@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0" version="28.0.6">
+  <diagram name="Страница — 1" id="n95gg-a6Ke8kBzeHCYc-">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="-RmaYpeovM1a3vHn_bZJ-1" target="-RmaYpeovM1a3vHn_bZJ-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="-RmaYpeovM1a3vHn_bZJ-1" target="-RmaYpeovM1a3vHn_bZJ-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-1" value="Clusterize Step" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="73" y="470" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-2" value="MLE" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="73" y="580" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="-RmaYpeovM1a3vHn_bZJ-5" target="-RmaYpeovM1a3vHn_bZJ-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-27" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endFill=0;" edge="1" parent="1" source="-RmaYpeovM1a3vHn_bZJ-5" target="-RmaYpeovM1a3vHn_bZJ-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-5" value="Responsibilities Step" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="233" y="470" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-7" value="" style="rounded=0;whiteSpace=wrap;html=1;perimeterSpacing=3;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="433" y="530" width="320" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-8" value="Moments M Step" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;strokeColor=default;" vertex="1" parent="1">
+          <mxGeometry x="433" y="530" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-9" value="C-Moments" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="473" y="590" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-10" value="TL-Moments" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="603" y="590" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-11" value="LQ-Moments" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="473" y="660" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-12" value="&lt;div&gt;L-Moments&lt;/div&gt;" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="603" y="660" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-14" value="" style="rounded=0;whiteSpace=wrap;html=1;perimeterSpacing=3;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="433" y="350" width="300" height="135" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-15" value="ComponentEstimation" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;strokeColor=default;" vertex="1" parent="1">
+          <mxGeometry x="433" y="350" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-16" value="CM Step" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="603" y="405" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="-RmaYpeovM1a3vHn_bZJ-18" value="CME Step" style="html=1;whiteSpace=wrap;" vertex="1" parent="1">
+          <mxGeometry x="463" y="405" width="110" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
