@@ -1,19 +1,67 @@
-pysatl-mpest/
-├── algorithms/
-│   ├── base_estimator.py
-│   ├── estimator_step.py
-│   ├── iterative_estimator.py
-│   ├── breakpointers/
-│   ├── initializers/
-│   ├── pruners/
-│   ├── steps/
-│   │   ├── expectation_steps/
-│   │   ├── maximization_steps/
-│   │   └── moments_steps/
-│   └── strategies/
+pysatl_mpest/
+├── __init__.py
 │
-└── mpest_core/
-    ├── continuous_dist.py
-    ├── mixture_model.py
-    ├── parameter.py
-    └── distributions/
+├── core/
+│   ├── __init__.py
+│   ├── mixture.py
+│   └── parameter.py
+│
+├── distributions/
+│   ├── __init__.py
+│   ├── continuous_dist.py
+│   ├── exponential.py
+│   ├── normal.py
+│   └── ...
+│
+├── estimators/
+│   ├── __init__.py
+│   ├── base_estimator.py
+│   ├── direct/
+│   │   ├── __init__.py
+│   │   ├── mle.py
+│   │   ├── mom.py
+│   │   └── ...
+│   │
+│   └── iterative/
+│       ├── __init__.py
+│       ├── base_breakpointer.py
+│       ├── base_pruner.py
+│       ├── base_step.py
+│       ├── iterative_estimator.py
+│       ├── breakponters/
+│       │   ├── __init__.py
+│       │   └── ...
+│       │
+│       ├── pruners/
+│       │   ├── __init__.py
+│       │   └── ...
+│       │
+│       └── steps/
+│           ├── __init__.py
+│           ├── component_maximization.py
+│           ├── data_structures.py
+│           ├── lmoments.py
+│           ├── lqmoments.py
+│           ├── moments.py
+│           ├── responsibilities.py
+│           ├── tlmoments.py
+│           └── ...
+│
+├── initializers/
+│   ├── __init__.py
+│   ├── base_initializer.py
+│   └── clusterizer.py
+│
+├── optimizers/
+│   ├── __init__.py
+│   ├── base_optimizer.py
+│   └── ...
+│
+└── strategies/
+    ├── likelihood.py
+    ├── lmoments.py
+    ├── lqmoments.py
+    ├── moments.py
+    ├── q_function.py
+    ├── tlmoments.py
+    └── ...
