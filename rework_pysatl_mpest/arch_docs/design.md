@@ -30,7 +30,7 @@
 
 6. **Примеры (пока псевдокод)**
 
-   
+
 
 # 1. Введение
 
@@ -69,13 +69,13 @@
 
 - **Обеспечить базу для будущего рефакторинга:** Честно проанализировать сильные и слабые стороны текущей архитектуры, выявить потенциальные риски и узкие места, которые могут потребовать пересмотра в будущем.
 
-  
+
 
 ## 1.3 Глоссарий
 
 ###  Смесь распределений
 
-Объект представляющий собой взвешенную совокупность распределений. 
+Объект представляющий собой взвешенную совокупность распределений.
 
 Плотность смеси распределений можно задать таким образом:
 $$
@@ -213,7 +213,7 @@ classDiagram
     ResponsibilitiesStep ..> TLMoments
     ResponsibilitiesStep ..> LQMoments
     ResponsibilitiesStep ..> LMoments
-    
+
     MLE o-- ScipyOptimizer
 
     ComponentMaximization *-- "1..*" OptimizationBlock
@@ -263,7 +263,7 @@ classDiagram
 
   - ***+ pdf(X: ndarray): ndarray***
 
-    Функция плотности. 
+    Функция плотности.
 
   - ***\+ lpdf(X: ndarray): ndarray***
 
@@ -276,7 +276,7 @@ classDiagram
   - ***+ generate(size: int): ndarray***
 
     Сэмплирование выборки размера `size`.
-    
+
 
   + **\+ loglikelihood(X: ndarray): ndarray**
 
@@ -360,7 +360,7 @@ classDiagram
   - ***+ fit(X, MixtureModel): MixtureModel***
 
     Абстрактный метод, оценивающий параметры смеси распределений по выборке при известном $\mathcal{F}$
-  
+
 - **Доступные оценщики:**
 
   - **IterativeEstimator**
@@ -454,7 +454,7 @@ classDiagram
     1. Метод `prune` будет возвращать контекст с уже измененной смесью, откуда удалена компонента/ы
     2. Метод `prune` будет возвращать массив `idx_component` указывающий на то, какие компоненты надо удалить. Этот случай необходим, если я решу сделать композицию алгоритмов.
 
-    
+
 
 ### BaseInitializer
 
@@ -491,7 +491,7 @@ classDiagram
   - ***+ run(context: Context): Context***
 
     Абстрактный метод, запускающий шаг алгоритма. Внутри себя может работать с контекстом, записывая туда информацию необходимую для следующего шага.
-  
+
 - **Доступные шаги**
 
   - **ResponsibilitiesStep**
@@ -534,7 +534,7 @@ def optimize_q_function_normal(X: ndarray, W: ndarray, optimizer: ScipyOptimizer
 
 Является реализацией абстрактного класса `EstimatorStep`. Требует валидацию при инициализации.
 
-Нужен для оптимизации параметров с помощью численных или аналитических методов. В случае численных методов нужен оптимизатор. Главная "киллерфича" этого класса в том, что можно разбить смесь на компоненты, и в каждой компоненте фиксировать нужные параметры, оптимизируя другие. Таким образом возможно в некоторых случаях получить прирост к скорости, а так же выразить аналитически некоторые параметры. 
+Нужен для оптимизации параметров с помощью численных или аналитических методов. В случае численных методов нужен оптимизатор. Главная "киллерфича" этого класса в том, что можно разбить смесь на компоненты, и в каждой компоненте фиксировать нужные параметры, оптимизируя другие. Таким образом возможно в некоторых случаях получить прирост к скорости, а так же выразить аналитически некоторые параметры.
 
 #### ParameterId
 
@@ -593,17 +593,17 @@ sequenceDiagram
 
     User->>+Initializer: perform(X, List[Distribution])
     note right of User: Запрос на создание начального приближения
-    
+
     Initializer->>+MixtureModel: new MixtureModel(...)
     MixtureModel-->>-Initializer: initial_mixture
-    
+
     Initializer-->>-User: initial_mixture
-    
+
     User->>+IterativeEstimator: fit(X, initial_mixture)
     note right of User: Запуск итеративного процесса оценки
-    
+
     IterativeEstimator->>IterativeEstimator: Внутренний цикл (steps, breakpointers, pruners)
-    
+
     IterativeEstimator-->>-User: final_mixture
     note right of User: Получение обученной модели
 ```
@@ -622,19 +622,19 @@ sequenceDiagram
     participant Distribution as Component (Distribution)
 
     Note over IterativeEstimator: Начало итерации с MixtureModel(t)
-    
+
     IterativeEstimator->>+ResponsibilitiesStep: run(context)
     note right of ResponsibilitiesStep: E-шаг: вычисление W
     ResponsibilitiesStep-->>-IterativeEstimator: context (с обновленными W)
-    
+
     IterativeEstimator->>+MomentsMStep: run(context)
     note right of MomentsMStep: M-шаг: обновление параметров
-    
+
     MomentsMStep->>Distribution: estimate_params_from_moments(X, W)
     note over MomentsMStep, Distribution: Вызов стратегии через @singledispatch для конкретного типа распределения (CMoments, TLMoments и т.д.)
-    
+
     Distribution-->>MomentsMStep: updated_parameters
-    
+
     MomentsMStep-->>-IterativeEstimator: context (с обновленными параметрами)
 
     Note over IterativeEstimator: Конец итерации, получена MixtureModel(t+1)
@@ -654,20 +654,20 @@ sequenceDiagram
     participant ScipyOptimizer
 
     Note over ComponentMaximization: Шаг получает context (с Mixture, W, X)
-    
+
     loop для каждого OptimizationBlock
         ComponentMaximization->>OptimizationBlock: execute()
-        
+
         OptimizationBlock->>+Distribution: get_target_function(target_name)
         note right of Distribution: Поиск целевой функции (например, q_function)<br/>через @singledispatch
         Distribution-->>-OptimizationBlock: target_func
-        
+
         OptimizationBlock->>+ScipyOptimizer: minimize(target_func, initial_guess)
         ScipyOptimizer-->>-OptimizationBlock: optimal_param_value
-        
+
         OptimizationBlock->>Distribution: set_parameter(param_name, optimal_param_value)
     end
-    
+
     Note over ComponentMaximization: Все параметры обновлены. Шаг завершен.
 ```
 
@@ -717,7 +717,7 @@ sequenceDiagram
    Идея fallback-логики и "Цепочки обязанностей" упомянута, но не интегрирована в архитектуру. На данный момент неясно:
    - Что происходит, если шаг `EstimatorStep` не может быть выполнен (например, метод неприменим к компоненте)?
    - Как система должна реагировать? Прервать весь процесс? Попробовать другой шаг?
-   - Кто отвечает за эту логику? `IterativeEstimator`? Сам шаг? 
+   - Кто отвечает за эту логику? `IterativeEstimator`? Сам шаг?
      Отсутствие этого механизма делает систему хрупкой.
 
 ### 5.3. Открытые вопросы и направления для развития
@@ -843,4 +843,3 @@ base_mixture = initializer.perform(X, [Normal, Exponential])
 estimator = IterativeEstimator([breakpointer], [pruner], [expectation_step, moments_step])
 result_mixture = estimator.fit(X, base_mixture)
 ```
-

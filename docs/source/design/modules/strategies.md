@@ -27,4 +27,3 @@ def optimize_q_function_normal(X: ndarray, W: ndarray, optimizer: ScipyOptimizer
 
 
 ## Различные диаграммы
-

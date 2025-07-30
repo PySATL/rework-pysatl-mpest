@@ -42,8 +42,3 @@
 :width: 300px
 :align: center
 ```
-
-
-
-
-
