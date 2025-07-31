@@ -1,4 +1,4 @@
-# Модуль Iterative
+# Iterative
 
 Предоставляет необходимую функциональность для работы с итеративными алгоритмами, такие как:
 
@@ -8,6 +8,11 @@
 4. Breakpointer'ы
 
 
+```{image} ../../_static/iterative.png
+:alt: Select Parameters
+:width: 800px
+:align: center
+```
 
 ## Классы
 

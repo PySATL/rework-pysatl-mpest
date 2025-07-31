@@ -11,7 +11,7 @@
 
 ```{image} ./_static/Use-case-researcher.png
 :alt: Select Parameters
-:width: 400px
+:width: 500px
 :align: center
 ```
 
@@ -39,6 +39,6 @@
 
 ```{image} ./_static/activity-mpest.png
 :alt: Select Parameters
-:width: 300px
+:width: 450px
 :align: center
 ```

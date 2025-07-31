@@ -3,14 +3,15 @@
 ```{toctree}
 :maxdepth: 2
 :caption: Содержание раздела:
+:hidden:
 :titlesonly:
 
 core
 distributions
+estimators/index
 initializers
 optimizers
 strategies
-estimators/index
 ```
 
 На следующей диаграмме представлена высокоуровневая диаграмма архитектуры pysatl-mpest:

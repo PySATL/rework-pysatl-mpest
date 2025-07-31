@@ -1,7 +1,13 @@
-# Модуль Distributions
+# Distributions
 
 Предоставляет пользователю интерфейс для реализации собственных распределений, а так же классы уже реализованных в pysatl-mpest распределений.
 
+
+```{image} ../_static/distributions.png
+:alt: Select Parameters
+:width: 800px
+:align: center
+```
 
 
 ## Классы

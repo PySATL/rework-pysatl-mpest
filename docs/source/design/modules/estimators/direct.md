@@ -1,8 +1,12 @@
-# Модуль Direct
+# Direct
 
 Модуль, содержащий прямые оценщики параметров смеси распределений.
 
-
+```{image} ../../_static/direct.png
+:alt: Select Parameters
+:width: 800px
+:align: center
+```
 
 ## Классы
 
