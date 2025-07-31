@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" /><link rel="prev" title="Модуль Estimators" href="estimators.html" />
+<link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" /><link rel="next" title="Initializers" href="../initializers.html" /><link rel="prev" title="Direct" href="direct.html" />
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
-        <title>Модуль Iterative - Mpest 1.0 documentation</title>
+        <title>Iterative - Mpest 1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -203,17 +203,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../../tree.html">Дерево алгоритмов</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usecase_activity.html">Use-case и activity диаграммы</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">Модули архитектуры pysatl-mpest</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Модули архитектуры pysatl-mpest</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../core.html">Модуль Core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../distributions.html">Модуль Distributions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../initializers.html">Модуль Initializers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../optimizers.html">Модуль Optimizers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../strategies.html">Модуль Strategies</a></li>
-<li class="toctree-l2 current has-children"><a class="reference internal" href="index.html">Оценщики (Estimators)</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Оценщики (Estimators)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="direct.html">Модуль Direct</a></li>
-<li class="toctree-l3"><a class="reference internal" href="estimators.html">Модуль Estimators</a></li>
-<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Модуль Iterative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../core.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../distributions.html">Distributions</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="index.html">Estimators</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Estimators</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="direct.html">Direct</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">Iterative</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../optimizers.html">Optimizers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../strategies.html">Strategies</a></li>
 </ul>
 </li>
 </ul>
@@ -257,7 +256,7 @@
         </div>
         <article role="main" id="furo-main-content">
           <section class="tex2jax_ignore mathjax_ignore" id="iterative">
-<h1>Модуль Iterative<a class="headerlink" href="#iterative" title="Link to this heading">¶</a></h1>
+<h1>Iterative<a class="headerlink" href="#iterative" title="Link to this heading">¶</a></h1>
 <p>Предоставляет необходимую функциональность для работы с итеративными алгоритмами, такие как:</p>
 <ol class="arabic simple">
 <li><p>Оркестратор IterativeEstimator</p></li>
@@ -265,6 +264,8 @@
 <li><p>Pruner’ы</p></li>
 <li><p>Breakpointer’ы</p></li>
 </ol>
+<a class="reference internal image-reference" href="../../../_images/iterative.png"><img alt="Select Parameters" class="align-center" src="../../../_images/iterative.png" style="width: 800px;" />
+</a>
 <section id="id1">
 <h2>Классы<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <section id="iterativeestimator">
@@ -466,15 +467,23 @@
       <footer>
         
         <div class="related-pages">
-          
-          <a class="prev-page" href="estimators.html">
+          <a class="next-page" href="../initializers.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Initializers</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="direct.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Модуль Estimators</div>
+                <div class="title">Direct</div>
                 
               </div>
             </a>
@@ -508,7 +517,7 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Модуль Iterative</a><ul>
+<li><a class="reference internal" href="#">Iterative</a><ul>
 <li><a class="reference internal" href="#id1">Классы</a><ul>
 <li><a class="reference internal" href="#iterativeestimator">IterativeEstimator</a></li>
 <li><a class="reference internal" href="#basebreakpointer">BaseBreakpointer</a></li>

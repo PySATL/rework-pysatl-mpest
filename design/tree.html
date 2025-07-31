@@ -203,17 +203,16 @@
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Дерево алгоритмов</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usecase_activity.html">Use-case и activity диаграммы</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="modules/index.html">Модули архитектуры pysatl-mpest</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Модули архитектуры pysatl-mpest</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="modules/core.html">Модуль Core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/distributions.html">Модуль Distributions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/initializers.html">Модуль Initializers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/optimizers.html">Модуль Optimizers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules/strategies.html">Модуль Strategies</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="modules/estimators/index.html">Оценщики (Estimators)</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Оценщики (Estimators)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="modules/estimators/direct.html">Модуль Direct</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/estimators/estimators.html">Модуль Estimators</a></li>
-<li class="toctree-l3"><a class="reference internal" href="modules/estimators/iterative.html">Модуль Iterative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/core.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/distributions.html">Distributions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/estimators/index.html">Estimators</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Estimators</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/estimators/direct.html">Direct</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/estimators/iterative.html">Iterative</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="modules/initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/optimizers.html">Optimizers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/strategies.html">Strategies</a></li>
 </ul>
 </li>
 </ul>
@@ -259,7 +258,7 @@
           <section class="tex2jax_ignore mathjax_ignore" id="id1">
 <h1>Дерево алгоритмов<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h1>
 <p>Основным понятием, являющимся центром всей архитектуры модуля алгоритмов, является “дерево алгоритмов”, показывающее то, как система выполняет пошаговый процесс оценки параметров: от предварительной настройки до выбора и выполнения одного из доступных семейств алгоритмов.</p>
-<a class="reference internal image-reference" href="../_images/Algo-tree.png"><img alt="Select Parameters" class="align-center" src="../_images/Algo-tree.png" style="width: 400px;" />
+<a class="reference internal image-reference" href="../_images/Algo-tree.png"><img alt="Select Parameters" class="align-center" src="../_images/Algo-tree.png" style="width: 500px;" />
 </a>
 <p>Процесс можно разбить на следующие логические этапы:</p>
 <ol class="arabic simple">
@@ -305,7 +304,7 @@
 <section id="em-like">
 <h2>EM-like<a class="headerlink" href="#em-like" title="Link to this heading">¶</a></h2>
 <p>Как было показано в общей архитектуре “дерева алгоритмов”, одной из ключевых стратегий оценки является EM-like. Данная диаграмма детализирует внутреннюю структуру этого итеративного процесса.</p>
-<a class="reference internal image-reference" href="../_images/EM-like.png"><img alt="Select Parameters" class="align-center" src="../_images/EM-like.png" style="width: 400px;" />
+<a class="reference internal image-reference" href="../_images/EM-like.png"><img alt="Select Parameters" class="align-center" src="../_images/EM-like.png" style="width: 500px;" />
 </a>
 <p>Процесс состоит из двух фундаментальных шагов, выполняемых последовательно в цикле: <strong>E-step</strong> (шаг ожидания) и <strong>M-step</strong> (шаг максимизации):</p>
 <ol class="arabic simple">
@@ -344,8 +343,8 @@
 <h2>Forward estimation<a class="headerlink" href="#forward-estimation" title="Link to this heading">¶</a></h2>
 <p>Эта ветвь объединяет неитеративные методы оценки параметров смеси. В отличие от EM-алгоритмов, которые уточняют параметры шаг за шагом, методы прямого оценивания вычисляют их напрямую на основе свойств выборки.</p>
 <p>Основными представителями этого семейства являются <strong>Метод Максимального Правдоподобия (MLE)</strong> и <strong>Метод Моментов (Method of Moments)</strong>.</p>
-<section id="maximum-likelihood-estimation-mle">
-<h3><strong>Метод Максимального Правдоподобия (Maximum Likelihood Estimation, MLE)</strong><a class="headerlink" href="#maximum-likelihood-estimation-mle" title="Link to this heading">¶</a></h3>
+<section id="mle">
+<h3><strong>Метод Максимального Правдоподобия (MLE)</strong><a class="headerlink" href="#mle" title="Link to this heading">¶</a></h3>
 <p><strong>Идея:</strong> Метод заключается в поиске таких параметров модели (<span class="math notranslate nohighlight">\(\Theta\)</span> и <span class="math notranslate nohighlight">\(\Omega\)</span>), при которых наблюдаемые данные являются наиболее “вероятными”.</p>
 <p><strong>Процесс:</strong></p>
 <ol class="arabic simple">
@@ -353,8 +352,8 @@
 <li><p><strong>Максимизация:</strong> Находится максимум логарифма этой функции.</p></li>
 </ol>
 </section>
-<section id="method-of-moments-mom">
-<h3><strong>Метод Моментов (Method of Moments, MoM)</strong><a class="headerlink" href="#method-of-moments-mom" title="Link to this heading">¶</a></h3>
+<section id="mom">
+<h3><strong>Метод Моментов (MoM)</strong><a class="headerlink" href="#mom" title="Link to this heading">¶</a></h3>
 <p>Пока что не рассматривался.</p>
 </section>
 </section>
@@ -419,8 +418,8 @@
 <li><a class="reference internal" href="#em-like">EM-like</a></li>
 <li><a class="reference internal" href="#monte-carlo">Monte Carlo</a></li>
 <li><a class="reference internal" href="#forward-estimation">Forward estimation</a><ul>
-<li><a class="reference internal" href="#maximum-likelihood-estimation-mle"><strong>Метод Максимального Правдоподобия (Maximum Likelihood Estimation, MLE)</strong></a></li>
-<li><a class="reference internal" href="#method-of-moments-mom"><strong>Метод Моментов (Method of Moments, MoM)</strong></a></li>
+<li><a class="reference internal" href="#mle"><strong>Метод Максимального Правдоподобия (MLE)</strong></a></li>
+<li><a class="reference internal" href="#mom"><strong>Метод Моментов (MoM)</strong></a></li>
 </ul>
 </li>
 </ul>

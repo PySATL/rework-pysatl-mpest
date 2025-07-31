@@ -5,7 +5,7 @@
 
 ```{image} ./_static/Algo-tree.png
 :alt: Select Parameters
-:width: 400px
+:width: 500px
 :align: center
 ```
 
@@ -40,7 +40,7 @@
 
 ```{image} ./_static/EM-like.png
 :alt: Select Parameters
-:width: 400px
+:width: 500px
 :align: center
 ```
 
@@ -79,7 +79,7 @@
 
 
 
-#### **Метод Максимального Правдоподобия (Maximum Likelihood Estimation, MLE)**
+#### **Метод Максимального Правдоподобия (MLE)**
 
 **Идея:** Метод заключается в поиске таких параметров модели ($\Theta$ и $\Omega$), при которых наблюдаемые данные являются наиболее "вероятными".
 
@@ -90,6 +90,6 @@
 
 
 
-#### **Метод Моментов (Method of Moments, MoM)**
+#### **Метод Моментов (MoM)**
 
 Пока что не рассматривался.

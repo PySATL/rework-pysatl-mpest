@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Модуль Distributions" href="distributions.html" /><link rel="prev" title="Модули архитектуры pysatl-mpest" href="index.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Distributions" href="distributions.html" /><link rel="prev" title="Модули архитектуры pysatl-mpest" href="index.html" />
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
-        <title>Модуль Core - Mpest 1.0 documentation</title>
+        <title>Core - Mpest 1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -203,17 +203,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../tree.html">Дерево алгоритмов</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usecase_activity.html">Use-case и activity диаграммы</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Модули архитектуры pysatl-mpest</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Модули архитектуры pysatl-mpest</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Модуль Core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="distributions.html">Модуль Distributions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="initializers.html">Модуль Initializers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="optimizers.html">Модуль Optimizers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="strategies.html">Модуль Strategies</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="estimators/index.html">Оценщики (Estimators)</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Оценщики (Estimators)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="estimators/direct.html">Модуль Direct</a></li>
-<li class="toctree-l3"><a class="reference internal" href="estimators/estimators.html">Модуль Estimators</a></li>
-<li class="toctree-l3"><a class="reference internal" href="estimators/iterative.html">Модуль Iterative</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="estimators/index.html">Estimators</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Estimators</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="estimators/direct.html">Direct</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/iterative.html">Iterative</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizers.html">Optimizers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strategies.html">Strategies</a></li>
 </ul>
 </li>
 </ul>
@@ -257,13 +256,26 @@
         </div>
         <article role="main" id="furo-main-content">
           <section class="tex2jax_ignore mathjax_ignore" id="core">
-<h1>Модуль Core<a class="headerlink" href="#core" title="Link to this heading">¶</a></h1>
+<h1>Core<a class="headerlink" href="#core" title="Link to this heading">¶</a></h1>
 <p>Предоставляет класс смеси распределений, а так же дескриптор, позволяющий реализовывать свои распределения. (Решил его вынести сюда а не в Distributions)</p>
+<a class="reference internal image-reference" href="../../_images/core.png"><img alt="Select Parameters" class="align-center" src="../../_images/core.png" style="width: 800px;" />
+</a>
 <section id="id1">
 <h2>Классы<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <section id="parameter">
 <h3>Parameter<a class="headerlink" href="#parameter" title="Link to this heading">¶</a></h3>
-<p>Дескриптор, описывающий параметр распределения. Он отвечает за синхронизацию внутренних и внешних параметров,, а так же их ленивое чтение.</p>
+<p>Дескриптор, описывающий параметр распределения. Он отвечает за синхронизацию внутренних и внешних параметров, а так же их ленивое чтение.</p>
+<ul>
+<li><p><strong>Альтернативы</strong></p>
+<p>В прошлой версии архитектуры параметры хранились в объекте распределения в виде списка и без имён. Такой подход приводил ко многим проблемам:</p>
+<ul class="simple">
+<li><p>Внешний пользователь работал с параметрами как со списком, поэтому не мог знать о том, какой параметр закодирован в массиве под индексом 0 или под индексом 1, об этом знал только разработчик.</p></li>
+<li><p>Логика преобразования параметров к внутреннему и внешнему виду лежала в самом объекте распределения, и проводилась с помощью специальных методов. Дескриптор решает эту проблему, инкапсулируя эту логику внутри себя.</p></li>
+<li><p>Если хранить параметры в таком виде, то неудобно поддерживать заморозку и разморозку параметров, т.к. это происходит по индексам, а не по именам, и для конечного пользователя все так же является непонятным.</p></li>
+<li><p>Необходимо поддерживать синхронизацию внутреннего представления параметров и внешнего, таким образом необходимо поддерживать “ленивое” чтение каждого отдельного параметра в различных представлениях (внутреннем и внешнем). В случае со списком параметров это приводит к увеличению размера класса распределения, а в случае с дескриптором, эта логика инкапсулируется внутри.</p></li>
+</ul>
+</li>
+</ul>
 </section>
 <section id="mixturemodel">
 <h3>MixtureModel<a class="headerlink" href="#mixturemodel" title="Link to this heading">¶</a></h3>
@@ -319,7 +331,7 @@
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Модуль Distributions</div>
+                <div class="title">Distributions</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -364,7 +376,7 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Модуль Core</a><ul>
+<li><a class="reference internal" href="#">Core</a><ul>
 <li><a class="reference internal" href="#id1">Классы</a><ul>
 <li><a class="reference internal" href="#parameter">Parameter</a></li>
 <li><a class="reference internal" href="#mixturemodel">MixtureModel</a></li>

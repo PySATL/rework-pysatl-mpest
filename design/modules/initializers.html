@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Модуль Optimizers" href="optimizers.html" /><link rel="prev" title="Модуль Distributions" href="distributions.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Optimizers" href="optimizers.html" /><link rel="prev" title="Iterative" href="estimators/iterative.html" />
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
-        <title>Модуль Initializers - Mpest 1.0 documentation</title>
+        <title>Initializers - Mpest 1.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=d111a655" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -203,17 +203,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../tree.html">Дерево алгоритмов</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../usecase_activity.html">Use-case и activity диаграммы</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Модули архитектуры pysatl-mpest</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Модули архитектуры pysatl-mpest</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="core.html">Модуль Core</a></li>
-<li class="toctree-l2"><a class="reference internal" href="distributions.html">Модуль Distributions</a></li>
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Модуль Initializers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="optimizers.html">Модуль Optimizers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="strategies.html">Модуль Strategies</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="estimators/index.html">Оценщики (Estimators)</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Оценщики (Estimators)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="estimators/direct.html">Модуль Direct</a></li>
-<li class="toctree-l3"><a class="reference internal" href="estimators/estimators.html">Модуль Estimators</a></li>
-<li class="toctree-l3"><a class="reference internal" href="estimators/iterative.html">Модуль Iterative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributions.html">Distributions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="estimators/index.html">Estimators</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Estimators</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="estimators/direct.html">Direct</a></li>
+<li class="toctree-l3"><a class="reference internal" href="estimators/iterative.html">Iterative</a></li>
 </ul>
 </li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="optimizers.html">Optimizers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="strategies.html">Strategies</a></li>
 </ul>
 </li>
 </ul>
@@ -257,8 +256,15 @@
         </div>
         <article role="main" id="furo-main-content">
           <section class="tex2jax_ignore mathjax_ignore" id="initializers">
-<h1>Модуль Initializers<a class="headerlink" href="#initializers" title="Link to this heading">¶</a></h1>
+<h1>Initializers<a class="headerlink" href="#initializers" title="Link to this heading">¶</a></h1>
 <p>Модуль, предоставляющий интерфейс и конкретные классы для инициализации начального приближения смеси.</p>
+<a class="reference internal image-reference" href="../../_images/initializers.png"><img alt="Select Parameters" class="align-center" src="../../_images/initializers.png" style="width: 800px;" />
+</a>
+<p>Было решено вынести инициализаторы в отдельный модуль, а так же не связывать <code class="docutils literal notranslate"><span class="pre">BaseEstimator</span></code> и <code class="docutils literal notranslate"><span class="pre">BaseInitializer</span></code> отношением композиции потому что:</p>
+<ul class="simple">
+<li><p>Интерфейсы инициализатора и оценщика разные, один принимает готовую смесь, а второй список распределений.</p></li>
+<li><p>Будет сложнее отслеживать поведение инициализатора, по той причине, что его результат будет обрабатываться внутри оценщика. Поэтому не получится отдельно еще каким либо образом поработать с начальным приближением перед тем, как отправить его в алгоритм.</p></li>
+</ul>
 <section id="id1">
 <h2>Классы<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
 <section id="baseinitializer">
@@ -278,6 +284,25 @@
 </li>
 </ul>
 </section>
+<section id="clusterizeinitializer">
+<h3>ClusterizeInitializer<a class="headerlink" href="#clusterizeinitializer" title="Link to this heading">¶</a></h3>
+<p>Реализация абстрактного класса BaseInitializer, основанная на кластеризации выборки и последующей инициализации параметров с учетом кластеров.</p>
+<ul>
+<li><p><strong>Атрибуты</strong></p>
+<ul>
+<li><p><strong>- is_soft: bool</strong></p>
+<p>Флаг, влияющий на то, будет ли матрица ответственностей жёсткой или мягкой. Если его значение <code class="docutils literal notranslate"><span class="pre">true</span></code>, то матрица будет содержать вероятности между 0 и 1. В противном случае будут устанавливаться жесткие вероятности, либо 0 либо 1.</p>
+</li>
+<li><p><strong>- clusterizer</strong></p>
+<p>Кластеризатор из sklearn, который будет проводить кластеризацию.</p>
+</li>
+<li><p><strong>+ labels: list</strong></p>
+<p>Метки принадлежности элементов к тому или иному кластеру.</p>
+</li>
+</ul>
+</li>
+</ul>
+</section>
 </section>
 <section id="id2">
 <h2>Различные диаграммы<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
@@ -294,18 +319,18 @@
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Модуль Optimizers</div>
+                <div class="title">Optimizers</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="distributions.html">
+          <a class="prev-page" href="estimators/iterative.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Модуль Distributions</div>
+                <div class="title">Iterative</div>
                 
               </div>
             </a>
@@ -339,9 +364,10 @@
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Модуль Initializers</a><ul>
+<li><a class="reference internal" href="#">Initializers</a><ul>
 <li><a class="reference internal" href="#id1">Классы</a><ul>
 <li><a class="reference internal" href="#baseinitializer">BaseInitializer</a></li>
+<li><a class="reference internal" href="#clusterizeinitializer">ClusterizeInitializer</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#id2">Различные диаграммы</a></li>
