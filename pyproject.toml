@@ -44,7 +44,7 @@ ruamel-yaml = "^0.18.10"
 [tool.ruff]
 line-length = 120
 output-format = "grouped"
-src = ["mpest", "experimental_env", "tests"]
+src = ["rework_pysatl_mpest", "mpest", "experimental_env", "tests"]
 exclude = ["*.ipynb"]
 
 [tool.ruff.format]
@@ -60,7 +60,7 @@ ignore = ["PLR0913"]
 "**/__init__.py" = ["F401"]
 
 [tool.mypy]
-files = ["mpest", "experimental_env"]
+files = ["rework_pysatl_mpest", "mpest", "experimental_env"]
 ignore_missing_imports = true
 exclude = ["^mpest/utils.py"]
 
