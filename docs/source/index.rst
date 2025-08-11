@@ -27,5 +27,5 @@ Mpest documentation
 
    design/index
    design/tree
-   design/usecase_activity
+   design/usecase
    design/modules/index
