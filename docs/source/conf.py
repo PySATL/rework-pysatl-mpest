@@ -21,6 +21,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "myst_parser",
     "sphinx.ext.mathjax",
+    'sphinxcontrib.mermaid',
 ]
 
 templates_path = ["_templates"]
