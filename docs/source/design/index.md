@@ -1,4 +1,15 @@
-# Введение
+# Design
+
+```{toctree}
+:maxdepth: 2
+:caption: Архитектура:
+:hidden:
+:titlesonly:
+
+tree
+usecase
+modules/index
+```
 
 `pysatl-mpest` — это Python-библиотека, предназначенная для оценки параметров смесей вероятностных распределений.
 
