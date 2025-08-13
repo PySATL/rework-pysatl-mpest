@@ -14,37 +14,47 @@ from typing import Callable, Union, overload
 
 
 class Parameter:
-    """
-    A descriptor for validating and managing distribution parameters.
+    """A descriptor for validating and managing distribution parameters.
 
-    This class implements the descriptor protocol for managing access to attributes,
-    representing the parameters of the statistical distribution. It allows you to set
-    the conditions (invariants) that the parameter value must satisfy.
+    This class implements the descriptor protocol for managing access to
+    attributes representing the parameters of a statistical distribution.
+    It allows you to set the conditions (invariants) that the
+    parameter value must satisfy.
 
-    Attributes:
-        invariant (Callable[[float], bool]): A function that checks
-            whether the parameter value is valid. Returns `True` if the value
-            is correct, and `False` otherwise.
-        error_message (str): An error message that will be triggered if
-            the invariant is not satisfied.
-        public_name (str): The name of the attribute as defined in the owner class.
-        private_name (str): The name of the attribute to store the value inside the instance of
-            the owner class.
+    Parameters
+    ----------
+    invariant : Callable[[float], bool], optional
+        A predicate function for validating parameter values.
+        Defaults to `lambda x: True`.
+    error_message : str, optional
+        An error message in case of failed validation.
+        Defaults to "Parameter value is not valid.".
 
-    Args:
-        invariant (Callable[[float], bool]): Predicate function for validation
-            parameter values.
-        error_message (str): An error message in case of failed validation.
+    Attributes
+    ----------
+    invariant : Callable[[float], bool]
+        A function that checks if the parameter value is valid.
+        Returns `True` if the value is correct, and `False` otherwise.
+    error_message : str
+        An error message that is raised if the invariant is not satisfied.
+    public_name : str
+        The name of the attribute as defined in the owner class.
+    private_name : str
+        The name of the attribute used to store the value within an instance
+        of the owner class.
 
-    .. rubric:: Using example
+    Examples
+    --------
 
     .. code-block:: python
 
         class NormalDistribution(ContinuousDistribution):
-            # Location parameter can be any
+            # Location parameter can be any number
             loc = Parameter()
             # Scale parameter must be a positive number
-            scale = Parameter(invariant=lambda s: s > 0, error_message="Standard deviation (scale) must be positive.")
+            scale = Parameter(invariant=lambda s: s > 0,
+                              error_message="Standard deviation (scale) must be positive.")
+
     """
 
     def __init__(
@@ -58,13 +68,16 @@ class Parameter:
     def __set_name__(self, owner: type[object], name: str):
         """Sets the name for the public and private attributes.
 
-        This method is automatically called when creating an instance of the descriptor
-        in the owner class. It uses the attribute name to create
+        This method is automatically called when a descriptor instance is created
+        in the owner class. It uses the attribute name to create the
         public and private names.
 
-        Args:
-            owner (Type[object]): The class that uses the handle.
-            name (str): The attribute name assigned to the descriptor instance.
+        Parameters
+        ----------
+        owner : type[object]
+            The class that uses the descriptor.
+        name : str
+            The attribute name assigned to the descriptor instance.
         """
 
         self.public_name = name
@@ -72,26 +85,31 @@ class Parameter:
 
     @overload
     def __get__(self, instance: None, owner: type[object]) -> "Parameter":
-        """If access is via a class, then we return the descriptor object itself."""
+        """If access is via a class, return the descriptor object itself."""
 
     @overload
     def __get__(self, instance: object, owner: type[object]) -> float:
-        """If access is via an object, then we return the value."""
+        """If access is via an object, return the value."""
 
     def __get__(self, instance: object | None, owner: type[object]) -> Union[float, "Parameter"]:
         """Returns the parameter value or the descriptor itself.
 
-        If access occurs through an instance of the class, returns the value
-        the parameter. If access occurs through a class, it returns itself
+        If access is through an instance of the class, it returns the
+        parameter's value. If access is through the class itself, it returns
         the descriptor object.
 
-        Args:
-            instance (object): An instance of the owner class, or `None` if
-                access is provided through the class.
-            owner (Type[object]): The owner class.
+        Parameters
+        ----------
+        instance : object or None
+            An instance of the owner class, or `None` if access
+            is through the class.
+        owner : type[object]
+            The owner class.
 
-        Returns:
-            Union[float, 'Parameter']: The value of the parameter or the descriptor itself.
+        Returns
+        -------
+        float or Parameter
+            The value of the parameter or the descriptor itself.
         """
 
         if instance is None:
@@ -103,16 +121,21 @@ class Parameter:
         """Sets the parameter value after validation.
 
         Before setting a new value, it checks whether the parameter is
-        "fixed." Then validates the value using the `invariant` function.
+        "fixed." Then, it validates the value using the `invariant` function.
 
-        Args:
-            instance (object): An instance of the owner class.
-            value (float): A new value for the parameter.
+        Parameters
+        ----------
+        instance : object
+            An instance of the owner class.
+        value : float
+            The new value for the parameter.
 
-        Raises:
-            AttributeError: If an attempt is made to change the "fixed"
-                the parameter.
-            ValueError: If the new value does not pass the `invariant` check.
+        Raises
+        ------
+        AttributeError
+            If an attempt is made to change a "fixed" parameter.
+        ValueError
+            If the new value does not pass the `invariant` check.
         """
 
         if self.public_name in getattr(instance, "_fixed_params", set()):

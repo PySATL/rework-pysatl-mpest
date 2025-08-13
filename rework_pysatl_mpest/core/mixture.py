@@ -24,27 +24,46 @@ class MixtureModel:
     This class encapsulates a collection of distribution components and their
     corresponding weights.
 
-    Attributes:
-        components (tuple[ContinuousDistribution]): A tuple of the distribution
-            objects that form the mixture.
-        n_components (int): The number of components in the mixture.
-        weights (NDArray[np.float64]): A NumPy array of the normalized weights for each
-            component. The sum of weights is always 1.
-        log_weights (NDArray[np.float64]): A NumPy array of the natural logarithm of the
-            component weights.
+    Parameters
+    ----------
+    components : Sequence[ContinuousDistribution]
+        A sequence of distribution objects that will form the mixture.
+    weights : Optional[ArrayLike], optional
+        An array of initial weights for the components. The weights must be
+        positive and sum to 1. If None, components are assigned equal
+        weights. Defaults to None.
 
-    Args:
-        components (Sequence[ContinuousDistribution]): A sequence of
-            distribution objects that will form the mixture.
-        weights (Optional[ArrayLike], optional): An array of initial weights
-            for the components. The weights must be positive and sum to 1.
-            If None, components are assigned equal weights. Defaults to None.
+    Attributes
+    ----------
+    components : tuple[ContinuousDistribution]
+        A tuple of the distribution objects that form the mixture.
+    n_components : int
+        The number of components in the mixture.
+    weights : NDArray[np.float64]
+        A NumPy array of the normalized weights for each component. The sum
+        of weights is always 1.
+    log_weights : NDArray[np.float64]
+        A NumPy array of the natural logarithm of the component weights.
 
-    Raises:
-        ValueError: If the list of components is empty, or if the provided
-            weights are invalid (e.g., negative, wrong number of elements,
-            or do not sum to 1).
+    Raises
+    ------
+    ValueError
+        If the list of components is empty, or if the provided weights are
+        invalid (e.g., negative, wrong number of elements, or do not sum to 1).
 
+    Methods
+    -------
+
+    .. autosummary::
+        :toctree: generated/
+
+        add_component
+        remove_component
+        pdf
+        lpdf
+        loglikelihood
+        q_function
+        generate
     """
 
     def __init__(self, components: Sequence[ContinuousDistribution], weights: Optional[ArrayLike] = None):
@@ -65,14 +84,18 @@ class MixtureModel:
     def _validate_weights(self, n_components: int, weights: NDArray[float64]):
         """Validates the component weights.
 
-        Args:
-            n_components (int): The expected number of components.
-            weights (NDArray[np.float64]): The array of weights to validate.
+        Parameters
+        ----------
+        n_components : int
+            The expected number of components.
+        weights : NDArray[np.float64]
+            The array of weights to validate.
 
-        Raises:
-            ValueError: If the number of weights does not match the number of
-                components, if any weight is negative, or if the weights do
-                not sum to 1.
+        Raises
+        ------
+        ValueError
+            If the number of weights does not match the number of components,
+            if any weight is negative, or if the weights do not sum to 1.
         """
 
         if len(weights) != n_components:
@@ -119,12 +142,16 @@ class MixtureModel:
     def log_weights(self, new_log_weights: ArrayLike):
         """Sets the log-weights for the components.
 
-        Args:
-            new_log_weights (ArrayLike): A 1D NumPy array of new log-weights.
+        Parameters
+        ----------
+        new_log_weights : ArrayLike
+            A 1D NumPy array of new log-weights.
 
-        Raises:
-            ValueError: If the length of the new log-weights vector does not
-                match the number of components.
+        Raises
+        ------
+        ValueError
+            If the length of the new log-weights vector does not match the
+            number of components.
         """
 
         new_log_weights = np.asarray(new_log_weights, dtype=float64)
@@ -137,16 +164,20 @@ class MixtureModel:
     def add_component(self, component: ContinuousDistribution, weight: float):
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
-        If `weight` is specified for the new component, the old component weights
-        are multiplied by `(1 - weight)`.
+        If `weight` is specified for the new component, the old component
+        weights are multiplied by `(1 - weight)`.
 
-        Args:
-            component (ContinuousDistribution): The distribution component to add.
-            weight (float): The weight for the new component,
-                a number in the range (0, 1).
+        Parameters
+        ----------
+        component : ContinuousDistribution
+            The distribution component to add.
+        weight : float
+            The weight for the new component, a number in the range (0, 1).
 
-        Raises:
-            ValueError: If the specified `weight` is outside the range (0, 1).
+        Raises
+        ------
+        ValueError
+            If the specified `weight` is outside the range (0, 1).
         """
 
         if not (0 < weight < 1):
@@ -164,12 +195,17 @@ class MixtureModel:
 
         The weights of the remaining components are renormalized to sum to 1.
 
-        Args:
-            component_idx (int): The index of the component to remove.
+        Parameters
+        ----------
+        component_idx : int
+            The index of the component to remove.
 
-        Raises:
-            IndexError: If the component index is out of range.
-            ValueError: If an attempt is made to remove the last component.
+        Raises
+        ------
+        IndexError
+            If the component index is out of range.
+        ValueError
+            If an attempt is made to remove the last component.
         """
 
         n_components = self.n_components
@@ -185,15 +221,20 @@ class MixtureModel:
         self._cached_weights = None
 
     def pdf(self, X: ArrayLike) -> NDArray[float64]:
-        """Calculates the Probability Density Function (PDF) of the mixture.
+        """Probability Density Function of the mixture.
 
-        The PDF is computed as the weighted sum of the PDFs of its components.
+        The PDF is computed as the weighted sum of the PDFs of its
+        components.
 
-        Args:
-            X (ArrayLike): The input data points at which to evaluate the PDF.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points at which to evaluate the PDF.
 
-        Returns:
-            NDArray[np.float64]: The PDF values corresponding to each point in `X`.
+        Returns
+        -------
+        NDArray[np.float64]
+            The PDF values corresponding to each point in `X`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -201,13 +242,17 @@ class MixtureModel:
         return np.asarray(np.dot(self.weights, component_pdfs))
 
     def lpdf(self, X: ArrayLike) -> NDArray[float64]:
-        """Calculates the Log of the Probability Density Function (LPDF).
+        """Logarithms of the Probability Density Function.
 
-        Args:
-            X (ArrayLike): The input data points at which to evaluate the LPDF.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points at which to evaluate the LPDF.
 
-        Returns:
-            NDArray[np.float64]: The log-PDF values corresponding to each point in `X`.
+        Returns
+        -------
+        NDArray[np.float64]
+            The log-PDF values corresponding to each point in `X`.
         """
 
         X = np.atleast_1d(X)
@@ -217,34 +262,47 @@ class MixtureModel:
         return logsumexp(log_terms, axis=0)  # type: ignore
 
     def loglikelihood(self, X: ArrayLike) -> float:
-        """Calculates the total log-likelihood of the data `X`.
+        """Log-likelihood of the complete data `X`.
 
-        The log-likelihood is the sum of the log-PDF values for all data points.
+        The log-likelihood is the sum of the log-PDF values for all data
+        points.
 
-        Args:
-            X (ArrayLike): The input data sample.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data sample.
 
-        Returns:
-            float: The total log-likelihood value.
+        Returns
+        -------
+        float
+            The total log-likelihood value.
         """
+
         X = np.asarray(X, dtype=float64)
         return np.sum(self.lpdf(X))
 
     def q_function(self, X: ArrayLike, H: ArrayLike) -> float:
-        """Calculates the Q-function (expectation of the complete log-likelihood).
+        """Q-function (expectation of the complete log-likelihood).
 
-        Args:
-            X (ArrayLike): The input data sample.
-            H (ArrayLike): The responsibility matrix (posterior probabilities),
-                where H[i, j] is the probability that data point i belongs to
-                component j. Its shape should be (n_samples, n_components).
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data sample.
+        H : ArrayLike
+            The responsibility matrix (posterior probabilities), where
+            H[i, j] is the probability that data point i belongs to
+            component j. Its shape should be (n_samples, n_components).
 
-        Returns:
-            float: The value of the Q-function.
+        Returns
+        -------
+        float
+            The value of the Q-function.
 
-        Raises:
-            ValueError: If the number of columns in the responsibility matrix `H`
-                does not match the number of components in the model.
+        Raises
+        ------
+        ValueError
+            If the number of columns in the responsibility matrix `H` does
+            not match the number of components in the model.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -267,15 +325,19 @@ class MixtureModel:
         """Generates random samples from the mixture model.
 
         First, a component is chosen based on the mixture weights. Then, a
-        sample is drawn from the chosen component's distribution. This process
-        is repeated `size` times.
+        sample is drawn from the chosen component's distribution. This
+        process is repeated `size` times.
 
-        Args:
-            size (int): The number of random samples to generate.
+        Parameters
+        ----------
+        size : int
+            The number of random samples to generate.
 
-        Returns:
-            NDArray[np.float64]: A NumPy array containing the generated samples. Returns
-                an empty array if `size` is not positive.
+        Returns
+        -------
+        NDArray[np.float64]
+            A NumPy array containing the generated samples. Returns an
+            empty array if `size` is not positive.
         """
 
         if size == 0:
