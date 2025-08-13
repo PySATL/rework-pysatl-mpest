@@ -14,11 +14,34 @@ from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribu
 
 
 class Exponential(ContinuousDistribution):
-    """Class of two-parametric exponential distribution.
+    """Class for the two-parameter exponential distribution.
 
-    Attributes:
-        loc (float): location parameter, can be any.
-        rate (float): rate parameter, must be positive
+    Parameters
+    ----------
+    loc : float
+        Location parameter. Can be any real number.
+    rate : float
+        Rate parameter (lambda). Must be positive.
+
+    Attributes
+    ----------
+    loc : float
+        Location parameter.
+    rate : float
+        Rate parameter.
+
+
+    Methods
+    -------
+
+    .. autosummary::
+        :toctree: generated/
+
+        ppf
+        pdf
+        lpdf
+        log_gradients
+        generate
     """
 
     PARAM_LOC = "loc"
@@ -41,20 +64,26 @@ class Exponential(ContinuousDistribution):
         return {self.PARAM_LOC, self.PARAM_RATE}
 
     def pdf(self, X):
-        """Probability density function (PDF) of the two-parametric exponential distribution:
+        """Probability density function (PDF).
+
+        The PDF for the two-parameter exponential distribution is:
 
         .. math::
 
-            `f(x ~|~ \\alpha, \\beta) = \\alpha \\cdot e^{-\\alpha \\cdot (x - \\beta)}`
+            f(x | \\alpha, \\beta) = \\alpha \\cdot e^{-\\alpha \\cdot (x - \\beta)}
 
-        where :math: `\\alpha` is the rate parameter, :math: `\\beta` is the location parameter
+        where :math:`\\alpha` is the rate parameter and :math:`\\beta` is the
+        location parameter. The function is zero for :math:`x < \\beta`.
 
-        Args:
-            X (ArrayLike): The input data points at which to evaluate the PDF.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points at which to evaluate the PDF.
 
-        Returns:
-            NDArray[np.float64]: The PDF values corresponding to each point in `X`.
-
+        Returns
+        -------
+        NDArray[np.float64]
+            The PDF values corresponding to each point in `X`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -62,19 +91,23 @@ class Exponential(ContinuousDistribution):
         return np.where(self.loc <= X, self.rate * np.exp(-self.rate * (X - self.loc)), 0.0)
 
     def ppf(self, P):
-        """Calculates the Percent Point Function (PPF) or quantile function of the
-        two-parametric exponential distribution:
+        """Percent Point Function (PPF) or quantile function.
+
+        The PPF for the two-parameter exponential distribution is:
 
         .. math::
 
-            `Q(p ~ |~ \\alpha, \\beta) = \\beta - \frac{\\ln(1 - x)}{\\alpha}`
+            Q(p | \\alpha, \\beta) = \\beta - \\frac{\\ln(1 - p)}{\\alpha}
 
-        Args:
-            P (ArrayLike): The probability values (between 0 and 1) at which
-                to evaluate the PPF.
+        Parameters
+        ----------
+        P : ArrayLike
+            The probability values (between 0 and 1) at which to evaluate the PPF.
 
-        Returns:
-            NDArray[np.float64]: The PPF values corresponding to each probability in `P`.
+        Returns
+        -------
+        NDArray[np.float64]
+            The PPF values corresponding to each probability in `P`.
         """
 
         P = np.asarray(P, dtype=float64)
@@ -82,78 +115,95 @@ class Exponential(ContinuousDistribution):
         return np.where((P >= 0) & (P <= 1), self.loc - np.log(1 - P) / self.rate, np.nan)
 
     def lpdf(self, X):
-        """Calculates the Log of the Probability Density Function (LPDF) of the two-parametric exponential distribution:
+        """Log of the Probability Density Function (LPDF).
+
+        The log-PDF for the two-parameter exponential distribution is:
 
         .. math::
 
-            `\\ln ~f(x ~|~ \\alpha, \\beta) = \\ln(\\alpha) - \\alpha \\cdot (x - \\beta)`
+            \\ln f(x | \\alpha, \\beta) = \\ln(\\alpha) - \\alpha \\cdot (x - \\beta)
 
-        Args:
-            X (ArrayLike): The input data points at which to evaluate the LPDF.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points at which to evaluate the LPDF.
 
-        Returns:
-            NDArray[np.float64]: The log-PDF values corresponding to each point in `X`.
+        Returns
+        -------
+        NDArray[np.float64]
+            The log-PDF values corresponding to each point in `X`.
         """
 
         X = np.asarray(X, dtype=float64)
         return np.where(self.loc <= X, np.log(self.rate) - self.rate * (X - self.loc), -np.inf)
 
     def _dlog_loc(self, X):
-        """Calculates the partial derivative of the lpdf with respect to the `loc` parameter.
+        """Partial derivative of the lpdf w.r.t. the `loc` parameter.
 
         The derivative is non-zero only for `X >= loc`.
 
         .. math::
 
-            \\frac{\\partial \\ln f(x ~|~ \\alpha, \\beta)}{\\partial \\beta} = \\alpha
+            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\beta} = \\alpha
 
-        Where :math:`\\alpha` is the rate and :math:`\\beta` is the location.
+        where :math:`\\alpha` is the rate and :math:`\\beta` is the location.
 
-        Args:
-            X (ArrayLike): The input data points.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points.
 
-        Returns:
-            NDArray[np.float64]: The gradient of the lpdf with respect to `loc` for each point in `X`.
+        Returns
+        -------
+        NDArray[np.float64]
+            The gradient of the lpdf with respect to `loc` for each point in `X`.
         """
 
         X = np.asarray(X, dtype=float64)
         return np.where(self.loc <= X, self.rate, 0.0)
 
     def _dlog_rate(self, X):
-        """Calculates the partial derivative of the lpdf with respect to the `rate` parameter.
+        """Partial derivative of the lpdf w.r.t. the `rate` parameter.
 
-         The derivative is non-zero only for `X >= loc`.
+        The derivative is non-zero only for `X >= loc`.
 
         .. math::
 
-             \\frac{\\partial \\ln f(x ~|~ \\alpha, \\beta)}{\\partial \\alpha} = \\frac{1}{\\alpha} - (x - \\beta)
+             \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\alpha} = \\frac{1}{\\alpha} - (x - \\beta)
 
-         Where :math:`\\alpha` is the rate and :math:`\\beta` is the location.
+        where :math:`\\alpha` is the rate and :math:`\\beta` is the location.
 
-         Args:
-             X (ArrayLike): The input data points.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points.
 
-         Returns:
-             NDArray[np.float64]: The gradient of the lpdf with respect to `rate` for each point in `X`.
+        Returns
+        -------
+        NDArray[np.float64]
+            The gradient of the lpdf with respect to `rate` for each point in `X`.
         """
 
         X = np.asarray(X, dtype=float64)
         return np.where(self.loc <= X, 1.0 / self.rate - (X - self.loc), 0.0)
 
     def log_gradients(self, X):
-        """Calculates the gradients of the log-PDF with respect to its parameters of the
-        two-parametric exponential distribution:
+        """Calculates the gradients of the log-PDF w.r.t. its parameters.
 
         The gradients are computed for the parameters that are not fixed.
 
-        Args:
-            X (ArrayLike): The input data points at which to calculate the gradients.
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points at which to calculate the gradients.
 
-        Returns:
-            NDArray[np.float64]: An array where each row corresponds to a data point in `X`
-                and each column corresponds to the gradient with respect to a
-                specific optimizable parameter. The order of columns corresponds
-                to the sorted order of `self.params_to_optimize`.
+        Returns
+        -------
+        NDArray[np.float64]
+            An array where each row corresponds to a data point in `X`
+            and each column corresponds to the gradient with respect to a
+            specific optimizable parameter. The order of columns corresponds
+            to the sorted order of `self.params_to_optimize`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -173,21 +223,29 @@ class Exponential(ContinuousDistribution):
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):
-        """Generates random samples from the two-parametric exponential distribution.
+        """Generates random samples from the distribution.
 
-        Args:
-            size (int): The number of random samples to generate.
+        Parameters
+        ----------
+        size : int
+            The number of random samples to generate.
 
-        Returns:
-            NDArray[np.float64]: A NumPy array containing the generated samples.
+        Returns
+        -------
+        NDArray[np.float64]
+            A NumPy array containing the generated samples.
         """
 
         return np.asarray(expon.rvs(loc=self.loc, scale=1 / self.rate, size=size), dtype=float64)
 
     def __repr__(self) -> str:
-        """Returns a one-to-one representation of the object that can be used to recreate it.
+        """Returns a string representation of the object.
 
-        For example: Exponential(loc=0.0, rate=2.0)
+        Returns
+        -------
+        str
+            A string that can be used to recreate the object, e.g.,
+            "Exponential(loc=0.0, rate=2.0)".
         """
 
         return f"{self.__class__.__name__}(loc={self.loc}, rate={self.rate})"
