@@ -36,6 +36,8 @@ class ContinuousDistribution(ABC):
     Methods
     -------
 
+    **Implemented methods**
+
     .. autosummary::
         :toctree: generated/
 
@@ -45,6 +47,7 @@ class ContinuousDistribution(ABC):
         set_params_from_vector
         q_function
 
+    **Abstract methods**
 
     .. autosummary::
         :toctree: generated/
@@ -60,7 +63,7 @@ class ContinuousDistribution(ABC):
     **Key Functionality**
 
     - Parameter management: fixing and releasing parameters for optimization.
-    - Function calculation: standard implementation of `q_function`.
+    - Function calculation: standard implementation of :meth:`q_function`.
     - Parameter vectorization: getting and setting parameters from a numpy
       vector.
 
@@ -68,15 +71,15 @@ class ContinuousDistribution(ABC):
 
     Subclasses must:
 
-    1. Implement the :attr:`~name` property to identify the distribution.
+    1. Implement the :attr:`name` property to identify the distribution.
 
-    2. Implement the :attr:`~params` property to return all parameter names.
+    2. Implement the :attr:`params` property to return all parameter names.
 
-    3. Implement the abstract methods: :meth:`~pdf`, :meth:`~ppf`,
-       :meth:`~lpdf`, :meth:`~log_gradients`, and :meth:`~generate`.
+    3. Implement the abstract methods: :meth:`pdf`, :meth:`ppf`,
+       :meth:`lpdf`, :meth:`log_gradients`, and :meth:`generate`.
 
-    4. Define their parameters as instance attributes (e.g., `self.loc`,
-       `self.scale`) with a `Parameter` descriptor.
+    4. Define their parameters as instance attributes (e.g., :attr:`self.loc`,
+       :attr:`self.scale`) with a :class:`rework_pysatl_mpest.core.Parameter` descriptor.
 
     """
 
@@ -86,7 +89,6 @@ class ContinuousDistribution(ABC):
         """
 
         self._fixed_params: set[str] = set()
-
 
     def fix_param(self, name: str):
         """Fixes a parameter, excluding it from optimization and further changes.
@@ -120,8 +122,8 @@ class ContinuousDistribution(ABC):
 
         self._fixed_params.discard(name)
 
-    def get_params_vector(self, param_names: Sequence[str]) -> NDArray[float64]:
-        """Retrieves specified parameter values as a NumPy array.
+    def get_params_vector(self, param_names: Sequence[str]) -> list[float]:
+        """Retrieves specified parameter values as a list.
 
         Parameters
         ----------
@@ -130,46 +132,43 @@ class ContinuousDistribution(ABC):
 
         Returns
         -------
-        NDArray[np.float64]
-            A 1D NumPy array containing the values of the requested parameters
+        list[float]
+            A list containing the values of the requested parameters
             in the specified order.
 
         Raises
         ------
         ValueError
             If any of the requested parameter names do not exist in the
-            distribution's `params`.
+            distribution's :attr:`params`.
         """
 
         if not set(param_names).issubset(self.params):
             invalid_params = set(param_names) - self.params
             raise ValueError(f"Invalid parameter names provided: {invalid_params}")
 
-        return np.array([getattr(self, name) for name in param_names], dtype=float64)
+        return [getattr(self, name) for name in param_names]
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: ArrayLike):
-        """Sets parameter values from a NumPy array.
+    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[float]):
+        """Sets parameter values from a sequence of floats.
 
         Updates the distribution's parameters using values from the provided
-        vector. The order of values in the vector must correspond to the order
-        of names in `param_names`.
+        sequence. The order of values in the :attr:`vector` must correspond to the order
+        of names in :attr:`param_names`.
 
         Parameters
         ----------
         param_names : Sequence[str]
             A sequence of parameter names to update.
-        vector : ArrayLike
-            A 1D array-like object (e.g., list, NumPy array) of new values
-            for the parameters.
+        vector : Sequence[float]
+            A sequence of new values for the parameters.
 
         Raises
         ------
         ValueError
             If any parameter names do not exist, or if the length of
-            `param_names` does not match the length of `vector`.
+            :attr:`param_names` does not match the length of :attr:`vector`.
         """
-
-        vector = np.asarray(vector, dtype=float64)
 
         if len(param_names) != len(vector):
             raise ValueError("The number of parameter names must match the number of values in the vector.")
@@ -179,7 +178,7 @@ class ContinuousDistribution(ABC):
             raise ValueError(f"Invalid parameter names provided: {invalid_params}")
 
         for name, value in zip(param_names, vector):
-            setattr(self, name, value.item())
+            setattr(self, name, value)
 
     def q_function(self, X: ArrayLike, H: ArrayLike) -> float:
         """Calculates the Q-function (expectation of the complete log-likelihood).
@@ -190,7 +189,7 @@ class ContinuousDistribution(ABC):
             Input data array or scalar (sample).
         H : ArrayLike
             Array or scalar of posterior probabilities (responsibilities)
-            corresponding to each element of `X`.
+            corresponding to each element of :attr:`X`.
 
         Returns
         -------
@@ -229,7 +228,11 @@ class ContinuousDistribution(ABC):
             raise ValueError(f"X and H shapes must be equal, while got {X.shape} and {H.shape}")
 
         lpdf_values = self.lpdf(X)
-        return np.dot(H, lpdf_values).item()
+
+        # Handle case 0 * np.inf
+        safe_lpdf = np.where(H == 0, 0.0, lpdf_values)
+
+        return np.dot(H, safe_lpdf).item()
 
     @property
     @abstractmethod
@@ -259,7 +262,7 @@ class ContinuousDistribution(ABC):
         Returns
         -------
         NDArray[np.float64]
-            The PDF values corresponding to each point in `X`.
+            The PDF values corresponding to each point in :attr:`X`.
         """
 
     @abstractmethod
@@ -277,7 +280,7 @@ class ContinuousDistribution(ABC):
         Returns
         -------
         NDArray[np.float64]
-            The PPF values corresponding to each probability in `P`.
+            The PPF values corresponding to each probability in :attr:`P`.
         """
 
     @abstractmethod
@@ -296,7 +299,7 @@ class ContinuousDistribution(ABC):
         Returns
         -------
         NDArray[np.float64]
-            The log-PDF values corresponding to each point in `X`.
+            The log-PDF values corresponding to each point in :attr:`X`.
         """
 
     @abstractmethod
@@ -313,10 +316,10 @@ class ContinuousDistribution(ABC):
         Returns
         -------
         NDArray[np.float64]
-            An array where each row corresponds to a data point in `X` and
+            An array where each row corresponds to a data point in :attr:`X` and
             each column corresponds to the gradient with respect to a specific
             optimizable parameter. The order of columns corresponds to the
-            sorted order of `self.params_to_optimize`.
+            sorted order of :attr:`params_to_optimize`.
         """
 
     @abstractmethod

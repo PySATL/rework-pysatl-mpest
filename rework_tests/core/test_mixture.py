@@ -6,6 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pytest
@@ -332,3 +333,61 @@ class TestMixtureModelGenerate:
         samples_from_c1 = samples[samples < midpoint_between_means]
         proportion_c1 = len(samples_from_c1) / n_samples
         assert proportion_c1 == pytest.approx(weights[0], abs=0.05)
+
+
+class TestMixtureModelDunderMethods:
+    """Tests for special (dunder) methods of MixtureModel."""
+
+    @pytest.mark.parametrize(
+        "index, expected_component_index",
+        [
+            (0, 0),
+            (1, 1),
+            (-1, 1),  # Test negative indexing
+            (-2, 0),
+        ],
+    )
+    def test_getitem_retrieves_correct_component(
+        self,
+        mixture_model: MixtureModel,
+        exp_components: tuple[Exponential, ...],
+        index: int,
+        expected_component_index: int,
+    ):
+        """Tests that __getitem__ retrieves the correct component by index."""
+
+        assert mixture_model[index] is exp_components[expected_component_index]
+
+    def test_getitem_out_of_bounds_raises_index_error(self, mixture_model: MixtureModel):
+        """Tests that accessing an out-of-bounds index raises an IndexError."""
+
+        with pytest.raises(IndexError):
+            _ = mixture_model[2]
+        with pytest.raises(IndexError):
+            _ = mixture_model[-3]
+
+    @pytest.mark.parametrize("invalid_key", ["a_string", 1.5, (0, 1)])
+    def test_getitem_with_invalid_key_type_raises_type_error(self, mixture_model: MixtureModel, invalid_key: Any):
+        """Tests that using a non-integer key (that is not a slice) raises a TypeError."""
+
+        with pytest.raises(TypeError):
+            _ = mixture_model[invalid_key]
+
+    def test_iter_yields_correct_components_in_order(
+        self, mixture_model: MixtureModel, exp_components: tuple[Exponential, ...]
+    ):
+        """Tests that iterating over the model yields all components in the correct order."""
+
+        iterated_components = list(mixture_model)
+        assert iterated_components == list(exp_components)
+        assert all(comp_iter is comp_orig for comp_iter, comp_orig in zip(iterated_components, exp_components))
+
+    def test_iter_is_reusable(self, mixture_model: MixtureModel):
+        """Tests that the model can be iterated over multiple times."""
+
+        first_pass = list(mixture_model)
+        second_pass = list(mixture_model)
+
+        assert len(first_pass) == mixture_model.n_components
+        assert first_pass is not second_pass  # The lists are different objects
+        assert first_pass == second_pass  # But their contents are identical

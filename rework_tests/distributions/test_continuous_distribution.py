@@ -11,6 +11,10 @@ from numpy.typing import ArrayLike, NDArray
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 
 
+# Dummy distribution classes
+# --------------------------
+
+
 class DummyDistribution(ContinuousDistribution):
     """
     A concrete implementation of ContinuousDistribution for testing purposes.
@@ -73,11 +77,32 @@ class DummyDistribution(ContinuousDistribution):
         return np.arange(size, dtype=float)
 
 
+class DummyInfLpdfDistribution(DummyDistribution):
+    def lpdf(self, X: ArrayLike) -> NDArray[np.float64]:
+        """Returns -inf if X < 0, otherwise works like the parent."""
+
+        X = np.asarray(X, dtype=float)
+        return np.where(X < 0, -np.inf, np.log1p(X))
+
+
+# Fixtures
+# --------
+
+
 @pytest.fixture
 def dummy_dist() -> DummyDistribution:
     """Provides a fresh instance of DummyDistribution for each test."""
 
     return DummyDistribution(param1=10.0, param2=20.0)
+
+
+@pytest.fixture
+def dummy_inf_dist() -> DummyInfLpdfDistribution:
+    return DummyInfLpdfDistribution()
+
+
+# Tests
+# -----
 
 
 class TestContinuousDistribution:
@@ -86,6 +111,9 @@ class TestContinuousDistribution:
     using a concrete DummyDistribution implementation.
     """
 
+    # Tests initialization
+    # --------------------
+
     def test_initialization(self, dummy_dist: DummyDistribution):
         """Tests that the `_fixed_params` attribute is correctly initialized."""
 
@@ -93,12 +121,15 @@ class TestContinuousDistribution:
         assert isinstance(dummy_dist._fixed_params, set)
         assert dummy_dist._fixed_params == set()
 
+    # Test q_function method
+    # ----------------------
+
     @pytest.mark.parametrize(
         "X, H",
         [
             (np.array([1, 2, 3]), np.array([0.1, 0.5, 0.4])),
             (np.array([0]), np.array([1.0])),
-            (5, 0.5),
+            (5, 0.5),  # Handle scalar case
         ],
     )
     def test_q_function_correct_calculation(self, dummy_dist: DummyDistribution, X, H):
@@ -115,6 +146,24 @@ class TestContinuousDistribution:
         assert isinstance(q_val, float)
         assert np.isclose(q_val, expected_q_value)
 
+    def test_q_function_handle_inf_lpdfs(self, dummy_inf_dist: DummyInfLpdfDistribution):
+        """Tests that q_function correctly handles lpdf=-inf when the corresponding
+        responsibility H is 0, avoiding a `0 * inf = nan` result.
+        """
+
+        # X[0] will produce lpdf = -inf
+        X = np.array([-1.0, 1.0, 2.0])
+        # H[0] is 0.0, which should prevent nan
+        H = np.array([0.0, 0.5, 0.5])
+
+        # Manually calculate the expected result, treating 0 * -inf as 0
+        expected_q_value = 0.5 * np.log(2.0) + 0.5 * np.log(3.0)
+
+        q_val = dummy_inf_dist.q_function(X, H)
+
+        assert not np.isnan(q_val)
+        assert np.isclose(q_val, expected_q_value)
+
     def test_q_function_shape_mismatch_raises_error(self, dummy_dist: DummyDistribution):
         """Tests that q_function raises ValueError for mismatched shapes of X and H."""
 
@@ -122,6 +171,9 @@ class TestContinuousDistribution:
         H = np.array([0.5, 0.5])
         with pytest.raises(ValueError, match="X and H shapes must be equal"):
             dummy_dist.q_function(X, H)
+
+    # Test fix_params, unfix_params methods
+    # -------------------------------------
 
     def test_fix_param_success(self, dummy_dist: DummyDistribution):
         """Tests that a parameter can be successfully fixed."""
@@ -166,19 +218,22 @@ class TestContinuousDistribution:
         dummy_dist.unfix_param("param1")
         assert dummy_dist.params_to_optimize == {"param1"}
 
+    # Test get_params_vector method
+    # -----------------------------
+
     @pytest.mark.parametrize(
         "param_names, expected_vector",
         [
-            (["param1", "param2"], np.array([10.0, 20.0])),
-            (("param2", "param1"), np.array([20.0, 10.0])),
-            (["param1"], np.array([10.0])),
+            (["param1", "param2"], [10.0, 20.0]),
+            (("param2", "param1"), [20.0, 10.0]),
+            (["param1"], [10.0]),
         ],
     )
     def test_get_params_vector_success(self, dummy_dist: DummyDistribution, param_names, expected_vector):
         """Tests retrieving parameter values as a vector."""
 
         vector = dummy_dist.get_params_vector(param_names)
-        assert isinstance(vector, np.ndarray)
+        assert isinstance(vector, list)
         assert np.array_equal(vector, expected_vector)
 
     def test_get_params_vector_invalid_name_raises_error(self, dummy_dist: DummyDistribution):
@@ -186,6 +241,9 @@ class TestContinuousDistribution:
 
         with pytest.raises(ValueError, match="Invalid parameter names provided"):
             dummy_dist.get_params_vector(["param1", "invalid_param"])
+
+    # Test set_params_from_vector method
+    # ----------------------------------
 
     @pytest.mark.parametrize(
         "param_names, vector_to_set",
