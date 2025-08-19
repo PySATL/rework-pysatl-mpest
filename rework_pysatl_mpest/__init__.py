@@ -18,8 +18,8 @@ from rework_pysatl_mpest.core import MixtureModel, Parameter
 from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential
 
 __all__ = [
-    "MixtureModel",
-    "Parameter",
     "ContinuousDistribution",
     "Exponential",
+    "MixtureModel",
+    "Parameter",
 ]

@@ -1,0 +1,55 @@
+"""A module that provides an abstract class for implementing custom estimators."""
+
+__author__ = "Danil Totmyanin"
+__copyright__ = "Copyright (c) 2025 PySATL project"
+__license__ = "SPDX-License-Identifier: MIT"
+
+from abc import ABC, abstractmethod
+
+from numpy.typing import ArrayLike
+
+from rework_pysatl_mpest.core.mixture import MixtureModel
+
+
+class BaseEstimator(ABC):
+    """Abstract class for a mixture model parameter estimator.
+
+    This class defines the interface for all estimator algorithms. Estimators are responsible for
+    fitting the parameters of a :class:`~rework_pysatl_mpest.core.MixtureModel` to a given dataset.
+
+    Methods
+    -------
+    **Abstract methods**
+
+    .. autosummary::
+        :toctree: generated/
+
+        fit
+
+    Notes
+    -----
+    **Implementation Requirements**
+
+    Subclasses must implement the abstract method :meth:`fit` to provide a specific
+    estimation strategy.
+    """
+
+    @abstractmethod
+    def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
+        """Fits the mixture model to the provided data.
+
+        This method estimates the parameters of the model's components and their
+        corresponding weights based on the input data sample.
+
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data sample for fitting the model.
+        mixture : MixtureModel
+            The initial mixture model to be fitted.
+
+        Returns
+        -------
+        MixtureModel
+            The mixture model with estimated parameters.
+        """

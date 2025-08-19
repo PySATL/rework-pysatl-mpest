@@ -8,3 +8,5 @@ API Reference
 
    core/index
    distributions/index
+   estimators/index
+   optimizers/index
