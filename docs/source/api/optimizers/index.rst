@@ -1,0 +1,20 @@
+.. _api.optimizers:
+
+###############
+mpest.optimizers
+###############
+
+.. automodule:: rework_pysatl_mpest.optimizers
+   :no-members:
+
+------------------
+
+Abstract Classes
+================
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: class.rst
+
+   ~Optimizer
