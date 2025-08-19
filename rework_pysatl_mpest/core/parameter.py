@@ -34,7 +34,7 @@ class Parameter:
     ----------
     invariant : Callable[[float], bool]
         A function that checks if the parameter value is valid.
-        Returns `True` if the value is correct, and `False` otherwise.
+        Returns True if the value is correct, and False otherwise.
     error_message : str
         An error message that is raised if the invariant is not satisfied.
     public_name : str
@@ -52,8 +52,7 @@ class Parameter:
             # Location parameter can be any number
             loc = Parameter()
             # Scale parameter must be a positive number
-            scale = Parameter(invariant=lambda s: s > 0,
-                              error_message="Standard deviation (scale) must be positive.")
+            scale = Parameter(invariant=lambda s: s > 0, error_message="Standard deviation (scale) must be positive.")
 
     """
 
@@ -121,7 +120,7 @@ class Parameter:
         """Sets the parameter value after validation.
 
         Before setting a new value, it checks whether the parameter is
-        "fixed." Then, it validates the value using the `invariant` function.
+        "fixed." Then, it validates the value using the :attr:`invariant` function.
 
         Parameters
         ----------
@@ -135,7 +134,7 @@ class Parameter:
         AttributeError
             If an attempt is made to change a "fixed" parameter.
         ValueError
-            If the new value does not pass the `invariant` check.
+            If the new value does not pass the :attr:`invariant` check.
         """
 
         if self.public_name in getattr(instance, "_fixed_params", set()):

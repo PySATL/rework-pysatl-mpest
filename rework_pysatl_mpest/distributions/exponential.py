@@ -83,7 +83,7 @@ class Exponential(ContinuousDistribution):
         Returns
         -------
         NDArray[np.float64]
-            The PDF values corresponding to each point in `X`.
+            The PDF values corresponding to each point in :attr:`X`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -107,7 +107,7 @@ class Exponential(ContinuousDistribution):
         Returns
         -------
         NDArray[np.float64]
-            The PPF values corresponding to each probability in `P`.
+            The PPF values corresponding to each probability in :attr:`P`.
         """
 
         P = np.asarray(P, dtype=float64)
@@ -131,14 +131,14 @@ class Exponential(ContinuousDistribution):
         Returns
         -------
         NDArray[np.float64]
-            The log-PDF values corresponding to each point in `X`.
+            The log-PDF values corresponding to each point in :attr:`X`.
         """
 
         X = np.asarray(X, dtype=float64)
         return np.where(self.loc <= X, np.log(self.rate) - self.rate * (X - self.loc), -np.inf)
 
     def _dlog_loc(self, X):
-        """Partial derivative of the lpdf w.r.t. the `loc` parameter.
+        """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
 
         The derivative is non-zero only for `X >= loc`.
 
@@ -156,14 +156,14 @@ class Exponential(ContinuousDistribution):
         Returns
         -------
         NDArray[np.float64]
-            The gradient of the lpdf with respect to `loc` for each point in `X`.
+            The gradient of the lpdf with respect to :attr:`loc` for each point in ::attr`X`.
         """
 
         X = np.asarray(X, dtype=float64)
         return np.where(self.loc <= X, self.rate, 0.0)
 
     def _dlog_rate(self, X):
-        """Partial derivative of the lpdf w.r.t. the `rate` parameter.
+        """Partial derivative of the lpdf w.r.t. the :attr:`rate` parameter.
 
         The derivative is non-zero only for `X >= loc`.
 
@@ -181,7 +181,7 @@ class Exponential(ContinuousDistribution):
         Returns
         -------
         NDArray[np.float64]
-            The gradient of the lpdf with respect to `rate` for each point in `X`.
+            The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -200,10 +200,10 @@ class Exponential(ContinuousDistribution):
         Returns
         -------
         NDArray[np.float64]
-            An array where each row corresponds to a data point in `X`
+            An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
-            to the sorted order of `self.params_to_optimize`.
+            to the sorted order of :attr:`self.params_to_optimize`.
         """
 
         X = np.asarray(X, dtype=float64)

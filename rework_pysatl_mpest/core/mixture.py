@@ -164,7 +164,7 @@ class MixtureModel:
     def add_component(self, component: ContinuousDistribution, weight: float):
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
-        If `weight` is specified for the new component, the old component
+        If :attr:`weight` is specified for the new component, the old component
         weights are multiplied by `(1 - weight)`.
 
         Parameters
@@ -177,7 +177,7 @@ class MixtureModel:
         Raises
         ------
         ValueError
-            If the specified `weight` is outside the range (0, 1).
+            If the specified :attr:`weight` is outside the range (0, 1).
         """
 
         if not (0 < weight < 1):
@@ -234,7 +234,7 @@ class MixtureModel:
         Returns
         -------
         NDArray[np.float64]
-            The PDF values corresponding to each point in `X`.
+            The PDF values corresponding to each point in :attr:`X`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -252,7 +252,7 @@ class MixtureModel:
         Returns
         -------
         NDArray[np.float64]
-            The log-PDF values corresponding to each point in `X`.
+            The log-PDF values corresponding to each point in :attr:`X`.
         """
 
         X = np.atleast_1d(X)
@@ -262,7 +262,7 @@ class MixtureModel:
         return logsumexp(log_terms, axis=0)  # type: ignore
 
     def loglikelihood(self, X: ArrayLike) -> float:
-        """Log-likelihood of the complete data `X`.
+        """Log-likelihood of the complete data :attr:`X`.
 
         The log-likelihood is the sum of the log-PDF values for all data
         points.
@@ -301,7 +301,7 @@ class MixtureModel:
         Raises
         ------
         ValueError
-            If the number of columns in the responsibility matrix `H` does
+            If the number of columns in the responsibility matrix :attr:`H` does
             not match the number of components in the model.
         """
 
@@ -337,7 +337,7 @@ class MixtureModel:
         -------
         NDArray[np.float64]
             A NumPy array containing the generated samples. Returns an
-            empty array if `size` is not positive.
+            empty array if :attr:`size` is not positive.
         """
 
         if size == 0:
@@ -352,3 +352,33 @@ class MixtureModel:
         samples = np.concatenate(samples_list)
         np.random.shuffle(samples)
         return samples
+
+    def __getitem__(self, key: int):
+        """Retrieves components by index.
+
+        Parameters
+        ----------
+        key : int
+            The index of the component.
+
+        Returns
+        -------
+        ContinuousDistribution
+            A single component of the mixture
+        """
+
+        return self.components[key]
+
+    def __iter__(self):
+        """Returns an iterator over the mixture components.
+
+        This allows the `MixtureModel` instance to be used directly in
+        loops, such as a `for` loop, to iterate over its components.
+
+        Yields
+        ------
+        Iterator[ContinuousDistribution]
+            An iterator that yields the components of the mixture model.
+        """
+
+        return iter(self.components)
