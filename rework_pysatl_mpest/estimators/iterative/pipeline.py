@@ -20,6 +20,7 @@ from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.estimators.base_estimator import BaseEstimator
+from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, PipelineLogger
 from rework_pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
 from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
 from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
@@ -52,6 +53,9 @@ class Pipeline(BaseEstimator):
     pruners : Sequence[Pruner] | None, optional
         A sequence of strategies for removing components from the mixture model
         during fitting. Defaults to None, meaning no pruning is performed.
+    once_in_iterations: int, optional
+        The logging frequency. A value of `n` means logging occurs every
+        `n` iterations. Defaults to 1 (log every iteration).
 
     Attributes
     ----------
@@ -63,7 +67,9 @@ class Pipeline(BaseEstimator):
     pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-
+    logger : PipelineLogger
+        object that collects comprehensive information about each
+        iteration of a :class:`Pipeline` estimator.
     Raises
     ------
     ValueError
@@ -84,6 +90,7 @@ class Pipeline(BaseEstimator):
         steps: Sequence[PipelineStep],
         breakpointers: Sequence[Breakpointer],
         pruners: Sequence[Pruner] | None = None,
+        once_in_iterations: int = 1,
     ):
         self._validate_steps(list(steps))
 
@@ -96,6 +103,7 @@ class Pipeline(BaseEstimator):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners) if pruners else []  # self.pruners will always be list
         self.steps = list(steps)
+        self.logger = PipelineLogger(once_in_iterations)
 
     def _validate_steps(self, steps: list[PipelineStep]):
         """Validates the sequence of pipeline steps.
@@ -167,6 +175,19 @@ class Pipeline(BaseEstimator):
             for step in self.steps:
                 result_state = step.run(state)
                 if result_state.error:
+                    if len(self.logger) > 0:
+                        self.logger[-1].error = result_state.error
+                    else:
+                        self.logger.log(
+                            IterationRecord(
+                                self.logger._counter,
+                                result_state.curr_mixture,
+                                result_state.X,
+                                result_state.H,
+                                None,
+                                result_state.error,
+                            )
+                        )
                     warnings.warn(
                         f"Pipeline fitting stopped prematurely due to an error in step "
                         f"'{step.__class__.__name__}': {state.error}",
@@ -178,6 +199,10 @@ class Pipeline(BaseEstimator):
             # Pruning
             for pruner in self.pruners:
                 state = pruner.prune(state)
+            # Log
+            self.logger.log(
+                IterationRecord(self.logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
+            )
 
             # Checking stopping criteria
             if any(breakpointer.check(state) for breakpointer in self.breakpointers):

@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, PipelineLogger
 from rework_pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
 from rework_pysatl_mpest.estimators.iterative.pipeline import Pipeline
 from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
@@ -188,6 +189,7 @@ class TestPipelineInitialization:
         assert isinstance(pipeline.steps, list)
         assert isinstance(pipeline.breakpointers, list)
         assert isinstance(pipeline.pruners, list)
+        assert isinstance(pipeline.logger, PipelineLogger)
 
     def test_init_with_none_pruners_creates_empty_list(self):
         """Tests that an empty list is created if pruners=None."""
@@ -206,6 +208,19 @@ class TestPipelineInitialization:
 
         with pytest.raises(ValueError, match="The 'breakpointers' list cannot be empty"):
             Pipeline(steps, [])
+
+    def test_init_creates_logger_with_correct_frequency(self):
+        """Tests that the logger is created with the correct frequency parameter."""
+
+        steps = [MockSingleStep()]
+        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+
+        pipeline_default = Pipeline(steps, breakpointers)
+        assert pipeline_default.logger.once_in_iterations == 1
+
+        pipeline_custom = Pipeline(steps, breakpointers, once_in_iterations=5)
+        FREQUENCY_OF_LOGS = 5
+        assert pipeline_custom.logger.once_in_iterations == FREQUENCY_OF_LOGS
 
 
 # --- Step Validation Tests ---
@@ -429,3 +444,38 @@ class TestPipelineFit:
         expected_order = ["A", "B", "pruner", "check_breakpointer"]
 
         assert call_log == expected_order
+
+    def test_fit_logs_iterations_to_public_logger(self, initial_mixture, sample_data):
+        """Tests that the fit method logs iterations to the public logger attribute."""
+
+        steps = [MockSingleStep()]
+        breakpointers = [MockBreakpointer(stop_at_iteration=3)]
+
+        pipeline = Pipeline(steps, breakpointers)
+
+        assert len(pipeline.logger) == 0
+
+        fitted_mixture = pipeline.fit(sample_data, initial_mixture)
+
+        assert len(pipeline.logger) > 0
+        assert isinstance(pipeline.logger[0], IterationRecord)
+        assert pipeline.logger[0].iteration == 0
+        assert pipeline.logger[0].mixture == fitted_mixture
+
+    def test_fit_logs_with_custom_frequency(self, initial_mixture, sample_data):
+        """Tests that logging occurs at the specified frequency."""
+
+        steps = [MockSingleStep()]
+
+        breakpointers = [MockBreakpointer(stop_at_iteration=5)]
+
+        pipeline = Pipeline(steps, breakpointers, once_in_iterations=2)
+
+        fitted_mixture = pipeline.fit(sample_data, initial_mixture)
+        EXPECTED_LEN_OF_LOGGER = 2
+        EXPECTED_ITERATIONS = [0, 2]
+
+        assert len(pipeline.logger) == EXPECTED_LEN_OF_LOGGER
+        assert pipeline.logger[0].iteration == EXPECTED_ITERATIONS[0]
+        assert pipeline.logger[1].iteration == EXPECTED_ITERATIONS[1]
+        assert pipeline.logger[1].mixture == fitted_mixture
