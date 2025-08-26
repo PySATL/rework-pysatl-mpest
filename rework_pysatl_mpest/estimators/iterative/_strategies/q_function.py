@@ -73,7 +73,7 @@ def q_function_strategy(
     X, H_j = state.X, state.H[:, block.component_id]
     component_id = block.component_id
 
-    params_to_optimize = list(component.params_to_optimize.intersection(block.params_to_optimize))
+    params_to_optimize = sorted(list(component.params_to_optimize.intersection(block.params_to_optimize)))
     temp_comp = deepcopy(component)
 
     def target(vector_params):
