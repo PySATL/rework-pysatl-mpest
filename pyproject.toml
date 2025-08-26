@@ -25,6 +25,7 @@ seaborn = ">=0.13.2,<0.14.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
+pytest-mock = "^3.14.1"
 pre-commit = "^4.1.0"
 ruff = "^0.9.6"
 mypy = "==1.13.0"
