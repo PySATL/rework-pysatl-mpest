@@ -15,17 +15,14 @@ Mpest documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: API:
+   :caption: API
 
    api/index
 
 .. toctree::
    :maxdepth: 3
-   :caption: Design:
+   :caption: Design
    :hidden:
    :titlesonly:
 
    design/index
-   design/tree
-   design/usecase_activity
-   design/modules/index

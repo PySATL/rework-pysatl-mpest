@@ -1,0 +1,7 @@
+
+remove\_component
+=================
+
+.. currentmodule:: rework_pysatl_mpest.core
+
+.. automethod:: rework_pysatl_mpest.core.MixtureModel.remove_component

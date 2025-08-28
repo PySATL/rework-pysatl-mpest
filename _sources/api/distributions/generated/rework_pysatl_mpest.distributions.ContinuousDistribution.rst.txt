@@ -1,0 +1,84 @@
+﻿
+ContinuousDistribution
+======================
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.ContinuousDistribution
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~ContinuousDistribution.fix_param
+
+   ~ContinuousDistribution.generate
+
+   ~ContinuousDistribution.get_params_vector
+
+   ~ContinuousDistribution.log_gradients
+
+   ~ContinuousDistribution.lpdf
+
+   ~ContinuousDistribution.pdf
+
+   ~ContinuousDistribution.ppf
+
+   ~ContinuousDistribution.q_function
+
+   ~ContinuousDistribution.set_params_from_vector
+
+   ~ContinuousDistribution.unfix_param
+
+
+

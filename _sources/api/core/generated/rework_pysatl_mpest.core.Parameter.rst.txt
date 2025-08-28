@@ -1,0 +1,14 @@
+﻿
+Parameter
+=========
+
+.. currentmodule:: rework_pysatl_mpest.core
+
+.. autoclass:: rework_pysatl_mpest.core.Parameter
+   :show-inheritance:
+
+
+
+    
+
+

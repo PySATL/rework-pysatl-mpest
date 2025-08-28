@@ -1,0 +1,84 @@
+﻿
+Exponential
+===========
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Exponential
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Exponential.fix_param
+
+   ~Exponential.generate
+
+   ~Exponential.get_params_vector
+
+   ~Exponential.log_gradients
+
+   ~Exponential.lpdf
+
+   ~Exponential.pdf
+
+   ~Exponential.ppf
+
+   ~Exponential.q_function
+
+   ~Exponential.set_params_from_vector
+
+   ~Exponential.unfix_param
+
+
+

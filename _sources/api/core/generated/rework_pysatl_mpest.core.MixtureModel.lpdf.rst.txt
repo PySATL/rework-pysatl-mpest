@@ -1,0 +1,7 @@
+
+lpdf
+====
+
+.. currentmodule:: rework_pysatl_mpest.core
+
+.. automethod:: rework_pysatl_mpest.core.MixtureModel.lpdf
