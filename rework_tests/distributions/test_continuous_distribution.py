@@ -10,7 +10,6 @@ import pytest
 from numpy.typing import ArrayLike, NDArray
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 
-
 # Dummy distribution classes
 # --------------------------
 

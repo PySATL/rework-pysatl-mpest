@@ -22,17 +22,13 @@ numpy = ">=2.2.3,<3.0.0"
 scikit-learn = ">=1.6.1,<2.0.0"
 scipy = ">=1.15.2,<2.0.0"
 seaborn = ">=0.13.2,<0.14.0"
-pydata-sphinx-theme = "^0.16.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 pre-commit = "^4.1.0"
 ruff = "^0.9.6"
 mypy = "==1.13.0"
-sphinx = "^8.2.0"
-sphinxcontrib-mermaid = "^1.0.0"
 hypothesis = "^6.131.7"
-myst-parser = "^4.0.1"
 types-pyyaml = "^6.0.12.20250516"
 types-tqdm = "^4.67.0.20250516"
 
@@ -41,11 +37,17 @@ tqdm = "^4.67.1"
 multiprocess = "^0.70.17"
 ruamel-yaml = "^0.18.10"
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "^8.2.3"
+myst-parser = "^4.0.1"
+sphinxcontrib-mermaid = "^1.0.0"
+pydata-sphinx-theme = "^0.16.1"
+
 
 [tool.ruff]
 line-length = 120
 output-format = "grouped"
-src = ["rework_pysatl_mpest", "mpest", "experimental_env", "tests"]
+src = ["rework_pysatl_mpest", "mpest", "experimental_env", "rework_tests", "tests"]
 exclude = ["*.ipynb"]
 
 [tool.ruff.format]
@@ -59,6 +61,7 @@ ignore = ["PLR0913"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
+
 
 [tool.mypy]
 files = ["rework_pysatl_mpest", "mpest", "experimental_env"]
