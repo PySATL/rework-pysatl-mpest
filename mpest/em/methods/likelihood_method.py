@@ -79,8 +79,9 @@ class ClusteringEStep(AExpectation[EResult]):
     MIN_SAMPLES = 2
     MIN_PROB = 1e-100
     MIN_COMPONENT_SIZE = 10
+    EPS = 0.3
 
-    def __init__(self, models: list[AModel], clusterizer, eps: float = 0.3, accurate_init: bool = False) -> None:
+    def __init__(self, models: list[AModel], clusterizer, eps: float = EPS, accurate_init: bool = False) -> None:
         self._n_components = len(models)
         self._models = models
         self._initialized = False
@@ -103,19 +104,20 @@ class ClusteringEStep(AExpectation[EResult]):
     ) -> tuple[int | None, list[float] | None, float]:
         best_k, best_params, best_score = None, None, -np.inf
         for k, X_k in clusters.items():
-            if len(X_k) < self.MIN_SAMPLES:
+            X_flat = X_k.flatten()
+            if len(X_flat) < self.MIN_SAMPLES:
                 continue
             try:
                 if isinstance(model, WeibullModelExp):
-                    params = self._estimate_weibull_params(X_k)
+                    params = self._estimate_weibull_params(X_flat)
                     params_arr = np.clip(params, [0.1, 0.1], [2.0, 1000.0])
                     params = [float(params_arr[0]), float(params_arr[1])]
-                    score = np.sum(np.log(weibull_min.pdf(X_k, *params)))
+                    score = np.sum(np.clip(weibull_min.logpdf(X_flat, *params), -1e10, 1e10))
                 else:
-                    mean = np.mean(X_k)
-                    std = np.clip(np.std(X_k), 0.1, 100.0)
+                    mean = np.mean(X_flat)
+                    std = np.clip(np.std(X_flat), 0.1, 100.0)
                     params = [mean, std]
-                    score = np.sum(np.log(norm.pdf(X_k, mean, std)))
+                    score = np.sum(np.clip(norm.logpdf(X_flat, mean, std), -1e10, 1e10))
                 if score > best_score:
                     best_score = score
                     best_k = k
