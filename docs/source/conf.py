@@ -9,7 +9,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../../'))
+sys.path.insert(0, os.path.abspath("../../"))
 
 project = "Mpest"
 copyright = "2025, Danil Totmyanin, Anton Kazancev"
@@ -26,8 +26,8 @@ extensions = [
     "sphinx.ext.intersphinx",
     "myst_parser",
     "sphinx.ext.mathjax",
-    'sphinxcontrib.mermaid',
-    'sphinx.ext.autosummary'
+    "sphinxcontrib.mermaid",
+    "sphinx.ext.autosummary",
 ]
 
 autodoc_typehints = "description"
@@ -57,7 +57,7 @@ myst_enable_extensions = [
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'pydata_sphinx_theme'
+html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 mermaid_init_js = """
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs'
@@ -102,7 +102,9 @@ window.theme_observer = theme_observer;
 
 import os
 import re
+
 from sphinx.ext.autosummary import generate as autosummary
+
 
 def autosummary_from_docstrings(app):
     """
@@ -114,23 +116,20 @@ def autosummary_from_docstrings(app):
     sources = []
 
     # Проходим по объектам из автодока
-    for name, obj in list(app.env.domains['py'].data['objects'].items()):
+    for name, obj in list(app.env.domains["py"].data["objects"].items()):
         doc = app.env.doc2path(obj[0], base=None)
         if not os.path.isfile(doc):
             continue
-        with open(doc, "r", encoding="utf-8") as f:
+        with open(doc, encoding="utf-8") as f:
             text = f.read()
         for match in pattern.finditer(text):
             sources.append(doc)
 
     if sources:
         autosummary.generate_autosummary_docs(
-            sources,
-            suffix=".rst",
-            base_path=app.srcdir,
-            imported_members=True,
-            app=app
+            sources, suffix=".rst", base_path=app.srcdir, imported_members=True, app=app
         )
+
 
 def setup(app):
     app.connect("builder-inited", autosummary_from_docstrings)
