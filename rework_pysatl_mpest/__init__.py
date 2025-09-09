@@ -20,7 +20,7 @@ from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponentia
 __all__ = [
     "ContinuousDistribution",
     "Exponential",
-    "Uniform",
     "MixtureModel",
     "Parameter",
+    "Uniform",
 ]
