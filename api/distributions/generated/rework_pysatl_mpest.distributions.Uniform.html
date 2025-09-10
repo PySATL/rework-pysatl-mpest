@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Exponential &#8212; Mpest 1.0 documentation</title>
+    <title>Uniform &#8212; Mpest 1.0 documentation</title>
   
   
   
@@ -41,11 +41,11 @@
     <script src="../../../_static/documentation_options.js?v=f2a433a1"></script>
     <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'api/distributions/generated/rework_pysatl_mpest.distributions.Exponential';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/distributions/generated/rework_pysatl_mpest.distributions.Uniform';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Uniform" href="rework_pysatl_mpest.distributions.Uniform.html" />
-    <link rel="prev" title="ContinuousDistribution" href="rework_pysatl_mpest.distributions.ContinuousDistribution.html" />
+    <link rel="next" title="Design" href="../../../design/index.html" />
+    <link rel="prev" title="Exponential" href="rework_pysatl_mpest.distributions.Exponential.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -273,8 +273,8 @@
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">mpest.distributions</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="rework_pysatl_mpest.distributions.ContinuousDistribution.html">ContinuousDistribution</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Exponential</a></li>
-<li class="toctree-l2"><a class="reference internal" href="rework_pysatl_mpest.distributions.Uniform.html">Uniform</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rework_pysatl_mpest.distributions.Exponential.html">Exponential</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Uniform</a></li>
 </ul>
 </details></li>
 </ul>
@@ -323,7 +323,7 @@
     
     <li class="breadcrumb-item"><a href="../index.html" class="nav-link">mpest.distributions</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Exponential</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Uniform</span></li>
   </ul>
 </nav>
 </div>
@@ -340,43 +340,50 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="exponential">
-<h1>Exponential<a class="headerlink" href="#exponential" title="Link to this heading">#</a></h1>
+  <section id="uniform">
+<h1>Uniform<a class="headerlink" href="#uniform" title="Link to this heading">#</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="rework_pysatl_mpest.distributions.Exponential">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Exponential</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rework_pysatl_mpest/distributions/exponential.html#Exponential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rework_pysatl_mpest.distributions.Exponential" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py" id="rework_pysatl_mpest.distributions.Uniform">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Uniform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">left_border</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_border</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rework_pysatl_mpest/distributions/uniform.html#Uniform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rework_pysatl_mpest.distributions.Uniform" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="rework_pysatl_mpest.distributions.ContinuousDistribution.html#rework_pysatl_mpest.distributions.ContinuousDistribution" title="rework_pysatl_mpest.distributions.continuous_dist.ContinuousDistribution"><code class="xref py py-class docutils literal notranslate"><span class="pre">ContinuousDistribution</span></code></a></p>
-<p>Class for the two-parameter exponential distribution.</p>
+<p>The Uniform continuous probability distribution.</p>
+<p>The uniform distribution describes an experiment where there is an arbitrary
+outcome that lies between certain bounds. The probability is constant between
+these bounds and zero elsewhere.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>loc</strong> (<em>float</em>) – Location parameter. Can be any real number.</p></li>
-<li><p><strong>rate</strong> (<em>float</em>) – Rate parameter (lambda). Must be positive.</p></li>
+<li><p><strong>left_border</strong> (<em>float</em>) – Left border of section [a, b]. Can be any real number.</p></li>
+<li><p><strong>right_border</strong> (<em>float</em>) – Right border of section [a, b]. Can be any real number.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>loc</strong> (<em>float</em>) – Location parameter.</p></li>
-<li><p><strong>rate</strong> (<em>float</em>) – Rate parameter.</p></li>
+<li><p><strong>left_border</strong> (<em>float</em>) – Left border of section [a, b].</p></li>
+<li><p><strong>right_border</strong> (<em>float</em>) – Right border of section [a, b].</p></li>
 </ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If left_border is greater than or equal to right_border, or if either
+    parameter is not finite.</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Exponential.ppf.html#rework_pysatl_mpest.distributions.Exponential.ppf" title="rework_pysatl_mpest.distributions.Exponential.ppf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ppf</span></code></a>(P)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Uniform.ppf.html#rework_pysatl_mpest.distributions.Uniform.ppf" title="rework_pysatl_mpest.distributions.Uniform.ppf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ppf</span></code></a>(P)</p></td>
 <td><p>Percent Point Function (PPF) or quantile function.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Exponential.pdf.html#rework_pysatl_mpest.distributions.Exponential.pdf" title="rework_pysatl_mpest.distributions.Exponential.pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pdf</span></code></a>(X)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Uniform.pdf.html#rework_pysatl_mpest.distributions.Uniform.pdf" title="rework_pysatl_mpest.distributions.Uniform.pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pdf</span></code></a>(X)</p></td>
 <td><p>Probability density function (PDF).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Exponential.lpdf.html#rework_pysatl_mpest.distributions.Exponential.lpdf" title="rework_pysatl_mpest.distributions.Exponential.lpdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lpdf</span></code></a>(X)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Uniform.lpdf.html#rework_pysatl_mpest.distributions.Uniform.lpdf" title="rework_pysatl_mpest.distributions.Uniform.lpdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lpdf</span></code></a>(X)</p></td>
 <td><p>Log of the Probability Density Function (LPDF).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Exponential.log_gradients.html#rework_pysatl_mpest.distributions.Exponential.log_gradients" title="rework_pysatl_mpest.distributions.Exponential.log_gradients"><code class="xref py py-obj docutils literal notranslate"><span class="pre">log_gradients</span></code></a>(X)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Uniform.log_gradients.html#rework_pysatl_mpest.distributions.Uniform.log_gradients" title="rework_pysatl_mpest.distributions.Uniform.log_gradients"><code class="xref py py-obj docutils literal notranslate"><span class="pre">log_gradients</span></code></a>(X)</p></td>
 <td><p>Calculates the gradients of the log-PDF w.r.t.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Exponential.generate.html#rework_pysatl_mpest.distributions.Exponential.generate" title="rework_pysatl_mpest.distributions.Exponential.generate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate</span></code></a>(size)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="rework_pysatl_mpest.distributions.Uniform.generate.html#rework_pysatl_mpest.distributions.Uniform.generate" title="rework_pysatl_mpest.distributions.Uniform.generate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate</span></code></a>(size)</p></td>
 <td><p>Generates random samples from the distribution.</p></td>
 </tr>
 </tbody>
@@ -397,20 +404,20 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="rework_pysatl_mpest.distributions.ContinuousDistribution.html"
+       href="rework_pysatl_mpest.distributions.Exponential.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">ContinuousDistribution</p>
+        <p class="prev-next-title">Exponential</p>
       </div>
     </a>
     <a class="right-next"
-       href="rework_pysatl_mpest.distributions.Uniform.html"
+       href="../../../design/index.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Uniform</p>
+        <p class="prev-next-title">Design</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -433,7 +440,7 @@
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rework_pysatl_mpest.distributions.Exponential"><code class="docutils literal notranslate"><span class="pre">Exponential</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rework_pysatl_mpest.distributions.Uniform"><code class="docutils literal notranslate"><span class="pre">Uniform</span></code></a></li>
 </ul>
   </nav></div>
 
@@ -441,7 +448,7 @@
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../../../_sources/api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.rst.txt"
+      <li><a href="../../../_sources/api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div></div>

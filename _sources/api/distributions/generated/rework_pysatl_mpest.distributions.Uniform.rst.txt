@@ -1,0 +1,84 @@
+﻿
+Uniform
+=======
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Uniform
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Uniform.fix_param
+
+   ~Uniform.generate
+
+   ~Uniform.get_params_vector
+
+   ~Uniform.log_gradients
+
+   ~Uniform.lpdf
+
+   ~Uniform.pdf
+
+   ~Uniform.ppf
+
+   ~Uniform.q_function
+
+   ~Uniform.set_params_from_vector
+
+   ~Uniform.unfix_param
+
+
+
