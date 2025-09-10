@@ -9,8 +9,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.distributions.uniform import Uniform
 
-__all__ = [
-    "ContinuousDistribution",
-    "Exponential",
-]
+__all__ = ["ContinuousDistribution", "Exponential", "Uniform"]

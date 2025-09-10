@@ -30,3 +30,4 @@ Continuous distributions
    :template: class.rst
 
    ~Exponential
+   ~Uniform
