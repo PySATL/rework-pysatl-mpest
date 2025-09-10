@@ -1,6 +1,6 @@
 """Module providing uniform distribution class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -139,7 +139,8 @@ class Uniform(ContinuousDistribution):
             \\ln f(x | \\alpha, \\beta) = -\\ln(\\beta - \\alpha)
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
-        right_border parameter. The function is -inf for :math:`\\alpha >= \\beta`
+        right_border parameter. The function is -inf for :math:`\\alpha >= \\beta` or
+        when x not in range.
 
         Parameters
         ----------
@@ -159,7 +160,12 @@ class Uniform(ContinuousDistribution):
     def _dlog_left_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`left_border` parameter.
 
-        The derivative is non-zero only for `left_border <= X <= right_border`.
+        .. math::
+
+            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\alpha} = frac{1.0}{(\\beta - \\alpha)}
+
+        where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
+        right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
         """
 
         X = np.asarray(X, dtype=float64)
@@ -169,7 +175,12 @@ class Uniform(ContinuousDistribution):
     def _dlog_right_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`right_border` parameter.
 
-        The derivative is non-zero only for `left_border <= X <= right_border`.
+        .. math::
+
+            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\beta} = frac{-1.0}{(\\beta - \\alpha)}
+
+        where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
+        right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
         """
 
         X = np.asarray(X, dtype=float64)

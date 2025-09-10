@@ -1,6 +1,6 @@
 """Tests for Uniform class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -14,8 +14,6 @@ from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions.uniform import Uniform
 from scipy.integrate import quad
 from scipy.stats import kstest, uniform
-
-st_left_border = st.floats(min_value=-1e3, max_value=1e3, allow_nan=False, allow_infinity=False)
 
 
 @st.composite
