@@ -9,7 +9,7 @@ from rework_pysatl_mpest import ContinuousDistribution, Exponential
 @singledispatch
 def find_best_cluster_for_model(
     model: ContinuousDistribution, clusters: dict[int, np.ndarray], min_samples=10
-    ) -> tuple[int | None, tuple[type[ContinuousDistribution], dict[str, float]], float]:
+) -> tuple[int | None, tuple[type[ContinuousDistribution], dict[str, float]], float]:
     best_k, best_params, best_score = None, {}, -np.inf
     for k, X_k in clusters.items():
         x_flat = X_k.flatten()
@@ -18,7 +18,7 @@ def find_best_cluster_for_model(
         try:
             mean = np.mean(x_flat)
             std = np.clip(np.std(x_flat), 0.1, 100.0)
-            params = {'mean': float(mean), 'std': float(std)}
+            params = {"mean": float(mean), "std": float(std)}
             score = np.sum(np.clip(norm.logpdf(x_flat, mean, std), -1e10, 1e10))
             if score > best_score:
                 best_score = score
@@ -32,7 +32,7 @@ def find_best_cluster_for_model(
 @find_best_cluster_for_model.register(Exponential)
 def _(
     model: Exponential, clusters: dict[int, np.ndarray], min_samples=10
-    ) -> tuple[int | None, tuple[type[Exponential], dict[str, float]], float]:
+) -> tuple[int | None, tuple[type[Exponential], dict[str, float]], float]:
     best_k, best_params, best_score = None, {}, -np.inf
     for k, X_k in clusters.items():
         x_flat = X_k.flatten()
@@ -59,7 +59,7 @@ def _(
             if score > best_score:
                 best_score = score
                 best_k = k
-                best_params = {'loc': loc_est, 'rate': rate_est}
+                best_params = {"loc": loc_est, "rate": rate_est}
 
         except (ValueError, ZeroDivisionError, RuntimeWarning):
             continue
