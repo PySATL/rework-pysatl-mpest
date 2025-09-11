@@ -18,9 +18,11 @@ class ClusterizeInitializer(Initializer):
         self.models: list[ContinuousDistribution] = []
 
     def _clusterize(self, X: np.ndarray, clusterizer: Any) -> np.ndarray:
-        if (hasattr(clusterizer, "n_clusters") and
-                self.n_components is not None and
-                self.n_components != clusterizer.n_clusters):
+        if (
+            hasattr(clusterizer, "n_clusters")
+            and self.n_components is not None
+            and self.n_components != clusterizer.n_clusters
+        ):
             raise ValueError("Count of components and clusters doesn't match.")
 
         X = X.reshape(-1, 1)
@@ -37,8 +39,7 @@ class ClusterizeInitializer(Initializer):
 
         return labels
 
-    def _accurate_init(self, X: np.ndarray, labels: np.ndarray
-                       ) -> tuple[list[ContinuousDistribution], list[float]]:
+    def _accurate_init(self, X: np.ndarray, labels: np.ndarray) -> tuple[list[ContinuousDistribution], list[float]]:
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _accurate_init")
 
@@ -70,8 +71,7 @@ class ClusterizeInitializer(Initializer):
 
         return distributions, weights
 
-    def _fast_init(self, X: np.ndarray, labels: np.ndarray
-                   ) -> tuple[list[ContinuousDistribution], list[float]]:
+    def _fast_init(self, X: np.ndarray, labels: np.ndarray) -> tuple[list[ContinuousDistribution], list[float]]:
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _fast_init")
 
