@@ -9,12 +9,10 @@ from rework_pysatl_mpest.optimizers.optimizer import Optimizer
 
 NUMERICAL_TOLERANCE = 0.33
 
+
 @singledispatch
 def q_function_strategy(
-        component: ContinuousDistribution,
-        X: np.ndarray,
-        H_j: np.ndarray,
-        optimizer: Optimizer
+    component: ContinuousDistribution, X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
 ) -> dict[str, float]:
     params_to_optimize = sorted(list(component.params_to_optimize))
     temp_comp = deepcopy(component)
@@ -31,12 +29,7 @@ def q_function_strategy(
 
 
 @q_function_strategy.register(Exponential)
-def _(
-        component: Exponential,
-        X: np.ndarray,
-        H_j: np.ndarray,
-        optimizer: Optimizer
-) -> dict[str, float]:
+def _(component: Exponential, X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer) -> dict[str, float]:
     new_params = {}
     N_j = np.sum(H_j).item()
 
