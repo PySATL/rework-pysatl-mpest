@@ -1,0 +1,30 @@
+﻿
+Optimizer
+=========
+
+.. currentmodule:: rework_pysatl_mpest.optimizers
+
+.. autoclass:: rework_pysatl_mpest.optimizers.Optimizer
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Optimizer.minimize
+
+
+

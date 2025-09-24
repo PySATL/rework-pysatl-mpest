@@ -1,0 +1,7 @@
+
+fit
+===
+
+.. currentmodule:: rework_pysatl_mpest.estimators.iterative
+
+.. automethod:: rework_pysatl_mpest.estimators.iterative.Pipeline.fit

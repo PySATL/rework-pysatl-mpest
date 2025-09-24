@@ -1,0 +1,30 @@
+﻿
+MaximizationStep
+================
+
+.. currentmodule:: rework_pysatl_mpest.estimators.iterative
+
+.. autoclass:: rework_pysatl_mpest.estimators.iterative.MaximizationStep
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~MaximizationStep.run
+
+
+

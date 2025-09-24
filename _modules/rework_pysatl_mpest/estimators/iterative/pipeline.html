@@ -1,0 +1,650 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rework_pysatl_mpest.estimators.iterative.pipeline &#8212; Mpest 1.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs'
+
+const make_config = () => {
+  let prefersDark = localStorage.getItem('theme') === 'dark' || (localStorage.getItem('theme') === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return({
+    startOnLoad:false,
+    darkMode: prefersDark,
+    theme: prefersDark ? "dark" : "default"
+  })
+}
+
+const init_mermaid = () => {
+    let graphs = document.querySelectorAll(".mermaid");
+    [...graphs].forEach((element) => {
+        if (!element.hasAttribute("data-source")) {
+            element.setAttribute("data-source", element.innerText);
+        }
+        if (element.hasAttribute("data-processed")) {
+            let new_elt = document.createElement("pre");
+            let graph_source = element.getAttribute("data-source");
+            new_elt.appendChild(document.createTextNode(graph_source));
+            new_elt.classList.add("mermaid");
+            new_elt.setAttribute("data-source", graph_source);
+            element.replaceWith(new_elt);
+        }
+    });
+
+    let config = make_config()
+    mermaid.initialize(config);
+    mermaid.run();
+}
+
+init_mermaid();
+
+let theme_observer = new MutationObserver(init_mermaid);
+let body = document.getElementsByTagName("body")[0];
+theme_observer.observe(body, {attributes: true});
+window.theme_observer = theme_observer;
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/rework_pysatl_mpest/estimators/iterative/pipeline';</script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Mpest 1.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../design/index.html">
+    Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../design/index.html">
+    Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">rework_pysatl_mpest.estimators.iterative.pipeline</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for rework_pysatl_mpest.estimators.iterative.pipeline</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Provides a configurable, iterative estimator for mixture models.</span>
+
+<span class="sd">This module defines the `Pipeline` class, which orchestrates an iterative</span>
+<span class="sd">estimation process by executing a sequence of processing steps. It allows for</span>
+<span class="sd">the flexible construction of algorithms like Expectation-Maximization (EM) by</span>
+<span class="sd">combining different steps (:class:`PipelineStep`), stopping criteria (:class:`Breakpointer`),</span>
+<span class="sd">and component pruning strategies (:class:`Pruner`).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Danil Totmyanin&quot;</span>
+<span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">&quot;Copyright (c) 2025 PySATL project&quot;</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;SPDX-License-Identifier: MIT&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.core.mixture</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.base_estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative._logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationRecord</span><span class="p">,</span> <span class="n">PipelineLogger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.breakpointer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Breakpointer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pruner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pruner</span>
+
+
+<div class="viewcode-block" id="Pipeline">
+<a class="viewcode-back" href="../../../../api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html#rework_pysatl_mpest.estimators.iterative.Pipeline">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Pipeline</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An estimator that fits a mixture model via a configurable iterative process.</span>
+
+<span class="sd">    The pipeline executes a sequence of defined steps in a loop. After each full</span>
+<span class="sd">    sequence of steps, pruning strategies are applied, and stopping conditions</span>
+<span class="sd">    are checked. The loop continues until a breakpointer signals to stop.</span>
+<span class="sd">    This allows for building complex, multi-stage estimation algorithms,</span>
+<span class="sd">    such as variants of the EM algorithm.</span>
+
+<span class="sd">    The core components used for configuration are:</span>
+
+<span class="sd">    - :class:`.PipelineStep`</span>
+<span class="sd">    - :class:`Breakpointer`</span>
+<span class="sd">    - :class:`Pruner`</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    steps : Sequence[PipelineStep]</span>
+<span class="sd">        An ordered sequence of steps to be executed in each iteration of the</span>
+<span class="sd">        pipeline.</span>
+<span class="sd">    breakpointers : Sequence[Breakpointer]</span>
+<span class="sd">        A sequence of strategies that define the stopping conditions for the</span>
+<span class="sd">        iterative process. This list cannot be empty.</span>
+<span class="sd">    pruners : Sequence[Pruner] | None, optional</span>
+<span class="sd">        A sequence of strategies for removing components from the mixture model</span>
+<span class="sd">        during fitting. Defaults to None, meaning no pruning is performed.</span>
+<span class="sd">    once_in_iterations: int, optional</span>
+<span class="sd">        The logging frequency. A value of `n` means logging occurs every</span>
+<span class="sd">        `n` iterations. Defaults to 1 (log every iteration).</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    steps : list[PipelineStep]</span>
+<span class="sd">        The ordered list of operations to be performed in each iteration.</span>
+<span class="sd">    breakpointers : list[Breakpointer]</span>
+<span class="sd">        The list of objects that determine when the fitting process should</span>
+<span class="sd">        terminate.</span>
+<span class="sd">    pruners : list[Pruner]</span>
+<span class="sd">        The list of objects that may remove components from the mixture during</span>
+<span class="sd">        the fitting process.</span>
+<span class="sd">    logger : PipelineLogger</span>
+<span class="sd">        object that collects comprehensive information about each</span>
+<span class="sd">        iteration of a :class:`Pipeline` estimator.</span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If the sequence of :attr:`steps` is empty or invalid (i.e., a step is</span>
+<span class="sd">        followed by a step not listed in its :attr:`available_next_steps`), or if</span>
+<span class="sd">        the sequence of :attr:`breakpointers` is empty.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    .. autosummary::</span>
+<span class="sd">        :toctree: generated/</span>
+
+<span class="sd">        fit</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">steps</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">PipelineStep</span><span class="p">],</span>
+        <span class="n">breakpointers</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Breakpointer</span><span class="p">],</span>
+        <span class="n">pruners</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Pruner</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">once_in_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_steps</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">steps</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">breakpointers</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The &#39;breakpointers&#39; list cannot be empty. &quot;</span>
+                <span class="s2">&quot;At least one stopping criterion must be provided to prevent an infinite loop.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">breakpointers</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pruners</span><span class="p">)</span> <span class="k">if</span> <span class="n">pruners</span> <span class="k">else</span> <span class="p">[]</span>  <span class="c1"># self.pruners will always be list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">PipelineLogger</span><span class="p">(</span><span class="n">once_in_iterations</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PipelineStep</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates the sequence of pipeline steps.</span>
+
+<span class="sd">        Checks if each step in the pipeline can legally be followed by the next</span>
+<span class="sd">        one, based on the :attr:`available_next_steps` property of each step. It also</span>
+<span class="sd">        checks that the pipeline can be run in a loop (the last step must be</span>
+<span class="sd">        compatible with the first step).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        steps : list[PipelineStep]</span>
+<span class="sd">            The sequence of steps to validate.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the :attr:`steps` list is empty or if the pipeline configuration is</span>
+<span class="sd">            invalid, meaning a step is followed by an incompatible one.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">steps</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The &#39;steps&#39; list cannot be empty for a Pipeline.&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">curr_step</span><span class="p">,</span> <span class="n">next_step</span> <span class="o">=</span> <span class="n">steps</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">steps</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="n">available_steps</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">curr_step</span><span class="o">.</span><span class="n">available_next_steps</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">next_step</span><span class="p">,</span> <span class="n">available_steps</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Wrong pipeline configuration. Step &#39;</span><span class="si">{</span><span class="n">curr_step</span><span class="si">}</span><span class="s2">&#39; have&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;available next steps:&#39;</span><span class="si">{</span><span class="n">curr_step</span><span class="o">.</span><span class="n">available_next_steps</span><span class="si">}</span><span class="s2">&#39;, but got &#39;</span><span class="si">{</span><span class="n">next_step</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+                <span class="p">)</span>
+
+<div class="viewcode-block" id="Pipeline.fit">
+<a class="viewcode-back" href="../../../../api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pipeline.fit.html#rework_pysatl_mpest.estimators.iterative.Pipeline.fit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">mixture</span><span class="p">:</span> <span class="n">MixtureModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fits the mixture model to the data using the configured pipeline.</span>
+
+<span class="sd">        This method initializes the pipeline&#39;s state and runs the main loop.</span>
+<span class="sd">        The loop consists of executing all :attr:`steps` in order, followed by</span>
+<span class="sd">        all :attr:`pruners`. This cycle repeats until any `breakpointers` indicate</span>
+<span class="sd">        that the process should stop.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : ArrayLike</span>
+<span class="sd">            The input data sample.</span>
+<span class="sd">        mixture : MixtureModel</span>
+<span class="sd">            The initial mixture model to be fitted. An internal copy of this</span>
+<span class="sd">            model will be modified throughout the process.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MixtureModel</span>
+<span class="sd">            The fitted mixture model after the pipeline has converged or been</span>
+<span class="sd">            stopped.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">copied_mixture</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">mixture</span><span class="p">)</span>  <span class="c1"># Copy to avoid modifying the original object</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">copied_mixture</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># Updating the state before starting an iteration</span>
+            <span class="c1"># TODO: remove heavy deepcopy</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">)</span>
+
+            <span class="c1"># Performing steps</span>
+            <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+                <span class="n">result_state</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">result_state</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">result_state</span><span class="o">.</span><span class="n">error</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                            <span class="n">IterationRecord</span><span class="p">(</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">_counter</span><span class="p">,</span>
+                                <span class="n">result_state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">,</span>
+                                <span class="n">result_state</span><span class="o">.</span><span class="n">X</span><span class="p">,</span>
+                                <span class="n">result_state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span>
+                                <span class="kc">None</span><span class="p">,</span>
+                                <span class="n">result_state</span><span class="o">.</span><span class="n">error</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Pipeline fitting stopped prematurely due to an error in step &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">step</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="ne">RuntimeWarning</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">return</span> <span class="n">result_state</span><span class="o">.</span><span class="n">curr_mixture</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">result_state</span>
+
+            <span class="c1"># Pruning</span>
+            <span class="k">for</span> <span class="n">pruner</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">pruner</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+            <span class="c1"># Log</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
+                <span class="n">IterationRecord</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">_counter</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">error</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Checking stopping criteria</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">breakpointer</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="k">for</span> <span class="n">breakpointer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span><span class="p">):</span>
+                <span class="k">break</span>
+
+        <span class="k">return</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Danil Totmyanin, Anton Kazancev.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

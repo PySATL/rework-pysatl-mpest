@@ -1,0 +1,30 @@
+﻿
+StepBreakpointer
+================
+
+.. currentmodule:: rework_pysatl_mpest.estimators.iterative
+
+.. autoclass:: rework_pysatl_mpest.estimators.iterative.StepBreakpointer
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~StepBreakpointer.check
+
+
+

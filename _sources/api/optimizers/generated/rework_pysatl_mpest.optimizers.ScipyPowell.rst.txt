@@ -1,0 +1,30 @@
+﻿
+ScipyPowell
+===========
+
+.. currentmodule:: rework_pysatl_mpest.optimizers
+
+.. autoclass:: rework_pysatl_mpest.optimizers.ScipyPowell
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~ScipyPowell.minimize
+
+
+

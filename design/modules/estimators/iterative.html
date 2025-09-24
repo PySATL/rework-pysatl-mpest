@@ -126,14 +126,7 @@
     
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../user_guide/index.html">
-    <no title>
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../api/index.html">
-    API Reference
+    User Guide
   </a>
 </li>
 
@@ -141,6 +134,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../../index.html">
     Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
   </a>
 </li>
 
@@ -219,14 +219,7 @@
     
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../../../user_guide/index.html">
-    <no title>
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../../../api/index.html">
-    API Reference
+    User Guide
   </a>
 </li>
 
@@ -234,6 +227,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="../../index.html">
     Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
   </a>
 </li>
 
@@ -264,7 +264,7 @@
 <nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
-  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Архитектура:</span></p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Design:</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../tree.html">Дерево алгоритмов</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../usecase.html">Use-case диаграмма</a></li>
@@ -354,7 +354,7 @@
 <h1>Iterative<a class="headerlink" href="#iterative" title="Link to this heading">#</a></h1>
 <p>Предоставляет необходимую функциональность для работы с итеративными алгоритмами, такие как:</p>
 <ol class="arabic simple">
-<li><p>Оркестратор IterativeEstimator</p></li>
+<li><p>Оркестратор <code class="docutils literal notranslate"><span class="pre">Pipeline</span></code></p></li>
 <li><p>Шаги алгоритма и соответствующие им классы для конфигурации</p></li>
 <li><p>Pruner’ы</p></li>
 <li><p>Breakpointer’ы</p></li>
@@ -363,193 +363,105 @@
 </a>
 <section id="id1">
 <h2>Классы<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
-<section id="iterativeestimator">
-<h3>IterativeEstimator<a class="headerlink" href="#iterativeestimator" title="Link to this heading">#</a></h3>
+<section id="pipeline">
+<h3>Pipeline<a class="headerlink" href="#pipeline" title="Link to this heading">#</a></h3>
 <p>Конкретный класс, реализующий итеративные алгоритмы оценки параметров смеси распределений.</p>
 <ul>
 <li><p><strong>Атрибуты</strong></p>
 <ul>
-<li><p><strong>- breakpointers: list[BaseBreakpointer]</strong></p>
-<p>Условия остановки алгоритма. Не знаю, нужно ли делать разделение на:</p>
-<ol class="arabic">
-<li><p>Остановка если хотя бы один из брейкпоинтеров сработал</p></li>
-<li><p>Остановка только если все из брейкпоинтеров сработали</p>
-<p>Во втором случае интуитивно кажется, что алгоритм может оказаться бесконечным (но это не точно)</p>
+<li><p><strong>+ breakpointers: list[Breakpointer]</strong></p>
+<p>Условия остановки алгоритма. Остановка срабатывает, если хотя бы один из Breakpointer’ов подал сигнал.</p>
 </li>
-</ol>
+<li><p><strong>+ pruners: list[Pruners]</strong></p>
+<p>Классы удаляющие компоненты из смеси по некоему условию. Отрабатывают каждый последовательно.</p>
 </li>
-<li><p><strong>- pruners: list[BasePruners]</strong></p>
-<p>Классы удаляющие компоненты из смеси по некоему условию. Актуален тот же вопрос что и для брейкпоинтеров.</p>
-</li>
-<li><p><strong>- steps: list[EstimatorStep]</strong></p>
+<li><p><strong>+ steps: list[PipelineStep]</strong></p>
 <p>Список последовательности шагов, на каждой итерации алгоритм будет по ним проходить начиная с 0 шага и заканчивая последним.</p>
 </li>
-<li><p><strong>+ context: Context | dict</strong></p>
-<p>Общие данные алгоритма, к которым имеют доступ шаги. Т.к. они выполняются последовательно никакой конкурентности на запись и чтение нет.</p>
-<p>Не знаю что лучше: сделать дикт или отдельный датакласс:</p>
-<ol class="arabic simple">
-<li><p>В случае с диктом, необходимо четко писать ключи без ошибок и т.д., может быть неудобным дебажить</p></li>
-<li><p>В случае с контекстом, боюсь он может очень сильно разрастись, т.к. различные ветви дерева доступных шагов могут использовать различные конфигурации полей, и все их сувать в контекст как то странно…</p></li>
-</ol>
+<li><p><strong>+ logger: PipelineLogger</strong></p>
+<p>Логгер сохраняющий информацию об итерациях алгоритма.</p>
 </li>
 </ul>
 </li>
 <li><p><strong>Методы</strong></p>
 <ul>
-<li><p><strong>- validate()</strong></p>
-<p>Функция для валидации конфигурации алгоритма. Проверяет:</p>
-<ul class="simple">
-<li><p>Что все шаги могут друг за другом идти.</p></li>
-<li><p>Применимость каждого шага к компонентам. Если видит, что шаг неприменим то вызывает fallback (пока не придумано как)</p></li>
-</ul>
-</li>
 <li><p><strong>+ fit(X, mixture): mixture</strong></p>
 <p>Выполняет каждый элемент из <code class="docutils literal notranslate"><span class="pre">steps</span></code> последовательно. В конце каждой итерации идет проверка на выполнение условия остановки и, если остановка не нужна, проверка на удаление компоненты.</p>
+<p>Для передачи данных между шагами работает с объектом класса <code class="docutils literal notranslate"><span class="pre">PipelineState</span></code>:</p>
 </li>
 </ul>
 </li>
 <li><p><strong>Мысли</strong></p>
 <p>Для поддержки своего пайплайна для каждой компоненты можно добавить что то вроде <code class="docutils literal notranslate"><span class="pre">global_steps</span></code> которые отрабатывают для каждой компоненты и <code class="docutils literal notranslate"><span class="pre">local_steps</span></code> содержащий пайплайны для каждой компоненты (а что если идет сначала шаг из <code class="docutils literal notranslate"><span class="pre">global_step</span></code>, а потом шаг из <code class="docutils literal notranslate"><span class="pre">local_steps</span></code> а потом снова из <code class="docutils literal notranslate"><span class="pre">global_steps</span></code>?)</p>
-<p>Если так делать кстати, то получится распараллелить каждую итерацию (очень предпочтительно!)</p>
+<p>Если так делать кстати, то получится распараллелить каждую итерацию (очень предпочтительно!) Однако т.к. каждый из шагов возвращает новый <code class="docutils literal notranslate"><span class="pre">PipelineState</span></code>, то придется это переделать (иначе распараллелить не получится)</p>
 </li>
 </ul>
 </section>
-<section id="basebreakpointer">
-<h3>BaseBreakpointer<a class="headerlink" href="#basebreakpointer" title="Link to this heading">#</a></h3>
+<section id="breakpointer">
+<h3>Breakpointer<a class="headerlink" href="#breakpointer" title="Link to this heading">#</a></h3>
 <p>Абстрактный класс, занимающийся остановкой алгоритма по некоему условию.</p>
 <ul>
 <li><p><strong>Атрибуты</strong></p></li>
 <li><p><strong>Методы</strong></p>
 <ul>
-<li><p><em><strong>+ check(context: Context): bool</strong></em></p>
-<p>Абстрактный метод, который по контексту и некоторому условию понимает, нужно ли остановить алгоритм или нет.</p>
+<li><p><em><strong>+ check(state: PipelineState): bool</strong></em></p>
+<p>Абстрактный метод, который по состоянию и некоторому условию понимает, нужно ли остановить алгоритм или нет.</p>
 </li>
 </ul>
 </li>
 </ul>
 </section>
-<section id="basepruner">
-<h3>BasePruner<a class="headerlink" href="#basepruner" title="Link to this heading">#</a></h3>
+<section id="pruner">
+<h3>Pruner<a class="headerlink" href="#pruner" title="Link to this heading">#</a></h3>
 <p>Абстрактный класс, занимающийся удалением лишних компонент смеси.</p>
 <ul>
 <li><p><strong>Атрибуты</strong></p></li>
 <li><p><strong>Методы</strong></p>
 <ul>
-<li><p><em><strong>+ prune(context: Context): Context</strong></em></p>
+<li><p><em><strong>+ prune(state: PipelineState): PipelineState</strong></em></p>
 <p>Абстрактный метод, реализующий удаление компоненты из смеси по условию.</p>
 <p>Есть два варианта:</p>
 <ol class="arabic simple">
 <li><p>Метод <code class="docutils literal notranslate"><span class="pre">prune</span></code> будет возвращать контекст с уже измененной смесью, откуда удалена компонента/ы</p></li>
 <li><p>Метод <code class="docutils literal notranslate"><span class="pre">prune</span></code> будет возвращать массив <code class="docutils literal notranslate"><span class="pre">idx_component</span></code> указывающий на то, какие компоненты надо удалить. Этот случай необходим, если я решу сделать композицию алгоритмов.</p></li>
 </ol>
+<p>Сейчас реализован вариант 1.</p>
 </li>
 </ul>
 </li>
 </ul>
 </section>
-<section id="baseinitializer">
-<h3>BaseInitializer<a class="headerlink" href="#baseinitializer" title="Link to this heading">#</a></h3>
-<p>Абстрактный класс, занимающийся инициализацией начального приближение смеси.</p>
-<ul>
-<li><p><strong>Атрибуты</strong></p></li>
-<li><p><strong>Методы</strong></p>
-<ul>
-<li><p><em><strong>+ perform(X, list[Distribution]): MixtureModel</strong></em></p>
-<p>Абстрактный метод, который некоторым образом по выборке и списку распределений подбирает начальное приближение. Это приближение в виде смеси можно передать в объекты, реализующие интерфейс <code class="docutils literal notranslate"><span class="pre">BaseEstimator</span></code>.</p>
-</li>
-</ul>
-</li>
-<li><p><strong>Мысли</strong></p>
-<p>Думаю, стоит так же через стратегии (&#64;singledispatch) делать, т.к. инициализировать каждую компоненту надо отдельно.</p>
-</li>
-</ul>
-</section>
-<section id="estimatorstep">
-<h3>EstimatorStep<a class="headerlink" href="#estimatorstep" title="Link to this heading">#</a></h3>
+<section id="pipelinestep">
+<h3>PipelineStep<a class="headerlink" href="#pipelinestep" title="Link to this heading">#</a></h3>
 <p>Абстрактный класс для шагов алгоритмов.</p>
 <ul>
 <li><p><strong>Атрибуты</strong></p>
 <ul>
-<li><p><em><strong>+ available_next: list[EstimatorStep]</strong></em></p>
+<li><p><em><strong>+ available_next: list[PipelineStep]</strong></em></p>
 <p>Приватный атрибут, содержащий информацию о том, какой шаг может идти следующим. Надо чтобы последний шаг замыкал итерацию так, чтобы возвращал то, что может обработать первый шаг итерации.</p>
 <p>Например: <code class="docutils literal notranslate"><span class="pre">EStep</span> <span class="pre">-&gt;</span> <span class="pre">MStep</span></code>, <code class="docutils literal notranslate"><span class="pre">MStep</span> <span class="pre">-&gt;</span> <span class="pre">EStep</span></code>.</p>
-<p>Возможно стоит заменить на <code class="docutils literal notranslate"><span class="pre">return_value_names</span></code> или что то вроде того.</p>
+<p>Возможно стоит заменить на <code class="docutils literal notranslate"><span class="pre">return_value_names</span></code> или что то вроде того, чтобы зашивать информацию о доступных следующих шагах в возвращаемые атрибуты.</p>
 </li>
 </ul>
 </li>
 <li><p><strong>Методы</strong></p>
 <ul>
-<li><p><em><strong>+ run(context: Context): Context</strong></em></p>
+<li><p><em><strong>+ run(state: PipelineState): PipelineState</strong></em></p>
 <p>Абстрактный метод, запускающий шаг алгоритма. Внутри себя может работать с контекстом, записывая туда информацию необходимую для следующего шага.</p>
 </li>
 </ul>
 </li>
 <li><p><strong>Доступные шаги</strong></p>
 <ul>
-<li><p><strong>ResponsibilitiesStep</strong></p>
+<li><p><strong>ExpectationStep</strong></p>
 <p>Шаг оценки скрытых параметров, возвращающий матрицу ответственностей, содержащей вероятности и использующуюся в последующих шагах.</p>
 </li>
-<li><p><strong>MomentsSteps</strong> (Conventional moments, L-moments etc.)</p>
-<p>Шаги оценки параметров, основанные на моментах.</p>
-</li>
-<li><p><strong>ComponentMaximization</strong></p>
-<p>Про него подробнее дальше.</p>
+<li><p><strong>MaximizationStep</strong></p>
+<p>Шаг, который оценивает параметры по выбранной стратегии. Конфигурируется пользователем.</p>
 </li>
 </ul>
 </li>
 </ul>
-</section>
-<hr class="docutils" />
-<section id="componentmaximization">
-<h3>ComponentMaximization<a class="headerlink" href="#componentmaximization" title="Link to this heading">#</a></h3>
-<p>Является реализацией абстрактного класса <code class="docutils literal notranslate"><span class="pre">EstimatorStep</span></code>. Требует валидацию при инициализации.</p>
-<p>Нужен для оптимизации параметров с помощью численных или аналитических методов. В случае численных методов нужен оптимизатор. Главная “киллерфича” этого класса в том, что можно разбить смесь на компоненты, и в каждой компоненте фиксировать нужные параметры, оптимизируя другие. Таким образом возможно в некоторых случаях получить прирост к скорости, а так же выразить аналитически некоторые параметры.</p>
-<section id="parameterid">
-<h4>ParameterId<a class="headerlink" href="#parameterid" title="Link to this heading">#</a></h4>
-<p>Является датаклассом, содержащим номер компоненты и имя параметров, которые надо заморозить. Нужен, т.к. из смеси в общем виде параметры не достать и не обработать (т.к. они именованные)</p>
-<ul class="simple">
-<li><p>Атрибуты</p>
-<ul>
-<li><p><strong>+ component_id: int</strong></p></li>
-<li><p><strong>+ param_name: str</strong></p></li>
-</ul>
-</li>
-</ul>
-</section>
-<section id="optimizationtarget">
-<h4>OptimizationTarget<a class="headerlink" href="#optimizationtarget" title="Link to this heading">#</a></h4>
-<p>Является <code class="docutils literal notranslate"><span class="pre">Enum</span></code> для двух стратегий оптимизации: Q-функции и логарифма правдоподобия.</p>
-</section>
-<section id="optimizationblock">
-<h4>OptimizationBlock<a class="headerlink" href="#optimizationblock" title="Link to this heading">#</a></h4>
-<p>Датакласс, содержащий в себе информацию необходимую для конкретного CME шага.</p>
-<ul>
-<li><p><strong>Атрибуты</strong></p>
-<ul>
-<li><p><strong>+ parameters: list[ParameterId]</strong></p>
-<p>Список параметров, которые необходимо оценить</p>
-</li>
-<li><p><strong>+ target: OptimizationTarget</strong></p>
-<p>Стратегии оптимизации.</p>
-</li>
-<li><p><strong>- optimizer: ScipyOptimizer</strong></p>
-<p>Оптимизатор, который будет работать в случае отсутствия реализации аналитического решения.</p>
-</li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul>
-<li><p><strong>Атрибуты</strong></p>
-<ul>
-<li><p><strong>- blocks: list[OptimizationBlock]</strong></p>
-<p>Атрибут, содержащий стратегию оптимизации для каждой компоненты. Необходимо проверить, чтобы в каждом блоке компонента была одна и та же. Это сознательное ограничение на время, пока не реализуем композицию алгоритмов.</p>
-</li>
-</ul>
-</li>
-<li><p><strong>Методы</strong></p></li>
-</ul>
-</section>
 </section>
 </section>
 <section id="id2">
@@ -605,17 +517,10 @@
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Классы</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#iterativeestimator">IterativeEstimator</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basebreakpointer">BaseBreakpointer</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#basepruner">BasePruner</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#baseinitializer">BaseInitializer</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#estimatorstep">EstimatorStep</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#componentmaximization">ComponentMaximization</a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#parameterid">ParameterId</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#optimizationtarget">OptimizationTarget</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#optimizationblock">OptimizationBlock</a></li>
-</ul>
-</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipeline">Pipeline</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#breakpointer">Breakpointer</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pruner">Pruner</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#pipelinestep">PipelineStep</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Различные диаграммы</a></li>

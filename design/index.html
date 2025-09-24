@@ -47,7 +47,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Дерево алгоритмов" href="tree.html" />
-    <link rel="prev" title="Uniform" href="../api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.html" />
+    <link rel="prev" title="User Guide" href="../user_guide/index.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -128,14 +128,7 @@
     
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../user_guide/index.html">
-    <no title>
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../api/index.html">
-    API Reference
+    User Guide
   </a>
 </li>
 
@@ -143,6 +136,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#">
     Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
   </a>
 </li>
 
@@ -221,14 +221,7 @@
     
 <li class="nav-item ">
   <a class="nav-link nav-internal" href="../user_guide/index.html">
-    <no title>
-  </a>
-</li>
-
-
-<li class="nav-item ">
-  <a class="nav-link nav-internal" href="../api/index.html">
-    API Reference
+    User Guide
   </a>
 </li>
 
@@ -236,6 +229,13 @@
 <li class="nav-item current active">
   <a class="nav-link nav-internal" href="#">
     Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API Reference
   </a>
 </li>
 
@@ -266,7 +266,7 @@
 <nav class="bd-docs-nav bd-links"
      aria-label="Section Navigation">
   <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
-  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Архитектура:</span></p>
+  <div class="bd-toc-item navbar-nav"><p aria-level="2" class="caption" role="heading"><span class="caption-text">Design:</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="tree.html">Дерево алгоритмов</a></li>
 <li class="toctree-l1"><a class="reference internal" href="usecase.html">Use-case диаграмма</a></li>
@@ -353,17 +353,17 @@
 <p>На данный момент система позволяет:</p>
 <ol class="arabic simple">
 <li><p>Описывать непрерывные распределения и их смеси, а так же работать с ними как с объектами теории вероятностей <em>(Готово)</em></p></li>
-<li><p>Выполнять предобработку данных <em>(В разработке)</em>:</p>
+<li><p>Выполнять предобработку данных:</p>
 <ul class="simple">
-<li><p>Оценивать количество компонент</p></li>
-<li><p>Проводить инициализацию начального приближения путем кластеризации</p></li>
+<li><p>Оценивать количество компонент <em>(В разработке)</em></p></li>
+<li><p>Проводить инициализацию начального приближения путем кластеризации <em>(В разработке)</em></p></li>
 </ul>
 </li>
-<li><p>Конфигурировать и запускать сложные итеративные алгоритмы оценки параметров смеси (В разработке)*:</p>
+<li><p>Конфигурировать и запускать сложные итеративные алгоритмы оценки параметров смеси:</p>
 <ul class="simple">
-<li><p>Комбинировать различные шаги алгоритма, например E шаг + LMoments шаг или E шаг + ВашЭкзотическийШаг</p></li>
-<li><p>Настраивать условие остановки алгоритма</p></li>
-<li><p>Настраивать удаление лишних компонент</p></li>
+<li><p>Комбинировать различные шаги алгоритма, например E шаг + LMoments шаг или E шаг + ВашЭкзотическийШаг <em>(Готово)</em></p></li>
+<li><p>Настраивать условие остановки алгоритма <em>(Готово)</em></p></li>
+<li><p>Настраивать удаление лишних компонент <em>(Готово)</em></p></li>
 </ul>
 </li>
 <li><p>Для удобства API система предоставляет “Фасады”, с помощью которых можно легко сконфигурировать типовые алгоритмы, например EM или ELM алгоритмы. <em>(В разработке)</em></p></li>
@@ -476,6 +476,8 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code>: для всех численных вычислений и работы с многомерными массивами (<code class="docutils literal notranslate"><span class="pre">ndarray</span></code>).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">scipy</span></code>: для численных методов (оптимизация, решение систем уравнений, нахождение нулей функции).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">sklearn</span></code>: для кластеризации.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">+</span> <span class="pre">pytest-mock</span> <span class="pre">+</span> <span class="pre">hypothesis</span></code>: фреймворки для тестирования.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sphinx</span></code>: для генерации документации.</p></li>
 </ul>
 </li>
 </ul>
@@ -493,12 +495,12 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.html"
+       href="../user_guide/index.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Uniform</p>
+        <p class="prev-next-title">User Guide</p>
       </div>
     </a>
     <a class="right-next"
