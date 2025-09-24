@@ -122,11 +122,11 @@ We use the **NumPy docstring standard** as our base format. All public modules, 
 
 1. **Use Sphinx Roles for Cross-Referencing:**
    To ensure that our documentation is fully navigable, all references to  other code elements (classes, methods, attributes, parameters) within  docstrings **must** use Sphinx roles. This turns them into clickable hyperlinks in the generated documentation.
-   - Use ``:class:`ClassName``` to reference a class.
-   - Use ``:meth:`method_name``` to reference a method.
-   - Use ``:attr:`attribute_name``` to reference an attribute or property.
-   - Use ``:func:`function_name``` to reference a function.
-   - To shorten a long path, use a tilde (~). For example, ``:class:~rework_pysatl_mpest.core.mixture.MixtureModel``` will be rendered simply as MixtureModel`.
+   - Use ``:class:`ClassName` `` to reference a class.
+   - Use ``:meth:`method_name` `` to reference a method.
+   - Use ``:attr:`attribute_name` `` to reference an attribute or property.
+   - Use ``:func:`function_name` `` to reference a function.
+   - To shorten a long path, use a tilde (~). For example, ``:class:~rework_pysatl_mpest.core.mixture.MixtureModel` `` will be rendered simply as `MixtureModel`.
 2. **Include autosummary for Public APIs:**
    For classes, the docstring should include an `.. autosummary::` block. This directive instructs Sphinx to automatically generate a summary table of the class's public methods and attributes.
    - List all public methods that should be included in the documentation.
@@ -134,6 +134,49 @@ We use the **NumPy docstring standard** as our base format. All public modules, 
 3. **Structure and Detail:**
    - **Classes:** The docstring should clearly describe the class's purpose, followed by Parameters (for the constructor), Attributes, Methods (via autosummary), and Notes or Examples where applicable.
    - **Methods/Functions:** Must include a description, Parameters with types, Returns with type, and Raises for any exceptions thrown.
+
+**Comprehensive Example of a Class Docstring:**
+
+```python
+class Pipeline(BaseEstimator):
+    """An estimator that fits a mixture model via a configurable iterative process.
+
+    The pipeline executes a sequence of defined steps in a loop. After each full
+    sequence of steps, pruning strategies are applied, and stopping conditions
+    are checked. The process is orchestrated by :class:`.PipelineStep`,
+    :class:`.Breakpointer`, and :class:`.Pruner` components.
+
+    Parameters
+    ----------
+    steps : Sequence[PipelineStep]
+        An ordered sequence of steps to be executed in each iteration.
+    breakpointers : Sequence[Breakpointer]
+        A sequence of strategies that define the stopping conditions.
+
+    Attributes
+    ----------
+    steps : list[PipelineStep]
+        The ordered list of operations to be performed in each iteration.
+    logger : PipelineLogger
+        An object that collects information about each iteration.
+
+    Raises
+    ------
+    ValueError
+        If the sequence of :attr:`steps` or :attr:`breakpointers` is empty.
+
+    Methods
+    -------
+    .. autosummary::
+        :toctree: generated/
+
+        fit
+    """
+
+    # ... class implementation
+```
+
+
 
 #### Building and Previewing Documentation Locally
 
@@ -158,6 +201,20 @@ Our documentation is built using **Sphinx**. Before submitting your pull request
 #### Updating Architectural Documentation
 
 If your changes introduce significant architectural modifications (e.g., adding a new major component, changing the core data flow, or altering the relationship between modules), you must also update the design documentation. This includes updating both the descriptive text and any relevant diagrams (e.g., UML, flowcharts).
+
+
+
+### 8. Testing Requirements
+
+To maintain code quality and prevent regressions, all contributions must be accompanied by tests.
+
+#### Running Tests Locally
+
+Before creating a pull request, please run the entire test suite locally to ensure that your changes haven't broken existing functionality:
+
+```bash
+pytest tests
+```
 
 
 
