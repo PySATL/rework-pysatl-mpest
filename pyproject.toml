@@ -32,6 +32,7 @@ mypy = "==1.13.0"
 hypothesis = "^6.131.7"
 types-pyyaml = "^6.0.12.20250516"
 types-tqdm = "^4.67.0.20250516"
+pytest-cov = "^7.0.0"
 
 [tool.poetry.group.experiments.dependencies]
 tqdm = "^4.67.1"
@@ -68,6 +69,17 @@ ignore = ["PLR0913"]
 files = ["rework_pysatl_mpest", "mpest", "experimental_env"]
 ignore_missing_imports = true
 exclude = ["^mpest/utils.py"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["rework_tests"]
+
+addopts = [
+    "--cov=rework_pysatl_mpest",          # Укажите здесь имя вашего основного пакета/папки с кодом
+    "--cov-report=term-missing", # Выводить отчет в консоль с указанием пропущенных строк
+    "--cov-report=html",         # Генерировать детальный HTML-отчет
+    "--cov-fail-under=80",       # Считать запуск тестов проваленным, если покрытие ниже 80%
+]
 
 
 [build-system]
