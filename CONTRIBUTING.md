@@ -96,7 +96,7 @@ git push
 
 ### 6. Documentation requirements
 
-High-quality documentation is crucial for the project's maintainability and  usability. All contributions that add or modify code **must** include corresponding documentation updates.
+High-quality documentation is crucial for the project's maintainability and usability. All contributions that add or modify code **must** include corresponding documentation updates.
 
 #### File Header and Module Docstring
 
@@ -121,7 +121,7 @@ We use the **NumPy docstring standard** as our base format. All public modules, 
 **Key Requirements:**
 
 1. **Use Sphinx Roles for Cross-Referencing:**
-   To ensure that our documentation is fully navigable, all references to  other code elements (classes, methods, attributes, parameters) within  docstrings **must** use Sphinx roles. This turns them into clickable hyperlinks in the generated documentation.
+   To ensure that our documentation is fully navigable, all references to other code elements (classes, methods, attributes, parameters) within docstrings **must** use Sphinx roles. This turns them into clickable hyperlinks in the generated documentation.
    - Use ``:class:`ClassName` `` to reference a class.
    - Use ``:meth:`method_name` `` to reference a method.
    - Use ``:attr:`attribute_name` `` to reference an attribute or property.
@@ -204,21 +204,38 @@ If your changes introduce significant architectural modifications (e.g., adding 
 
 
 
-### 8. Testing Requirements
+### 7. Testing Requirements
 
-To maintain code quality and prevent regressions, all contributions must be accompanied by tests.
+To maintain code quality and prevent regressions, all contributions must be accompanied by comprehensive tests. We use `pytest` for running tests and `pytest-cov` to enforce a minimum code coverage standard.
 
-#### Running Tests Locally
+#### Writing Tests
 
-Before creating a pull request, please run the entire test suite locally to ensure that your changes haven't broken existing functionality:
+- All new functionality (`feat`) must be accompanied by tests that cover its behavior.
+- Tests should be placed in the `rework_tests/` directories, mirroring the project's source code structure.
+
+#### Running Tests and Checking Coverage
+
+Before creating a pull request, you **must** run the entire test suite locally. Our project is configured to automatically check test coverage on every run.
+
+**Run all tests and generate a coverage report with this single command:**
 
 ```bash
-pytest tests
+poetry run pytest
 ```
 
+This command will:
+
+1. Execute all tests within the project.
+2. Display a code coverage summary in the terminal, highlighting any files or lines that are not covered by tests.
+3. Generate a detailed, interactive HTML report in a new `htmlcov/` directory.
+
+To visually analyze which lines of your code are not covered, open the `htmlcov/index.html` file in your browser. This is an excellent way to find gaps in your tests.
+
+**Important:** Our CI pipeline will fail if your contribution causes the total code coverage to drop below the required threshold. Ensure that all new code is adequately tested.
 
 
-### 7. Create a Pull Request (PR)
+
+### 8. Create a Pull Request (PR)
 
 Once your branch with the changes is in your fork, you can create a Pull Request to propose your changes to the main repository.
 
@@ -231,7 +248,7 @@ Once your branch with the changes is in your fork, you can create a Pull Request
 
 For your Pull Request to be merged, it must meet the following requirements configured in the repository:
 
-- **CI/CD Checks Must Pass:** All automated status checks (tests, linters, etc.) configured in the project must complete successfully. If any check fails, you will need to fix the issue and push new commits to your branch.
+- **CI/CD Checks Must Pass:** All automated status checks must complete successfully. This includes linters, the entire test suite, and a **minimum code coverage check**. If any check fails, you will need to fix the issue and push new commits to your branch.
 - **Mandatory Code Review:**
   - Your PR must receive at least **one approval** from another project member.
   - The PR author **cannot** approve their own work. The most recent set of changes must be approved by someone other than the person who pushed them.
