@@ -6,5 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from rework_pysatl_mpest.optimizers.optimizer import Optimizer
+from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
+from rework_pysatl_mpest.optimizers.scipy_powell import ScipyPowell
 
-__all__ = ["Optimizer"]
+__all__ = ["Optimizer", "ScipyNelderMead", "ScipyPowell"]
