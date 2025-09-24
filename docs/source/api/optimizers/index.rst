@@ -29,4 +29,3 @@ Available implementations
 
    ~ScipyNelderMead
    ~ScipyPowell
-
