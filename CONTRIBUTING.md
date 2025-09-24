@@ -24,13 +24,13 @@ git clone https://github.com/YOUR-USERNAME/pysatl-mpest.git
 cd pysatl-mpest
 ```
 
-Before you start making changes, create a new branch in following format `<type>/<what-this-branch-solves>`.
+Before you start making changes, create a new branch in following format `<your-username>/<what-this-branch-solves>` if this branch on the original repository. If you working in the fork, name your branches at your own discretion.
 
-For example: `feat/add-new-solver` or `fix/memory-leak-issue`.
+For example: `iraedeus/add-new-solver` or `vityana/memory-leak-issue`.
 
 ```bash
 git checkout main
-git checkout -b <type>/<what-this-branch-solves>
+git checkout -b <your-username>/<what-this-branch-solves>
 ```
 
 
@@ -94,7 +94,74 @@ git push
 
 
 
-### 6. Create a Pull Request (PR)
+### 6. Documentation requirements
+
+High-quality documentation is crucial for the project's maintainability and  usability. All contributions that add or modify code **must** include corresponding documentation updates.
+
+#### File Header and Module Docstring
+
+Every Python source file (`.py`) must begin with a standard header containing metadata and a module-level docstring. This ensures consistency and proper attribution.
+
+**Template:**
+
+```python
+"""Module docstring"""
+
+__author__ = "Your Name"
+__copyright__ = "Copyright (c) 2025 PySATL project"
+__license__ = "SPDX-License-Identifier: MIT"
+
+# ... rest of the module code
+```
+
+#### Docstring Style and Content
+
+We use the **NumPy docstring standard** as our base format. All public modules, classes, methods, and functions must have comprehensive docstrings that are compatible with **Sphinx** for automatic documentation generation.
+
+**Key Requirements:**
+
+1. **Use Sphinx Roles for Cross-Referencing:**
+   To ensure that our documentation is fully navigable, all references to  other code elements (classes, methods, attributes, parameters) within  docstrings **must** use Sphinx roles. This turns them into clickable hyperlinks in the generated documentation.
+   - Use ``:class:`ClassName``` to reference a class.
+   - Use ``:meth:`method_name``` to reference a method.
+   - Use ``:attr:`attribute_name``` to reference an attribute or property.
+   - Use ``:func:`function_name``` to reference a function.
+   - To shorten a long path, use a tilde (~). For example, ``:class:~rework_pysatl_mpest.core.mixture.MixtureModel``` will be rendered simply as MixtureModel`.
+2. **Include autosummary for Public APIs:**
+   For classes, the docstring should include an `.. autosummary::` block. This directive instructs Sphinx to automatically generate a summary table of the class's public methods and attributes.
+   - List all public methods that should be included in the documentation.
+   - Use the `:toctree: generated/` option.
+3. **Structure and Detail:**
+   - **Classes:** The docstring should clearly describe the class's purpose, followed by Parameters (for the constructor), Attributes, Methods (via autosummary), and Notes or Examples where applicable.
+   - **Methods/Functions:** Must include a description, Parameters with types, Returns with type, and Raises for any exceptions thrown.
+
+#### Building and Previewing Documentation Locally
+
+Our documentation is built using **Sphinx**. Before submitting your pull request, you **must** generate the documentation locally to ensure there are no formatting errors, warnings, or broken links.
+
+1. Navigate to the `docs` directory:
+
+   ```bash
+   cd docs
+   ```
+
+2. Build the documentation:
+
+   ```bash
+   make clean html
+   ```
+
+3. Preview the result:
+
+   The output will be generated in the `docs/build/html` directory. Open `docs/build/html/index.html` in your web browser to review the changes and verify that everything renders correctly.
+
+#### Updating Architectural Documentation
+
+If your changes introduce significant architectural modifications (e.g., adding a new major component, changing the core data flow, or altering the relationship between modules), you must also update the design documentation. This includes updating both the descriptive text and any relevant diagrams (e.g., UML, flowcharts).
+
+
+
+### 7. Create a Pull Request (PR)
 
 Once your branch with the changes is in your fork, you can create a Pull Request to propose your changes to the main repository.
 
@@ -107,11 +174,11 @@ Once your branch with the changes is in your fork, you can create a Pull Request
 
 For your Pull Request to be merged, it must meet the following requirements configured in the repository:
 
-- **CI/CD Checks Must Pass:** All automated status checks (tests, linters, etc.) configured in the  project must complete successfully. If any check fails, you will need to fix the issue and push new commits to your branch.
+- **CI/CD Checks Must Pass:** All automated status checks (tests, linters, etc.) configured in the project must complete successfully. If any check fails, you will need to fix the issue and push new commits to your branch.
 - **Mandatory Code Review:**
   - Your PR must receive at least **one approval** from another project member.
   - The PR author **cannot** approve their own work. The most recent set of changes must be approved by someone other than the person who pushed them.
-  - If you push new commits to your branch after receiving an approval, that  approval will be automatically dismissed. The changes will need to be  reviewed again. This ensures that the latest version of the code is  always reviewed.
+  - If you push new commits to your branch after receiving an approval, that approval will be automatically dismissed. The changes will need to be reviewed again. This ensures that the latest version of the code is always reviewed.
 - **All Conversations Must Be Resolved:** All comments and conversations on the code left during the review must be marked as resolved before the PR can be merged.
 - **No Force Pushing:** The main branch is protected from force pushes to ensure a stable and clean commit history.
 
