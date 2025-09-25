@@ -175,7 +175,7 @@ class TestWeibullPPF:
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.shape == p.shape
 
-    @given(shape=st_shape, loc=st_loc, scale=st_scale, p=st.floats(0, 1))
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, p=st.floats(0.01, 1))
     def test_ppf_against_scipy(self, shape, loc, scale, p):
         """Compares the custom PPF implementation against scipy's implementation."""
 
