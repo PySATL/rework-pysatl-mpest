@@ -15,12 +15,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from rework_pysatl_mpest.core import MixtureModel, Parameter
-from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential, Uniform
+from rework_pysatl_mpest.distributions import Cauchy, ContinuousDistribution, Exponential, Uniform
 
-__all__ = [
-    "ContinuousDistribution",
-    "Exponential",
-    "MixtureModel",
-    "Parameter",
-    "Uniform",
-]
+__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "MixtureModel", "Parameter", "Uniform"]
