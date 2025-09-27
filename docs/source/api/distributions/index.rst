@@ -31,3 +31,4 @@ Continuous distributions
 
    ~Exponential
    ~Uniform
+   ~Cauchy
