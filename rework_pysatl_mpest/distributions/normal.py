@@ -1,6 +1,6 @@
 """Module providing normal (Gaussian) distribution class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
