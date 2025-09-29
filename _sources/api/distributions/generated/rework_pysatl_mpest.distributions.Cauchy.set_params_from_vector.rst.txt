@@ -1,0 +1,7 @@
+
+set\_params\_from\_vector
+=========================
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. automethod:: rework_pysatl_mpest.distributions.Cauchy.set_params_from_vector

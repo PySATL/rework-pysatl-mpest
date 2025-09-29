@@ -1,0 +1,84 @@
+﻿
+Cauchy
+======
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Cauchy
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Cauchy.fix_param
+
+   ~Cauchy.generate
+
+   ~Cauchy.get_params_vector
+
+   ~Cauchy.log_gradients
+
+   ~Cauchy.lpdf
+
+   ~Cauchy.pdf
+
+   ~Cauchy.ppf
+
+   ~Cauchy.q_function
+
+   ~Cauchy.set_params_from_vector
+
+   ~Cauchy.unfix_param
+
+
+
