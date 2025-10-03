@@ -423,7 +423,6 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        pdf</span>
 <span class="sd">        lpdf</span>
 <span class="sd">        loglikelihood</span>
-<span class="sd">        q_function</span>
 <span class="sd">        generate</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -655,49 +654,6 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
-
-
-<div class="viewcode-block" id="MixtureModel.q_function">
-<a class="viewcode-back" href="../../../api/core/generated/rework_pysatl_mpest.core.MixtureModel.q_function.html#rework_pysatl_mpest.core.MixtureModel.q_function">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">q_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">H</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Q-function (expectation of the complete log-likelihood).</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data sample.</span>
-<span class="sd">        H : ArrayLike</span>
-<span class="sd">            The responsibility matrix (posterior probabilities), where</span>
-<span class="sd">            H[i, j] is the probability that data point i belongs to</span>
-<span class="sd">            component j. Its shape should be (n_samples, n_components).</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        float</span>
-<span class="sd">            The value of the Q-function.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If the number of columns in the responsibility matrix :attr:`H` does</span>
-<span class="sd">            not match the number of components in the model.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">H</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Dimensionality mismatch: matrix H has </span><span class="si">{</span><span class="n">H</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> columns, &quot;</span>
-                <span class="s2">&quot;while the model has </span><span class="si">{self.n_components}</span><span class="s2"> components.&quot;</span>
-            <span class="p">)</span>
-
-        <span class="n">component_q_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">q_function</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">comp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">))</span>
-
-        <span class="n">responsibilities_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">weights_q_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">responsibilities_sum</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_weights</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">component_q_sum</span> <span class="o">+</span> <span class="n">weights_q_sum</span></div>
 
 
 <div class="viewcode-block" id="MixtureModel.generate">

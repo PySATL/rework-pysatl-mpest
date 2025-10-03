@@ -1,7 +1,0 @@
-
-q\_function
-===========
-
-.. currentmodule:: rework_pysatl_mpest.distributions
-
-.. automethod:: rework_pysatl_mpest.distributions.Exponential.q_function

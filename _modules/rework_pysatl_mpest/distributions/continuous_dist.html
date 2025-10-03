@@ -368,7 +368,6 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">float64</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">NDArray</span>
 
@@ -406,7 +405,6 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">        unfix_param</span>
 <span class="sd">        get_params_vector</span>
 <span class="sd">        set_params_from_vector</span>
-<span class="sd">        q_function</span>
 
 <span class="sd">    **Abstract methods**</span>
 
@@ -424,7 +422,6 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    **Key Functionality**</span>
 
 <span class="sd">    - Parameter management: fixing and releasing parameters for optimization.</span>
-<span class="sd">    - Function calculation: standard implementation of :meth:`q_function`.</span>
 <span class="sd">    - Parameter vectorization: getting and setting parameters from a numpy</span>
 <span class="sd">      vector.</span>
 
@@ -551,63 +548,6 @@ window.addEventListener("load", () => mermaid.run());
 
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">param_names</span><span class="p">,</span> <span class="n">vector</span><span class="p">):</span>
             <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="ContinuousDistribution.q_function">
-<a class="viewcode-back" href="../../../api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.q_function.html#rework_pysatl_mpest.distributions.ContinuousDistribution.q_function">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">q_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">H</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculates the Q-function (expectation of the complete log-likelihood).</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        X : ArrayLike</span>
-<span class="sd">            Input data array or scalar (sample).</span>
-<span class="sd">        H : ArrayLike</span>
-<span class="sd">            Array or scalar of posterior probabilities (responsibilities)</span>
-<span class="sd">            corresponding to each element of :attr:`X`.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        float</span>
-<span class="sd">            The value of the Q-function.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If the shapes of X and H are not equal.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        The formula for the Q-function for one component of a mixture is:</span>
-
-<span class="sd">        .. math::</span>
-
-<span class="sd">            Q(\\theta | \\theta^{(t)}) = \\sum_{i=1}^{n} h_i \\ln f(x_i | \\theta)</span>
-
-<span class="sd">        where:</span>
-<span class="sd">            - :math:`X = \\{x_1, x_2, \\ldots, x_n\\}` is the input data sample.</span>
-<span class="sd">            - :math:`n` is the number of observations in the sample.</span>
-<span class="sd">            - :math:`h_i` is the responsibility (posterior probability) of this</span>
-<span class="sd">              component for observation :math:`x_i`, calculated with **old**</span>
-<span class="sd">              parameters :math:`\\theta^{(t)}`. This corresponds to the `H`</span>
-<span class="sd">              argument.</span>
-<span class="sd">            - :math:`f(x_i | \\theta)` is the probability density function for</span>
-<span class="sd">              observation :math:`x_i` with **new** parameters :math:`\\theta`.</span>
-<span class="sd">            - :math:`\\theta` is the new set of parameters for optimization.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-
-        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">H</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;X and H shapes must be equal, while got </span><span class="si">{</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">H</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-        <span class="n">lpdf_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
-
-        <span class="c1"># Handle case 0 * np.inf</span>
-        <span class="n">safe_lpdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">H</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">lpdf_values</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">safe_lpdf</span><span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span></div>
 
 
     <span class="nd">@property</span>

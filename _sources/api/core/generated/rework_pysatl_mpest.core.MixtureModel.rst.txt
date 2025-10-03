@@ -35,10 +35,6 @@ MixtureModel
         
     
 
-    
-        
-    
-
 
 
 
@@ -57,8 +53,6 @@ MixtureModel
    ~MixtureModel.lpdf
 
    ~MixtureModel.pdf
-
-   ~MixtureModel.q_function
 
    ~MixtureModel.remove_component
 

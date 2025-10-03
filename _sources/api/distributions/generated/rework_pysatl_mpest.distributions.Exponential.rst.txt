@@ -47,10 +47,6 @@ Exponential
         
     
 
-    
-        
-    
-
 
 
 
@@ -73,8 +69,6 @@ Exponential
    ~Exponential.pdf
 
    ~Exponential.ppf
-
-   ~Exponential.q_function
 
    ~Exponential.set_params_from_vector
 
