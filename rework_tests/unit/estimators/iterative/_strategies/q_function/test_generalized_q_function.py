@@ -58,8 +58,10 @@ class DummyDistribution(ContinuousDistribution):
     def generate(self, size: int):
         return np.array([])
 
-    def q_function(self, X: np.ndarray, H: np.ndarray) -> float:
-        return -((self.param1 - 5) ** 2 + (self.param2 - 10) ** 2)
+    def q_function(self, X: np.ndarray, H_j: np.ndarray) -> float:
+        lpdf_values = self.lpdf(X)
+        safe_lpdf = np.where(H_j == 0, 0.0, lpdf_values)
+        return np.dot(H_j, safe_lpdf).item()
 
 
 # --- Test Fixtures ---
