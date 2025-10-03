@@ -62,7 +62,6 @@ class MixtureModel:
         pdf
         lpdf
         loglikelihood
-        q_function
         generate
     """
 
@@ -280,46 +279,6 @@ class MixtureModel:
 
         X = np.asarray(X, dtype=float64)
         return np.sum(self.lpdf(X))
-
-    def q_function(self, X: ArrayLike, H: ArrayLike) -> float:
-        """Q-function (expectation of the complete log-likelihood).
-
-        Parameters
-        ----------
-        X : ArrayLike
-            The input data sample.
-        H : ArrayLike
-            The responsibility matrix (posterior probabilities), where
-            H[i, j] is the probability that data point i belongs to
-            component j. Its shape should be (n_samples, n_components).
-
-        Returns
-        -------
-        float
-            The value of the Q-function.
-
-        Raises
-        ------
-        ValueError
-            If the number of columns in the responsibility matrix :attr:`H` does
-            not match the number of components in the model.
-        """
-
-        X = np.asarray(X, dtype=float64)
-        H = np.asarray(H, dtype=float64)
-
-        if H.shape[1] != self.n_components:
-            raise ValueError(
-                f"Dimensionality mismatch: matrix H has {H.shape[1]} columns, "
-                "while the model has {self.n_components} components."
-            )
-
-        component_q_sum = sum(comp.q_function(X, H[:, i]) for i, comp in enumerate(self.components))
-
-        responsibilities_sum = np.sum(H, axis=0)
-        weights_q_sum = np.sum(responsibilities_sum * self.log_weights)
-
-        return component_q_sum + weights_q_sum
 
     def generate(self, size: int) -> NDArray[float64]:
         """Generates random samples from the mixture model.

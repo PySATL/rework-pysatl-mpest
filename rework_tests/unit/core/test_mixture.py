@@ -251,34 +251,6 @@ class TestMixtureModelCalculations:
         assert isinstance(calculated_loglikelihood, float)
         assert np.isclose(calculated_loglikelihood, expected_loglikelihood)
 
-    def test_q_function_calculation(self, mixture_model: MixtureModel):
-        """Tests the Q-function calculation against its definition."""
-
-        X = np.array([1.0, 6.0])
-        H = np.array([[0.9, 0.1], [0.2, 0.8]])
-
-        c1, c2 = mixture_model.components
-        log_w1, log_w2 = mixture_model.log_weights
-
-        q_for_weights = np.sum(H[:, 0]) * log_w1 + np.sum(H[:, 1]) * log_w2
-        q_for_comp1 = np.sum(H[:, 0] * c1.lpdf(X))
-        q_for_comp2 = np.sum(H[:, 1] * c2.lpdf(X))
-
-        expected_q_value = q_for_weights + q_for_comp1 + q_for_comp2
-        calculated_q_value = mixture_model.q_function(X, H)
-
-        assert isinstance(calculated_q_value, float)
-        assert np.isclose(calculated_q_value, expected_q_value)
-
-    def test_q_function_with_mismatched_h_raises_error(self, mixture_model: MixtureModel):
-        """Tests that Q-function raises ValueError if H dimensions don't match n_components."""
-
-        X = np.array([1.0, 6.0])
-        H_invalid = np.array([[0.8, 0.1, 0.1], [0.1, 0.8, 0.1]])
-
-        with pytest.raises(ValueError, match="Dimensionality mismatch"):
-            mixture_model.q_function(X, H_invalid)
-
 
 class TestMixtureModelGenerate:
     """Statistical tests for the `generate` method."""
