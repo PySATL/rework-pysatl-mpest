@@ -115,10 +115,6 @@
 
     Логарифм правдоподобия.
 
-  - **\+ q_function(X: ArrayLike, H: ArrayLike): ndarray**
-
-    Q-функция.
-
   - **\+ generate(size: int): ndarray**
 
     Сэмплирование выборки размера `size`.

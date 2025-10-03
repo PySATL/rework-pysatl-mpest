@@ -60,10 +60,6 @@
 
     <br>
 
-  - **\+ q_function(X: ArrayLike, H: ArrayLike): ndarray**
-
-    Q-функция. Формула одинакова для всех распределений.
-
   - **\+ get_params_vector(param_names: Sequence[str]): ndarray**
 
     Вспомогательная функция для получения параметров распределения по имени в виде вектора.
