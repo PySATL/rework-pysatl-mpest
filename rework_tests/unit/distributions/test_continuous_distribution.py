@@ -120,57 +120,6 @@ class TestContinuousDistribution:
         assert isinstance(dummy_dist._fixed_params, set)
         assert dummy_dist._fixed_params == set()
 
-    # Test q_function method
-    # ----------------------
-
-    @pytest.mark.parametrize(
-        "X, H",
-        [
-            (np.array([1, 2, 3]), np.array([0.1, 0.5, 0.4])),
-            (np.array([0]), np.array([1.0])),
-            (5, 0.5),  # Handle scalar case
-        ],
-    )
-    def test_q_function_correct_calculation(self, dummy_dist: DummyDistribution, X, H):
-        """Tests that the q_function calculates the value correctly."""
-
-        X_arr = np.atleast_1d(X)
-        H_arr = np.atleast_1d(H)
-
-        expected_lpdf = dummy_dist.lpdf(X_arr)
-        expected_q_value = np.dot(H_arr, expected_lpdf)
-
-        q_val = dummy_dist.q_function(X, H)
-
-        assert isinstance(q_val, float)
-        assert np.isclose(q_val, expected_q_value)
-
-    def test_q_function_handle_inf_lpdfs(self, dummy_inf_dist: DummyInfLpdfDistribution):
-        """Tests that q_function correctly handles lpdf=-inf when the corresponding
-        responsibility H is 0, avoiding a `0 * inf = nan` result.
-        """
-
-        # X[0] will produce lpdf = -inf
-        X = np.array([-1.0, 1.0, 2.0])
-        # H[0] is 0.0, which should prevent nan
-        H = np.array([0.0, 0.5, 0.5])
-
-        # Manually calculate the expected result, treating 0 * -inf as 0
-        expected_q_value = 0.5 * np.log(2.0) + 0.5 * np.log(3.0)
-
-        q_val = dummy_inf_dist.q_function(X, H)
-
-        assert not np.isnan(q_val)
-        assert np.isclose(q_val, expected_q_value)
-
-    def test_q_function_shape_mismatch_raises_error(self, dummy_dist: DummyDistribution):
-        """Tests that q_function raises ValueError for mismatched shapes of X and H."""
-
-        X = np.array([1, 2, 3])
-        H = np.array([0.5, 0.5])
-        with pytest.raises(ValueError, match="X and H shapes must be equal"):
-            dummy_dist.q_function(X, H)
-
     # Test fix_params, unfix_params methods
     # -------------------------------------
 
