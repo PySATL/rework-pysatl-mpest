@@ -9,7 +9,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-import numpy as np
 from numpy import float64
 from numpy.typing import ArrayLike, NDArray
 
@@ -45,7 +44,6 @@ class ContinuousDistribution(ABC):
         unfix_param
         get_params_vector
         set_params_from_vector
-        q_function
 
     **Abstract methods**
 
@@ -63,7 +61,6 @@ class ContinuousDistribution(ABC):
     **Key Functionality**
 
     - Parameter management: fixing and releasing parameters for optimization.
-    - Function calculation: standard implementation of :meth:`q_function`.
     - Parameter vectorization: getting and setting parameters from a numpy
       vector.
 
@@ -179,60 +176,6 @@ class ContinuousDistribution(ABC):
 
         for name, value in zip(param_names, vector):
             setattr(self, name, value)
-
-    def q_function(self, X: ArrayLike, H: ArrayLike) -> float:
-        """Calculates the Q-function (expectation of the complete log-likelihood).
-
-        Parameters
-        ----------
-        X : ArrayLike
-            Input data array or scalar (sample).
-        H : ArrayLike
-            Array or scalar of posterior probabilities (responsibilities)
-            corresponding to each element of :attr:`X`.
-
-        Returns
-        -------
-        float
-            The value of the Q-function.
-
-        Raises
-        ------
-        ValueError
-            If the shapes of X and H are not equal.
-
-        Notes
-        -----
-        The formula for the Q-function for one component of a mixture is:
-
-        .. math::
-
-            Q(\\theta | \\theta^{(t)}) = \\sum_{i=1}^{n} h_i \\ln f(x_i | \\theta)
-
-        where:
-            - :math:`X = \\{x_1, x_2, \\ldots, x_n\\}` is the input data sample.
-            - :math:`n` is the number of observations in the sample.
-            - :math:`h_i` is the responsibility (posterior probability) of this
-              component for observation :math:`x_i`, calculated with **old**
-              parameters :math:`\\theta^{(t)}`. This corresponds to the `H`
-              argument.
-            - :math:`f(x_i | \\theta)` is the probability density function for
-              observation :math:`x_i` with **new** parameters :math:`\\theta`.
-            - :math:`\\theta` is the new set of parameters for optimization.
-        """
-
-        X = np.asarray(X, dtype=np.float64)
-        H = np.asarray(H, dtype=np.float64)
-
-        if X.shape != H.shape:
-            raise ValueError(f"X and H shapes must be equal, while got {X.shape} and {H.shape}")
-
-        lpdf_values = self.lpdf(X)
-
-        # Handle case 0 * np.inf
-        safe_lpdf = np.where(H == 0, 0.0, lpdf_values)
-
-        return np.dot(H, safe_lpdf).item()
 
     @property
     @abstractmethod
