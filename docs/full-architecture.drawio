@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0" scale="7" border="0" version="28.0.7">
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0" scale="7" border="0" version="28.2.5">
   <diagram name="Страница — 1" id="dSvKRztRC6dZt_wdVG8Z">
-    <mxGraphModel dx="2488" dy="1599" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="3067" dy="1936" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -94,7 +94,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="CNbgSviLuuBBwOABzqil-1" value="&amp;lt;&amp;lt;Abstract&amp;gt;&amp;gt;&lt;div&gt;ContinuousDistribution&lt;/div&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=40;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-          <mxGeometry x="-80" y="-449.5" width="280" height="300" as="geometry" />
+          <mxGeometry x="-80" y="-439.5" width="280" height="280" as="geometry" />
         </mxCell>
         <mxCell id="CNbgSviLuuBBwOABzqil-37" value="&lt;div&gt;&lt;i&gt;+ name: str&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ params: set&lt;/i&gt;&lt;/div&gt;&lt;div&gt;+ fixed_params: set&lt;/div&gt;&lt;div&gt;+ params_to_optimize: set&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="CNbgSviLuuBBwOABzqil-1" vertex="1">
           <mxGeometry y="40" width="280" height="70" as="geometry" />
@@ -102,14 +102,14 @@
         <mxCell id="CNbgSviLuuBBwOABzqil-3" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" parent="CNbgSviLuuBBwOABzqil-1" vertex="1">
           <mxGeometry y="110" width="280" height="8" as="geometry" />
         </mxCell>
-        <mxCell id="CNbgSviLuuBBwOABzqil-4" value="&lt;div&gt;&lt;i&gt;+ ppf(P): ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ pdf(X):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ lpdf(X):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ log_gradients(X):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ generate(size):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;+ q_function(X, H):&amp;nbsp;&lt;i&gt;float&lt;br&gt;&lt;/i&gt;+ get_params_vector(param_names): ndarray&lt;/div&gt;&lt;div&gt;+ set_params_from_vector(param_names, vector)&lt;/div&gt;&lt;div&gt;+ fix_param(name: str)&lt;/div&gt;&lt;div&gt;+ unfix_param(name: str)&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="CNbgSviLuuBBwOABzqil-1" vertex="1">
-          <mxGeometry y="118" width="280" height="182" as="geometry" />
+        <mxCell id="CNbgSviLuuBBwOABzqil-4" value="&lt;div&gt;&lt;i&gt;+ ppf(P): ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ pdf(X):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ lpdf(X):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ log_gradients(X):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;+ generate(size):&amp;nbsp;&lt;/i&gt;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;+ get_params_vector(param_names): ndarray&lt;/div&gt;&lt;div&gt;+ set_params_from_vector(param_names, vector)&lt;/div&gt;&lt;div&gt;+ fix_param(name: str)&lt;/div&gt;&lt;div&gt;+ unfix_param(name: str)&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;i&gt;&lt;br&gt;&lt;/i&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="CNbgSviLuuBBwOABzqil-1" vertex="1">
+          <mxGeometry y="118" width="280" height="162" as="geometry" />
         </mxCell>
         <mxCell id="j10DFYHPFlDTU6M4tTgk-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=diamond;endFill=0;endSize=12;" parent="1" source="CNbgSviLuuBBwOABzqil-29" target="lqtpEDl2GM-emxKMyrAU-14" edge="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="CNbgSviLuuBBwOABzqil-29" value="MixtureModel" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-          <mxGeometry x="250" y="-414.5" width="250" height="230" as="geometry" />
+          <mxGeometry x="250" y="-404.5" width="250" height="210" as="geometry" />
         </mxCell>
         <mxCell id="CNbgSviLuuBBwOABzqil-30" value="&lt;div&gt;+ n_components: int&lt;/div&gt;&lt;div&gt;+ components: list&lt;/div&gt;&lt;div&gt;+ weights:&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;+ log_weights:&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="CNbgSviLuuBBwOABzqil-29" vertex="1">
           <mxGeometry y="26" width="250" height="74" as="geometry" />
@@ -117,8 +117,8 @@
         <mxCell id="CNbgSviLuuBBwOABzqil-31" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" parent="CNbgSviLuuBBwOABzqil-29" vertex="1">
           <mxGeometry y="100" width="250" height="8" as="geometry" />
         </mxCell>
-        <mxCell id="CNbgSviLuuBBwOABzqil-32" value="&lt;div&gt;+ add_component(component, weight)&lt;/div&gt;&lt;div&gt;+ remove_component(component_idx)&lt;/div&gt;&lt;div&gt;+ pdf(X):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;+ lpdf(X):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;+ loglikelihood(X):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;+ q_function(X, H):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;+ generate(size):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="CNbgSviLuuBBwOABzqil-29" vertex="1">
-          <mxGeometry y="108" width="250" height="122" as="geometry" />
+        <mxCell id="CNbgSviLuuBBwOABzqil-32" value="&lt;div&gt;+ add_component(component, weight)&lt;/div&gt;&lt;div&gt;+ remove_component(component_idx)&lt;/div&gt;&lt;div&gt;+ pdf(X):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;+ lpdf(X):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;div&gt;&lt;div&gt;&lt;div&gt;+ loglikelihood(X):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;&lt;div&gt;+ generate(size):&amp;nbsp;&lt;i&gt;ndarray&lt;/i&gt;&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;" parent="CNbgSviLuuBBwOABzqil-29" vertex="1">
+          <mxGeometry y="108" width="250" height="102" as="geometry" />
         </mxCell>
         <mxCell id="CNbgSviLuuBBwOABzqil-63" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=diamond;endFill=1;endSize=12;" parent="1" source="CNbgSviLuuBBwOABzqil-52" target="CNbgSviLuuBBwOABzqil-1" edge="1">
           <mxGeometry relative="1" as="geometry" />
