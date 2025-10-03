@@ -20,11 +20,17 @@ import numpy as np
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.distributions.normal import Normal
 from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
 from rework_pysatl_mpest.estimators.iterative.steps.block import OptimizationBlock
 from rework_pysatl_mpest.optimizers.optimizer import Optimizer
 
 NUMERICAL_TOLERANCE = 1e-9
+
+
+# ------------------------
+# Base Q-function strategy
+# ------------------------
 
 
 @singledispatch
@@ -84,40 +90,22 @@ def q_function_strategy(
     return component_id, dict(zip(params_to_optimize, new_params))
 
 
+# ---------------------------------
+# Exponential distribution strategy
+# ---------------------------------
+
+
 @q_function_strategy.register(Exponential)
 def _(
     component: Exponential, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
-    """Specialized M-step for the Exponential distribution using an analytical solution.
+    """Specialized Q-function parameter estimation strategy for
+    the Exponential distribution using an analytical solution.
 
     This function provides a closed-form update for the parameters of an
     `Exponential` distribution, which is more efficient and precise than
     general-purpose numerical optimization. It calculates the new `loc` and
     `rate` parameters directly from the data and responsibilities.
-
-    Parameters
-    ----------
-    component : Exponential
-        The exponential distribution component to be optimized.
-    state : PipelineState
-        The current state of the pipeline, containing `X` and `H`.
-    block : OptimizationBlock
-        The configuration for the optimization task.
-    optimizer : Optimizer
-        This parameter is ignored by this specialized implementation.
-
-    Returns
-    -------
-    tuple[int, dict[str, float]]
-        A tuple containing the component ID and a dictionary of the
-        analytically updated parameters. If the total responsibility for the
-        component is negligible, an empty dictionary is returned, indicating
-        no update was performed.
-
-    Raises
-    ------
-    ValueError
-        If the responsibility matrix `H` is not available in the `state`.
 
     Notes
     -----
@@ -142,9 +130,11 @@ def _(
 
     N_j = np.sum(H_j).item()
 
+    # If the component has negligible responsibility, do not update its parameters.
     if N_j < NUMERICAL_TOLERANCE:
         return block.component_id, {}
 
+    # Update location (loc) if it's in the optimization block
     if Exponential.PARAM_LOC in params_to_optimize:
         relevant_X = X[H_j > NUMERICAL_TOLERANCE]
         if relevant_X.size > 0:
@@ -152,6 +142,7 @@ def _(
         else:
             new_params[Exponential.PARAM_LOC] = component.loc
 
+    # Update lambda (rate) if it's in the optimization block
     if Exponential.PARAM_RATE in params_to_optimize:
         loc = new_params.get(Exponential.PARAM_LOC, component.loc)
 
@@ -164,5 +155,71 @@ def _(
             # If the weighted average is too close to loc,
             # leave rate unchanged to avoid infinity.
             new_params[Exponential.PARAM_RATE] = component.rate
+
+    return block.component_id, new_params
+
+
+# ----------------------------
+# Normal distribution strategy
+# ----------------------------
+
+
+@q_function_strategy.register(Normal)
+def _(
+    component: Normal, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, float]]:
+    """Specialized Q-function parameter estimation strategy for
+    the normal distribution using an analytical solution.
+
+    This function provides a closed-form update for the parameters of a
+    `Normal` distribution, which is more efficient than numerical optimization.
+    It calculates the new `loc` (mean) and `scale` (standard deviation)
+    parameters directly from the data and responsibilities.
+
+     Notes
+    -----
+    The analytical updates are as follows:
+    - The new mean `loc` is the weighted average of the data `X`.
+    - The new variance (`scale` squared) is the weighted average of the
+      squared differences from the new mean.
+    The weights are the responsibilities from the matrix `H`.
+    """
+
+    if state.H is None:
+        raise ValueError("Responsibility matrix H is not computed.")
+
+    X = state.X
+    H_j = state.H[:, block.component_id]
+
+    params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
+    new_params = {}
+
+    N_j = np.sum(H_j).item()
+
+    # If the component has negligible responsibility, do not update its parameters.
+    if N_j < NUMERICAL_TOLERANCE:
+        return block.component_id, {}
+
+    # Update mean (loc) if it's in the optimization block
+    if Normal.PARAM_LOC in params_to_optimize:
+        weighted_sum_X = np.dot(H_j, X).item()
+        new_mu = weighted_sum_X / N_j
+        new_params[Normal.PARAM_LOC] = new_mu
+
+    # Update std (scale) if it's in the optimization block
+    if Normal.PARAM_SCALE in params_to_optimize:
+        # Use the newly computed mean if available, otherwise use the existing one.
+        mu = new_params.get(Normal.PARAM_LOC, component.loc)
+
+        # Calculate the weighted variance
+        weighted_sum_sq_diff = np.dot(H_j, (X - mu) ** 2).item()
+        new_variance = weighted_sum_sq_diff / N_j
+
+        if new_variance > NUMERICAL_TOLERANCE:
+            new_params[Normal.PARAM_SCALE] = np.sqrt(new_variance)
+        else:
+            # If variance is too small, it can lead to instability.
+            # Keep the old scale to prevent it from collapsing to zero.
+            new_params[Normal.PARAM_SCALE] = component.scale
 
     return block.component_id, new_params
