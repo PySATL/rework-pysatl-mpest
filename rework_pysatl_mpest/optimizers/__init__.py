@@ -6,4 +6,3 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from rework_pysatl_mpest.optimizers.optimizer import Optimizer
-
