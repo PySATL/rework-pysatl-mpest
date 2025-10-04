@@ -18,7 +18,7 @@ from functools import singledispatch
 
 import numpy as np
 
-from ....distributions import ContinuousDistribution, Exponential, Normal
+from ....distributions import ContinuousDistribution, Exponential, Normal, Weibull
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
@@ -221,5 +221,76 @@ def _(
             # If variance is too small, it can lead to instability.
             # Keep the old scale to prevent it from collapsing to zero.
             new_params[Normal.PARAM_SCALE] = component.scale
+
+    return block.component_id, new_params
+
+
+# ----------------------------
+# Weibull distribution strategy
+# ----------------------------
+
+
+@q_function_strategy.register(Weibull)
+def _(
+    component: Weibull, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, float]]:
+    """Specialized Q-function parameter estimation strategy for
+    the Weibull distribution using an analytical solution.
+    """
+
+    if state.H is None:
+        raise ValueError("Responsibility matrix H is not computed.")
+
+    X = state.X
+    H_j = state.H[:, block.component_id]
+
+    params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
+    new_params = {}
+
+    N_j = np.sum(H_j).item()
+
+    # If the component has negligible responsibility, do not update its parameters.
+    if N_j < NUMERICAL_TOLERANCE:
+        return block.component_id, {}
+
+    # ------------------------
+    # Optimizing loc and shape
+    # ------------------------
+
+    params_for_numerical_opt = {Weibull.PARAM_SHAPE, Weibull.PARAM_LOC}.intersection(params_to_optimize)
+
+    if params_for_numerical_opt:
+        reduced_block = OptimizationBlock(block.component_id, params_for_numerical_opt, block.maximization_strategy)
+
+        # The generic strategy will handle the optimization for the reduced set
+        _, numerically_optimized_params = q_function_strategy.dispatch(ContinuousDistribution)(
+            component, state, reduced_block, optimizer
+        )
+        new_params.update(numerically_optimized_params)
+
+    # -----------------------------
+    # Analytical solution for scale
+    # -----------------------------
+
+    final_shape = new_params.get(Weibull.PARAM_SHAPE, component.shape)
+    final_loc = new_params.get(Weibull.PARAM_LOC, component.loc)
+
+    if Weibull.PARAM_SCALE in params_to_optimize:
+        # Ensure that data points are greater than the location parameter
+        if np.any(final_loc >= X):
+            new_params[Weibull.PARAM_SCALE] = component.scale
+        else:
+            X_minus_loc = X - final_loc
+
+            # Use np.maximum to avoid taking powers of negative numbers if final_loc is slightly off
+            safe_X_minus_loc = np.maximum(X_minus_loc, NUMERICAL_TOLERANCE)
+
+            weighted_sum = np.dot(H_j, safe_X_minus_loc**final_shape)
+
+            if weighted_sum > 0:
+                new_scale = (weighted_sum / N_j) ** (1.0 / final_shape)
+                new_params[Weibull.PARAM_SCALE] = new_scale
+            else:
+                new_params[Weibull.PARAM_SCALE] = component.scale
 
     return block.component_id, new_params
