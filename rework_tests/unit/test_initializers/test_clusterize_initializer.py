@@ -9,15 +9,13 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-
-from rework_pysatl_mpest.Initializers.clusterizeInitializer import ClusterizeInitializer
-from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
+from rework_pysatl_mpest.Initializers.clusterizeInitializer import ClusterizeInitializer
+from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 
 
 class TestClusterizeInitializer:
-
     def setup_method(self):
         self.mock_clusterizer = Mock()
         self.mock_distributions = [Mock(spec=ContinuousDistribution) for _ in range(5)]
@@ -30,15 +28,9 @@ class TestClusterizeInitializer:
             dist.get_params_vector = Mock(return_value=np.array([0.0, 1.0]))
             dist.q_function = Mock(return_value=-10.0)
 
-    @pytest.mark.parametrize("is_accurate,is_soft", [
-        (True, True), (True, False), (False, True), (False, False)
-    ])
+    @pytest.mark.parametrize("is_accurate,is_soft", [(True, True), (True, False), (False, True), (False, False)])
     def test_initialization_parameters(self, is_accurate, is_soft):
-        initializer = ClusterizeInitializer(
-            is_accurate=is_accurate,
-            is_soft=is_soft,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=is_accurate, is_soft=is_soft, clusterizer=self.mock_clusterizer)
 
         assert initializer.is_accurate == is_accurate
         assert initializer.is_soft == is_soft
@@ -49,11 +41,7 @@ class TestClusterizeInitializer:
         assert initializer.models == []
 
     def test_soft_clusterize(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         expected_weights = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
@@ -68,11 +56,7 @@ class TestClusterizeInitializer:
         np.testing.assert_array_equal(called_arg, X.reshape(-1, 1))
 
     def test_hard_clusterize_no_outliers(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=False,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0, 4.0])
         labels = np.array([0, 1, 0, 1])
@@ -84,11 +68,7 @@ class TestClusterizeInitializer:
         np.testing.assert_array_equal(result, expected)
 
     def test_hard_clusterize_single_cluster_no_outliers(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=False,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         labels = np.array([0, 0, 0])
@@ -100,11 +80,7 @@ class TestClusterizeInitializer:
         np.testing.assert_array_equal(result, expected)
 
     def test_hard_clusterize_with_outliers(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=False,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         labels = np.array([0, -1, 1])
@@ -116,11 +92,7 @@ class TestClusterizeInitializer:
         np.testing.assert_array_equal(result, expected)
 
     def test_hard_clusterize_all_outliers(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=False,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0])
         labels = np.array([-1, -1])
@@ -132,11 +104,7 @@ class TestClusterizeInitializer:
         np.testing.assert_array_equal(result, expected)
 
     def test_hard_clusterize_non_consecutive_labels(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=False,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0, 4.0])
         labels = np.array([2, 5, 2, 5])
@@ -149,11 +117,7 @@ class TestClusterizeInitializer:
 
     @pytest.mark.parametrize("is_soft", [True, False])
     def test_clusterize_failure(self, is_soft):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=is_soft,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=is_soft, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
 
@@ -183,136 +147,123 @@ class TestClusterizeInitializer:
             initializer_hard._clusterize(X, invalid_clusterizer)
 
     def test_perform_accurate_init_normal_path(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
         dists = [self.mock_distributions[0], self.mock_distributions[1]]
 
-        with patch.object(initializer, '_clusterize', return_value=H):
-            with patch(
-                    'rework_pysatl_mpest.Initializers.clusterMatchStrategy.match_clusters_for_models_akaike') as mock_match:
-                mock_match.return_value = (
-                    [dists[0], dists[1]],
-                    [{"mean": 1.0, "std": 0.5}, {"mean": 2.0, "std": 1.0}],
-                    [0.4, 0.6]
-                )
+        with (
+            patch.object(initializer, "_clusterize", return_value=H),
+            patch(
+                "rework_pysatl_mpest.Initializers.clusterMatchStrategy.match_clusters_for_models_akaike"
+            ) as mock_match,
+        ):
+            mock_match.return_value = (
+                [dists[0], dists[1]],
+                [{"mean": 1.0, "std": 0.5}, {"mean": 2.0, "std": 1.0}],
+                [0.4, 0.6],
+            )
 
-                result = initializer.perform(
-                    X=X,
-                    dists=dists,
-                    cluster_match_info=ClusterMatchStrategy.AKAIKE,
-                    estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION]
-                )
+            result = initializer.perform(
+                X=X,
+                dists=dists,
+                cluster_match_info=ClusterMatchStrategy.AKAIKE,
+                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+            )
+            len_components = len(dists)
 
-                assert isinstance(result, MixtureModel)
-                assert len(result.components) == 2
-                assert len(result.weights) == 2
-                assert sum(result.weights) == pytest.approx(1.0)
-                np.testing.assert_array_equal(result.weights, [0.8, 0.2])
+            assert isinstance(result, MixtureModel)
+            assert len(result.components) == len_components
+            assert len(result.weights) == len_components
+            assert sum(result.weights) == pytest.approx(1.0)
+            np.testing.assert_array_equal(result.weights, [0.8, 0.2])
 
-                dists[0].set_params_from_vector.assert_called_once()
-                dists[1].set_params_from_vector.assert_called_once()
+            dists[0].set_params_from_vector.assert_called_once()
+            dists[1].set_params_from_vector.assert_called_once()
 
     def test_perform_accurate_init_fallback_to_fast_init(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
         dists = [self.mock_distributions[0], self.mock_distributions[1]]
 
-        with patch.object(initializer, '_clusterize', return_value=H):
-            with patch(
-                    'rework_pysatl_mpest.Initializers.clusterizeInitializer.match_clusters_for_models_log_likelihood') as mock_match:
-                mock_match.return_value = (
-                    [dists[0], dists[1]],
-                    [None, {"mean": 2.0, "std": 1.0}],
-                    [0.5, 0.5]
-                )
+        with (
+            patch.object(initializer, "_clusterize", return_value=H),
+            patch(
+                "rework_pysatl_mpest.Initializers.clusterizeInitializer.match_clusters_for_models_log_likelihood"
+            ) as mock_match,
+        ):
+            mock_match.return_value = ([dists[0], dists[1]], [None, {"mean": 2.0, "std": 1.0}], [0.5, 0.5])
 
-                with patch.object(initializer, '_fast_init') as mock_fast_init:
-                    mock_fast_init.return_value = ([dists[0], dists[1]], [0.3, 0.7])
-
-                    result = initializer.perform(
-                        X=X,
-                        dists=dists,
-                        cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                        estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION]
-                    )
-
-                    mock_fast_init.assert_called_once_with(X, H)
-                    np.testing.assert_array_equal(result.weights, [0.3, 0.7])
-
-    def test_perform_fast_init(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=False,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
-
-        X = np.array([1.0, 2.0, 3.0])
-        H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
-        dists = [self.mock_distributions[0], self.mock_distributions[1]]
-
-        with patch.object(initializer, '_clusterize', return_value=H):
-            with patch.object(initializer, '_estimation_strategies') as mock_est_strategies:
-                mock_est_strategies.__getitem__.return_value = Mock(return_value={"mean": 0.0, "std": 1.0})
+            with patch.object(initializer, "_fast_init") as mock_fast_init:
+                mock_fast_init.return_value = ([dists[0], dists[1]], [0.3, 0.7])
 
                 result = initializer.perform(
                     X=X,
                     dists=dists,
                     cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                    estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION]
+                    estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
                 )
 
-                assert isinstance(result, MixtureModel)
-                assert len(result.components) == 2
-                assert len(result.weights) == 2
-                assert sum(result.weights) == pytest.approx(1.0)
+                mock_fast_init.assert_called_once_with(X, H)
+                np.testing.assert_array_equal(result.weights, [0.3, 0.7])
 
-                dists[0].set_params_from_vector.assert_called_once()
-                dists[1].set_params_from_vector.assert_called_once()
+    def test_perform_fast_init(self):
+        initializer = ClusterizeInitializer(is_accurate=False, is_soft=True, clusterizer=self.mock_clusterizer)
+
+        X = np.array([1.0, 2.0, 3.0])
+        H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
+        dists = [self.mock_distributions[0], self.mock_distributions[1]]
+
+        with (
+            patch.object(initializer, "_clusterize", return_value=H),
+            patch.object(initializer, "_estimation_strategies") as mock_est_strategies,
+        ):
+            mock_est_strategies.__getitem__.return_value = Mock(return_value={"mean": 0.0, "std": 1.0})
+
+            result = initializer.perform(
+                X=X,
+                dists=dists,
+                cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
+                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+            )
+            len_components = len(dists)
+            assert isinstance(result, MixtureModel)
+            assert len(result.components) == len_components
+            assert len(result.weights) == len_components
+            assert sum(result.weights) == pytest.approx(1.0)
+
+            dists[0].set_params_from_vector.assert_called_once()
+            dists[1].set_params_from_vector.assert_called_once()
 
     def test_weight_normalization(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
 
-        with patch.object(initializer, '_clusterize', return_value=H):
-            with patch.object(initializer, '_accurate_init') as mock_acc_init:
-                mock_acc_init.return_value = ([self.mock_distributions[0], self.mock_distributions[1]], [2.0, 3.0])
+        with (
+            patch.object(initializer, "_clusterize", return_value=H),
+            patch.object(initializer, "_accurate_init") as mock_acc_init,
+        ):
+            mock_acc_init.return_value = ([self.mock_distributions[0], self.mock_distributions[1]], [2.0, 3.0])
 
-                result = initializer.perform(
-                    X=X,
-                    dists=[self.mock_distributions[0], self.mock_distributions[1]],
-                    cluster_match_info=ClusterMatchStrategy.AKAIKE,
-                    estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION]
-                )
+            result = initializer.perform(
+                X=X,
+                dists=[self.mock_distributions[0], self.mock_distributions[1]],
+                cluster_match_info=ClusterMatchStrategy.AKAIKE,
+                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+            )
 
-                expected_weights = [0.4, 0.6]
-                for i, expected in enumerate(expected_weights):
-                    assert result.weights[i] == pytest.approx(expected, abs=0.01)
-                assert sum(result.weights) == pytest.approx(1.0)
+            expected_weights = [0.4, 0.6]
+            for i, expected in enumerate(expected_weights):
+                assert result.weights[i] == pytest.approx(expected, abs=0.01)
+            assert sum(result.weights) == pytest.approx(1.0)
 
     def test_validation_errors_accurate_init(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
@@ -332,11 +283,7 @@ class TestClusterizeInitializer:
             initializer._accurate_init(X, H)
 
     def test_validation_errors_fast_init(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=False,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=False, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
@@ -349,22 +296,13 @@ class TestClusterizeInitializer:
             initializer._fast_init(X, H)
 
     def test_different_distribution_types(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=False,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=False, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([1.0, 2.0, 3.0, 4.0])
         H = np.array([[0.8, 0.2, 0.1, 0.3], [0.7, 0.3, 0.2, 0.1], [0.9, 0.1, 0.3, 0.2], [0.6, 0.4, 0.5, 0.1]])
 
         distributions = []
-        param_sets = [
-            {"mean", "std"},
-            {"alpha", "beta"},
-            {"lambda"},
-            {"shape", "scale"}
-        ]
+        param_sets = [{"mean", "std"}, {"alpha", "beta"}, {"lambda"}, {"shape", "scale"}]
 
         for i, params in enumerate(param_sets):
             mock_dist = Mock(spec=ContinuousDistribution)
@@ -374,13 +312,14 @@ class TestClusterizeInitializer:
 
         self.mock_clusterizer.fit_transform = Mock(return_value=H)
 
-        with patch.object(initializer, '_estimation_strategies') as mock_est_strategies:
+        with patch.object(initializer, "_estimation_strategies") as mock_est_strategies:
+
             def mock_estimation_side_effect(model, X, H, optimizer):
                 param_map = {
                     frozenset({"mean", "std"}): {"mean": 2.0, "std": 1.0},
                     frozenset({"alpha", "beta"}): {"alpha": 2.0, "beta": 2.0},
                     frozenset({"lambda"}): {"lambda": 0.5},
-                    frozenset({"shape", "scale"}): {"shape": 2.0, "scale": 1.0}
+                    frozenset({"shape", "scale"}): {"shape": 2.0, "scale": 1.0},
                 }
                 return param_map.get(frozenset(model.params), {})
 
@@ -390,7 +329,7 @@ class TestClusterizeInitializer:
                 X=X,
                 dists=distributions,
                 cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                estimation_info=[EstimationStrategy.QFUNCTION] * len(distributions)
+                estimation_info=[EstimationStrategy.QFUNCTION] * len(distributions),
             )
 
             assert isinstance(result, MixtureModel)
@@ -399,11 +338,7 @@ class TestClusterizeInitializer:
                 dist.set_params_from_vector.assert_called_once()
 
     def test_edge_case_empty_data(self):
-        initializer = ClusterizeInitializer(
-            is_accurate=True,
-            is_soft=True,
-            clusterizer=self.mock_clusterizer
-        )
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
         X = np.array([])
         H = np.array([]).reshape(0, 2)
@@ -414,22 +349,19 @@ class TestClusterizeInitializer:
 
         self.mock_clusterizer.fit_transform = Mock(return_value=H)
 
-        with patch.object(initializer, '_accurate_init') as mock_acc_init:
+        with patch.object(initializer, "_accurate_init") as mock_acc_init:
             mock_acc_init.return_value = (distributions, [0.5, 0.5])
 
             result = initializer.perform(
                 X=X,
                 dists=distributions,
                 cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION]
+                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
             )
-
+            len_components = len(distributions)
             assert isinstance(result, MixtureModel)
-            assert len(result.components) == 2
+            assert len(result.components) == len_components
             np.testing.assert_array_equal(result.weights, [0.5, 0.5])
-
-    def test_min_samples_constant(self):
-        assert ClusterizeInitializer.MIN_SAMPLES == 10
 
     def test_class_variables_immutable(self):
         assert isinstance(ClusterizeInitializer._estimation_strategies, MappingProxyType)
