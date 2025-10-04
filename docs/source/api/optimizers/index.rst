@@ -18,3 +18,14 @@ Abstract Classes
    :template: class.rst
 
    ~Optimizer
+
+Available implementations
+=========================
+
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: class.rst
+
+   ~ScipyNelderMead
+   ~ScipyPowell
