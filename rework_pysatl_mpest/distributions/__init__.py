@@ -7,9 +7,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from scipy.stats import Normal
+
 from rework_pysatl_mpest.distributions.cauchy import Cauchy
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.distributions.exponential import Exponential
 from rework_pysatl_mpest.distributions.uniform import Uniform
+from rework_pysatl_mpest.distributions.weibull import Weibull
 
-__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Uniform"]
+__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Normal", "Uniform", "Weibull"]

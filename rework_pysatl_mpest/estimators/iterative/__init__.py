@@ -17,7 +17,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, PipelineLogger
 from rework_pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
 from rework_pysatl_mpest.estimators.iterative.breakpointers.step_breakpointer import StepBreakpointer
 from rework_pysatl_mpest.estimators.iterative.pipeline import Pipeline
@@ -25,16 +24,17 @@ from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineStat
 from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
 from rework_pysatl_mpest.estimators.iterative.pruner import Pruner
 from rework_pysatl_mpest.estimators.iterative.pruners.prior_threshold_pruner import PriorThresholdPruner
+from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
 from rework_pysatl_mpest.estimators.iterative.steps.expectation_step import ExpectationStep
 from rework_pysatl_mpest.estimators.iterative.steps.maximization_step import MaximizationStep
 
 __all__ = [
     "Breakpointer",
     "ExpectationStep",
-    "IterationRecord",
     "MaximizationStep",
+    "MaximizationStrategy",
+    "OptimizationBlock",
     "Pipeline",
-    "PipelineLogger",
     "PipelineState",
     "PipelineStep",
     "PriorThresholdPruner",
