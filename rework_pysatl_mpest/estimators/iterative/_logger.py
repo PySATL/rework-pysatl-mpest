@@ -5,7 +5,7 @@ logging pipeline execution details, including iteration statistics,
 mixture models, and timing information.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
