@@ -11,8 +11,9 @@ import numpy as np
 import pytest
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.Initializers.clusterizeInitializer import ClusterizeInitializer
+from rework_pysatl_mpest.Initializers.clusterize_initializer import ClusterizeInitializer
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.optimizers import ScipyNelderMead
 
 
 class TestClusterizeInitializer:
@@ -156,7 +157,7 @@ class TestClusterizeInitializer:
         with (
             patch.object(initializer, "_clusterize", return_value=H),
             patch(
-                "rework_pysatl_mpest.Initializers.clusterMatchStrategy.match_clusters_for_models_akaike"
+                "rework_pysatl_mpest.Initializers.cluster_match_strategy.match_clusters_for_models_akaike"
             ) as mock_match,
         ):
             mock_match.return_value = (
@@ -192,22 +193,23 @@ class TestClusterizeInitializer:
         with (
             patch.object(initializer, "_clusterize", return_value=H),
             patch(
-                "rework_pysatl_mpest.Initializers.clusterizeInitializer.match_clusters_for_models_log_likelihood"
+                "rework_pysatl_mpest.Initializers.clusterize_initializer.match_clusters_for_models_log_likelihood"
             ) as mock_match,
         ):
             mock_match.return_value = ([dists[0], dists[1]], [None, {"mean": 2.0, "std": 1.0}], [0.5, 0.5])
 
             with patch.object(initializer, "_fast_init") as mock_fast_init:
                 mock_fast_init.return_value = ([dists[0], dists[1]], [0.3, 0.7])
-
+                optimizer = ScipyNelderMead()
                 result = initializer.perform(
                     X=X,
                     dists=dists,
                     cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
                     estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+                    optimizer=optimizer,
                 )
 
-                mock_fast_init.assert_called_once_with(X, H)
+                mock_fast_init.assert_called_once_with(X, H, optimizer)
                 np.testing.assert_array_equal(result.weights, [0.3, 0.7])
 
     def test_perform_fast_init(self):

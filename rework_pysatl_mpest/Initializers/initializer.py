@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 
-import numpy as np
+from numpy._typing import ArrayLike
 
 from rework_pysatl_mpest import ContinuousDistribution
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
@@ -53,7 +53,7 @@ class Initializer(ABC):
     @abstractmethod
     def perform(
         self,
-        X: np.ndarray,
+        X: ArrayLike,
         dists: list[ContinuousDistribution],
         cluster_match_info: ClusterMatchStrategy,
         estimation_info: list[EstimationStrategy],
@@ -62,7 +62,7 @@ class Initializer(ABC):
 
         Parameters
         ----------
-        X : np.ndarray
+        X : ArrayLike
             Input data points used for parameter estimation. Should be a 1D array
             of sample values from the mixture distribution.
         dists : list[ContinuousDistribution]

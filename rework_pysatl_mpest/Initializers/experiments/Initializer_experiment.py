@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import davies_bouldin_score, silhouette_score
 
 from rework_pysatl_mpest import Exponential, MixtureModel
-from rework_pysatl_mpest.Initializers.clusterizeInitializer import ClusterizeInitializer
+from rework_pysatl_mpest.Initializers.clusterize_initializer import ClusterizeInitializer
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 
 MIN_LABELS_COUNT = 2
