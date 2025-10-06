@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 from rework_pysatl_mpest import ContinuousDistribution
-from rework_pysatl_mpest.Initializers.clusterMatchStrategy import match_clusters_for_models_log_likelihood
+from rework_pysatl_mpest.Initializers.cluster_match_strategy import match_clusters_for_models_log_likelihood
 
 COMPARISON_CONSTANT = 1e-10
 

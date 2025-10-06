@@ -100,11 +100,11 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from .clusterizeInitializer import ClusterizeInitializer
-from .clusterMatchStrategy import (
+from .cluster_match_strategy import (
     match_clusters_for_models_akaike,
     match_clusters_for_models_log_likelihood,
 )
+from .clusterize_initializer import ClusterizeInitializer
 from .initializer import Initializer
 from .q_function import q_function_strategy, q_function_strategy_exponential
 from .strategies import ClusterMatchStrategy, EstimationStrategy

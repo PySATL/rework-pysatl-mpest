@@ -11,15 +11,17 @@ from types import MappingProxyType
 from typing import Any, Callable, ClassVar, Optional
 
 import numpy as np
+from numpy._typing import ArrayLike
 
 from rework_pysatl_mpest import ContinuousDistribution, MixtureModel
-from rework_pysatl_mpest.Initializers.clusterMatchStrategy import (
+from rework_pysatl_mpest.Initializers.cluster_match_strategy import (
     match_clusters_for_models_akaike,
     match_clusters_for_models_log_likelihood,
 )
 from rework_pysatl_mpest.Initializers.initializer import Initializer
 from rework_pysatl_mpest.Initializers.q_function import q_function_strategy
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.optimizers import Optimizer
 from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
 
 
@@ -189,7 +191,9 @@ class ClusterizeInitializer(Initializer):
         else:
             raise ValueError("Clusterizer doesn't have required method")
 
-    def _accurate_init(self, X: np.ndarray, H: np.ndarray) -> tuple[list[ContinuousDistribution], list[float]]:
+    def _accurate_init(
+        self, X: np.ndarray, H: np.ndarray, optimizer: Optimizer = ScipyNelderMead()
+    ) -> tuple[list[ContinuousDistribution], list[float]]:
         """Performs accurate initialization with optimal cluster-model matching.
 
         Parameters
@@ -198,6 +202,9 @@ class ClusterizeInitializer(Initializer):
             Input data points.
         H : np.ndarray
             Weight matrix from clustering.
+        optimizer : Optimizer
+            Optimizer that will be used in estimation strategies.
+            By default ScipyNelderMead.
 
         Returns
         -------
@@ -221,13 +228,11 @@ class ClusterizeInitializer(Initializer):
 
         cluster_match_func = self._cluster_match_strategies[self.cluster_match_strategy]
 
-        estimation_funcs = []
-        for strategy in self.estimation_strategies:
-            estimation_funcs.append(self._estimation_strategies[strategy])
+        estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
         distributions, params, weights = cluster_match_func(self.models, X, H, estimation_funcs)
         if not np.all(params):
-            return self._fast_init(X, H)
+            return self._fast_init(X, H, optimizer)
 
         new_distributions = []
         for i, dist in enumerate(distributions):
@@ -238,7 +243,9 @@ class ClusterizeInitializer(Initializer):
 
         return new_distributions, weights
 
-    def _fast_init(self, X: np.ndarray, H: np.ndarray) -> tuple[list[ContinuousDistribution], list[float]]:
+    def _fast_init(
+        self, X: np.ndarray, H: np.ndarray, optimizer: Optimizer = ScipyNelderMead()
+    ) -> tuple[list[ContinuousDistribution], list[float]]:
         """Performs fast initialization with direct cluster assignments.
 
         Parameters
@@ -247,6 +254,9 @@ class ClusterizeInitializer(Initializer):
             Input data points.
         H : np.ndarray
             Weight matrix from clustering.
+        optimizer : Optimizer
+            Optimizer that will be used in estimation strategies.
+            By default ScipyNelderMead.
 
         Returns
         -------
@@ -266,14 +276,12 @@ class ClusterizeInitializer(Initializer):
 
         distributions: list[ContinuousDistribution] = []
         weights: list[float] = []
-        estimation_funcs = []
-        for strategy in self.estimation_strategies:
-            estimation_funcs.append(self._estimation_strategies[strategy])
+        estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
         for k in range(self.n_components):
             model = self.models[k]
             H_k = H[:, k]
-            params = estimation_funcs[k](model, X, H_k, ScipyNelderMead())
+            params = estimation_funcs[k](model, X, H_k, optimizer)
             params_names = params.keys()
             params_values = params.values()
             model.set_params_from_vector(params_names, params_values)
@@ -286,16 +294,17 @@ class ClusterizeInitializer(Initializer):
 
     def perform(
         self,
-        X: np.ndarray,
+        X: ArrayLike,
         dists: list[ContinuousDistribution],
         cluster_match_info: ClusterMatchStrategy,
         estimation_info: list[EstimationStrategy],
+        optimizer: Optimizer = ScipyNelderMead(),
     ) -> MixtureModel:
         """Performs cluster-based initialization of mixture model parameters.
 
         Parameters
         ----------
-        X : np.ndarray
+        X : ArrayLike
             Input data points for initialization.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize.
@@ -303,6 +312,9 @@ class ClusterizeInitializer(Initializer):
             Strategy for matching clusters to distribution models.
         estimation_info : list[EstimationStrategy]
             List of estimation strategies for each distribution model.
+        optimizer : Optimizer
+            Optimizer that will be used in estimation strategies.
+            By default ScipyNelderMead.
 
         Returns
         -------
@@ -318,7 +330,7 @@ class ClusterizeInitializer(Initializer):
         4. Normalizes component weights
         5. Returns the initialized mixture model
         """
-
+        X = np.asarray(X, dtype=np.float64)
         self.models = dists
         self.n_components = len(dists)
         H = self._clusterize(X, self.clusterizer)
@@ -326,9 +338,9 @@ class ClusterizeInitializer(Initializer):
         self.estimation_strategies = estimation_info
 
         if self.is_accurate:
-            distributions, weights = self._accurate_init(X, H)
+            distributions, weights = self._accurate_init(X, H, optimizer)
         else:
-            distributions, weights = self._fast_init(X, H)
+            distributions, weights = self._fast_init(X, H, optimizer)
 
         total_weight = sum(weights)
         normalized_weights: list[float] = [w / total_weight for w in weights]

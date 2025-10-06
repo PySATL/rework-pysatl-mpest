@@ -13,7 +13,7 @@ from typing import Callable
 import numpy as np
 
 from rework_pysatl_mpest import ContinuousDistribution
-from rework_pysatl_mpest.optimizers.scipy_powell import ScipyPowell
+from rework_pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
 
 
 def match_clusters_for_models_log_likelihood(
@@ -22,6 +22,7 @@ def match_clusters_for_models_log_likelihood(
     H: np.ndarray,
     estimation_info: list[Callable],
     min_samples: int = 10,
+    optimizer: Optimizer = ScipyNelderMead(),
 ) -> tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]:
     """Matches clusters to models using weighted log-likelihood criteria.
 
@@ -44,6 +45,9 @@ def match_clusters_for_models_log_likelihood(
     min_samples : int, optional
         Minimum number of samples required for a cluster to be considered valid.
         Default is 10.
+    optimizer : Optimizer
+        Optimizer that will be used in estimation strategies.
+        By default ScipyNelderMead.
 
     Returns
     -------
@@ -108,7 +112,7 @@ def match_clusters_for_models_log_likelihood(
             H_k = H[:, k]
 
             temp_model = deepcopy(model)
-            new_params = estimation_func(temp_model, X, H_k, ScipyPowell())
+            new_params = estimation_func(temp_model, X, H_k, optimizer)
             param_names = new_params.keys()
             param_values = new_params.values()
             temp_model.set_params_from_vector(param_names, param_values)
@@ -141,6 +145,7 @@ def match_clusters_for_models_akaike(
     H: np.ndarray,
     estimation_info: list[Callable],
     min_samples: int = 10,
+    optimizer: Optimizer = ScipyNelderMead(),
 ) -> tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]:
     """Matches clusters to models using Akaike Information Criterion (AIC).
 
@@ -162,6 +167,9 @@ def match_clusters_for_models_akaike(
     min_samples : int, optional
         Minimum number of samples required for a cluster to be considered valid.
         Default is 10.
+    optimizer : Optimizer
+        Optimizer that will be used in estimation strategies.
+        By default ScipyNelderMead.
 
     Returns
     -------
@@ -214,7 +222,7 @@ def match_clusters_for_models_akaike(
             H_k = H[:, k]
 
             temp_model = deepcopy(model)
-            new_params = estimation_func(temp_model, X, H_k, ScipyPowell())
+            new_params = estimation_func(temp_model, X, H_k, optimizer)
             param_names = new_params.keys()
             param_values = new_params.values()
             temp_model.set_params_from_vector(param_names, param_values)

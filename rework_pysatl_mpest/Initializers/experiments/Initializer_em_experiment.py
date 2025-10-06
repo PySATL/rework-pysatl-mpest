@@ -16,7 +16,7 @@ from rework_pysatl_mpest.estimators.iterative.pipeline import Pipeline
 from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
 from rework_pysatl_mpest.estimators.iterative.steps.expectation_step import ExpectationStep
 from rework_pysatl_mpest.estimators.iterative.steps.maximization_step import MaximizationStep
-from rework_pysatl_mpest.Initializers.clusterizeInitializer import ClusterizeInitializer
+from rework_pysatl_mpest.Initializers.clusterize_initializer import ClusterizeInitializer
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 from rework_pysatl_mpest.optimizers.scipy_powell import ScipyPowell
 
