@@ -20,12 +20,12 @@ from typing import Callable, ClassVar
 
 import numpy as np
 
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.estimators.iterative._strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
-from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
+from ....distributions import ContinuousDistribution
+from ....optimizers import Optimizer
+from .._strategies import q_function_strategy
+from ..pipeline_state import PipelineState
+from ..pipeline_step import PipelineStep
+from .block import MaximizationStrategy, OptimizationBlock
 
 
 class MaximizationStep(PipelineStep):

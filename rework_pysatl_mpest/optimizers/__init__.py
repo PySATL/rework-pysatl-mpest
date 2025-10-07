@@ -5,8 +5,8 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
-from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
-from rework_pysatl_mpest.optimizers.scipy_powell import ScipyPowell
+from .optimizer import Optimizer
+from .scipy_nelder_mead import ScipyNelderMead
+from .scipy_powell import ScipyPowell
 
 __all__ = ["Optimizer", "ScipyNelderMead", "ScipyPowell"]

@@ -6,8 +6,8 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from rework_pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
+from ..breakpointer import Breakpointer
+from ..pipeline_state import PipelineState
 
 
 class StepBreakpointer(Breakpointer):

@@ -6,7 +6,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.core.parameter import Parameter
+from .mixture import MixtureModel
+from .parameter import Parameter
 
 __all__ = ["MixtureModel", "Parameter"]

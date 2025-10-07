@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
+from ..core import MixtureModel
 
 
 class BaseEstimator(ABC):
