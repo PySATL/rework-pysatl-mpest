@@ -7,15 +7,16 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from collections.abc import Sequence
-from typing import Optional
+from collections.abc import Iterator, Sequence
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 from numpy import float64
 from numpy.typing import ArrayLike, NDArray
 from scipy.special import logsumexp, softmax
 
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
+if TYPE_CHECKING:
+    from ..distributions import ContinuousDistribution
 
 
 class MixtureModel:
@@ -65,7 +66,7 @@ class MixtureModel:
         generate
     """
 
-    def __init__(self, components: Sequence[ContinuousDistribution], weights: Optional[ArrayLike] = None):
+    def __init__(self, components: Sequence["ContinuousDistribution"], weights: Optional[ArrayLike] = None):
         n_components = len(components)
         if n_components == 0:
             raise ValueError("List of components cannot be an empty")
@@ -160,7 +161,7 @@ class MixtureModel:
         self._log_weights = np.asarray(new_log_weights, dtype=float)
         self._cached_weights = None
 
-    def add_component(self, component: ContinuousDistribution, weight: float):
+    def add_component(self, component: "ContinuousDistribution", weight: float):
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
         If :attr:`weight` is specified for the new component, the old component
@@ -312,7 +313,7 @@ class MixtureModel:
         np.random.shuffle(samples)
         return samples
 
-    def __getitem__(self, key: int):
+    def __getitem__(self, key: int) -> "ContinuousDistribution":
         """Retrieves components by index.
 
         Parameters
@@ -328,7 +329,7 @@ class MixtureModel:
 
         return self.components[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator["ContinuousDistribution"]:
         """Returns an iterator over the mixture components.
 
         This allows the `MixtureModel` instance to be used directly in

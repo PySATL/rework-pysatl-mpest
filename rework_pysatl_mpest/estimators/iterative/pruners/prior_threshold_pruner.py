@@ -14,8 +14,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from copy import copy
 
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pruner import Pruner
+from ..pipeline_state import PipelineState
+from ..pruner import Pruner
 
 
 class PriorThresholdPruner(Pruner):

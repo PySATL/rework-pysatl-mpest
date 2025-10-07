@@ -9,7 +9,7 @@ from typing import Callable
 
 from scipy.optimize import minimize
 
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
+from .optimizer import Optimizer
 
 
 class ScipyPowell(Optimizer):
