@@ -8,8 +8,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.special import logsumexp
 
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
+from ..pipeline_state import PipelineState
+from ..pipeline_step import PipelineStep
 
 
 class ExpectationStep(PipelineStep):

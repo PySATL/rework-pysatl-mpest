@@ -26,7 +26,7 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from rework_pysatl_mpest.estimators.base_estimator import BaseEstimator
+from .base_estimator import BaseEstimator
 
 __all__ = [
     "BaseEstimator",
