@@ -377,13 +377,13 @@ window.addEventListener("load", () => mermaid.run());
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.core.mixture</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.base_estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative._logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationRecord</span><span class="p">,</span> <span class="n">PipelineLogger</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.breakpointer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Breakpointer</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pruner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pruner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">...core</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..base_estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationRecord</span><span class="p">,</span> <span class="n">PipelineLogger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.breakpointer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Breakpointer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.pruner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pruner</span>
 
 
 <div class="viewcode-block" id="Pipeline">

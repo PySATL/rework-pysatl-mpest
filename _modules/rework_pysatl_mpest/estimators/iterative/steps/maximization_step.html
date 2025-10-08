@@ -379,12 +379,12 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.distributions.continuous_dist</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContinuousDistribution</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative._strategies.q_function</span><span class="w"> </span><span class="kn">import</span> <span class="n">q_function_strategy</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.estimators.iterative.steps.block</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaximizationStrategy</span><span class="p">,</span> <span class="n">OptimizationBlock</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.optimizers.optimizer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">....distributions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContinuousDistribution</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">....optimizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._strategies</span><span class="w"> </span><span class="kn">import</span> <span class="n">q_function_strategy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.block</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaximizationStrategy</span><span class="p">,</span> <span class="n">OptimizationBlock</span>
 
 
 <div class="viewcode-block" id="MaximizationStep">
