@@ -7,6 +7,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import csv
 import random
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -22,8 +23,9 @@ st_scale = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infin
 
 
 def load_r_test_cases():
+    csv_path = Path(__file__).parent / "constraints" / "pareto_test_VGAM_R.csv"
     cases = []
-    with open("constraints/pareto_test_VGAM_R.csv", newline="", encoding="utf-8") as f:
+    with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             cases.append(
