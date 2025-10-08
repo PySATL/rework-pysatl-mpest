@@ -7,8 +7,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.core import MixtureModel
+from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, PipelineLogger
 
 # objects - 2-3  init(once_in =_iteration) (1,2,3)

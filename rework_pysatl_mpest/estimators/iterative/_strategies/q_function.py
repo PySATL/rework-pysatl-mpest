@@ -18,12 +18,10 @@ from functools import singledispatch
 
 import numpy as np
 
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.distributions.exponential import Exponential
-from rework_pysatl_mpest.distributions.normal import Normal
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.steps.block import OptimizationBlock
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
+from ....distributions import ContinuousDistribution, Exponential, Normal
+from ....optimizers import Optimizer
+from ..pipeline_state import PipelineState
+from ..steps import OptimizationBlock
 
 NUMERICAL_TOLERANCE = 1e-9
 

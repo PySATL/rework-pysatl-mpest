@@ -18,13 +18,13 @@ from copy import deepcopy
 import numpy as np
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.estimators.base_estimator import BaseEstimator
-from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, PipelineLogger
-from rework_pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
-from rework_pysatl_mpest.estimators.iterative.pruner import Pruner
+from ...core import MixtureModel
+from ..base_estimator import BaseEstimator
+from ._logger import IterationRecord, PipelineLogger
+from .breakpointer import Breakpointer
+from .pipeline_state import PipelineState
+from .pipeline_step import PipelineStep
+from .pruner import Pruner
 
 
 class Pipeline(BaseEstimator):

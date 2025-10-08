@@ -12,7 +12,7 @@ import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
-from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.distributions import Exponential
 from scipy.integrate import quad
 from scipy.stats import expon, kstest
 

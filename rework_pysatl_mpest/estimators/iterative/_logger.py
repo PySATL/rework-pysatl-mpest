@@ -5,7 +5,7 @@ logging pipeline execution details, including iteration statistics,
 mixture models, and timing information.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -15,8 +15,8 @@ from typing import Optional
 from numpy import float64
 from numpy.typing import NDArray
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.estimators.iterative.pruner import Pruner
+from ...core import MixtureModel
+from .pruner import Pruner
 
 
 @dataclass

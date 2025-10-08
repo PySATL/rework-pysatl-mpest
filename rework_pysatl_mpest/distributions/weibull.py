@@ -9,8 +9,8 @@ import numpy as np
 from numpy import float64
 from scipy.stats import weibull_min
 
-from rework_pysatl_mpest.core.parameter import Parameter
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
+from ..core import Parameter
+from .continuous_dist import ContinuousDistribution
 
 
 class Weibull(ContinuousDistribution):
