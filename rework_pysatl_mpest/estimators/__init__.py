@@ -27,7 +27,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from .base_estimator import BaseEstimator
+from .ecm import ECM
 
-__all__ = [
-    "BaseEstimator",
-]
+__all__ = ["ECM", "BaseEstimator"]
