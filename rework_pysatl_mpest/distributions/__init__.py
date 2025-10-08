@@ -10,6 +10,9 @@ __license__ = "SPDX-License-Identifier: MIT"
 from rework_pysatl_mpest.distributions.cauchy import Cauchy
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.distributions.normal import Normal
+from rework_pysatl_mpest.distributions.pareto import Pareto
 from rework_pysatl_mpest.distributions.uniform import Uniform
+from rework_pysatl_mpest.distributions.weibull import Weibull
 
-__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Uniform"]
+__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Normal", "Pareto", "Uniform", "Weibull"]

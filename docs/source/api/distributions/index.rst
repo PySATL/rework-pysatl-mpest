@@ -32,3 +32,6 @@ Continuous distributions
    ~Exponential
    ~Uniform
    ~Cauchy
+   ~Normal
+   ~Weibull
+   ~Pareto

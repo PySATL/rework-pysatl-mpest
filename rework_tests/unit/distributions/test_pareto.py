@@ -1,0 +1,362 @@
+"""Tests for Pareto class"""
+
+__author__ = "Maksim Pastukhov"
+__copyright__ = "Copyright (c) 2025 PySATL project"
+__license__ = "SPDX-License-Identifier: MIT"
+
+
+import csv
+import random
+
+import numpy as np
+import pytest
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
+from hypothesis.extra.numpy import arrays
+from rework_pysatl_mpest.distributions.pareto import Pareto
+from scipy.integrate import quad
+from scipy.stats import kstest, pareto
+
+st_shape = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
+st_scale = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
+
+
+def load_r_test_cases():
+    cases = []
+    with open("constraints/pareto_test_VGAM_R.csv", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            cases.append(
+                pytest.param(
+                    np.float64(row["x"]),
+                    np.float64(row["shape"]),
+                    np.float64(row["scale"]),
+                    np.float64(row["expected_pdf"]),
+                    id=row["name"],
+                )
+            )
+    return cases
+
+
+class TestParetoInitialization:
+    """Tests for the __init__ method and basic properties."""
+
+    def test_initialization_successful(self):
+        """Tests that the instance is initialized correctly with valid parameters."""
+
+        shape, scale = 0.5, 2.0
+        dist = Pareto(shape=shape, scale=scale)
+        assert isinstance(dist.shape, float)
+        assert isinstance(dist.scale, float)
+        assert dist.shape == shape
+        assert dist.scale == scale
+
+    def test_name_property(self):
+        """Tests that the name property returns the correct string."""
+
+        dist = Pareto(shape=1.0, scale=2.0)
+        assert dist.name == "Pareto"
+
+    def test_params_property(self):
+        """Tests that the params property returns the correct set of parameter names."""
+
+        dist = Pareto(shape=1.0, scale=1.0)
+        assert dist.params == {"shape", "scale"}
+
+    def test_shape_invariant_violation(self):
+        """Tests that initializing with a non-positive shape raises a ValueError."""
+
+        with pytest.raises(ValueError, match="Shape parameter must be a positive"):
+            Pareto(shape=0.0, scale=1.0)
+        with pytest.raises(ValueError, match="Shape parameter must be a positive"):
+            Pareto(shape=-1.0, scale=1.0)
+
+    def test_scale_invariant_violation(self):
+        """Tests that initializing with a non-positive scale raises a ValueError."""
+
+        with pytest.raises(ValueError, match="Scale parameter must be a positive"):
+            Pareto(shape=1.0, scale=0.0)
+        with pytest.raises(ValueError, match="Scale parameter must be a positive"):
+            Pareto(shape=1.0, scale=-1.0)
+
+    def test_shape_assignment_violation(self):
+        """Tests that assigning a non-positive shape after initialization raises a ValueError."""
+
+        dist = Pareto(shape=1.0, scale=1.0)
+        with pytest.raises(ValueError, match="Shape parameter must be a positive"):
+            dist.shape = 0.0
+        with pytest.raises(ValueError, match="Shape parameter must be a positive"):
+            dist.shape = -10.0
+
+    def test_scale_assignment_violation(self):
+        """Tests that assigning a non-positive scale after initialization raises a ValueError."""
+
+        dist = Pareto(shape=1.0, scale=1.0)
+        with pytest.raises(ValueError, match="Scale parameter must be a positive"):
+            dist.scale = 0.0
+        with pytest.raises(ValueError, match="Scale parameter must be a positive"):
+            dist.scale = -10.0
+
+    def test_repr_method(self):
+        """Tests that the __repr__ method provides a reproducible string."""
+
+        dist = Pareto(shape=1.23, scale=4.56)
+        repr_str = repr(dist)
+        assert repr_str == "Pareto(shape=1.23, scale=4.56)"
+
+        recreated_dist = eval(repr_str)
+        assert isinstance(recreated_dist, Pareto)
+        assert recreated_dist.shape == dist.shape
+        assert recreated_dist.scale == dist.scale
+
+
+class TestParetoPDF:
+    """Tests for the pdf method using hypothesis."""
+
+    @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e2, 1e2)))
+    def test_pdf_properties(self, x):
+        """Tests that the PDF is non-negative and has the correct return type and shape."""
+
+        dist = Pareto(shape=1.0, scale=2.0)
+        pdf_values = dist.pdf(x)
+        assert isinstance(pdf_values, np.ndarray)
+        assert pdf_values.shape == x.shape
+        assert np.all(pdf_values >= 0)
+
+    @pytest.mark.parametrize("x,shape,scale,expected_pdf", load_r_test_cases())
+    def test_pdf_against_R(self, shape, scale, x, expected_pdf):
+        """Compares the custom PDF implementation against scipy's implementation."""
+
+        dist = Pareto(shape=shape, scale=scale)
+        custom_pdf = dist.pdf(x)
+
+        np.testing.assert_allclose(expected_pdf, custom_pdf, atol=1e-8)
+
+    @pytest.mark.parametrize(
+        "shape,scale",
+        [(2.0, 1.0), (1.0, 1.0), (0.25, 1.0), (100.0, 3.0), (1.7, 0.8), (4.05854031201452, 17.7524529929971)],
+    )
+    def test_pdf_integral_is_one(self, shape, scale):
+        """Tests that the integral of the PDF over its support is equal to 1."""
+
+        dist = Pareto(shape=shape, scale=scale)
+        integral, error = quad(dist.pdf, scale, np.inf, epsabs=1e-10, epsrel=1e-10, limit=100)
+        assert np.isfinite(integral), f"Integral diverged: {integral}"
+        np.testing.assert_allclose(1.0, integral, rtol=1e-8, atol=1e-10)
+
+    @pytest.mark.parametrize(
+        "shape,scale, x",
+        [
+            (2.0, 1.0, 100.0),
+            (1.0, 1.0, 1000.0),
+            (0.25, 1.0, 1.0),
+            (100.0, 3.0, -1.0),
+            (1.7, 0.8, -8.0),
+            (4.05854031201452, 17.7524529929971, 10.0),
+        ],
+    )
+    def test_pdf_outside_support(self, shape, scale, x):
+        """Tests that the PDF is zero for values less than the location parameter."""
+        x = np.asarray(x, dtype=np.float64)
+        x_val = scale - abs(x)
+        dist = Pareto(shape=shape, scale=scale)
+        assert dist.pdf(x_val) == 0.0
+
+
+class TestParetoLPDF:
+    """Tests for the lpdf (log-PDF) method using hypothesis."""
+
+    @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_lpdf_return_type_and_shape(self, shape, scale, x):
+        """Tests the return type and shape of the lpdf method."""
+
+        dist = Pareto(shape=shape, scale=scale)
+        lpdf_values = dist.lpdf(x)
+        assert isinstance(lpdf_values, np.ndarray)
+        assert lpdf_values.shape == x.shape
+
+    @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3, allow_infinity=False, allow_nan=False))
+    def test_lpdf_against_scipy(self, shape, scale, x):
+        """Compares the custom LPDF implementation against scipy's implementation."""
+        assume(np.isfinite(pareto.logpdf(x, scale=scale, b=shape, loc=0.0)))
+        dist = Pareto(shape=shape, scale=scale)
+        custom_lpdf = dist.lpdf(x)
+        scipy_lpdf = pareto.logpdf(x, scale=scale, b=shape, loc=0.0)
+        np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-12)
+
+    @given(shape=st_shape, scale=st_scale, x=st.floats(min_value=1e2, max_value=1e4, allow_infinity=False))
+    def test_lpdf_outside_support(self, shape, scale, x):
+        """Tests that the LPDF is -inf for values less than the location parameter."""
+
+        x_val = scale - x
+        dist = Pareto(shape=shape, scale=scale)
+        assert dist.lpdf(x_val) == -np.inf
+
+
+class TestParetoPPF:
+    """Tests for the ppf (Percent Point Function) method using hypothesis."""
+
+    @given(
+        shape=st_shape,
+        scale=st_scale,
+        p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)),
+    )
+    def test_ppf_return_type_and_shape(self, shape, scale, p):
+        """Tests the return type and shape of the ppf method."""
+
+        dist = Pareto(shape=shape, scale=scale)
+        ppf_values = dist.ppf(p)
+        assert isinstance(ppf_values, np.ndarray)
+        assert ppf_values.shape == p.shape
+
+    @given(shape=st_shape, scale=st_scale, p=st.floats(0, 1))
+    def test_ppf_against_scipy(self, shape, scale, p):
+        """Compares the custom PPF implementation against scipy's implementation."""
+
+        dist = Pareto(shape=shape, scale=scale)
+        custom_ppf = dist.ppf(p)
+        scipy_ppf = pareto.ppf(p, scale=scale, b=shape)
+        np.testing.assert_allclose(custom_ppf, scipy_ppf, atol=1e-9)
+
+    @pytest.mark.parametrize("p_val", [-0.5, 1.1, 1.5])
+    def test_ppf_invalid_input(self, p_val):
+        """Tests that PPF returns NaN for probabilities outside the [0, 1) range."""
+
+        dist = Pareto(shape=1.0, scale=5.0)
+        assert np.isnan(dist.ppf(p_val))
+
+
+class TestParetoGradients:
+    """Tests for gradient calculation methods."""
+
+    h = 1e-6
+
+    @settings(suppress_health_check=[HealthCheck.filter_too_much])
+    @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
+    def test_dlog_shape_numerical(self, shape, scale, x):
+        """Checks the analytical gradient for 'shape' against a numerical approximation."""
+
+        assume(np.all(x > scale))
+
+        dist = Pareto(shape=shape, scale=scale)
+
+        lpdf_plus_h = Pareto(shape=shape + self.h, scale=scale).lpdf(x)
+        lpdf_minus_h = Pareto(shape=shape - self.h, scale=scale).lpdf(x)
+
+        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        analytical_grad = dist._dlog_shape(x)
+
+        assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.shape == x.shape
+        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+    @settings(suppress_health_check=[HealthCheck.filter_too_much])
+    @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
+    def test_dlog_scale_numerical(self, shape, scale, x):
+        """Checks the analytical gradient for 'scale' against a numerical approximation."""
+
+        assume(np.all(x > scale + self.h))
+
+        dist = Pareto(shape=shape, scale=scale)
+
+        lpdf_plus_h = Pareto(shape=shape, scale=scale + self.h).lpdf(x)
+        lpdf_minus_h = Pareto(shape=shape, scale=scale - self.h).lpdf(x)
+
+        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        analytical_grad = dist._dlog_scale(x)
+
+        assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.shape == x.shape
+        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+    @pytest.mark.parametrize(
+        "fixed_params, expected_shape_col, expected_params",
+        [
+            ([], 2, ["shape", "scale"]),
+            (["shape"], 1, ["scale"]),
+            (["scale"], 1, ["shape"]),
+            (["shape", "scale"], 0, []),
+        ],
+    )
+    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
+        """Tests the structure and content of log_gradients with various fixed parameters."""
+
+        dist = Pareto(shape=1.0, scale=2.0)
+        for param in fixed_params:
+            dist.fix_param(param)
+
+        x = np.array([1.5, 2.0, 3.0])
+        gradients = dist.log_gradients(x)
+
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.shape == (len(x), expected_shape_col)
+
+        if "shape" in expected_params:
+            idx = sorted(expected_params).index("shape")
+            np.testing.assert_allclose(gradients[:, idx], dist._dlog_shape(x))
+        if "scale" in expected_params:
+            idx = sorted(expected_params).index("scale")
+            np.testing.assert_allclose(gradients[:, idx], dist._dlog_scale(x))
+
+
+class TestParetoGenerate:
+    """Tests for the generate method."""
+
+    def test_generate_type_and_shape(self):
+        """Tests that generated samples have the correct type and shape."""
+
+        np.random.seed(42)
+        random.seed(42)
+        dist = Pareto(shape=1.0, scale=2.0)
+        size = 100
+        samples = dist.generate(size=size)
+        assert isinstance(samples, np.ndarray)
+        assert samples.dtype == np.float64
+        assert samples.shape == (size,)
+
+    def test_generate_zero_size(self):
+        """Tests if the generating 0 number of samples returns an empty array"""
+
+        dist = Pareto(shape=1.0, scale=2.0)
+        assert len(dist.generate(size=0)) == 0
+
+    @pytest.mark.parametrize("size", [-1, -10])
+    def test_generate_negative_size(self, size):
+        """Tests that generating a negative number of samples raises ValueError."""
+
+        dist = Pareto(shape=1.0, scale=2.0)
+
+        with pytest.raises(ValueError):
+            dist.generate(size=size)
+
+    def test_generate_statistical_properties(self):
+        """Tests if the generated samples have correct statistical properties (mean, variance)."""
+
+        np.random.seed(123)
+        random.seed(123)
+        shape, scale = 5.0, 0.5
+        dist = Pareto(shape=shape, scale=scale)
+        size = 20000
+
+        samples = dist.generate(size=size)
+
+        theoretical_mean = (shape * scale) / (shape - 1)
+        theoretical_var = ((scale**2) * shape) / ((shape - 1) ** 2 * (shape - 2))
+
+        assert np.mean(samples) == pytest.approx(theoretical_mean, rel=0.1)
+        assert np.var(samples) == pytest.approx(theoretical_var, rel=0.1)
+
+    def test_generate_kolmogorov_smirnov(self):
+        """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
+
+        np.random.seed(456)
+        random.seed(456)
+        shape, scale, loc = 10.0, 2.0, 0.0
+        dist = Pareto(shape=shape, scale=scale)
+        size = 1000
+
+        samples = dist.generate(size=size)
+
+        ks_statistic, p_value = kstest(samples, "pareto", args=(shape, loc, scale))
+        lower_bound = 0.05
+        assert p_value > lower_bound
