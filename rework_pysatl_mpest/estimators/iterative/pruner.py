@@ -11,7 +11,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
+from .pipeline_state import PipelineState
 
 
 class Pruner(ABC):
