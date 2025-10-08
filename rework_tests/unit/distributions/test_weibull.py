@@ -12,7 +12,7 @@ import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
-from rework_pysatl_mpest.distributions.weibull import Weibull
+from rework_pysatl_mpest.distributions import Weibull
 from scipy.integrate import quad
 from scipy.special import gamma
 from scipy.stats import kstest, weibull_min

@@ -8,14 +8,17 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 import pytest
 from pytest_mock import MockerFixture
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
-from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
-from rework_pysatl_mpest.estimators.iterative.steps.expectation_step import ExpectationStep
-from rework_pysatl_mpest.estimators.iterative.steps.maximization_step import MaximizationStep
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
+from rework_pysatl_mpest.core import MixtureModel
+from rework_pysatl_mpest.distributions import ContinuousDistribution
+from rework_pysatl_mpest.estimators.iterative import (
+    ExpectationStep,
+    MaximizationStep,
+    MaximizationStrategy,
+    OptimizationBlock,
+    PipelineState,
+    PipelineStep,
+)
+from rework_pysatl_mpest.optimizers import Optimizer
 
 
 @pytest.fixture

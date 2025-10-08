@@ -12,7 +12,7 @@ import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
-from rework_pysatl_mpest.distributions.cauchy import Cauchy
+from rework_pysatl_mpest.distributions import Cauchy
 from scipy.integrate import quad
 from scipy.stats import cauchy, kstest
 

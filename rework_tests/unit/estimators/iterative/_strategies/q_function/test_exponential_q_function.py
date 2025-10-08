@@ -9,10 +9,9 @@ import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from rework_pysatl_mpest.distributions.exponential import Exponential
-from rework_pysatl_mpest.estimators.iterative._strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
+from rework_pysatl_mpest.distributions import Exponential
+from rework_pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
+from rework_pysatl_mpest.estimators.iterative._strategies import q_function_strategy
 
 # Test Fixtures
 # -------------
