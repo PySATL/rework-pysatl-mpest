@@ -11,7 +11,8 @@ from .cauchy import Cauchy
 from .continuous_dist import ContinuousDistribution
 from .exponential import Exponential
 from .normal import Normal
+from .pareto import Pareto
 from .uniform import Uniform
 from .weibull import Weibull
 
-__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Normal", "Uniform", "Weibull"]
+__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Normal", "Pareto", "Uniform", "Weibull"]
