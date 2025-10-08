@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 import pytest
 from numpy.typing import ArrayLike, NDArray
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
+from rework_pysatl_mpest.distributions import ContinuousDistribution
 
 # Dummy distribution classes
 # --------------------------

@@ -9,13 +9,11 @@ from copy import deepcopy
 
 import numpy as np
 import pytest
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.core.parameter import Parameter
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.estimators.iterative._strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
+from rework_pysatl_mpest.core import MixtureModel, Parameter
+from rework_pysatl_mpest.distributions import ContinuousDistribution
+from rework_pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
+from rework_pysatl_mpest.estimators.iterative._strategies import q_function_strategy
+from rework_pysatl_mpest.optimizers import Optimizer
 
 # Helper classes for test isolation
 # ---------------------------------

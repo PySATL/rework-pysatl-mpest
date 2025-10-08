@@ -11,7 +11,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
-from rework_pysatl_mpest.distributions.uniform import Uniform
+from rework_pysatl_mpest.distributions import Uniform
 from scipy.integrate import quad
 from scipy.stats import kstest, uniform
 
