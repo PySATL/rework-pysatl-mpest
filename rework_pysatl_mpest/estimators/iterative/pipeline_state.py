@@ -16,7 +16,7 @@ from typing import Optional
 from numpy import float64
 from numpy.typing import NDArray
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
+from ...core import MixtureModel
 
 
 @dataclass
