@@ -11,10 +11,9 @@ from hypothesis import given
 from hypothesis import strategies as st
 from numpy._core.numerictypes import float64
 from numpy.typing import ArrayLike, NDArray
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pruners.prior_threshold_pruner import PriorThresholdPruner
+from rework_pysatl_mpest.core import MixtureModel
+from rework_pysatl_mpest.distributions import ContinuousDistribution
+from rework_pysatl_mpest.estimators.iterative import PipelineState, PriorThresholdPruner
 
 
 class DummyDistribution(ContinuousDistribution):

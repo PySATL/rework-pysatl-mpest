@@ -12,9 +12,8 @@ import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.core import MixtureModel
+from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential
 
 
 @pytest.fixture

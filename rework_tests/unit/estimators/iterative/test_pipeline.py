@@ -10,14 +10,10 @@ from typing import Callable
 
 import numpy as np
 import pytest
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.exponential import Exponential
+from rework_pysatl_mpest.core import MixtureModel
+from rework_pysatl_mpest.distributions import Exponential
+from rework_pysatl_mpest.estimators.iterative import Breakpointer, Pipeline, PipelineState, PipelineStep, Pruner
 from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, PipelineLogger
-from rework_pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
-from rework_pysatl_mpest.estimators.iterative.pipeline import Pipeline
-from rework_pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from rework_pysatl_mpest.estimators.iterative.pipeline_step import PipelineStep
-from rework_pysatl_mpest.estimators.iterative.pruner import Pruner
 
 # --- Mock objects for isolated testing ---
 

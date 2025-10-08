@@ -6,7 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import pytest
-from rework_pysatl_mpest.core.parameter import Parameter
+from rework_pysatl_mpest.core import Parameter
 
 
 class _OwnerClass:
