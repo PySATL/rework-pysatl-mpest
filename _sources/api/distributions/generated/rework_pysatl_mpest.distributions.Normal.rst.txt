@@ -1,0 +1,78 @@
+﻿
+Normal
+======
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Normal
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Normal.fix_param
+
+   ~Normal.generate
+
+   ~Normal.get_params_vector
+
+   ~Normal.log_gradients
+
+   ~Normal.lpdf
+
+   ~Normal.pdf
+
+   ~Normal.ppf
+
+   ~Normal.set_params_from_vector
+
+   ~Normal.unfix_param
+
+
+

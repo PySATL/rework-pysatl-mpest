@@ -1,0 +1,78 @@
+﻿
+Pareto
+======
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Pareto
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Pareto.fix_param
+
+   ~Pareto.generate
+
+   ~Pareto.get_params_vector
+
+   ~Pareto.log_gradients
+
+   ~Pareto.lpdf
+
+   ~Pareto.pdf
+
+   ~Pareto.ppf
+
+   ~Pareto.set_params_from_vector
+
+   ~Pareto.unfix_param
+
+
+

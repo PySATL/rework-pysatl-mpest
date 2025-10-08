@@ -1,0 +1,78 @@
+﻿
+Weibull
+=======
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Weibull
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Weibull.fix_param
+
+   ~Weibull.generate
+
+   ~Weibull.get_params_vector
+
+   ~Weibull.log_gradients
+
+   ~Weibull.lpdf
+
+   ~Weibull.pdf
+
+   ~Weibull.ppf
+
+   ~Weibull.set_params_from_vector
+
+   ~Weibull.unfix_param
+
+
+

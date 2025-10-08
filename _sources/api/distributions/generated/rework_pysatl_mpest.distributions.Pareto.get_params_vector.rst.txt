@@ -1,0 +1,7 @@
+
+get\_params\_vector
+===================
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. automethod:: rework_pysatl_mpest.distributions.Pareto.get_params_vector
