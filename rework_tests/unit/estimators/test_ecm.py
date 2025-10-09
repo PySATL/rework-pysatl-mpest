@@ -91,11 +91,12 @@ class TestECMInitialization:
 
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
-        assert ecm.breakpointers is not mock_breakpointers  # Should be a new list
+        assert ecm.breakpointers is not mock_breakpointers
         assert ecm.breakpointers == mock_breakpointers
         assert ecm.pruners is not mock_pruners
         assert ecm.pruners == mock_pruners
         assert ecm.optimizer is mock_optimizer
+        assert ecm._logger is None
 
 
 class TestECMFit:
@@ -118,7 +119,7 @@ class TestECMFit:
         # Arrange
         MockPipeline = mocker.patch("rework_pysatl_mpest.estimators.ecm.Pipeline")
         mock_pipeline_instance = MockPipeline.return_value
-        mock_pipeline_instance.fit.return_value = sample_mixture  # Return something to be the result
+        mock_pipeline_instance.fit.return_value = sample_mixture
 
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
@@ -162,64 +163,67 @@ class TestECMFit:
             args[3],
         )
 
-        # 1. Check general pipeline configuration
         assert pipeline_breakpointers == mock_breakpointers
         assert pipeline_pruners == mock_pruners
         assert pipeline_log_freq == log_frequency
 
-        # 2. Check the sequence and types of steps
         assert len(pipeline_steps) == num_of_steps
         assert isinstance(pipeline_steps[0], ExpectationStep)
         assert isinstance(pipeline_steps[1], MaximizationStep)
 
-        # 3. Deeply inspect the MaximizationStep configuration
         m_step = pipeline_steps[1]
         assert m_step.optimizer is mock_optimizer
         assert len(m_step.blocks) == sample_mixture.n_components
 
-        # 4. Verify each OptimizationBlock corresponds to a component and uses QFUNCTION
         for i, (block, component) in enumerate(zip(m_step.blocks, sample_mixture.components)):
             assert block.component_id == i
-            assert block.maximization_strategy == MaximizationStrategy.QFUNCTION
             assert block.params_to_optimize == component.params_to_optimize
+            assert block.maximization_strategy == MaximizationStrategy.QFUNCTION
 
-        # Check that the fixed parameter was correctly excluded
         assert "rate" not in m_step.blocks[1].params_to_optimize
         assert "loc" in m_step.blocks[1].params_to_optimize
 
-    def test_fit_sets_and_overwrites_logger(
+    def test_logger_access_lifecycle(
         self,
+        mocker: MockerFixture,
         mock_optimizer: Optimizer,
         mock_pruners: list[Pruner],
         sample_mixture: MixtureModel,
         sample_data: np.ndarray,
     ):
         """
-        Tests that the `logger` attribute is created after `fit` runs, and that it is
-        replaced with a new logger instance on a subsequent `fit` call.
+        Tests the full lifecycle of the logger property:
+        1. Raises AttributeError before `fit` is called.
+        2. Becomes accessible after the first `fit` call.
+        3. Is overwritten with a new object on a subsequent `fit` call.
         """
 
         # Arrange
+        MockPipeline = mocker.patch("rework_pysatl_mpest.estimators.ecm.Pipeline")
+
         breakpointers = [StopAfterOneIteration()]
         ecm = ECM(breakpointers=breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
-        # Assert initial state
-        assert not hasattr(ecm, "logger")
+        # 1. Assert initial state: logger access raises a specific error
+        with pytest.raises(AttributeError, match="Logger is not available. Call the 'fit' method first."):
+            _ = ecm.logger
 
-        # Act 1: First call to fit()
+        # 2. Act & Assert after first call
+        mock_pipeline_instance_1 = MockPipeline.return_value
+        mock_pipeline_instance_1.logger = "first_logger_object"
+
         ecm.fit(sample_data, sample_mixture)
 
-        # Assert 1: Logger now exists
-        assert hasattr(ecm, "logger")
-        assert len(ecm.logger) > 0
+        assert ecm.logger == "first_logger_object"
         first_logger_id = id(ecm.logger)
 
-        # Act 2: Second call to fit()
+        # 3. Act & Assert after second call
+        mock_pipeline_instance_2 = MockPipeline.return_value
+        mock_pipeline_instance_2.logger = "second_logger_object"
+
         ecm.fit(sample_data, sample_mixture)
 
-        # Assert 2: Logger still exists but is a new object
-        assert hasattr(ecm, "logger")
+        assert ecm.logger == "second_logger_object"
         second_logger_id = id(ecm.logger)
 
         assert first_logger_id != second_logger_id
-        assert len(ecm.logger) > 0
