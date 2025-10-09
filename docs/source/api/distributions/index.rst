@@ -35,3 +35,4 @@ Continuous distributions
    ~Normal
    ~Weibull
    ~Pareto
+   ~Beta

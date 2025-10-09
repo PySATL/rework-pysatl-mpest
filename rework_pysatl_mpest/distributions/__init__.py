@@ -14,5 +14,6 @@ from .normal import Normal
 from .pareto import Pareto
 from .uniform import Uniform
 from .weibull import Weibull
+from .beta import Beta
 
-__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Normal", "Pareto", "Uniform", "Weibull"]
+__all__ = ["Cauchy", "ContinuousDistribution", "Exponential", "Normal", "Pareto", "Uniform", "Weibull", "Beta"]
