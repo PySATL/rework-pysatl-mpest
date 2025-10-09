@@ -27,6 +27,7 @@ from .iterative import (
     Pipeline,
     Pruner,
 )
+from .iterative._logger import PipelineLogger
 
 
 class ECM(BaseEstimator):
@@ -69,9 +70,10 @@ class ECM(BaseEstimator):
         the fitting process.
     optimizer : Optimizer
         The numerical optimizer used for parameter estimation.
-    logger : PipelineLogger
-        An object that collects information about each iteration. It is
-        available after the :meth:`fit` method has been called.
+    logger : PipelineLogger | None
+        An object that collects information about each iteration.
+        This attribute is only available after the :meth:`fit` method has been called.
+        Accessing it beforehand will raise an :class:`AttributeError`.
 
     Methods
     -------
@@ -85,6 +87,21 @@ class ECM(BaseEstimator):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)
         self.optimizer = optimizer
+        self._logger: PipelineLogger | None = None
+
+    @property
+    def logger(self) -> PipelineLogger:
+        """An object that collects information about each iteration.
+
+        Raises
+        ------
+        AttributeError
+            If accessed before the `fit` method has been called at least once.
+        """
+
+        if self._logger is None:
+            raise AttributeError("Logger is not available. Call the 'fit' method first.")
+        return self._logger
 
     def fit(self, X: ArrayLike, mixture: MixtureModel, once_in_iterations: int = 1) -> MixtureModel:
         """Fits the mixture model to the data using the ECM algorithm.
@@ -122,5 +139,5 @@ class ECM(BaseEstimator):
             once_in_iterations,
         )
         result = pipeline.fit(X, mixture)
-        self.logger = pipeline.logger
+        self._logger = pipeline.logger
         return result
