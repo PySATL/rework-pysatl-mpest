@@ -6,16 +6,15 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from numpy import float64
+from scipy.special import digamma
 from scipy.stats import beta as beta_dist
-from scipy.special import beta as beta_func, digamma, gammaln
 
 from rework_pysatl_mpest.core.parameter import Parameter
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 
 
 class Beta(ContinuousDistribution):
-    """Class for the four-parameteric beta distribution.
-    """
+    """Class for the four-parameteric beta distribution."""
 
     PARAM_SHAPE1 = "shape1"
     PARAM_SHAPE2 = "shape2"
@@ -27,9 +26,7 @@ class Beta(ContinuousDistribution):
     lower_bound = Parameter()
     upper_bound = Parameter()
 
-
-    def __init__(self, shape1: float, shape2: float, 
-                 lower_bound: float, upper_bound: float):
+    def __init__(self, shape1: float, shape2: float, lower_bound: float, upper_bound: float):
         super().__init__()
         if lower_bound >= upper_bound:
             raise ValueError("Lower bound must be smaller Upper bound")
@@ -53,13 +50,14 @@ class Beta(ContinuousDistribution):
 
         .. math::
 
-            f(x | \\alpha_1, \\alpha_2, \\theta_1, \\theta_2) = \\frac{(x - \\theta_1)^(\\alpha_1 - 1) \\cdot (\\theta_2 - x)^(\\alpha_2 - 1)}
+            f(x | \\alpha_1, \\alpha_2, \\theta_1, \\theta_2) = \\frac{(x - \\theta_1)^(\\alpha_1 - 1)
+            \\cdot (\\theta_2 - x)^(\\alpha_2 - 1)}
             { (\\theta_2 - \\theta_1)^(\\alpha_1 + \\alpha_2 - 1) \\cdot B(\\alpha_1, \\alpha_2)}
 
         where :math:`\\theta_1` is the lower_bound parameter, :math:`\\theta_2` is the
-        upper_bound parameter, :math:`\\alpha_1` is the shape1 parameter and 
-        :math:`\\alpha_2` is the shape2 parameter,:math:`B(\\alpha_1, \\alpha_2) = 
-        \frac{\\Gamma(\\alpha_1)\\Gamma(\\alpha_2)}{\\Gamma(\\alpha_1 + \\alpha_2)}` 
+        upper_bound parameter, :math:`\\alpha_1` is the shape1 parameter and
+        :math:`\\alpha_2` is the shape2 parameter,:math:`B(\\alpha_1, \\alpha_2) =
+        \frac{\\Gamma(\\alpha_1)\\Gamma(\\alpha_2)}{\\Gamma(\\alpha_1 + \\alpha_2)}`
         is the Beta function.
 
         Parameters
@@ -82,18 +80,18 @@ class Beta(ContinuousDistribution):
 
         .. math::
 
-            Q(p | \\alpha_1, \\alpha_2, \\theta_1, \\theta_2) = \\theta_1 + (\\theta_2 - \\theta_1) \\cdot ppf(p, \\alpha_1, \\alpha_2)
+            Q(p | \\alpha_1, \\alpha_2, \\theta_1, \\theta_2) = \\theta_1 + (\\theta_2 - \\theta_1)
+            \\cdot ppf(p, \\alpha_1, \\alpha_2)
 
-        where :math:`\\theta_1` is the lower_bound parameter, :math:`\\theta_2` is the
-        upper_bound parameter, :math:`\\alpha_1` is the shape1 parameter and 
-        :math:`\\alpha_2` is the shape2 parameter.
+        where :math:`\\theta_1` is the lower_bound parameter, :math:`\\theta_2`
+        is the upper_bound parameter, :math:`\\alpha_1` is the shape1 parameter
+        and :math:`\\alpha_2` is the shape2 parameter.
         """
         P = np.asarray(P, dtype=float64)
         return np.where(
             (P >= 0) & (P <= 1),
-            (self.lower_bound + (self.upper_bound - self.lower_bound) * 
-             beta_dist.ppf(P, self.shape1, self.shape2)),
-            np.nan
+            (self.lower_bound + (self.upper_bound - self.lower_bound) * beta_dist.ppf(P, self.shape1, self.shape2)),
+            np.nan,
         )
 
     def lpdf(self, X):
@@ -110,8 +108,8 @@ class Beta(ContinuousDistribution):
             - \\ln B(\\alpha_1, \\alpha_2)
 
         where :math:`\\theta_1` is the lower_bound parameter, :math:`\\theta_2` is the
-        upper_bound parameter, :math:`\\alpha_1` is the shape1 parameter and 
-        :math:`\\alpha_2` is the shape2 parameter, :math:`B(\alpha_1, \alpha_2) = 
+        upper_bound parameter, :math:`\\alpha_1` is the shape1 parameter and
+        :math:`\\alpha_2` is the shape2 parameter, :math:`B(\alpha_1, \alpha_2) =
         \frac{\\Gamma(\\alpha_1)\\Gamma(\\alpha_2)}{\\Gamma(\\alpha_1 + \\alpha_2)}`
 
         Parameters
@@ -145,8 +143,8 @@ class Beta(ContinuousDistribution):
             - \\psi(\\alpha_1) + \\psi(\\alpha_1 + \\alpha_2)
 
         where :math:`\\theta_1` is the :attr:`lower_bound` parameter, :math:`\\theta_2` is the
-        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and 
-        :math:`\\alpha_2` is the :attr:`shape2` parameter, :math:`\\psi(\\cdot)` 
+        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and
+        :math:`\\alpha_2` is the :attr:`shape2` parameter, :math:`\\psi(\\cdot)`
         is the digamma function.
 
         Parameters
@@ -158,15 +156,16 @@ class Beta(ContinuousDistribution):
         -------
         NDArray[np.float64]
             The gradient of the lpdf with respect to :attr:`shape1` for each point in :attr:`X`.
-    """
+        """
 
         X = np.asarray(X, dtype=float64)
-        in_bounds = (X > self.lower_bound) & (X <= self.upper_bound)
+        in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
-            in_bounds, 
-            np.log(X - self.lower_bound) - np.log(self.upper_bound - self.lower_bound) -
-            (digamma(self.shape1) - digamma(self.shape1 + self.shape2)),
-            0.0
+            in_bounds,
+            np.log(X - self.lower_bound)
+            - np.log(self.upper_bound - self.lower_bound)
+            - (digamma(self.shape1) - digamma(self.shape1 + self.shape2)),
+            0.0,
         )
 
     def _dlog_shape2(self, X):
@@ -181,8 +180,8 @@ class Beta(ContinuousDistribution):
             - \\psi(\\alpha_2) + \\psi(\\alpha_1 + \\alpha_2)
 
         where :math:`\\theta_1` is the :attr:`lower_bound` parameter, :math:`\\theta_2` is the
-        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and 
-        :math:`\\alpha_2` is the :attr:`shape2` parameter, :math:`\\psi(\\cdot)` 
+        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and
+        :math:`\\alpha_2` is the :attr:`shape2` parameter, :math:`\\psi(\\cdot)`
         is the digamma function..
 
         Parameters
@@ -194,17 +193,18 @@ class Beta(ContinuousDistribution):
         -------
         NDArray[np.float64]
             The gradient of the lpdf with respect to :attr:`shape2` for each point in :attr:`X`.
-    """
+        """
 
         X = np.asarray(X, dtype=float64)
-        in_bounds = (X > self.lower_bound) & (X <= self.upper_bound)
+        in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
-            np.log(self.upper_bound - X) - np.log(self.upper_bound - self.lower_bound)
+            np.log(self.upper_bound - X)
+            - np.log(self.upper_bound - self.lower_bound)
             - (digamma(self.shape2) - digamma(self.shape1 + self.shape2)),
             0.0,
         )
-    
+
     def _dlog_lower_bound(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`lower_bound` parameter.
 
@@ -216,7 +216,7 @@ class Beta(ContinuousDistribution):
             \\frac{-\\alpha_1 - \\alpha_2 + 1}{\\theta_1 - \\theta_2} - \\frac{\\alpha_1 - 1}{x - \\theta_1}
 
         where :math:`\\theta_1` is the :attr:`lower_bound` parameter, :math:`\\theta_2` is the
-        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and 
+        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and
         :math:`\\alpha_2` is the :attr:`shape2` parameter.
 
         Parameters
@@ -228,17 +228,19 @@ class Beta(ContinuousDistribution):
         -------
         NDArray[np.float64]
             The gradient of the lpdf with respect to :attr:`lower_bound` for each point in :attr:`X`.
-    """
+        """
 
         X = np.asarray(X, dtype=float64)
-        in_bounds = (X > self.lower_bound) & (X <= self.upper_bound)
+        in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
-            (((self.shape1 + self.shape2 - 1) / (self.upper_bound - self.lower_bound)) -
-             ((self.shape1 - 1) / (X - self.lower_bound))),
+            (
+                ((self.shape1 + self.shape2 - 1) / (self.upper_bound - self.lower_bound))
+                - ((self.shape1 - 1) / (X - self.lower_bound))
+            ),
             0.0,
         )
-    
+
     def _dlog_upper_bound(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`upper_bound` parameter.
 
@@ -250,7 +252,7 @@ class Beta(ContinuousDistribution):
             \\frac{\\alpa_2 - 1}{\\theta_2 - x} - \\frac{\\alpha_1 + \\alpha_2 - 1}{\\theta_2 - \\theta_1}
 
         where :math:`\\theta_1` is the :attr:`lower_bound` parameter, :math:`\\theta_2` is the
-        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and 
+        :attr:`upper_bound` parameter, :math:`\\alpha_1` is the :attr:`shape1` parameter and
         :math:`\\alpha_2` is the :attr:`shape2` parameter.
 
         Parameters
@@ -262,16 +264,17 @@ class Beta(ContinuousDistribution):
         -------
         NDArray[np.float64]
             The gradient of the lpdf with respect to :attr:`upper_bound` for each point in :attr:`X`.
-    """
+        """
         X = np.asarray(X, dtype=float64)
-        in_bounds = (X > self.lower_bound) & (X <= self.upper_bound)
+        in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
-            (((self.shape2 - 1) / (self.upper_bound - X)) - 
-             ((self.shape1 + self.shape2 - 1) / (self.upper_bound - self.lower_bound))),
+            (
+                ((self.shape2 - 1) / (self.upper_bound - X))
+                - ((self.shape1 + self.shape2 - 1) / (self.upper_bound - self.lower_bound))
+            ),
             0.0,
         )
-
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -297,7 +300,7 @@ class Beta(ContinuousDistribution):
             self.PARAM_SHAPE1: self._dlog_shape1,
             self.PARAM_SHAPE2: self._dlog_shape2,
             self.PARAM_LOWER_BOUND: self._dlog_lower_bound,
-            self.PARAM_UPPER_BOUND: self._dlog_upper_bound
+            self.PARAM_UPPER_BOUND: self._dlog_upper_bound,
         }
 
         optimizable_params = sorted(list(self.params_to_optimize))
@@ -323,8 +326,12 @@ class Beta(ContinuousDistribution):
             A NumPy array containing the generated samples.
         """
 
-        return np.asarray(beta_dist.rvs(self.shape1, self.shape2, loc=self.lower_bound,
-                                scale=self.upper_bound - self.lower_bound, size=size), dtype=float64)
+        return np.asarray(
+            beta_dist.rvs(
+                self.shape1, self.shape2, loc=self.lower_bound, scale=self.upper_bound - self.lower_bound, size=size
+            ),
+            dtype=float64,
+        )
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -336,4 +343,10 @@ class Beta(ContinuousDistribution):
             "Beta(shape1=1.0, shape2=2.0, lower_bound=0.0, upper_bound=1.0)".
         """
 
-        return f"{self.__class__.__name__}(shape1={self.shape1}, shape2={self.shape2}, lower_bound={self.lower_bound}, upper_bound={self.upper_bound})"
+        return (
+            f"{self.__class__.__name__}("
+            f"shape1={self.shape1}, "
+            f"shape2={self.shape2}, "
+            f"lower_bound={self.lower_bound}, "
+            f"upper_bound={self.upper_bound})"
+        )

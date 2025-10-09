@@ -5,11 +5,11 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-import csv
 import random
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
@@ -23,20 +23,18 @@ st_scale = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infin
 
 
 def load_r_test_cases():
-    csv_path = Path(__file__).parent / "constraints" / "pareto_test_VGAM_R.csv"
+    """Loads constants calculated in R with VGAM::dpareto"""
+    csv_path = Path(__file__).parent / "constraints" / "pareto_type_1_test.csv"
+    data = pd.read_csv(csv_path)
+
+    id_col = data.columns[0]
+    param_cols = data.columns[1:]
+
     cases = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            cases.append(
-                pytest.param(
-                    np.float64(row["x"]),
-                    np.float64(row["shape"]),
-                    np.float64(row["scale"]),
-                    np.float64(row["expected_pdf"]),
-                    id=row["name"],
-                )
-            )
+    for _, row in data.iterrows():
+        params = [np.float64(row[col]) for col in param_cols]
+        cases.append(pytest.param(*params, id=str(row[id_col])))
+
     return cases
 
 

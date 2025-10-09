@@ -6,28 +6,66 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import random
-import pandas as pd
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
-from hypothesis import assume, given
+from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions.beta import Beta
 from scipy.integrate import quad
 from scipy.stats import beta, kstest
 
+
 @st.composite
 def st_valid_params(draw):
     """Generates well-behaved beta parameters for integration tests."""
     shape1 = draw(st.floats(min_value=1.0, max_value=50.0))
     shape2 = draw(st.floats(min_value=1.0, max_value=50.0))
-    
+
     lower_bound = draw(st.floats(min_value=-10.0, max_value=10.0))
     upper_bound = draw(st.floats(min_value=lower_bound + 0.5, max_value=lower_bound + 10.0))
-    
+
     return shape1, shape2, lower_bound, upper_bound
+
+
+def load_r_test_cases():
+    """Loads constants calculated in R with function extraDistr::dnsbeta"""
+    csv_path = Path(__file__).parent / "constraints" / "test_beta4params.csv"
+    data = pd.read_csv(csv_path)
+
+    id_col = data.columns[0]
+    param_cols = data.columns[1:]
+
+    cases = []
+    for _, row in data.iterrows():
+        params = [np.float64(row[col]) for col in param_cols]
+        cases.append(pytest.param(*params, id=str(row[id_col])))
+
+    return cases
+
+
+@st.composite
+def st_params_and_x_for_grad(draw):
+    """Generator of valid params with x for gradient test"""
+    shape1 = draw(st.floats(0.1, 100))
+    shape2 = draw(st.floats(0.1, 100))
+    lower = draw(st.floats(-100, 100))
+    upper = draw(st.floats(lower + 0.1, lower + 100))
+
+    margin = 1e-2
+    x = draw(
+        arrays(
+            np.float64,
+            shape=draw(st.integers(1, 5)),
+            elements=st.floats(
+                min_value=lower + margin, max_value=upper - margin, allow_nan=False, allow_infinity=False
+            ),
+        )
+    )
+    return (shape1, shape2, lower, upper, x)
 
 
 class TestBetaInitialization:
@@ -63,14 +101,14 @@ class TestBetaInitialization:
         """Tests that initializing with a non-positive shape1 raises a ValueError."""
 
         with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
-            Beta(shape1=-1.0 , shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+            Beta(shape1=-1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
         with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
-            Beta(shape1=-20.0 , shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+            Beta(shape1=-20.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
 
     def test_shape1_assignment_violation(self):
         """Tests that assigning a non-positive rate after initialization raises a ValueError."""
 
-        dist =  Beta(shape1=1.0 , shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
         with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
             dist.shape1 = -1.0
         with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
@@ -80,14 +118,14 @@ class TestBetaInitialization:
         """Tests that initializing with a non-positive shape1 raises a ValueError."""
 
         with pytest.raises(ValueError, match="Shape2 parameter should be positive or zero"):
-            Beta(shape1=1.0 , shape2=-2.0, lower_bound=10.0, upper_bound=20.0)
+            Beta(shape1=1.0, shape2=-2.0, lower_bound=10.0, upper_bound=20.0)
         with pytest.raises(ValueError, match="Shape2 parameter should be positive"):
-            Beta(shape1=1.0 , shape2=-20.0, lower_bound=10.0, upper_bound=20.0)
+            Beta(shape1=1.0, shape2=-20.0, lower_bound=10.0, upper_bound=20.0)
 
     def test_shape2_assignment_violation(self):
         """Tests that assigning a non-positive shape2 after initialization raises a ValueError."""
 
-        dist =  Beta(shape1=1.0 , shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
         with pytest.raises(ValueError, match="Shape2 parameter should be positive or zero"):
             dist.shape2 = -1.0
         with pytest.raises(ValueError, match="Shape2 parameter should be positive or zero"):
@@ -96,14 +134,14 @@ class TestBetaInitialization:
     def test_invariant_bounds_violation(self):
         """Tests that initializing with a lower bound bigger upper bound  raises a ValueError."""
         with pytest.raises(ValueError, match="Lower bound must be smaller Upper bound"):
-            Beta(shape1=1.0 , shape2=2.0, lower_bound=10.0, upper_bound=5.0)
+            Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=5.0)
         with pytest.raises(ValueError, match="Lower bound must be smaller Upper bound"):
-            Beta(shape1=1.0 , shape2=2.0, lower_bound=10.0, upper_bound=10.0)
+            Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=10.0)
 
     def test_repr_method(self):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Beta(shape1=1.0 , shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
         repr_str = repr(dist)
         assert repr_str == "Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)"
 
@@ -115,20 +153,6 @@ class TestBetaInitialization:
         assert recreated_dist.upper_bound == dist.upper_bound
 
 
-def load_r_test_cases():
-    csv_path = Path(__file__).parent / "constraints" / "test_beta4params.csv"
-    data = pd.read_csv(csv_path)
-
-    id_col = data.columns[0] 
-    param_cols = data.columns[1:]
-    
-    cases = []
-    for _, row in data.iterrows():
-        params = [np.float64(row[col]) for col in param_cols]
-        cases.append(pytest.param(*params, id=str(row[id_col])))
-    
-    return cases
-
 class TestBetaPDF:
     """Tests for the pdf method using hypothesis."""
 
@@ -136,14 +160,13 @@ class TestBetaPDF:
     def test_pdf_properties(self, x):
         """Tests that the PDF is non-negative and has the correct return type and shape."""
         shape1, shape2, lower_bound, upper_bound = 1.0, 1.0, 2.9, 10.0
-        dist = Beta(shape1, shape2, lower_bound, upper_bound) 
+        dist = Beta(shape1, shape2, lower_bound, upper_bound)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
 
-    @pytest.mark.parametrize("x,shape1,shape2,lower_bound,upper_bound,expected_pdf",
-                             load_r_test_cases())
+    @pytest.mark.parametrize("x,shape1,shape2,lower_bound,upper_bound,expected_pdf", load_r_test_cases())
     def test_pdf_against_R(self, x, shape1, shape2, lower_bound, upper_bound, expected_pdf):
         """Compares the custom PDF implementation against scipy's implementation."""
         dist = Beta(shape1, shape2, lower_bound, upper_bound)
@@ -186,7 +209,7 @@ class TestBetaLPDF:
         dist = Beta(shape1, shape2, lower_bound, upper_bound)
         custom_lpdf = dist.lpdf(x)
         scipy_lpdf = beta.logpdf(x, shape1, shape2, loc=lower_bound, scale=upper_bound - lower_bound)
-        print(f"custom_lpdf = {custom_lpdf}, scipy_lpdf = {scipy_lpdf}, shape1,shape2,lower_b, upper_b = {shape1, shape2, lower_bound, upper_bound}")
+
         np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-5)
 
     @given(params=st_valid_params(), x=st.floats(max_value=-1e6, allow_infinity=False))
@@ -228,35 +251,13 @@ class TestBetaPPF:
         dist = Beta(1.0, 1.0, 1.0, 10.0)
         assert np.isnan(dist.ppf(p_val))
 
-@st.composite
-def st_params_and_x_for_grad(draw):
-    """Generator of valid params with x for gradient test"""
-    shape1 = draw(st.floats(0.1, 100))   
-    shape2 = draw(st.floats(0.1, 100))
-    lower = draw(st.floats(-100, 100))
-    upper = draw(st.floats(lower + 0.1, lower + 100))
-
-   
-    margin = 1e-2  
-    x = draw(arrays(
-        np.float64,
-        shape=draw(st.integers(1, 5)),
-        elements=st.floats(
-            min_value=lower + margin,
-            max_value=upper - margin,
-            allow_nan=False,
-            allow_infinity=False
-        )
-    ))
-    return (shape1, shape2, lower, upper, x)
-
 
 class TestBetaGradients:
     """Tests for gradient calculation methods."""
 
     h = 1e-6
 
-    @given(params_x = st_params_and_x_for_grad())
+    @given(params_x=st_params_and_x_for_grad())
     def test_dlog_shape1_numerical(self, params_x):
         """Checks the analytical gradient for 'shape1' against a numerical approximation."""
         shape1, shape2, lower_bound, upper_bound, x = params_x
@@ -273,7 +274,7 @@ class TestBetaGradients:
         assert analytical_grad.shape == x.shape
         np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
-    @given(params_x = st_params_and_x_for_grad())
+    @given(params_x=st_params_and_x_for_grad())
     def test_dlog_shape2_numerical(self, params_x):
         """Checks the analytical gradient for 'shape2' against a numerical approximation."""
         shape1, shape2, lower_bound, upper_bound, x = params_x
@@ -290,7 +291,7 @@ class TestBetaGradients:
         assert analytical_grad.shape == x.shape
         np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
-    @given(params_x = st_params_and_x_for_grad())
+    @given(params_x=st_params_and_x_for_grad())
     def test_dlog_lower_bound_numerical(self, params_x):
         """Checks the analytical gradient for 'lower_bound' against a numerical approximation."""
         shape1, shape2, lower_bound, upper_bound, x = params_x
@@ -306,8 +307,8 @@ class TestBetaGradients:
         assert isinstance(analytical_grad, np.ndarray)
         assert analytical_grad.shape == x.shape
         np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
-    
-    @given(params_x = st_params_and_x_for_grad())
+
+    @given(params_x=st_params_and_x_for_grad())
     def test_dlog_upper_bound_numerical(self, params_x):
         """Checks the analytical gradient for 'upper_bound' against a numerical approximation."""
         shape1, shape2, lower_bound, upper_bound, x = params_x
@@ -326,9 +327,13 @@ class TestBetaGradients:
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
-        [([], 4, ["shape1", "shape2", "lower_bound", "upper_bound"]), (["shape1"], 3, ["shape2", "lower_bound", "upper_bound"]), 
-         (["shape1", "shape2"], 2, ["lower_bound", "upper_bound"]), (["shape1", "shape2", "lower_bound"], 1, ["upper_bound"]),
-         (["shape1", "shape2", "lower_bound", "upper_bound"], 0, [])],
+        [
+            ([], 4, ["shape1", "shape2", "lower_bound", "upper_bound"]),
+            (["shape1"], 3, ["shape2", "lower_bound", "upper_bound"]),
+            (["shape1", "shape2"], 2, ["lower_bound", "upper_bound"]),
+            (["shape1", "shape2", "lower_bound"], 1, ["upper_bound"]),
+            (["shape1", "shape2", "lower_bound", "upper_bound"], 0, []),
+        ],
     )
     def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
         """Tests the structure and content of log_gradients with various fixed parameters."""
@@ -355,7 +360,6 @@ class TestBetaGradients:
         if "upper_bound" in expected_params:
             idx = sorted(expected_params).index("upper_bound")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_upper_bound(x))
-
 
 
 class TestBetaGenerate:
@@ -399,10 +403,11 @@ class TestBetaGenerate:
 
         samples = dist.generate(size=size)
 
-        theoretical_mean = lower_bound + (upper_bound - lower_bound) * shape1 / (shape1 + shape2) 
+        theoretical_mean = lower_bound + (upper_bound - lower_bound) * shape1 / (shape1 + shape2)
 
-        theoretical_var = (upper_bound - lower_bound)**2 * shape1 * shape2 / ((shape1 + shape2)**2 * (shape1 + shape2 + 1)) 
-
+        theoretical_var = (
+            (upper_bound - lower_bound) ** 2 * shape1 * shape2 / ((shape1 + shape2) ** 2 * (shape1 + shape2 + 1))
+        )
 
         assert np.mean(samples) == pytest.approx(theoretical_mean, rel=0.1)
         assert np.var(samples) == pytest.approx(theoretical_var, rel=0.1)
