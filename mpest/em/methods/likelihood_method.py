@@ -1,15 +1,18 @@
 """The module in which the maximum likelihood method is presented"""
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
+from typing import Optional
 
 import numpy as np
 from scipy.stats import FitError, norm, weibull_min
 
+from mpest import Params, Samples
 from mpest.core.distribution import Distribution
 from mpest.core.mixture_distribution import MixtureDistribution
 from mpest.core.problem import Problem, Result
 from mpest.em.methods.abstract_steps import AExpectation, AMaximization
-from mpest.exceptions import EStepError, SampleError
+from mpest.exceptions import EStepError, MStepError, SampleError
 from mpest.models import AModel, AModelDifferentiable, WeibullModelExp
 from mpest.optimizers import AOptimizerJacobian, TOptimizer
 from mpest.utils import ResultWithError
@@ -262,6 +265,40 @@ class LikelihoodMStep(AMaximization[EResult]):
         """
         self.optimizer = optimizer
 
+    def _run_m_step_for_component(self, j: int, ch, d: Distribution, samples: Samples, optimizer: TOptimizer):
+        """
+        Helper function for multiprocessed.
+        Performs the M-step for a single mixture component.
+        """
+
+        def log_likelihood(params, ch, model: AModel):
+            array_ldpf = np.array([model.lpdf(x, params) for x in samples])
+            finite_mask = np.isfinite(array_ldpf)
+            return -np.sum(ch[finite_mask] * array_ldpf[finite_mask])
+
+        def jacobian(params, ch, model: AModelDifferentiable):
+            return -np.sum(
+                ch * np.swapaxes([model.ld_params(x, params) for x in samples], 0, 1),
+                axis=1,
+            )
+
+        if isinstance(optimizer, AOptimizerJacobian):
+            if not isinstance(d.model, AModelDifferentiable):
+                raise TypeError
+
+            new_params = optimizer.minimize(
+                partial(log_likelihood, ch=ch, model=d.model),
+                d.params,
+                jacobian=partial(jacobian, ch=ch, model=d.model),
+            )
+        else:
+            new_params = optimizer.minimize(
+                func=partial(log_likelihood, ch=ch, model=d.model),
+                params=d.params,
+            )
+
+        return j, new_params
+
     def step(self, e_result: EResult) -> Result:
         """
         A function that performs E step
@@ -281,36 +318,26 @@ class LikelihoodMStep(AMaximization[EResult]):
         mixture = problem.distributions
 
         new_w = np.sum(h, axis=1) / m
-        new_distributions: list[Distribution] = []
-        for j, ch in enumerate(h[:]):
-            d = mixture[j]
+        num_distributions = len(mixture)
+        calculated_params: list[Optional[Params]] = [None] * num_distributions
 
-            def log_likelihood(params, ch, model: AModel):
-                array_ldpf = np.array([model.lpdf(x, params) for x in samples])
-                finite_mask = np.isfinite(array_ldpf)
-                return -np.sum(ch[finite_mask] * array_ldpf[finite_mask])
+        with ProcessPoolExecutor() as executor:
+            tasks_args = [(j, h[j], mixture[j], samples, optimizer) for j in range(len(mixture))]
 
-            def jacobian(params, ch, model: AModelDifferentiable):
-                return -np.sum(
-                    ch * np.swapaxes([model.ld_params(x, params) for x in samples], 0, 1),
-                    axis=1,
-                )
+            futures = [executor.submit(self._run_m_step_for_component, *args) for args in tasks_args]
 
-            # maximizing log of likelihood function for every active distribution
-            if isinstance(optimizer, AOptimizerJacobian):
-                if not isinstance(d.model, AModelDifferentiable):
-                    raise TypeError
+            for future in as_completed(futures):
+                try:
+                    j, new_params = future.result()
+                    calculated_params[j] = new_params
+                except Exception as e:
+                    raise e
 
-                new_params = optimizer.minimize(
-                    partial(log_likelihood, ch=ch, model=d.model),
-                    d.params,
-                    jacobian=partial(jacobian, ch=ch, model=d.model),
-                )
-            else:
-                new_params = optimizer.minimize(
-                    func=partial(log_likelihood, ch=ch, model=d.model),
-                    params=d.params,
-                )
+            if any(p is None for p in calculated_params):
+                raise MStepError("Failed to compute all parameters, but no TypeError was raised.")
 
-            new_distributions.append(Distribution(d.model, new_params))
-        return ResultWithError(MixtureDistribution.from_distributions(new_distributions, new_w))
+            final_params: list[Params] = [p for p in calculated_params if p is not None]
+
+            new_distributions = [Distribution(mixture[i].model, final_params[i]) for i in range(num_distributions)]
+
+            return ResultWithError(MixtureDistribution.from_distributions(new_distributions, new_w))

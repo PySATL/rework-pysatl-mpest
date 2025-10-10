@@ -1,5 +1,7 @@
 """The module in which the moments method is presented"""
 
+from concurrent.futures.process import ProcessPoolExecutor
+
 import numpy as np
 
 from mpest import Samples
@@ -41,6 +43,18 @@ class MomentsMStep(AMaximization[EResult]):
 
         return numerator / sum_j_row_probabilities
 
+    def _calc_m_for_dist(
+        self, j: int, d: Distribution, samples: Samples, indicators: np.ndarray
+    ) -> tuple[int, np.ndarray]:
+        """
+        Helper function for multiprocessed.
+        Calculates all moments for a single specified mixture component.
+        """
+        moments_for_j = np.zeros(len(d.params))
+        for r in range(len(d.params)):
+            moments_for_j[r] = self.calc_order_moment_of_index_element(r + 1, j, samples, indicators)
+        return j, moments_for_j
+
     def step(self, e_result: EResult) -> Result:
         """
         A function that performs M step
@@ -62,9 +76,12 @@ class MomentsMStep(AMaximization[EResult]):
         max_params_count = max(len(d.params) for d in mixture)
         moments = np.zeros(shape=[len(mixture), max_params_count])
 
-        for j, d in enumerate(mixture):
-            for r in range(len(d.params)):
-                moments[j][r] = self.calc_order_moment_of_index_element(r + 1, j, samples, indicators)
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self._calc_m_for_dist, j, d, samples, indicators) for j, d in enumerate(mixture)]
+
+            for future in futures:
+                j, moments_for_j = future.result()
+                moments[j, : len(moments_for_j)] = moments_for_j
 
         for i, d in enumerate(mixture):
             if d.model.name == "WeibullExp" and (moments[i][0] * moments[i][1] < 0):

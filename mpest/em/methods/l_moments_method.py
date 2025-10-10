@@ -1,6 +1,7 @@
 """The module in which the L moments method is presented"""
 
 import json
+from concurrent.futures.process import ProcessPoolExecutor
 from math import ceil
 
 import numpy as np
@@ -56,6 +57,18 @@ class LMomentsMStep(AMaximization[EResult]):
             mr_j += p_rk * b_k
         return mr_j
 
+    def _calc_lm_for_dist(
+        self, j: int, d: Distribution, samples: Samples, indicators: np.ndarray
+    ) -> tuple[int, np.ndarray]:
+        """
+        Helper function for multiprocessed.
+        Calculates all L-moments for a single specified mixture component.
+        """
+        moments_for_j = np.zeros(len(d.params))
+        for r in range(len(d.params)):
+            moments_for_j[r] = self.calculate_mr_j(r + 1, j, samples, indicators)
+        return j, moments_for_j
+
     def step(self, e_result: EResult) -> Result:
         """
         A function that performs E step
@@ -76,9 +89,15 @@ class LMomentsMStep(AMaximization[EResult]):
 
         max_params_count = max(len(d.params) for d in mixture)
         l_moments = np.zeros(shape=[len(mixture), max_params_count])
-        for j, d in enumerate(mixture):
-            for r in range(len(d.params)):
-                l_moments[j][r] = self.calculate_mr_j(r + 1, j, samples, indicators)
+
+        with ProcessPoolExecutor() as executor:
+            futures = [
+                executor.submit(self._calc_lm_for_dist, j, d, samples, indicators) for j, d in enumerate(mixture)
+            ]
+
+            for future in futures:
+                j, moments_for_j = future.result()
+                l_moments[j, : len(moments_for_j)] = moments_for_j
 
         for i, d in enumerate(mixture):
             if d.model.name == "WeibullExp" and (l_moments[i][0] * l_moments[i][1] < 0):
