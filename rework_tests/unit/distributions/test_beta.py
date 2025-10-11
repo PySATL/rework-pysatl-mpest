@@ -14,7 +14,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
-from rework_pysatl_mpest.distributions.beta import Beta
+from rework_pysatl_mpest.distributions import Beta
 from scipy.integrate import quad
 from scipy.stats import beta, kstest
 
@@ -75,80 +75,80 @@ class TestBetaInitialization:
         """Tests that the instance is initialized correctly with valid parameters."""
 
         shape1, shape2, lower_bound, upper_bound = 0.5, 2.0, -1.0, 1.0
-        dist = Beta(shape1=shape1, shape2=shape2, lower_bound=lower_bound, upper_bound=upper_bound)
-        assert isinstance(dist.shape1, float)
-        assert isinstance(dist.shape2, float)
+        dist = Beta(alpha=shape1, beta=shape2, lower_bound=lower_bound, upper_bound=upper_bound)
+        assert isinstance(dist.alpha, float)
+        assert isinstance(dist.beta, float)
         assert isinstance(dist.lower_bound, float)
         assert isinstance(dist.upper_bound, float)
-        assert dist.shape1 == shape1
-        assert dist.shape2 == shape2
+        assert dist.alpha == shape1
+        assert dist.beta == shape2
         assert dist.lower_bound == lower_bound
         assert dist.upper_bound == upper_bound
 
     def test_name_property(self):
         """Tests that the name property returns the correct string."""
 
-        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=-1.0, upper_bound=1.0)
+        dist = Beta(alpha=1.0, beta=2.0, lower_bound=-1.0, upper_bound=1.0)
         assert dist.name == "Beta"
 
     def test_params_property(self):
         """Tests that the params property returns the correct set of parameter names."""
 
-        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=-1.0, upper_bound=1.0)
-        assert dist.params == {"shape1", "shape2", "lower_bound", "upper_bound"}
+        dist = Beta(alpha=1.0, beta=2.0, lower_bound=-1.0, upper_bound=1.0)
+        assert dist.params == {"alpha", "beta", "lower_bound", "upper_bound"}
 
-    def test_shape1_invariant_violation(self):
-        """Tests that initializing with a non-positive shape1 raises a ValueError."""
+    def test_alpha_invariant_violation(self):
+        """Tests that initializing with a non-positive alpha raises a ValueError."""
 
-        with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
-            Beta(shape1=-1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
-        with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
-            Beta(shape1=-20.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+        with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
+            Beta(alpha=-1.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)
+        with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
+            Beta(alpha=-20.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)
 
-    def test_shape1_assignment_violation(self):
+    def test_alpha_assignment_violation(self):
         """Tests that assigning a non-positive rate after initialization raises a ValueError."""
 
-        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
-        with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
-            dist.shape1 = -1.0
-        with pytest.raises(ValueError, match="Shape1 parameter should be positive or zero"):
-            dist.shape1 = -10.0
+        dist = Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)
+        with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
+            dist.alpha = -1.0
+        with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
+            dist.alpha = -10.0
 
-    def test_shape2_invariant_violation(self):
-        """Tests that initializing with a non-positive shape1 raises a ValueError."""
+    def test_beta_invariant_violation(self):
+        """Tests that initializing with a non-positive beta raises a ValueError."""
 
-        with pytest.raises(ValueError, match="Shape2 parameter should be positive or zero"):
-            Beta(shape1=1.0, shape2=-2.0, lower_bound=10.0, upper_bound=20.0)
-        with pytest.raises(ValueError, match="Shape2 parameter should be positive"):
-            Beta(shape1=1.0, shape2=-20.0, lower_bound=10.0, upper_bound=20.0)
+        with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
+            Beta(alpha=1.0, beta=-2.0, lower_bound=10.0, upper_bound=20.0)
+        with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
+            Beta(alpha=1.0, beta=-20.0, lower_bound=10.0, upper_bound=20.0)
 
-    def test_shape2_assignment_violation(self):
-        """Tests that assigning a non-positive shape2 after initialization raises a ValueError."""
+    def test_beta_assignment_violation(self):
+        """Tests that assigning a non-positive beta after initialization raises a ValueError."""
 
-        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
-        with pytest.raises(ValueError, match="Shape2 parameter should be positive or zero"):
-            dist.shape2 = -1.0
-        with pytest.raises(ValueError, match="Shape2 parameter should be positive or zero"):
-            dist.shape2 = -10.0
+        dist = Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)
+        with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
+            dist.beta = -1.0
+        with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
+            dist.beta = -10.0
 
     def test_invariant_bounds_violation(self):
         """Tests that initializing with a lower bound bigger upper bound  raises a ValueError."""
-        with pytest.raises(ValueError, match="Lower bound must be smaller Upper bound"):
-            Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=5.0)
-        with pytest.raises(ValueError, match="Lower bound must be smaller Upper bound"):
-            Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=10.0)
+        with pytest.raises(ValueError, match="Lower bound must be less than upper bound"):
+            Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=5.0)
+        with pytest.raises(ValueError, match="Lower bound must be less than upper bound"):
+            Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=10.0)
 
     def test_repr_method(self):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)
+        dist = Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)
         repr_str = repr(dist)
-        assert repr_str == "Beta(shape1=1.0, shape2=2.0, lower_bound=10.0, upper_bound=20.0)"
+        assert repr_str == "Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)"
 
         recreated_dist = eval(repr_str)
         assert isinstance(recreated_dist, Beta)
-        assert recreated_dist.shape1 == dist.shape1
-        assert recreated_dist.shape2 == dist.shape2
+        assert recreated_dist.alpha == dist.alpha
+        assert recreated_dist.beta == dist.beta
         assert recreated_dist.lower_bound == dist.lower_bound
         assert recreated_dist.upper_bound == dist.upper_bound
 
@@ -159,8 +159,8 @@ class TestBetaPDF:
     @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
     def test_pdf_properties(self, x):
         """Tests that the PDF is non-negative and has the correct return type and shape."""
-        shape1, shape2, lower_bound, upper_bound = 1.0, 1.0, 2.9, 10.0
-        dist = Beta(shape1, shape2, lower_bound, upper_bound)
+        alpha, beta, lower_bound, upper_bound = 1.0, 1.0, 2.9, 10.0
+        dist = Beta(alpha, beta, lower_bound, upper_bound)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
         assert pdf_values.shape == x.shape
@@ -268,7 +268,7 @@ class TestBetaGradients:
         lpdf_minus_h = Beta(shape1 - self.h, shape2, lower_bound, upper_bound).lpdf(x)
 
         numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
-        analytical_grad = dist._dlog_shape1(x)
+        analytical_grad = dist._dlog_alpha(x)
 
         assert isinstance(analytical_grad, np.ndarray)
         assert analytical_grad.shape == x.shape
@@ -285,7 +285,7 @@ class TestBetaGradients:
         lpdf_minus_h = Beta(shape1, shape2 - self.h, lower_bound, upper_bound).lpdf(x)
 
         numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
-        analytical_grad = dist._dlog_shape2(x)
+        analytical_grad = dist._dlog_beta(x)
 
         assert isinstance(analytical_grad, np.ndarray)
         assert analytical_grad.shape == x.shape
@@ -328,11 +328,11 @@ class TestBetaGradients:
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
         [
-            ([], 4, ["shape1", "shape2", "lower_bound", "upper_bound"]),
-            (["shape1"], 3, ["shape2", "lower_bound", "upper_bound"]),
-            (["shape1", "shape2"], 2, ["lower_bound", "upper_bound"]),
-            (["shape1", "shape2", "lower_bound"], 1, ["upper_bound"]),
-            (["shape1", "shape2", "lower_bound", "upper_bound"], 0, []),
+            ([], 4, ["alpha", "beta", "lower_bound", "upper_bound"]),
+            (["alpha"], 3, ["beta", "lower_bound", "upper_bound"]),
+            (["alpha", "beta"], 2, ["lower_bound", "upper_bound"]),
+            (["alpha", "beta", "lower_bound"], 1, ["upper_bound"]),
+            (["alpha", "beta", "lower_bound", "upper_bound"], 0, []),
         ],
     )
     def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
@@ -348,12 +348,12 @@ class TestBetaGradients:
         assert isinstance(gradients, np.ndarray)
         assert gradients.shape == (len(x), expected_shape_col)
 
-        if "shape1" in expected_params:
-            idx = sorted(expected_params).index("shape1")
-            np.testing.assert_allclose(gradients[:, idx], dist._dlog_shape1(x))
-        if "shape2" in expected_params:
-            idx = sorted(expected_params).index("shape2")
-            np.testing.assert_allclose(gradients[:, idx], dist._dlog_shape2(x))
+        if "alpha" in expected_params:
+            idx = sorted(expected_params).index("alpha")
+            np.testing.assert_allclose(gradients[:, idx], dist._dlog_alpha(x))
+        if "beta" in expected_params:
+            idx = sorted(expected_params).index("beta")
+            np.testing.assert_allclose(gradients[:, idx], dist._dlog_beta(x))
         if "lower_bound" in expected_params:
             idx = sorted(expected_params).index("lower_bound")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_lower_bound(x))
