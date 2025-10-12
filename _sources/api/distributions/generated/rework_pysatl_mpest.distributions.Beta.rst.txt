@@ -1,0 +1,78 @@
+﻿
+Beta
+====
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. autoclass:: rework_pysatl_mpest.distributions.Beta
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~Beta.fix_param
+
+   ~Beta.generate
+
+   ~Beta.get_params_vector
+
+   ~Beta.log_gradients
+
+   ~Beta.lpdf
+
+   ~Beta.pdf
+
+   ~Beta.ppf
+
+   ~Beta.set_params_from_vector
+
+   ~Beta.unfix_param
+
+
+

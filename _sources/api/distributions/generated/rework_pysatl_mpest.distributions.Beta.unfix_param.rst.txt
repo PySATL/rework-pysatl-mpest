@@ -1,0 +1,7 @@
+
+unfix\_param
+============
+
+.. currentmodule:: rework_pysatl_mpest.distributions
+
+.. automethod:: rework_pysatl_mpest.distributions.Beta.unfix_param
