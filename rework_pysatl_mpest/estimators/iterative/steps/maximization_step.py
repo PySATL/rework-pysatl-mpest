@@ -9,17 +9,18 @@ log-likelihood, using the responsibilities computed in a preceding
 Expectation-step.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+import os
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
-from typing import Callable, ClassVar
+from typing import Callable, ClassVar, Optional
 
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, parallel_backend
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
@@ -47,6 +48,11 @@ class MaximizationStep(PipelineStep):
     optimizer : Optimizer
         A numerical optimizer instance used to find the optimal parameters
         when an analytical solution is not available for a given strategy.
+    n_jobs : Optional[int], default=None
+        The number of jobs to run in parallel for the optimization tasks.
+        - ``None`` (default): The number of jobs is determined automatically. It will
+          be the minimum of the number of optimization blocks and the number of
+          available CPUs.
 
     Attributes
     ----------
@@ -67,9 +73,17 @@ class MaximizationStep(PipelineStep):
         {MaximizationStrategy.QFUNCTION: q_function_strategy}
     )
 
-    def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer):
+    def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer, n_jobs: Optional[int] = None):
         self.blocks = list(blocks)
         self.optimizer = optimizer
+
+        if n_jobs is not None:
+            self._n_jobs = n_jobs
+        else:
+            cpu_count = os.cpu_count() or 1
+            default_jobs = min(len(self.blocks), cpu_count)
+
+            self._n_jobs = default_jobs if default_jobs > 0 else 1
 
     @property
     def available_next_steps(self) -> list[type[PipelineStep]]:
@@ -99,11 +113,10 @@ class MaximizationStep(PipelineStep):
         param_values = list(params.values())
         component.set_params_from_vector(param_names, param_values)
 
-    @staticmethod
     def _optimization_worker(
+        self,
         state: PipelineState,
         block: OptimizationBlock,
-        strategy: Callable,
         optimizer: Optimizer,
     ) -> tuple[int, dict[str, float]]:
         """Helper method to execute the optimization strategy for a single block.
@@ -114,8 +127,6 @@ class MaximizationStep(PipelineStep):
             The current state of the estimation pipeline.
         block : OptimizationBlock
             The configuration block defining which component and parameters to optimize.
-        strategy : Callable
-            The function implementing the specific maximization strategy to be used.
         optimizer : Optimizer
             The optimizer instance passed to the strategy function.
 
@@ -125,7 +136,7 @@ class MaximizationStep(PipelineStep):
             A tuple containing the component ID and a dictionary of its newly optimized parameters.
         """
         component = state.curr_mixture[block.component_id]
-        component_id, new_params = strategy(component, state, block, optimizer)
+        component_id, new_params = self._strategies[block.maximization_strategy](component, state, block, optimizer)
 
         return component_id, new_params
 
@@ -158,12 +169,11 @@ class MaximizationStep(PipelineStep):
 
         curr_mixture = state.curr_mixture
 
-        results = Parallel(n_jobs=-1)(
-            delayed(MaximizationStep._optimization_worker)(
-                state, block, self._strategies[block.maximization_strategy], self.optimizer
+        # Use threading backend: NumPy/SciPy release the GIL, enabling true parallelism without data copying overhead.
+        with parallel_backend("threading", n_jobs=self._n_jobs):
+            results = Parallel()(
+                delayed(self._optimization_worker)(state, block, self.optimizer) for block in self.blocks
             )
-            for block in self.blocks
-        )
 
         for result in results:
             component_id, params = result
