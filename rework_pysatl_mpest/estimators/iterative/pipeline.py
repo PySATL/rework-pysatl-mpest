@@ -67,7 +67,7 @@ class Pipeline(BaseEstimator):
     pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    logger : PipelineLogger
+    logger : IterationsHistory
         object that collects comprehensive information about each
         iteration of a :class:`Pipeline` estimator.
     Raises
