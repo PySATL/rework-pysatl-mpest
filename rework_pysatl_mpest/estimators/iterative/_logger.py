@@ -67,6 +67,12 @@ class IterationsHistory:
     and length queries (`len(history)`), making it easy to inspect specific
     iterations or iterate over recorded states.
 
+    .. note::
+    The *i*-th entry in this container (i.e., `history[i]`) corresponds to
+    the pipeline iteration number `i * once_in_iterations`. For example,
+    if `once_in_iterations=5`, then `history[0]` holds iteration 0,
+    `history[1]` holds iteration 5, `history[2]` holds iteration 10, and so on.
+
     Example usage:
 
     >>> history = IterationsHistory(once_in_iterations=2)
