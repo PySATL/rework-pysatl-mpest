@@ -19,6 +19,7 @@ from types import MappingProxyType
 from typing import Callable, ClassVar
 
 import numpy as np
+from joblib import Parallel, delayed
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
@@ -98,6 +99,36 @@ class MaximizationStep(PipelineStep):
         param_values = list(params.values())
         component.set_params_from_vector(param_names, param_values)
 
+    @staticmethod
+    def _optimization_worker(
+        state: PipelineState,
+        block: OptimizationBlock,
+        strategy: Callable,
+        optimizer: Optimizer,
+    ) -> tuple[int, dict[str, float]]:
+        """Helper method to execute the optimization strategy for a single block.
+
+        Parameters
+        ----------
+        state : PipelineState
+            The current state of the estimation pipeline.
+        block : OptimizationBlock
+            The configuration block defining which component and parameters to optimize.
+        strategy : Callable
+            The function implementing the specific maximization strategy to be used.
+        optimizer : Optimizer
+            The optimizer instance passed to the strategy function.
+
+        Returns
+        -------
+        tuple[int, dict[str, float]]
+            A tuple containing the component ID and a dictionary of its newly optimized parameters.
+        """
+        component = state.curr_mixture[block.component_id]
+        component_id, new_params = strategy(component, state, block, optimizer)
+
+        return component_id, new_params
+
     def run(self, state: PipelineState) -> PipelineState:
         """Executes the M-step.
 
@@ -125,13 +156,14 @@ class MaximizationStep(PipelineStep):
             state.error = error
             return state
 
-        results = []
         curr_mixture = state.curr_mixture
 
-        for block in self.blocks:
-            strategy = self._strategies[block.maximization_strategy]
-            component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
-            results.append((component_id, new_params))
+        results = Parallel(n_jobs=-1)(
+            delayed(MaximizationStep._optimization_worker)(
+                state, block, self._strategies[block.maximization_strategy], self.optimizer
+            )
+            for block in self.blocks
+        )
 
         for result in results:
             component_id, params = result

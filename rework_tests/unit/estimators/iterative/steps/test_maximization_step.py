@@ -21,6 +21,11 @@ from rework_pysatl_mpest.estimators.iterative import (
 from rework_pysatl_mpest.optimizers import Optimizer
 
 
+def serial_executor(generator):
+    """ "A mock executor for joblib that runs tasks sequentially in a single process."""
+    return [func(*args, **kwargs) for func, args, kwargs in generator]
+
+
 @pytest.fixture
 def mock_optimizer(mocker: MockerFixture) -> Optimizer:
     """Fixture to create a mock Optimizer."""
@@ -138,6 +143,12 @@ class TestMaximizationStep:
 
         target_component = mock_components[0]
 
+        # Mock parallel execution to run tasks sequentially for testing.
+        mocker.patch(
+            "rework_pysatl_mpest.estimators.iterative.steps.maximization_step.Parallel",
+            return_value=serial_executor,
+        )
+
         step.run(pipeline_state)
 
         # mock_strategy was called once
@@ -218,6 +229,12 @@ class TestMaximizationStep:
 
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
+
+        # Mock parallel execution to run tasks sequentially for testing.
+        mocker.patch(
+            "rework_pysatl_mpest.estimators.iterative.steps.maximization_step.Parallel",
+            return_value=serial_executor,
+        )
 
         # Act
         step.run(pipeline_state)
