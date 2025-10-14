@@ -2,7 +2,7 @@
 A module providing an abstract class for continuous distributions.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -19,6 +19,10 @@ class ContinuousDistribution(ABC):
     This class defines the basic mathematical functions of distributions
     that must be implemented by specific distributions. This class also
     provides some functions that are common to all distributions.
+
+    Instances of subclasses can be compared for equality (``==``) and
+    inequality (``!=``). Two instances are considered equal if they are of
+    the exact same type and have identical parameter values.
 
     Attributes
     ----------
@@ -279,3 +283,49 @@ class ContinuousDistribution(ABC):
         NDArray[np.float64]
             A NumPy array containing the generated samples.
         """
+
+    def __eq__(self, other: object):
+        """Checks if two distribution objects are equal.
+
+        Two distribution objects are considered equal if they are of the same
+        type and all their parameters have the same values.
+
+        Parameters
+        ----------
+        other : object
+            The object to compare against.
+
+        Returns
+        -------
+        bool
+            True if the distributions are equal, False otherwise.
+        """
+        if not isinstance(other, ContinuousDistribution):
+            return NotImplemented
+
+        if type(self) is not type(other):
+            return False
+
+        sorted_params = sorted(list(self.params))
+
+        return (
+            self.name == other.name
+            and self.params == other.params
+            and self.get_params_vector(sorted_params) == other.get_params_vector(sorted_params)
+        )
+
+    def __hash__(self) -> int:
+        """Computes the hash of the distribution.
+
+        The hash is computed based on the distribution's name, its parameter
+        names, and their corresponding values.
+
+        Returns
+        -------
+        int
+            The hash value of the distribution object.
+        """
+        sorted_params = sorted(list(self.params))
+        param_values = tuple(self.get_params_vector(sorted_params))
+
+        return hash(tuple([self.name, tuple(self.params), param_values]))

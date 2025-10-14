@@ -1,6 +1,6 @@
 """Tests for Exponential class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -73,6 +73,8 @@ class TestExponentialInitialization:
         assert isinstance(recreated_dist, Exponential)
         assert recreated_dist.loc == dist.loc
         assert recreated_dist.rate == dist.rate
+
+        assert recreated_dist == dist
 
 
 class TestExponentialPDF:

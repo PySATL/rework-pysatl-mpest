@@ -1,6 +1,6 @@
 """Tests for MixtureModel class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -190,6 +190,8 @@ class TestMixtureModelModification:
         assert isinstance(comp1, Exponential)
         assert isinstance(comp2, Exponential)
 
+        assert model.components == (components[0], components[2])
+
         expected_comp1_loc = 0
         expected_comp2_loc = 10
 
@@ -328,6 +330,7 @@ class TestMixtureModelDunderMethods:
         """Tests that __getitem__ retrieves the correct component by index."""
 
         assert mixture_model[index] is exp_components[expected_component_index]
+        assert mixture_model[index] == exp_components[expected_component_index]
 
     def test_getitem_out_of_bounds_raises_index_error(self, mixture_model: MixtureModel):
         """Tests that accessing an out-of-bounds index raises an IndexError."""
@@ -352,6 +355,7 @@ class TestMixtureModelDunderMethods:
         iterated_components = list(mixture_model)
         assert iterated_components == list(exp_components)
         assert all(comp_iter is comp_orig for comp_iter, comp_orig in zip(iterated_components, exp_components))
+        assert all(comp_iter == comp_orig for comp_iter, comp_orig in zip(iterated_components, exp_components))
 
     def test_iter_is_reusable(self, mixture_model: MixtureModel):
         """Tests that the model can be iterated over multiple times."""
@@ -362,3 +366,82 @@ class TestMixtureModelDunderMethods:
         assert len(first_pass) == mixture_model.n_components
         assert first_pass is not second_pass  # The lists are different objects
         assert first_pass == second_pass  # But their contents are identical
+
+
+class TestMixtureModelComparison:
+    """Tests the __eq__ and __hash__ methods for MixtureModel."""
+
+    def test_eq_identical_models(self):
+        """Tests that two identical models are equal."""
+
+        c = [Exponential(0, 1), Exponential(10, 2)]
+        m1 = MixtureModel(components=c, weights=[0.4, 0.6])
+        m2 = MixtureModel(components=c, weights=[0.4, 0.6])
+        assert m1 == m2
+
+    def test_eq_order_insensitivity(self):
+        """Tests that models with the same components/weights in a different order are equal."""
+
+        c1 = [Exponential(0, 1), Exponential(10, 2)]
+        w1 = [0.4, 0.6]
+        m1 = MixtureModel(components=c1, weights=w1)
+
+        c2 = [Exponential(10, 2), Exponential(0, 1)]
+        w2 = [0.6, 0.4]
+        m2 = MixtureModel(components=c2, weights=w2)
+
+        assert m1 == m2
+
+    def test_neq_different_weights(self):
+        """Tests that models with different weights are not equal."""
+
+        c = [Exponential(0, 1), Exponential(10, 2)]
+        m1 = MixtureModel(components=c, weights=[0.4, 0.6])
+        m2 = MixtureModel(components=c, weights=[0.41, 0.59])
+        assert m1 != m2
+
+    def test_neq_different_components(self):
+        """Tests that models with different components are not equal."""
+
+        c1 = [Exponential(0, 1), Exponential(10, 2)]
+        c2 = [Exponential(0, 1), Exponential(99, 2)]
+        m1 = MixtureModel(components=c1, weights=[0.4, 0.6])
+        m2 = MixtureModel(components=c2, weights=[0.4, 0.6])
+        assert m1 != m2
+
+    def test_neq_different_n_components(self):
+        """Tests that models with a different number of components are not equal."""
+
+        c1 = [Exponential(0, 1), Exponential(10, 2)]
+        c2 = [Exponential(0, 1)]
+        m1 = MixtureModel(components=c1, weights=[0.4, 0.6])
+        m2 = MixtureModel(components=c2, weights=[1.0])
+        assert m1 != m2
+
+    def test_hash_consistency(self):
+        """Tests that equal models produce the same hash."""
+
+        m1 = MixtureModel(
+            components=[Exponential(0, 1), Exponential(10, 2)],
+            weights=[0.4, 0.6],
+        )
+        m2 = MixtureModel(
+            components=[Exponential(10, 2), Exponential(0, 1)],
+            weights=[0.6, 0.4],
+        )
+        assert m1 == m2
+        assert hash(m1) == hash(m2)
+
+    def test_hash_difference(self):
+        """Tests that non-equal models are likely to have different hashes."""
+
+        m1 = MixtureModel(
+            components=[Exponential(0, 1), Exponential(10, 2)],
+            weights=[0.4, 0.6],
+        )
+        m2 = MixtureModel(
+            components=[Exponential(0, 1), Exponential(10, 2)],
+            weights=[0.5, 0.5],
+        )
+        assert m1 != m2
+        assert hash(m1) != hash(m2)
