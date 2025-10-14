@@ -1,6 +1,6 @@
 """Tests for Uniform class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -75,6 +75,8 @@ class TestUniformInitialization:
         assert isinstance(recreated_dist, Uniform)
         assert recreated_dist.left_border == dist.left_border
         assert recreated_dist.right_border == dist.right_border
+
+        assert dist == recreated_dist
 
 
 class TestUniformPDF:

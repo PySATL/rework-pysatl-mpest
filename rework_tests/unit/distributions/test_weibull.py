@@ -1,6 +1,6 @@
 """Tests for Weibull class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -76,6 +76,8 @@ class TestWeibullInitialization:
         assert recreated_dist.shape == dist.shape
         assert recreated_dist.loc == dist.loc
         assert recreated_dist.scale == dist.scale
+
+        assert dist == recreated_dist
 
 
 class TestWeibullPDF:

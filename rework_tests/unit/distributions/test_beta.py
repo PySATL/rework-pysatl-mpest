@@ -1,6 +1,6 @@
 """Tests for Beta class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -151,6 +151,8 @@ class TestBetaInitialization:
         assert recreated_dist.beta == dist.beta
         assert recreated_dist.lower_bound == dist.lower_bound
         assert recreated_dist.upper_bound == dist.upper_bound
+
+        assert dist == recreated_dist
 
 
 class TestBetaPDF:

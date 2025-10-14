@@ -1,6 +1,6 @@
 """Tests for cauchy class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -73,6 +73,8 @@ class TestCauchyInitialization:
         assert isinstance(recreated_dist, Cauchy)
         assert recreated_dist.loc == dist.loc
         assert recreated_dist.scale == dist.scale
+
+        assert dist == recreated_dist
 
 
 class TestCauchyPDF:

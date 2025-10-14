@@ -1,6 +1,6 @@
 """Tests for Normal class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -63,6 +63,8 @@ class TestNormalInitialization:
         assert isinstance(recreated_dist, Normal)
         assert recreated_dist.loc == dist.loc
         assert recreated_dist.scale == dist.scale
+
+        assert dist == recreated_dist
 
 
 class TestNormalPDF:

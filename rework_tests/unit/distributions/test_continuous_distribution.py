@@ -1,6 +1,6 @@
 """Tests for ContinuousDistribution class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -21,12 +21,13 @@ class DummyDistribution(ContinuousDistribution):
     and test the non-abstract methods of the base class.
     """
 
-    def __init__(self, param1: float = 1.0, param2: float = 2.0):
+    def __init__(self, param1: float = 1.0, param2: float = 2.0, name: str = "Dummy"):
         """Initializes with two simple parameters."""
 
         super().__init__()
         self._param1 = param1
         self._param2 = param2
+        self._name = name
 
     @property
     def param1(self):
@@ -46,7 +47,7 @@ class DummyDistribution(ContinuousDistribution):
 
     @property
     def name(self) -> str:
-        return "Dummy"
+        return self._name
 
     @property
     def params(self) -> set[str]:
@@ -233,3 +234,59 @@ class TestContinuousDistribution:
 
         with pytest.raises(ValueError, match=error_msg_match):
             dummy_dist.set_params_from_vector(param_names, vector)
+
+
+class TestContinuousDistributionComparison:
+    """Tests the __eq__ and __hash__ methods of the ContinuousDistribution base class."""
+
+    def test_eq_same_type_and_params(self):
+        """Tests that two instances with the same type and parameters are equal."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=1.0, param2=2.0)
+        assert d1 == d2
+
+    def test_neq_different_params(self):
+        """Tests that two instances with different parameters are not equal."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=99.0, param2=2.0)
+        assert d1 != d2
+
+    def test_neq_different_type(self):
+        """Tests that two instances with different types are not equal."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=1.0, param2=2.0, name="Dummy2")
+        assert d1 != d2
+
+    def test_neq_other_object(self):
+        """Tests that a distribution instance is not equal to an object of a different class."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        other = "not_a_distribution"
+        assert d1 != other
+
+    def test_hash_consistency(self):
+        """Tests that two equal distribution instances have the same hash."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=1.0, param2=2.0)
+        assert d1 == d2
+        assert hash(d1) == hash(d2)
+
+    def test_hash_inequality(self):
+        """Tests that two non-equal distribution instances have different hashes."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=99.0, param2=2.0)
+        assert d1 != d2
+        assert hash(d1) != hash(d2)
+
+    def test_hash_inequality_name(self):
+        """Tests that two non-equal type distribution instances have different hashes."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=1.0, param2=2.0, name="Dummy2")
+        assert d1 != d2
+        assert hash(d1) != hash(d2)
