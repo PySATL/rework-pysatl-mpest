@@ -2,7 +2,7 @@
 manipulation, and analysis of a finite mixture of continuous probability
 distributions."""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -24,6 +24,11 @@ class MixtureModel:
 
     This class encapsulates a collection of distribution components and their
     corresponding weights.
+
+    Instances of this class can be compared for equality (``==``) and
+    inequality (``!=``). Two models are considered equal if they have the
+    same set of components and weights, regardless of the order in which
+    components were added.
 
     Parameters
     ----------
@@ -80,6 +85,8 @@ class MixtureModel:
         self._components = list(components)
         self._log_weights = np.log(weights + 1e-30)
         self._cached_weights: Optional[NDArray[float64]] = None
+
+        self._sorted_pairs_cache: Optional[list[tuple[ContinuousDistribution, float]]] = None
 
     def _validate_weights(self, n_components: int, weights: NDArray[float64]):
         """Validates the component weights.
@@ -342,3 +349,63 @@ class MixtureModel:
         """
 
         return iter(self.components)
+
+    def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ContinuousDistribution", float]]:
+        """Internal helper to get component-weight pairs, sorted by component hash."""
+
+        if self._sorted_pairs_cache is None:
+            weights_to_use = self.weights
+            if for_hashing:
+                weights_to_use = np.round(weights_to_use, 8)
+
+            pairs = sorted(zip(self.components, weights_to_use), key=lambda p: hash(p[0]))
+            if not for_hashing:
+                self._sorted_pairs_cache = pairs
+            return pairs
+        return self._sorted_pairs_cache
+
+    def __eq__(self, other: object) -> bool:
+        """Checks if two mixture models are equal.
+
+        Two mixture models are considered equal if they have the same number of
+        components and the same set of (component, weight) pairs.
+
+        Parameters
+        ----------
+        other : object
+            The object to compare against.
+
+        Returns
+        -------
+        bool
+            True if the mixture models are equal, False otherwise.
+        """
+
+        if not isinstance(other, MixtureModel):
+            return NotImplemented
+
+        if self.n_components != other.n_components:
+            return False
+
+        self_pairs = self._get_sorted_pairs()
+        other_pairs = other._get_sorted_pairs()
+
+        for (self_comp, self_weight), (other_comp, other_weight) in zip(self_pairs, other_pairs):
+            if self_comp != other_comp or not np.isclose(self_weight, other_weight):
+                return False
+
+        return True
+
+    def __hash__(self) -> int:
+        """Computes a hash for the mixture model.
+
+        The hash is computed based on the set of (component, weight) pairs.
+
+        Returns
+        -------
+        int
+            The hash value of the mixture model.
+        """
+
+        sorted_pairs_for_hash = self._get_sorted_pairs(for_hashing=True)
+        return hash(tuple(sorted_pairs_for_hash))
