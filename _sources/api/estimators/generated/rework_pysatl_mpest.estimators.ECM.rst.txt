@@ -1,0 +1,30 @@
+﻿
+ECM
+===
+
+.. currentmodule:: rework_pysatl_mpest.estimators
+
+.. autoclass:: rework_pysatl_mpest.estimators.ECM
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~ECM.fit
+
+
+

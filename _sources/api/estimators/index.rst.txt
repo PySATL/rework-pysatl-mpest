@@ -20,6 +20,13 @@ mpest.estimators
 Facades (High-Level API)
 ------------------------
 
+.. autosummary::
+   :toctree: generated
+   :nosignatures:
+   :template: class.rst
+
+    ~ECM
+
 Abstract Classes
 ================
 
