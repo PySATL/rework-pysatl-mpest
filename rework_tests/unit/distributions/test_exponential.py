@@ -70,10 +70,6 @@ class TestExponentialInitialization:
         assert repr_str == "Exponential(loc=1.23, rate=4.56)"
 
         recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Exponential)
-        assert recreated_dist.loc == dist.loc
-        assert recreated_dist.rate == dist.rate
-
         assert recreated_dist == dist
 
 

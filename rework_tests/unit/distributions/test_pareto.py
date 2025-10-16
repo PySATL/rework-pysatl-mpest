@@ -105,10 +105,6 @@ class TestParetoInitialization:
         assert repr_str == "Pareto(shape=1.23, scale=4.56)"
 
         recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Pareto)
-        assert recreated_dist.shape == dist.shape
-        assert recreated_dist.scale == dist.scale
-
         assert dist == recreated_dist
 
 
