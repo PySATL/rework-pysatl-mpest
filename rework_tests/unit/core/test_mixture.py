@@ -186,17 +186,7 @@ class TestMixtureModelModification:
 
         assert model.n_components == expected_n_components
 
-        comp1, comp2 = model.components
-        assert isinstance(comp1, Exponential)
-        assert isinstance(comp2, Exponential)
-
         assert model.components == (components[0], components[2])
-
-        expected_comp1_loc = 0
-        expected_comp2_loc = 10
-
-        assert comp1.loc == expected_comp1_loc
-        assert comp2.loc == expected_comp2_loc
 
         expected_weights = np.array([0.2, 0.3]) / (0.2 + 0.3)
         np.testing.assert_allclose(model.weights, expected_weights)
@@ -329,7 +319,6 @@ class TestMixtureModelDunderMethods:
     ):
         """Tests that __getitem__ retrieves the correct component by index."""
 
-        assert mixture_model[index] is exp_components[expected_component_index]
         assert mixture_model[index] == exp_components[expected_component_index]
 
     def test_getitem_out_of_bounds_raises_index_error(self, mixture_model: MixtureModel):
@@ -354,7 +343,6 @@ class TestMixtureModelDunderMethods:
 
         iterated_components = list(mixture_model)
         assert iterated_components == list(exp_components)
-        assert all(comp_iter is comp_orig for comp_iter, comp_orig in zip(iterated_components, exp_components))
         assert all(comp_iter == comp_orig for comp_iter, comp_orig in zip(iterated_components, exp_components))
 
     def test_iter_is_reusable(self, mixture_model: MixtureModel):

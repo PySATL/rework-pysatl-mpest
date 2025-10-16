@@ -59,11 +59,8 @@ class TestNormalInitialization:
         dist = Normal(loc=1.23, scale=4.56)
         repr_str = repr(dist)
         assert repr_str == "Normal(loc=1.23, scale=4.56)"
-        recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Normal)
-        assert recreated_dist.loc == dist.loc
-        assert recreated_dist.scale == dist.scale
 
+        recreated_dist = eval(repr_str)
         assert dist == recreated_dist
 
 

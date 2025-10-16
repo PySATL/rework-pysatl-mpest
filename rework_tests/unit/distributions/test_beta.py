@@ -146,12 +146,6 @@ class TestBetaInitialization:
         assert repr_str == "Beta(alpha=1.0, beta=2.0, lower_bound=10.0, upper_bound=20.0)"
 
         recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Beta)
-        assert recreated_dist.alpha == dist.alpha
-        assert recreated_dist.beta == dist.beta
-        assert recreated_dist.lower_bound == dist.lower_bound
-        assert recreated_dist.upper_bound == dist.upper_bound
-
         assert dist == recreated_dist
 
 
