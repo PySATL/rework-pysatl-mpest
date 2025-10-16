@@ -70,10 +70,6 @@ class TestCauchyInitialization:
         assert repr_str == "Cauchy(loc=1.23, scale=4.56)"
 
         recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Cauchy)
-        assert recreated_dist.loc == dist.loc
-        assert recreated_dist.scale == dist.scale
-
         assert dist == recreated_dist
 
 

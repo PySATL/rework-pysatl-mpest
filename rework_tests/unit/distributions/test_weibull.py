@@ -72,11 +72,6 @@ class TestWeibullInitialization:
         assert repr_str == "Weibull(shape=1.23, loc=4.56, scale=7.89)"
 
         recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Weibull)
-        assert recreated_dist.shape == dist.shape
-        assert recreated_dist.loc == dist.loc
-        assert recreated_dist.scale == dist.scale
-
         assert dist == recreated_dist
 
 

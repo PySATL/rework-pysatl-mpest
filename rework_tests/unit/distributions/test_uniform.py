@@ -72,10 +72,6 @@ class TestUniformInitialization:
         assert repr_str == "Uniform(left_border=1.23, right_border=4.56)"
 
         recreated_dist = eval(repr_str)
-        assert isinstance(recreated_dist, Uniform)
-        assert recreated_dist.left_border == dist.left_border
-        assert recreated_dist.right_border == dist.right_border
-
         assert dist == recreated_dist
 
 
