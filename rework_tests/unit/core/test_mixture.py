@@ -6,6 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Sequence
+from copy import copy
 from typing import Any
 
 import numpy as np
@@ -354,6 +355,42 @@ class TestMixtureModelDunderMethods:
         assert len(first_pass) == mixture_model.n_components
         assert first_pass is not second_pass  # The lists are different objects
         assert first_pass == second_pass  # But their contents are identical
+
+
+class TestMixtureModelCopying:
+    """Tests the __copy__ method for MixtureModel."""
+
+    def test_copy_creates_new_equal_instance(self, mixture_model: MixtureModel):
+        """Tests that copy.copy() creates a new instance that is equal to the original."""
+
+        copied_model = copy(mixture_model)
+
+        assert copied_model is not mixture_model
+        assert copied_model == mixture_model
+
+    def test_copy_is_independent_weights(self, mixture_model: MixtureModel):
+        """Tests that modifying the copied model's weights does not affect the original."""
+
+        copied_model = copy(mixture_model)
+        copied_model.log_weights = np.log([0.1, 0.9])
+
+        np.testing.assert_allclose(mixture_model.weights, [0.5, 0.5])
+        np.testing.assert_allclose(copied_model.weights, [0.1, 0.9])
+
+    def test_copy_is_independent_components(self, mixture_model: MixtureModel):
+        """Tests that the components in the copied model are also independent copies."""
+
+        copied_model = copy(mixture_model)
+
+        # Check that component objects are new instances
+        assert copied_model.components[0] is not mixture_model.components[0]
+        assert copied_model.components[1] is not mixture_model.components[1]
+
+        # Modify a parameter in a component of the copied model
+        copied_model.components[0].rate = 999.0
+
+        # Verify the original model's component is unchanged
+        assert mixture_model.components[0].rate != copied_model.components[0].rate
 
 
 class TestMixtureModelComparison:

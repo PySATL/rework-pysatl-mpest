@@ -13,7 +13,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import warnings
 from collections.abc import Sequence
-from copy import deepcopy
+from copy import copy
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -164,14 +164,13 @@ class Pipeline(BaseEstimator):
         """
 
         X = np.asarray(X, dtype=np.float64)
-        copied_mixture = deepcopy(mixture)  # Copy to avoid modifying the original object
+        copied_mixture = copy(mixture)  # Copy to avoid modifying the original object
 
         state = PipelineState(X, None, None, copied_mixture, None)
 
         while True:
             # Updating the state before starting an iteration
-            # TODO: remove heavy deepcopy
-            state.prev_mixture = deepcopy(state.curr_mixture)
+            state.prev_mixture = copy(state.curr_mixture)
 
             # Performing steps
             for step in self.steps:
