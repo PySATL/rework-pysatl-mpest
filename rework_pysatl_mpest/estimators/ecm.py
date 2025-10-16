@@ -27,7 +27,7 @@ from .iterative import (
     Pipeline,
     Pruner,
 )
-from .iterative._logger import PipelineLogger
+from .iterative._logger import IterationsHistory
 
 
 class ECM(BaseEstimator):
@@ -70,7 +70,7 @@ class ECM(BaseEstimator):
         the fitting process.
     optimizer : Optimizer
         The numerical optimizer used for parameter estimation.
-    logger : PipelineLogger | None
+    logger : IterationsHistory | None
         An object that collects information about each iteration.
         This attribute is only available after the :meth:`fit` method has been called.
         Accessing it beforehand will raise an :class:`AttributeError`.
@@ -87,10 +87,10 @@ class ECM(BaseEstimator):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)
         self.optimizer = optimizer
-        self._logger: PipelineLogger | None = None
+        self._logger: IterationsHistory | None = None
 
     @property
-    def logger(self) -> PipelineLogger:
+    def logger(self) -> IterationsHistory:
         """An object that collects information about each iteration.
 
         Raises
