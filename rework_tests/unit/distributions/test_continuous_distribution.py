@@ -5,6 +5,8 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from copy import copy
+
 import numpy as np
 import pytest
 from numpy.typing import ArrayLike, NDArray
@@ -234,6 +236,47 @@ class TestContinuousDistribution:
 
         with pytest.raises(ValueError, match=error_msg_match):
             dummy_dist.set_params_from_vector(param_names, vector)
+
+
+class TestContinuousDistributionCopying:
+    """Tests the __copy__ method implementation for ContinuousDistribution."""
+
+    def test_copy_creates_new_equal_instance(self, dummy_dist: DummyDistribution):
+        """Tests that copy.copy() creates a new instance that is equal to the original."""
+
+        copied_dist = copy(dummy_dist)
+
+        assert copied_dist is not dummy_dist
+        assert copied_dist == dummy_dist
+
+    def test_copy_is_independent(self, dummy_dist: DummyDistribution):
+        """Tests that modifying the copied instance does not affect the original."""
+
+        MODIFIED_PARAM_VALUE = 999.0
+        copied_dist = copy(dummy_dist)
+
+        original_param1_value = dummy_dist.param1
+
+        # Modify a parameter in the copied distribution
+        copied_dist.param1 = MODIFIED_PARAM_VALUE
+
+        # Assert that the original object's parameter remains unchanged
+        assert dummy_dist.param1 == original_param1_value
+        assert copied_dist.param1 == MODIFIED_PARAM_VALUE
+
+    def test_copy_replicates_fixed_params_independently(self, dummy_dist: DummyDistribution):
+        """Tests that the set of fixed parameters is also copied independently."""
+
+        dummy_dist.fix_param("param1")
+        copied_dist = copy(dummy_dist)
+
+        assert copied_dist._fixed_params == {"param1"}
+
+        # Modify the copy's fixed params
+        copied_dist.unfix_param("param1")
+
+        # Ensure the original is unchanged
+        assert dummy_dist._fixed_params != copied_dist._fixed_params
 
 
 class TestContinuousDistributionComparison:

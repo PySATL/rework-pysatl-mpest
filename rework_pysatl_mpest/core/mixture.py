@@ -8,6 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Iterator, Sequence
+from copy import copy
 from typing import TYPE_CHECKING, Optional
 
 import numpy as np
@@ -349,6 +350,19 @@ class MixtureModel:
         """
 
         return iter(self.components)
+
+    def __copy__(self) -> "MixtureModel":
+        """Creates a copy of the mixture model instance.
+
+        Returns
+        -------
+        MixtureModel
+            A new instance of the distribution, identical to the original.
+        """
+
+        copied_components = [copy(component) for component in self._components]
+        new_mixture = MixtureModel(components=copied_components, weights=self.weights.copy())
+        return new_mixture
 
     def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ContinuousDistribution", float]]:
         """Internal helper to get component-weight pairs, sorted by component hash."""
