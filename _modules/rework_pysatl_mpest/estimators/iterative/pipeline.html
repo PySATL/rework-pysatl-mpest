@@ -379,7 +379,7 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">...core</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..base_estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">._logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationRecord</span><span class="p">,</span> <span class="n">PipelineLogger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationRecord</span><span class="p">,</span> <span class="n">IterationsHistory</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.breakpointer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Breakpointer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
@@ -428,7 +428,7 @@ window.addEventListener("load", () => mermaid.run());
 <span class="sd">    pruners : list[Pruner]</span>
 <span class="sd">        The list of objects that may remove components from the mixture during</span>
 <span class="sd">        the fitting process.</span>
-<span class="sd">    logger : PipelineLogger</span>
+<span class="sd">    logger : IterationsHistory</span>
 <span class="sd">        object that collects comprehensive information about each</span>
 <span class="sd">        iteration of a :class:`Pipeline` estimator.</span>
 <span class="sd">    Raises</span>
@@ -445,6 +445,8 @@ window.addEventListener("load", () => mermaid.run());
 
 <span class="sd">        fit</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">logger</span><span class="p">:</span> <span class="n">IterationsHistory</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -464,7 +466,7 @@ window.addEventListener("load", () => mermaid.run());
         <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">breakpointers</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pruners</span><span class="p">)</span> <span class="k">if</span> <span class="n">pruners</span> <span class="k">else</span> <span class="p">[]</span>  <span class="c1"># self.pruners will always be list</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">PipelineLogger</span><span class="p">(</span><span class="n">once_in_iterations</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">IterationsHistory</span><span class="p">(</span><span class="n">once_in_iterations</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PipelineStep</span><span class="p">]):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Validates the sequence of pipeline steps.</span>
