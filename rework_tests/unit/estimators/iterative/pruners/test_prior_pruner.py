@@ -29,7 +29,7 @@ class DummyDistribution(ContinuousDistribution):
 
     @property
     def params(self) -> set[str]:
-        return set()
+        return {"name"}
 
     def pdf(self, X: ArrayLike) -> NDArray[float64]:
         pass

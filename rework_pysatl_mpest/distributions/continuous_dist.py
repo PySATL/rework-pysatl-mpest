@@ -284,6 +284,21 @@ class ContinuousDistribution(ABC):
             A NumPy array containing the generated samples.
         """
 
+    def __copy__(self) -> "ContinuousDistribution":
+        """Creates a copy of the distribution instance.
+
+        Returns
+        -------
+        ContinuousDistribution
+            A new instance of the distribution, identical to the original.
+        """
+        params_dict = {p: getattr(self, p) for p in self.params}
+
+        new_instance = self.__class__(**params_dict)
+        new_instance._fixed_params = self._fixed_params.copy()
+
+        return new_instance
+
     def __eq__(self, other: object):
         """Checks if two distribution objects are equal.
 
