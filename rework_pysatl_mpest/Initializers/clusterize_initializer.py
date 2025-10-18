@@ -13,7 +13,8 @@ from typing import Any, Callable, ClassVar, Optional
 import numpy as np
 from numpy._typing import ArrayLike
 
-from rework_pysatl_mpest import ContinuousDistribution, MixtureModel
+from rework_pysatl_mpest.core.mixture import MixtureModel
+from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.Initializers._estimation_strategies.q_function import q_function_strategy
 from rework_pysatl_mpest.Initializers.cluster_match_strategy import (
     match_clusters_for_models_akaike,
