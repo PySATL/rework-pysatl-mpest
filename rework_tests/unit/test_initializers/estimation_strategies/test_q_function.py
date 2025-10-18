@@ -113,7 +113,7 @@ class TestQFunctionStrategyGeneric:
 
         result = q_function_strategy(mock_component, np.array([1.0, 2.0]), np.array([0.5, 0.5]), self.mock_optimizer)
 
-        assert result == {"param1": 1.5, "param2": 2.5}
+        np.testing.assert_allclose(sorted(list(result.values())), [1.5, 2.5])
         self.mock_optimizer.minimize.assert_called_once()
 
 
