@@ -23,11 +23,8 @@ class Initializer(ABC):
 
     Methods
     -------
-
-    .. autosummary::
-        :toctree: generated/
-
-        perform
+    perform(X, dists, cluster_match_strategy, estimation_strategies)
+        Performs initialization of mixture model parameters.
 
     Notes
     -----

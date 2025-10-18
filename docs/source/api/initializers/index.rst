@@ -18,7 +18,7 @@ Abstract Classes
    :nosignatures:
    :template: class.rst
 
-   ~Initializer
+   Initializer
 
 Concrete Implementations
 ------------------------
@@ -28,7 +28,7 @@ Concrete Implementations
    :nosignatures:
    :template: class.rst
 
-   ~ClusterizeInitializer
+   ClusterizeInitializer
 
 Cluster Matching Strategies
 ---------------------------
@@ -40,8 +40,8 @@ Functions for matching clusters to distribution models based on statistical crit
    :nosignatures:
    :template: function.rst
 
-   ~match_clusters_for_models_akaike
-   ~match_clusters_for_models_log_likelihood
+   match_clusters_for_models_akaike
+   match_clusters_for_models_log_likelihood
 
 Parameter Estimation Strategies
 -------------------------------
@@ -53,7 +53,7 @@ Q-function based parameter estimation with multiple implementations.
    :nosignatures:
    :template: function.rst
 
-   ~q_function_strategy
+   q_function_strategy
 
 Q-function Strategy Implementations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -63,7 +63,7 @@ Q-function Strategy Implementations
    :nosignatures:
    :template: function.rst
 
-   ~q_function_strategy_exponential
+   q_function_strategy_exponential
 
 Utility Functions
 ~~~~~~~~~~~~~~~~~
@@ -73,7 +73,7 @@ Utility Functions
    :nosignatures:
    :template: function.rst
 
-   ~get_available_q_function_implementations
+   get_available_q_function_implementations
 
 Detailed Documentation
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -106,7 +106,7 @@ Cluster Matching Strategies (`ClusterMatchStrategy`)
    :nosignatures:
    :template: class.rst
 
-   ~ClusterMatchStrategy
+   ClusterMatchStrategy
 
 Parameter Estimation Strategies (`EstimationStrategy`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -116,4 +116,4 @@ Parameter Estimation Strategies (`EstimationStrategy`)
    :nosignatures:
    :template: class.rst
 
-   ~EstimationStrategy
+   EstimationStrategy

@@ -20,7 +20,7 @@ def match_clusters_for_models_log_likelihood(
     models: list[ContinuousDistribution],
     X: np.ndarray,
     H: np.ndarray,
-    estimation_info: list[Callable],
+    estimation_strategies: list[Callable],
     min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
 ) -> tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]:
@@ -39,7 +39,7 @@ def match_clusters_for_models_log_likelihood(
     H : np.ndarray
         Weight matrix where ``H[i, k]`` represents the probability that data point ``i``
         belongs to cluster ``k``.
-    estimation_info : list[Callable]
+    estimation_strategies : list[Callable]
         List of estimation functions for each model, used to estimate parameters
         for a given cluster.
     min_samples : int, optional
@@ -47,7 +47,7 @@ def match_clusters_for_models_log_likelihood(
         Default is 10.
     optimizer : Optimizer
         Optimizer that will be used in estimation strategies.
-        By default ScipyNelderMead.
+        By default, ScipyNelderMead.
 
     Returns
     -------
@@ -56,7 +56,7 @@ def match_clusters_for_models_log_likelihood(
 
         - The original list of models
         - List of parameter dictionaries for each model
-        - List of normalized weights for each model
+        - List of weights for each model
 
     Raises
     ------
@@ -84,7 +84,7 @@ def match_clusters_for_models_log_likelihood(
     n_clusters = H.shape[1]
     n_models = len(models)
 
-    if len(estimation_info) != n_models:
+    if len(estimation_strategies) != n_models:
         raise ValueError("Number of estimation functions must match number of models")
 
     updated_params_list = []
@@ -100,18 +100,22 @@ def match_clusters_for_models_log_likelihood(
 
     used_clusters = set()
 
-    for i, (model, estimation_func) in enumerate(zip(models, estimation_info)):
+    for i, (model, estimation_func) in enumerate(zip(models, estimation_strategies)):
         best_score = -np.inf
         best_params = {}
         best_cluster_weight = 0.0
         best_cluster = None
+        temp_model = deepcopy(model)
+        default_params_names, default_params_values = (
+            list(temp_model.params),
+            temp_model.get_params_vector(list(temp_model.params)),
+        )
 
         for k in valid_clusters:
             if k in used_clusters:
                 continue
             H_k = H[:, k]
 
-            temp_model = deepcopy(model)
             new_params = estimation_func(temp_model, X, H_k, optimizer)
             param_names = new_params.keys()
             param_values = new_params.values()
@@ -129,21 +133,20 @@ def match_clusters_for_models_log_likelihood(
                 best_cluster_weight = cluster_weights[k] / len(X)
                 best_cluster = k
 
+            temp_model.set_params_from_vector(default_params_names, default_params_values)
+
         used_clusters.add(best_cluster)
         updated_params_list.append(best_params)
         model_weights.append(float(best_cluster_weight))
 
-    total_weight = sum(model_weights)
-    normalized_weights = [w / total_weight for w in model_weights]
-
-    return models, updated_params_list, normalized_weights
+    return models, updated_params_list, model_weights
 
 
 def match_clusters_for_models_akaike(
     models: list[ContinuousDistribution],
     X: np.ndarray,
     H: np.ndarray,
-    estimation_info: list[Callable],
+    estimation_strategies: list[Callable],
     min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
 ) -> tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]:
@@ -161,7 +164,7 @@ def match_clusters_for_models_akaike(
     H : np.ndarray
         Weight matrix where ``H[i, k]`` represents the probability that data point ``i``
         belongs to cluster ``k``.
-    estimation_info : list[Callable]
+    estimation_strategies : list[Callable]
         List of estimation functions for each model, used to estimate parameters
         for a given cluster.
     min_samples : int, optional
@@ -169,7 +172,7 @@ def match_clusters_for_models_akaike(
         Default is 10.
     optimizer : Optimizer
         Optimizer that will be used in estimation strategies.
-        By default ScipyNelderMead.
+        By default, ScipyNelderMead.
 
     Returns
     -------
@@ -178,7 +181,7 @@ def match_clusters_for_models_akaike(
 
         - The original list of models
         - List of parameter dictionaries for each model
-        - List of normalized weights for each model
+        - List of weights for each model
 
     Raises
     ------
@@ -204,7 +207,7 @@ def match_clusters_for_models_akaike(
     n_clusters = H.shape[1]
     n_models = len(models)
 
-    if len(estimation_info) != n_models:
+    if len(estimation_strategies) != n_models:
         raise ValueError("Number of estimation functions must match number of models")
 
     aic_scores_dict = {}
@@ -217,11 +220,15 @@ def match_clusters_for_models_akaike(
         equal_weights = [1.0 / n_models] * n_models
         return models, default_params, equal_weights
 
-    for i, (model, estimation_func) in enumerate(zip(models, estimation_info)):
+    for i, (model, estimation_func) in enumerate(zip(models, estimation_strategies)):
+        temp_model = deepcopy(model)
+        default_params_names, default_params_values = (
+            list(temp_model.params),
+            temp_model.get_params_vector(list(temp_model.params)),
+        )
         for k in valid_clusters:
             H_k = H[:, k]
 
-            temp_model = deepcopy(model)
             new_params = estimation_func(temp_model, X, H_k, optimizer)
             param_names = new_params.keys()
             param_values = new_params.values()
@@ -242,6 +249,7 @@ def match_clusters_for_models_akaike(
                 "model_idx": i,
                 "cluster_idx": k,
             }
+            temp_model.set_params_from_vector(default_params_names, default_params_values)
 
     best_total_aic = np.inf
     best_params_assignment = []
@@ -265,7 +273,4 @@ def match_clusters_for_models_akaike(
             best_params_assignment = params_assignment
             best_weights_assignment = weights_assignment
 
-    total_weight = sum(best_weights_assignment)
-    normalized_weights = [w / total_weight for w in best_weights_assignment]
-
-    return models, best_params_assignment, normalized_weights
+    return models, best_params_assignment, best_weights_assignment

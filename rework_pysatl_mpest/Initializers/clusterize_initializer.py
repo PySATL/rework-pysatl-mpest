@@ -14,12 +14,12 @@ import numpy as np
 from numpy._typing import ArrayLike
 
 from rework_pysatl_mpest import ContinuousDistribution, MixtureModel
+from rework_pysatl_mpest.Initializers._estimation_strategies.q_function import q_function_strategy
 from rework_pysatl_mpest.Initializers.cluster_match_strategy import (
     match_clusters_for_models_akaike,
     match_clusters_for_models_log_likelihood,
 )
 from rework_pysatl_mpest.Initializers.initializer import Initializer
-from rework_pysatl_mpest.Initializers.q_function import q_function_strategy
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 from rework_pysatl_mpest.optimizers import Optimizer
 from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
@@ -31,14 +31,12 @@ class ClusterizeInitializer(Initializer):
     This initializer uses clustering algorithms to partition the data and then
     estimates initial parameters for mixture components based on the clustering results.
     Supports both hard clustering (crisp assignments) and soft clustering (fuzzy assignments).
+    For homogeneous mixtures fast (is_accurate = False) initialization is recommended.
 
     Attributes
     ----------
     MIN_SAMPLES : int
         Minimum number of samples required for a cluster to be considered valid.
-    _estimation_strategies : ClassVar[Mapping[EstimationStrategy, Callable]]
-        Mapping of estimation strategies to their implementation functions.
-    _cluster_match_strategies : ClassVar[Mapping[ClusterMatchStrategy, Callable]]
         Mapping of cluster matching strategies to their implementation functions.
     n_components : Optional[int]
         Number of mixture components to initialize.
@@ -63,13 +61,8 @@ class ClusterizeInitializer(Initializer):
 
     Methods
     -------
-
-    .. autosummary::
-
-        perform
-        _clusterize
-        _accurate_init
-        _fast_init
+    perform(X, dists, cluster_match_strategy, estimation_strategies, optimizer)
+        Performs cluster-based initialization of mixture model parameters.
 
     Notes
     -----
@@ -121,7 +114,6 @@ class ClusterizeInitializer(Initializer):
             The clustering algorithm instance. Must have appropriate methods for
             the specified clustering type.
         """
-
         self.is_soft = is_soft
         self.is_accurate = is_accurate
         self.clusterizer = clusterizer
@@ -152,12 +144,10 @@ class ClusterizeInitializer(Initializer):
             If the clusterizer doesn't have the required method for the specified
             clustering type, or if clustering fails.
         """
-
-        X = X.reshape(-1, 1)
         if self.is_soft and hasattr(clusterizer, "fit_transform"):
             try:
-                weights_matrix = clusterizer.fit_transform(X)
-                return weights_matrix
+                H = clusterizer.fit_transform(X)
+                return H
             except Exception as e:
                 raise ValueError(f"Fuzzy clusterizer failed: {e}")
 
@@ -171,20 +161,20 @@ class ClusterizeInitializer(Initializer):
                     n_clusters = 1
                     valid_labels = np.array([0])
                     labels = np.zeros_like(labels)
-                weights_matrix = np.zeros((len(X), n_clusters))
+                H = np.zeros((len(X), n_clusters))
                 if np.any(labels == -1):
                     outlier_mask = labels == -1
                     non_outlier_mask = ~outlier_mask
-                    weights_matrix[outlier_mask, :] = 1.0 / n_clusters
+                    H[outlier_mask, :] = 1.0 / n_clusters
                     for idx in np.where(non_outlier_mask)[0]:
                         label = labels[idx]
                         cluster_idx = np.where(valid_labels == label)[0][0]
-                        weights_matrix[idx, cluster_idx] = 1.0
+                        H[idx, cluster_idx] = 1.0
                 else:
                     for i, label in enumerate(labels):
                         cluster_idx = np.where(valid_labels == label)[0][0]
-                        weights_matrix[i, cluster_idx] = 1.0
-                return weights_matrix
+                        H[i, cluster_idx] = 1.0
+                return H
 
             except Exception as e:
                 raise ValueError(f"Hard clusterizer failed: {e}")
@@ -204,7 +194,7 @@ class ClusterizeInitializer(Initializer):
             Weight matrix from clustering.
         optimizer : Optimizer
             Optimizer that will be used in estimation strategies.
-            By default ScipyNelderMead.
+            By default, ScipyNelderMead.
 
         Returns
         -------
@@ -219,7 +209,6 @@ class ClusterizeInitializer(Initializer):
             If n_components is not set or if the number of estimation strategies
             doesn't match the number of models.
         """
-
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _accurate_init")
 
@@ -256,7 +245,7 @@ class ClusterizeInitializer(Initializer):
             Weight matrix from clustering.
         optimizer : Optimizer
             Optimizer that will be used in estimation strategies.
-            By default ScipyNelderMead.
+            By default, ScipyNelderMead.
 
         Returns
         -------
@@ -270,7 +259,6 @@ class ClusterizeInitializer(Initializer):
         ValueError
             If n_components is not set.
         """
-
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _fast_init")
 
@@ -296,8 +284,8 @@ class ClusterizeInitializer(Initializer):
         self,
         X: ArrayLike,
         dists: list[ContinuousDistribution],
-        cluster_match_info: ClusterMatchStrategy,
-        estimation_info: list[EstimationStrategy],
+        cluster_match_strategy: ClusterMatchStrategy,
+        estimation_strategies: list[EstimationStrategy],
         optimizer: Optimizer = ScipyNelderMead(),
     ) -> MixtureModel:
         """Performs cluster-based initialization of mixture model parameters.
@@ -308,13 +296,13 @@ class ClusterizeInitializer(Initializer):
             Input data points for initialization.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize.
-        cluster_match_info : ClusterMatchStrategy
+        cluster_match_strategy : ClusterMatchStrategy
             Strategy for matching clusters to distribution models.
-        estimation_info : list[EstimationStrategy]
+        estimation_strategies : list[EstimationStrategy]
             List of estimation strategies for each distribution model.
         optimizer : Optimizer
             Optimizer that will be used in estimation strategies.
-            By default ScipyNelderMead.
+            By default, ScipyNelderMead.
 
         Returns
         -------
@@ -334,8 +322,8 @@ class ClusterizeInitializer(Initializer):
         self.models = dists
         self.n_components = len(dists)
         H = self._clusterize(X, self.clusterizer)
-        self.cluster_match_strategy = cluster_match_info
-        self.estimation_strategies = estimation_info
+        self.cluster_match_strategy = cluster_match_strategy
+        self.estimation_strategies = estimation_strategies
 
         if self.is_accurate:
             distributions, weights = self._accurate_init(X, H, optimizer)

@@ -54,7 +54,7 @@ class TestClusterizeInitializer:
 
         assert self.mock_clusterizer.fit_transform.call_count == 1
         called_arg = self.mock_clusterizer.fit_transform.call_args[0][0]
-        np.testing.assert_array_equal(called_arg, X.reshape(-1, 1))
+        np.testing.assert_array_equal(called_arg, X)
 
     def test_hard_clusterize_no_outliers(self):
         initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
@@ -169,8 +169,8 @@ class TestClusterizeInitializer:
             result = initializer.perform(
                 X=X,
                 dists=dists,
-                cluster_match_info=ClusterMatchStrategy.AKAIKE,
-                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+                cluster_match_strategy=ClusterMatchStrategy.AKAIKE,
+                estimation_strategies=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
             )
             len_components = len(dists)
 
@@ -204,8 +204,8 @@ class TestClusterizeInitializer:
                 result = initializer.perform(
                     X=X,
                     dists=dists,
-                    cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                    estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+                    cluster_match_strategy=ClusterMatchStrategy.LIKELIHOOD,
+                    estimation_strategies=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
                     optimizer=optimizer,
                 )
 
@@ -228,8 +228,8 @@ class TestClusterizeInitializer:
             result = initializer.perform(
                 X=X,
                 dists=dists,
-                cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+                cluster_match_strategy=ClusterMatchStrategy.LIKELIHOOD,
+                estimation_strategies=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
             )
             len_components = len(dists)
             assert isinstance(result, MixtureModel)
@@ -255,8 +255,8 @@ class TestClusterizeInitializer:
             result = initializer.perform(
                 X=X,
                 dists=[self.mock_distributions[0], self.mock_distributions[1]],
-                cluster_match_info=ClusterMatchStrategy.AKAIKE,
-                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+                cluster_match_strategy=ClusterMatchStrategy.AKAIKE,
+                estimation_strategies=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
             )
 
             expected_weights = [0.4, 0.6]
@@ -330,8 +330,8 @@ class TestClusterizeInitializer:
             result = initializer.perform(
                 X=X,
                 dists=distributions,
-                cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                estimation_info=[EstimationStrategy.QFUNCTION] * len(distributions),
+                cluster_match_strategy=ClusterMatchStrategy.LIKELIHOOD,
+                estimation_strategies=[EstimationStrategy.QFUNCTION] * len(distributions),
             )
 
             assert isinstance(result, MixtureModel)
@@ -357,8 +357,8 @@ class TestClusterizeInitializer:
             result = initializer.perform(
                 X=X,
                 dists=distributions,
-                cluster_match_info=ClusterMatchStrategy.LIKELIHOOD,
-                estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+                cluster_match_strategy=ClusterMatchStrategy.LIKELIHOOD,
+                estimation_strategies=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
             )
             len_components = len(distributions)
             assert isinstance(result, MixtureModel)
