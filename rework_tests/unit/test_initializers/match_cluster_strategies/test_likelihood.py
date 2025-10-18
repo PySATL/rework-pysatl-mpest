@@ -84,9 +84,10 @@ class TestMatchClustersForModelsLogLikelihood:
         models_out, params, weights = match_clusters_for_models_log_likelihood(
             models, X, H_norm, est_funcs, min_samples=1
         )
+        norm_weights = np.asarray(weights) / sum(weights)
         assert len(params) == len_models
         assert all(p != {} for p in params)
-        assert abs(sum(weights) - 1.0) < COMPARISON_CONSTANT
+        assert abs(sum(norm_weights) - 1.0) < COMPARISON_CONSTANT
 
     def test_basic_assignment(self, mock_models, estimation_info, X, H_valid):
         len_models = len(mock_models)

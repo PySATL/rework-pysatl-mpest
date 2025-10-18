@@ -73,8 +73,12 @@ def clusterize_initialization(X: np.ndarray, mixture: MixtureModel, is_accurate:
     mixture = initializer.perform(
         X=X.reshape(-1, 1),
         dists=mixture.components,
-        cluster_match_info=ClusterMatchStrategy.AKAIKE,
-        estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+        cluster_match_strategy=ClusterMatchStrategy.AKAIKE,
+        estimation_strategies=[
+            EstimationStrategy.QFUNCTION,
+            EstimationStrategy.QFUNCTION,
+            EstimationStrategy.QFUNCTION,
+        ],
     )
     return mixture
 

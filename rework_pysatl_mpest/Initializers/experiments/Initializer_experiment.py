@@ -342,8 +342,12 @@ def run_kmeans_comparison(n_samples, experiment_num=0):
         mixture = initializer.perform(
             X=X.reshape(-1, 1),
             dists=initial_mixture.components,
-            cluster_match_info=ClusterMatchStrategy.AKAIKE,
-            estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+            cluster_match_strategy=ClusterMatchStrategy.AKAIKE,
+            estimation_strategies=[
+                EstimationStrategy.QFUNCTION,
+                EstimationStrategy.QFUNCTION,
+                EstimationStrategy.QFUNCTION,
+            ],
         )
         exec_time = time.time() - start_time
 
@@ -434,8 +438,12 @@ def run_cmeans_comparison(n_samples, experiment_num=0):
         mixture = initializer.perform(
             X=X.reshape(-1, 1),
             dists=initial_mixture.components,
-            cluster_match_info=ClusterMatchStrategy.AKAIKE,
-            estimation_info=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+            cluster_match_strategy=ClusterMatchStrategy.AKAIKE,
+            estimation_strategies=[
+                EstimationStrategy.QFUNCTION,
+                EstimationStrategy.QFUNCTION,
+                EstimationStrategy.QFUNCTION,
+            ],
         )
         exec_time = time.time() - start_time
 
