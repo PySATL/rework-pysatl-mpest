@@ -80,15 +80,13 @@ def q_function_strategy(
     - :func:`q_function_strategy_exponential` - for Exponential distribution
     """
 
-    params_to_optimize = sorted(list(component.params_to_optimize))
+    params_to_optimize = list(component.params_to_optimize)
     temp_comp = deepcopy(component)
 
     def target(vector_params):
-        try:
-            temp_comp.set_params_from_vector(params_to_optimize, vector_params)
-            return -temp_comp.q_function(X, H_j)
-        except (AttributeError, NotImplementedError):
-            print("This distribution type has no q_function implementation")
+        temp_comp.set_params_from_vector(params_to_optimize, vector_params)
+        lpdf_values = temp_comp.lpdf(X)
+        return np.dot(H_j, lpdf_values).item()
 
     initial_params = temp_comp.get_params_vector(params_to_optimize)
     new_params_vector = optimizer.minimize(target, initial_params)
@@ -97,7 +95,7 @@ def q_function_strategy(
     return new_params
 
 
-@q_function_strategy.register
+@q_function_strategy.register(Exponential)
 def q_function_strategy_exponential(
     component: Exponential, X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
 ) -> dict[str, float]:
@@ -151,7 +149,7 @@ def q_function_strategy_exponential(
         rate = N_j / Σ(H_j * max(X - loc, tolerance))
     where N_j is the sum of weights for the component.
 
-    Examples
+    Example
     --------
     >>> from rework_pysatl_mpest import Exponential
     >>> from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead

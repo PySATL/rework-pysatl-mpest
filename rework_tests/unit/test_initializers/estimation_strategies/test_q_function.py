@@ -4,13 +4,12 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-import contextlib
 from typing import ClassVar
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import numpy as np
 from rework_pysatl_mpest.distributions.exponential import Exponential
-from rework_pysatl_mpest.Initializers.q_function import NUMERICAL_TOLERANCE, q_function_strategy
+from rework_pysatl_mpest.Initializers._estimation_strategies.q_function import NUMERICAL_TOLERANCE, q_function_strategy
 from rework_pysatl_mpest.optimizers.optimizer import Optimizer
 
 COMPARISON_CONSTANT = 1e-10
@@ -116,63 +115,6 @@ class TestQFunctionStrategyGeneric:
 
         assert result == {"param1": 1.5, "param2": 2.5}
         self.mock_optimizer.minimize.assert_called_once()
-
-    def test_generic_strategy_attribute_error(self):
-        class DistributionWithoutQFunction:
-            params_to_optimize: ClassVar[set[str]] = {"param1"}
-
-            def get_params_vector(self, params):
-                return np.array([1.0])
-
-            def set_params_from_vector(self, params, vector):
-                pass
-
-        mock_component = DistributionWithoutQFunction()
-
-        def mock_minimize(target_func, initial_params):
-            with contextlib.suppress(AttributeError, NotImplementedError):
-                target_func(initial_params)
-            return np.array([2.0])
-
-        self.mock_optimizer.minimize.side_effect = mock_minimize
-
-        with patch("builtins.print") as mock_print:
-            result = q_function_strategy(
-                mock_component, np.array([1.0, 2.0]), np.array([0.5, 0.5]), self.mock_optimizer
-            )
-
-            mock_print.assert_called_with("This distribution type has no q_function implementation")
-            assert result == {"param1": 2.0}
-
-    def test_generic_strategy_not_implemented_error(self):
-        class DistributionWithNotImplementedQFunction:
-            params_to_optimize: ClassVar[set[str]] = {"param1"}
-
-            def get_params_vector(self, params):
-                return np.array([1.0])
-
-            def set_params_from_vector(self, params, vector):
-                pass
-
-            def q_function(self, X, H_j):
-                raise NotImplementedError("q_function not implemented")
-
-        mock_component = DistributionWithNotImplementedQFunction()
-
-        def mock_minimize(target_func, initial_params):
-            with contextlib.suppress(AttributeError, NotImplementedError):
-                target_func(initial_params)
-            return np.array([3.0])
-
-        self.mock_optimizer.minimize.side_effect = mock_minimize
-
-        with patch("builtins.print") as mock_print:
-            result = q_function_strategy(
-                mock_component, np.array([1.0, 2.0]), np.array([0.5, 0.5]), self.mock_optimizer
-            )
-
-            mock_print.assert_called_with("This distribution type has no q_function implementation")
-            assert result == {"param1": 3.0}
 
 
 class TestQFunctionStrategyIntegration:
