@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 
 from numpy._typing import ArrayLike
 
-from rework_pysatl_mpest import ContinuousDistribution
+from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 
 

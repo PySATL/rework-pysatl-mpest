@@ -12,7 +12,7 @@ from typing import Callable
 
 import numpy as np
 
-from rework_pysatl_mpest import ContinuousDistribution
+from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
 
 
