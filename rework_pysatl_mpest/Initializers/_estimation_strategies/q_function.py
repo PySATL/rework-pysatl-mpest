@@ -6,7 +6,6 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import deepcopy
 from functools import singledispatch
 
 import numpy as np
@@ -82,14 +81,13 @@ def q_function_strategy(
     """
 
     params_to_optimize = list(component.params_to_optimize)
-    temp_comp = deepcopy(component)
 
     def target(vector_params):
-        temp_comp.set_params_from_vector(params_to_optimize, vector_params)
-        lpdf_values = temp_comp.lpdf(X)
+        component.set_params_from_vector(params_to_optimize, vector_params)
+        lpdf_values = component.lpdf(X)
         return -np.dot(H_j, lpdf_values).item()
 
-    initial_params = temp_comp.get_params_vector(params_to_optimize)
+    initial_params = component.get_params_vector(params_to_optimize)
     new_params_vector = optimizer.minimize(target, initial_params)
 
     new_params = dict(zip(params_to_optimize, new_params_vector))

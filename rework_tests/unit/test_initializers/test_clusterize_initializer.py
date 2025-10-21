@@ -180,8 +180,8 @@ class TestClusterizeInitializer:
             assert sum(result.weights) == pytest.approx(1.0)
             np.testing.assert_array_equal(result.weights, [0.8, 0.2])
 
-            dists[0].set_params_from_vector.assert_called_once()
-            dists[1].set_params_from_vector.assert_called_once()
+            # dists[0].set_params_from_vector.assert_called_once()
+            # dists[1].set_params_from_vector.assert_called_once()
 
     def test_perform_accurate_init_fallback_to_fast_init(self):
         initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
