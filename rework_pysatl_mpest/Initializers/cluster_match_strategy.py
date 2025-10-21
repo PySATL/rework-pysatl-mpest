@@ -6,7 +6,6 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import deepcopy
 from itertools import permutations
 from typing import Callable
 
@@ -105,10 +104,9 @@ def match_clusters_for_models_log_likelihood(
         best_params = {}
         best_cluster_weight = 0.0
         best_cluster = None
-        temp_model = deepcopy(model)
         default_params_names, default_params_values = (
-            list(temp_model.params),
-            temp_model.get_params_vector(list(temp_model.params)),
+            list(model.params),
+            model.get_params_vector(list(model.params)),
         )
 
         for k in valid_clusters:
@@ -116,12 +114,12 @@ def match_clusters_for_models_log_likelihood(
                 continue
             H_k = H[:, k]
 
-            new_params = estimation_func(temp_model, X, H_k, optimizer)
+            new_params = estimation_func(model, X, H_k, optimizer)
             param_names = new_params.keys()
             param_values = new_params.values()
-            temp_model.set_params_from_vector(param_names, param_values)
+            model.set_params_from_vector(param_names, param_values)
 
-            log_probs = np.clip(temp_model.lpdf(X), -1e9, -1e-9)
+            log_probs = np.clip(model.lpdf(X), -1e9, -1e-9)
             weighted_log_likelihood = np.sum(H_k * log_probs)
 
             effective_n = cluster_weights[k]
@@ -133,7 +131,7 @@ def match_clusters_for_models_log_likelihood(
                 best_cluster_weight = cluster_weights[k] / len(X)
                 best_cluster = k
 
-            temp_model.set_params_from_vector(default_params_names, default_params_values)
+            model.set_params_from_vector(default_params_names, default_params_values)
 
         used_clusters.add(best_cluster)
         updated_params_list.append(best_params)
@@ -221,20 +219,19 @@ def match_clusters_for_models_akaike(
         return models, default_params, equal_weights
 
     for i, (model, estimation_func) in enumerate(zip(models, estimation_strategies)):
-        temp_model = deepcopy(model)
         default_params_names, default_params_values = (
-            list(temp_model.params),
-            temp_model.get_params_vector(list(temp_model.params)),
+            list(model.params),
+            model.get_params_vector(list(model.params)),
         )
         for k in valid_clusters:
             H_k = H[:, k]
 
-            new_params = estimation_func(temp_model, X, H_k, optimizer)
+            new_params = estimation_func(model, X, H_k, optimizer)
             param_names = new_params.keys()
             param_values = new_params.values()
-            temp_model.set_params_from_vector(param_names, param_values)
+            model.set_params_from_vector(param_names, param_values)
 
-            log_probs = np.clip(temp_model.lpdf(X), -1e9, -1e-9)
+            log_probs = np.clip(model.lpdf(X), -1e9, -1e-9)
             weighted_log_likelihood = np.sum(H_k * log_probs)
 
             k_params = len(model.params)
@@ -249,7 +246,7 @@ def match_clusters_for_models_akaike(
                 "model_idx": i,
                 "cluster_idx": k,
             }
-            temp_model.set_params_from_vector(default_params_names, default_params_values)
+            model.set_params_from_vector(default_params_names, default_params_values)
 
     best_total_aic = np.inf
     best_params_assignment = []
