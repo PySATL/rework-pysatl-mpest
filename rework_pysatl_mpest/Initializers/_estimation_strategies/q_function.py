@@ -87,7 +87,7 @@ def q_function_strategy(
     def target(vector_params):
         temp_comp.set_params_from_vector(params_to_optimize, vector_params)
         lpdf_values = temp_comp.lpdf(X)
-        return np.dot(H_j, lpdf_values).item()
+        return -np.dot(H_j, lpdf_values).item()
 
     initial_params = temp_comp.get_params_vector(params_to_optimize)
     new_params_vector = optimizer.minimize(target, initial_params)
