@@ -11,7 +11,7 @@ from types import MappingProxyType
 from typing import Any, Callable, ClassVar, Optional
 
 import numpy as np
-from numpy._typing import ArrayLike
+from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
