@@ -1,5 +1,5 @@
 """
-Initializers module for mixture model parameter initialization.
+initializers module for mixture model parameter initialization.
 
 This module provides various strategies for initializing parameters of mixture models
 before the main optimization process. Good initialization is crucial for achieving
@@ -7,7 +7,7 @@ fast convergence and high-quality solutions in mixture model estimation.
 
 **Purpose**
 
-Initializers provide good starting points for EM algorithm and other optimization
+initializers provide good starting points for EM algorithm and other optimization
 methods, helping to avoid poor local optima and improving convergence.
 
 **Usage Example**
@@ -17,8 +17,8 @@ methods, helping to avoid poor local optima and improving convergence.
     >>> from rework_pysatl_mpest import Exponential
     >>> import numpy as np
     >>> from sklearn.cluster import KMeans
-    >>> from rework_pysatl_mpest.Initializers import ClusterizeInitializer
-    >>> from rework_pysatl_mpest.Initializers import ClusterMatchStrategy, EstimationStrategy
+    >>> from rework_pysatl_mpest.initializers import ClusterizeInitializer
+    >>> from rework_pysatl_mpest.initializers import ClusterMatchStrategy, EstimationStrategy
 
     >>> # Create initializer with KMeans clustering
     >>> initializer_cluster = ClusterizeInitializer(

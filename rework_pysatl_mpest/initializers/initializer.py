@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 
 
 class Initializer(ABC):
@@ -30,7 +30,7 @@ class Initializer(ABC):
     -----
     **Purpose**
 
-    Initializers are responsible for providing good starting points for
+    initializers are responsible for providing good starting points for
     mixture model parameters before the main optimization process. This can
     significantly improve convergence speed and solution quality.
 

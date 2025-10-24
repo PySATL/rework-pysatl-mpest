@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.Initializers.clusterize_initializer import ClusterizeInitializer
-from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.initializers.clusterize_initializer import ClusterizeInitializer
+from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 from rework_pysatl_mpest.optimizers import ScipyNelderMead
 
 
@@ -157,7 +157,7 @@ class TestClusterizeInitializer:
         with (
             patch.object(initializer, "_clusterize", return_value=H),
             patch(
-                "rework_pysatl_mpest.Initializers.cluster_match_strategy.match_clusters_for_models_akaike"
+                "rework_pysatl_mpest.initializers.cluster_match_strategy.match_clusters_for_models_akaike"
             ) as mock_match,
         ):
             mock_match.return_value = (
@@ -190,7 +190,7 @@ class TestClusterizeInitializer:
         with (
             patch.object(initializer, "_clusterize", return_value=H),
             patch(
-                "rework_pysatl_mpest.Initializers.clusterize_initializer.match_clusters_for_models_log_likelihood"
+                "rework_pysatl_mpest.initializers.clusterize_initializer.match_clusters_for_models_log_likelihood"
             ) as mock_match,
         ):
             mock_match.return_value = ([dists[0], dists[1]], [None, {"mean": 2.0, "std": 1.0}], [0.5, 0.5])
