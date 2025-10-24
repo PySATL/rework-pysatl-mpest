@@ -6,7 +6,7 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import deepcopy
+from copy import copy
 from itertools import permutations
 from typing import Callable
 
@@ -105,7 +105,7 @@ def match_clusters_for_models_log_likelihood(
         best_params = {}
         best_cluster_weight = 0.0
         best_cluster = None
-        temp_model = deepcopy(model)
+        temp_model = copy(model)
         default_params_names, default_params_values = (
             list(temp_model.params),
             temp_model.get_params_vector(list(temp_model.params)),
@@ -221,7 +221,7 @@ def match_clusters_for_models_akaike(
         return models, default_params, equal_weights
 
     for i, (model, estimation_func) in enumerate(zip(models, estimation_strategies)):
-        temp_model = deepcopy(model)
+        temp_model = copy(model)
         default_params_names, default_params_values = (
             list(temp_model.params),
             temp_model.get_params_vector(list(temp_model.params)),
