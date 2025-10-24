@@ -6,7 +6,7 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import deepcopy
+from copy import copy
 from functools import singledispatch
 
 import numpy as np
@@ -82,7 +82,7 @@ def q_function_strategy(
     """
 
     params_to_optimize = list(component.params_to_optimize)
-    temp_comp = deepcopy(component)
+    temp_comp = copy(component)
 
     def target(vector_params):
         temp_comp.set_params_from_vector(params_to_optimize, vector_params)
@@ -152,7 +152,7 @@ def q_function_strategy_exponential(
 
     Example
     --------
-    >>> from rework_pysatl_mpest import Exponential
+    >>> from rework_pysatl_mpest.distributions.exponential import Exponential
     >>> from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
     >>> import numpy as np
 
