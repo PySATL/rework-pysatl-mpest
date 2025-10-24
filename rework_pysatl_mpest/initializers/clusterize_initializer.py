@@ -15,13 +15,13 @@ from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.Initializers._estimation_strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.Initializers.cluster_match_strategy import (
+from rework_pysatl_mpest.initializers._estimation_strategies.q_function import q_function_strategy
+from rework_pysatl_mpest.initializers.cluster_match_strategy import (
     match_clusters_for_models_akaike,
     match_clusters_for_models_log_likelihood,
 )
-from rework_pysatl_mpest.Initializers.initializer import Initializer
-from rework_pysatl_mpest.Initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.initializers.initializer import Initializer
+from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 from rework_pysatl_mpest.optimizers import Optimizer
 from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
 

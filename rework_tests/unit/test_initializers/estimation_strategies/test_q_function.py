@@ -9,7 +9,7 @@ from unittest.mock import Mock
 
 import numpy as np
 from rework_pysatl_mpest.distributions.exponential import Exponential
-from rework_pysatl_mpest.Initializers._estimation_strategies.q_function import NUMERICAL_TOLERANCE, q_function_strategy
+from rework_pysatl_mpest.initializers._estimation_strategies.q_function import NUMERICAL_TOLERANCE, q_function_strategy
 from rework_pysatl_mpest.optimizers.optimizer import Optimizer
 
 COMPARISON_CONSTANT = 1e-10

@@ -9,7 +9,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.Initializers.cluster_match_strategy import (
+from rework_pysatl_mpest.initializers.cluster_match_strategy import (
     match_clusters_for_models_akaike,
 )
 
