@@ -1,6 +1,6 @@
 """Module providing three-parametric weibull distribution class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -10,6 +10,7 @@ from numpy import float64
 from scipy.stats import weibull_min
 
 from ..core import Parameter
+from ..utils.typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
@@ -55,8 +56,8 @@ class Weibull(ContinuousDistribution):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0, "Scale parameter must be positive")
 
-    def __init__(self, shape: float, loc: float, scale: float):
-        super().__init__()
+    def __init__(self, shape: float, loc: float, scale: float, dtype: type[DType] | None = None):
+        super().__init__(dtype=dtype)
         self.shape = shape
         self.loc = loc
         self.scale = scale

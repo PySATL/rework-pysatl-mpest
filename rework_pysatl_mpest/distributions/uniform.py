@@ -1,14 +1,16 @@
 """Module providing uniform distribution class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
+
 
 import numpy as np
 from numpy import float64
 from scipy.stats import uniform
 
 from ..core import Parameter
+from ..utils.typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
@@ -59,8 +61,8 @@ class Uniform(ContinuousDistribution):
     left_border = Parameter()
     right_border = Parameter()
 
-    def __init__(self, left_border: float, right_border: float):
-        super().__init__()
+    def __init__(self, left_border: float, right_border: float, dtype: type[DType] | None = None):
+        super().__init__(dtype=dtype)
         if left_border >= right_border:
             raise ValueError("right_border parameter must be strictly greater than left_border")
         if not (np.isfinite(left_border) and np.isfinite(right_border)):

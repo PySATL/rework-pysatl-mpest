@@ -1,18 +1,20 @@
 """Module providing Cauchy distribution class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+
 import numpy as np
-from numpy import float64
 from scipy.stats import cauchy
+
+from rework_pysatl_mpest.utils.typings import DType
 
 from ..core import Parameter
 from .continuous_dist import ContinuousDistribution
 
 
-class Cauchy(ContinuousDistribution):
+class Cauchy(ContinuousDistribution[DType]):
     """Class for the two-parameter cauchy distribution.
 
     Parameters
@@ -49,8 +51,8 @@ class Cauchy(ContinuousDistribution):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0.0, "Scale parameter should be positive")
 
-    def __init__(self, loc: float, scale: float):
-        super().__init__()
+    def __init__(self, loc: float, scale: float, dtype: type[DType] | None = None):
+        super().__init__(dtype=dtype)
         self.loc = loc
         self.scale = scale
 
@@ -81,11 +83,11 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         return 1.0 / (np.pi * self.scale * (1.0 + ((X - self.loc) / self.scale) ** 2))
 
     def ppf(self, P):
@@ -107,10 +109,10 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
-        P = np.asarray(P, dtype=float64)
+        P = np.asarray(P, dtype=self.dtype)
         return np.where(
             (P >= 0) & (P <= 1),
             np.where(
@@ -140,10 +142,10 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         return np.log(1.0) - np.log(np.pi * self.scale * (1.0 + ((X - self.loc) / self.scale) ** 2))
 
     def _dlog_loc(self, X):
@@ -166,11 +168,11 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`loc` for each point in ::attr`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         return np.where(
             self.loc <= X, (2 * X - 2 * self.loc) / (self.scale**2 + X**2 - 2 * self.loc * X + self.loc**2), 0.0
         )
@@ -195,10 +197,10 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         return np.where(
             self.loc <= X,
             (-(self.scale**2) + X**2 - 2 * self.loc * X + self.loc**2)
@@ -218,13 +220,13 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.PARAM_LOC: self._dlog_loc,
@@ -250,11 +252,11 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
-        return np.asarray(cauchy.rvs(loc=self.loc, scale=self.scale, size=size), dtype=float64)
+        return np.asarray(cauchy.rvs(loc=self.loc, scale=self.scale, size=size), dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.

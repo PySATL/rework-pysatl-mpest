@@ -1,19 +1,21 @@
 """Module providing four parametric beta distribution distribution class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+
 import numpy as np
-from numpy import float64
 from scipy.special import digamma
 from scipy.stats import beta as beta_dist
+
+from rework_pysatl_mpest.utils.typings import DType
 
 from ..core import Parameter
 from .continuous_dist import ContinuousDistribution
 
 
-class Beta(ContinuousDistribution):
+class Beta(ContinuousDistribution[DType]):
     """Class for the four-parameteric beta distribution."""
 
     PARAM_ALPHA = "alpha"
@@ -26,8 +28,10 @@ class Beta(ContinuousDistribution):
     lower_bound = Parameter()
     upper_bound = Parameter()
 
-    def __init__(self, alpha: float, beta: float, lower_bound: float, upper_bound: float):
-        super().__init__()
+    def __init__(
+        self, alpha: float, beta: float, lower_bound: float, upper_bound: float, dtype: type[DType] | None = None
+    ):
+        super().__init__(dtype=dtype)
         if lower_bound >= upper_bound:
             raise ValueError("Lower bound must be less than upper bound")
         self.alpha = alpha
@@ -67,7 +71,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
 
         """
@@ -94,10 +98,10 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
-        P = np.asarray(P, dtype=float64)
+        P = np.asarray(P, dtype=self.dtype)
         return np.where(
             (P >= 0) & (P <= 1),
             (self.lower_bound + (self.upper_bound - self.lower_bound) * beta_dist.ppf(P, self.alpha, self.beta)),
@@ -129,11 +133,11 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         Z = (X - self.lower_bound) / (self.upper_bound - self.lower_bound)
 
@@ -164,11 +168,11 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`alpha` for each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
@@ -201,11 +205,11 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`beta` for each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
@@ -236,11 +240,11 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`lower_bound` for each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
@@ -272,10 +276,10 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`upper_bound` for each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
@@ -298,13 +302,13 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.PARAM_ALPHA: self._dlog_alpha,
@@ -332,7 +336,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
@@ -340,7 +344,7 @@ class Beta(ContinuousDistribution):
             beta_dist.rvs(
                 self.alpha, self.beta, loc=self.lower_bound, scale=self.upper_bound - self.lower_bound, size=size
             ),
-            dtype=float64,
+            dtype=self.dtype,
         )
 
     def __repr__(self) -> str:
