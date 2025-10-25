@@ -168,6 +168,7 @@ class MixtureModel:
             raise ValueError("The length of the new logit vector does not match the number of components.")
         self._log_weights = np.asarray(new_log_weights, dtype=float)
         self._cached_weights = None
+        self._sorted_pairs_cache = None
 
     def add_component(self, component: "ContinuousDistribution", weight: float):
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
@@ -197,6 +198,7 @@ class MixtureModel:
 
         self._components.append(component)
         self._cached_weights = None
+        self._sorted_pairs_cache = None
 
     def remove_component(self, component_idx: int):
         """Removes a component from the mixture by its index.
@@ -227,6 +229,7 @@ class MixtureModel:
         self._log_weights = np.delete(self._log_weights, component_idx)
         self._log_weights -= logsumexp(self._log_weights)
         self._cached_weights = None
+        self._sorted_pairs_cache = None
 
     def pdf(self, X: ArrayLike) -> NDArray[float64]:
         """Probability Density Function of the mixture.
@@ -367,7 +370,7 @@ class MixtureModel:
     def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ContinuousDistribution", float]]:
         """Internal helper to get component-weight pairs, sorted by component hash."""
 
-        if self._sorted_pairs_cache is None:
+        if self._sorted_pairs_cache is None or for_hashing:
             weights_to_use = self.weights
             if for_hashing:
                 weights_to_use = np.round(weights_to_use, 8)

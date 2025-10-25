@@ -470,3 +470,46 @@ class TestMixtureModelComparison:
         )
         assert m1 != m2
         assert hash(m1) != hash(m2)
+
+    def test_hash_changes_after_modifying_weights(self):
+        """Tests that the hash of the model updates after its weights are changed."""
+        model = MixtureModel(
+            components=[Exponential(0, 1), Exponential(10, 2)],
+            weights=[0.4, 0.6],
+        )
+        old_hash = hash(model)
+
+        model.log_weights = np.log([0.5, 0.5])
+        new_hash = hash(model)
+
+        assert old_hash != new_hash
+
+    def test_hash_changes_after_adding_component(self):
+        """Tests that the hash of the model updates after a new component is added."""
+        model = MixtureModel(
+            components=[Exponential(0, 1), Exponential(10, 2)],
+            weights=[0.4, 0.6],
+        )
+        old_hash = hash(model)
+
+        model.add_component(Exponential(99, 3), weight=0.1)
+        new_hash = hash(model)
+        expected_n_components = 3
+
+        assert model.n_components == expected_n_components
+        assert old_hash != new_hash
+
+    def test_hash_changes_after_removing_component(self):
+        """Tests that the hash of the model updates after a component is removed."""
+        model = MixtureModel(
+            components=[Exponential(0, 1), Exponential(10, 2), Exponential(99, 3)],
+            weights=[0.4, 0.5, 0.1],
+        )
+        old_hash = hash(model)
+
+        model.remove_component(1)
+        new_hash = hash(model)
+        expected_n_components = 2
+
+        assert model.n_components == expected_n_components
+        assert old_hash != new_hash
