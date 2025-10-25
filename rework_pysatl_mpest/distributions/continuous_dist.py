@@ -200,7 +200,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
     @property
     def dtype(self) -> type[DType]:
-        """Type[DType]: The numpy data type of the distribution's outputs."""
+        """type[DType]: The numpy data type of the distribution's outputs."""
         return self._dtype
 
     @property
