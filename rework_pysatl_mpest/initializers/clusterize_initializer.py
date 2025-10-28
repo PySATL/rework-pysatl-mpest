@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any, Callable, ClassVar, Optional
+from typing import Any, Callable, ClassVar, Generic, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -25,8 +25,10 @@ from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, Es
 from rework_pysatl_mpest.optimizers import Optimizer
 from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
 
+from ..utils.typings import DType
 
-class ClusterizeInitializer(Initializer):
+
+class ClusterizeInitializer(Initializer, Generic[DType]):
     """Cluster-based initializer for mixture model parameters.
 
     This initializer uses clustering algorithms to partition the data and then
@@ -45,7 +47,7 @@ class ClusterizeInitializer(Initializer):
         Strategy for matching clusters to distribution models.
     estimation_strategies : list[EstimationStrategy]
         List of estimation strategies for each distribution model.
-    models : list[ContinuousDistribution]
+    models : list[ContinuousDistribution[DType]]
         List of distribution models to initialize.
 
     Parameters
@@ -121,7 +123,7 @@ class ClusterizeInitializer(Initializer):
         self.n_components: Optional[int] = None
         self.cluster_match_strategy: ClusterMatchStrategy = ClusterMatchStrategy.LIKELIHOOD
         self.estimation_strategies: list[EstimationStrategy] = []
-        self.models: list[ContinuousDistribution] = []
+        self.models: list[ContinuousDistribution[DType]] = []
 
     def _clusterize(self, X: np.ndarray, clusterizer: Any) -> np.ndarray:
         """Performs clustering on the input data and returns weight matrix.
@@ -184,7 +186,7 @@ class ClusterizeInitializer(Initializer):
 
     def _accurate_init(
         self, X: np.ndarray, H: np.ndarray, optimizer: Optimizer = ScipyNelderMead()
-    ) -> tuple[list[ContinuousDistribution], list[float]]:
+    ) -> tuple[list[ContinuousDistribution[DType]], list[float]]:
         """Performs accurate initialization with optimal cluster-model matching.
 
         Parameters
@@ -199,7 +201,7 @@ class ClusterizeInitializer(Initializer):
 
         Returns
         -------
-        tuple[list[ContinuousDistribution], list[float]]
+        tuple[list[ContinuousDistribution[DType], list[float]]
             A tuple containing:
             - List of initialized distribution models
             - List of component weights
@@ -220,8 +222,8 @@ class ClusterizeInitializer(Initializer):
 
         estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
-        distributions, params, weights = cluster_match_func(self.models, X, H, estimation_funcs)
-        if not np.all(params):
+        distributions, params, weights = cluster_match_func(self.models, X, H, estimation_funcs, optimizer=optimizer)
+        if not all(params):
             return self._fast_init(X, H, optimizer)
 
         new_distributions = []
@@ -235,7 +237,7 @@ class ClusterizeInitializer(Initializer):
 
     def _fast_init(
         self, X: np.ndarray, H: np.ndarray, optimizer: Optimizer = ScipyNelderMead()
-    ) -> tuple[list[ContinuousDistribution], list[float]]:
+    ) -> tuple[list[ContinuousDistribution[DType]], list[float]]:
         """Performs fast initialization with direct cluster assignments.
 
         Parameters
@@ -250,7 +252,7 @@ class ClusterizeInitializer(Initializer):
 
         Returns
         -------
-        tuple[list[ContinuousDistribution], list[float]]
+        tuple[list[ContinuousDistribution[DType]], list[float]]
             A tuple containing:
             - List of initialized distribution models
             - List of component weights
@@ -263,7 +265,7 @@ class ClusterizeInitializer(Initializer):
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _fast_init")
 
-        distributions: list[ContinuousDistribution] = []
+        distributions: list[ContinuousDistribution[DType]] = []
         weights: list[float] = []
         estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
@@ -284,18 +286,18 @@ class ClusterizeInitializer(Initializer):
     def perform(
         self,
         X: ArrayLike,
-        dists: list[ContinuousDistribution],
+        dists: list[ContinuousDistribution[DType]],
         cluster_match_strategy: ClusterMatchStrategy,
         estimation_strategies: list[EstimationStrategy],
         optimizer: Optimizer = ScipyNelderMead(),
-    ) -> MixtureModel:
+    ) -> MixtureModel[DType]:
         """Performs cluster-based initialization of mixture model parameters.
 
         Parameters
         ----------
         X : ArrayLike
             Input data points for initialization.
-        dists : list[ContinuousDistribution]
+        dists : list[ContinuousDistribution[DType]]
             List of distribution models to initialize.
         cluster_match_strategy : ClusterMatchStrategy
             Strategy for matching clusters to distribution models.
@@ -307,7 +309,7 @@ class ClusterizeInitializer(Initializer):
 
         Returns
         -------
-        MixtureModel
+        MixtureModel[DType]
             Initialized mixture model with estimated parameters and weights.
 
         Notes
@@ -319,13 +321,19 @@ class ClusterizeInitializer(Initializer):
         4. Normalizes component weights
         5. Returns the initialized mixture model
         """
-        X = np.asarray(X, dtype=np.float64)
+        if not dists:
+            raise ValueError("List of distributions for initialization cannot be empty.")
+
+        _dtype = dists[0].dtype
+        X = np.asarray(X, dtype=_dtype)
         self.models = dists
         self.n_components = len(dists)
         H = self._clusterize(X, self.clusterizer)
         self.cluster_match_strategy = cluster_match_strategy
         self.estimation_strategies = estimation_strategies
 
+        distributions: list[ContinuousDistribution[DType]]
+        weights: list[float]
         if self.is_accurate:
             distributions, weights = self._accurate_init(X, H, optimizer)
         else:
@@ -333,5 +341,5 @@ class ClusterizeInitializer(Initializer):
 
         total_weight = sum(weights)
         normalized_weights: list[float] = [w / total_weight for w in weights]
-        current_mixture = MixtureModel(distributions, normalized_weights)
+        current_mixture = MixtureModel(distributions, normalized_weights, dtype=_dtype)
         return current_mixture

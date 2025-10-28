@@ -7,14 +7,17 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
+from typing import Generic
 
 from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 
+from ..utils.typings import DType
 
-class Initializer(ABC):
+
+class Initializer(ABC, Generic[DType]):
     """Abstract base class for mixture model initializers.
 
     This class defines the interface for all initialization strategies that
@@ -51,7 +54,7 @@ class Initializer(ABC):
     def perform(
         self,
         X: ArrayLike,
-        dists: list[ContinuousDistribution],
+        dists: list[ContinuousDistribution[DType]],
         cluster_match_info: ClusterMatchStrategy,
         estimation_info: list[EstimationStrategy],
     ):
@@ -62,7 +65,7 @@ class Initializer(ABC):
         X : ArrayLike
             Input data points used for parameter estimation. Should be a 1D array
             of sample values from the mixture distribution.
-        dists : list[ContinuousDistribution]
+        dists : list[ContinuousDistribution[DType]]
             List of distribution models to initialize. Each distribution
             represents one component of the mixture model. The number of
             distributions determines the number of mixture components.
@@ -77,7 +80,7 @@ class Initializer(ABC):
 
         Returns
         -------
-        MixtureModel
+        MixtureModel[DType]
             An initialized mixture model with estimated parameters and
             normalized component weights that sum to 1.
 

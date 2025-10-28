@@ -15,12 +15,14 @@ from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribu
 from rework_pysatl_mpest.distributions.exponential import Exponential
 from rework_pysatl_mpest.optimizers import Optimizer
 
+from ...utils.typings import DType
+
 NUMERICAL_TOLERANCE = 0.33
 
 
 @singledispatch
 def q_function_strategy(
-    component: ContinuousDistribution, X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
+    component: ContinuousDistribution[DType], X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
 ) -> dict[str, float]:
     """Generic Q-function optimization strategy for continuous distributions.
 
@@ -34,7 +36,7 @@ def q_function_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution
+    component : ContinuousDistribution[DType]
         The distribution component for which to estimate parameters.
     X : np.ndarray
         Input data points used for parameter estimation.
@@ -98,7 +100,7 @@ def q_function_strategy(
 
 @q_function_strategy.register(Exponential)
 def q_function_strategy_exponential(
-    component: Exponential, X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
+    component: Exponential[DType], X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
 ) -> dict[str, float]:
     """Specialized Q-function optimization strategy for Exponential distribution.
 
@@ -108,7 +110,7 @@ def q_function_strategy_exponential(
 
     Parameters
     ----------
-    component : Exponential
+    component : Exponential[DType]
         The Exponential distribution component for which to estimate parameters.
     X : np.ndarray
         Input data points used for parameter estimation.

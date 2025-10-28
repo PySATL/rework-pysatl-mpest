@@ -15,15 +15,17 @@ import numpy as np
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
 
+from ..utils.typings import DType
+
 
 def match_clusters_for_models_log_likelihood(
-    models: list[ContinuousDistribution],
+    models: list[ContinuousDistribution[DType]],
     X: np.ndarray,
     H: np.ndarray,
     estimation_strategies: list[Callable],
     min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
-) -> tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]:
+) -> tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]:
     """Matches clusters to models using weighted log-likelihood criteria.
 
     This function assigns each distribution model to the cluster that maximizes
@@ -32,7 +34,7 @@ def match_clusters_for_models_log_likelihood(
 
     Parameters
     ----------
-    models : list[ContinuousDistribution]
+    models : list[ContinuousDistribution[DType]]
         List of distribution models to be matched with clusters.
     X : np.ndarray
         Input data points used for parameter estimation.
@@ -51,7 +53,7 @@ def match_clusters_for_models_log_likelihood(
 
     Returns
     -------
-    tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]
+    tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]
         A tuple containing:
 
         - The original list of models
@@ -143,13 +145,13 @@ def match_clusters_for_models_log_likelihood(
 
 
 def match_clusters_for_models_akaike(
-    models: list[ContinuousDistribution],
+    models: list[ContinuousDistribution[DType]],
     X: np.ndarray,
     H: np.ndarray,
     estimation_strategies: list[Callable],
     min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
-) -> tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]:
+) -> tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]:
     """Matches clusters to models using Akaike Information Criterion (AIC).
 
     This function evaluates all possible permutations of cluster-model assignments
@@ -157,7 +159,7 @@ def match_clusters_for_models_akaike(
 
     Parameters
     ----------
-    models : list[ContinuousDistribution]
+    models : list[ContinuousDistribution[DType]
         List of distribution models to be matched with clusters.
     X : np.ndarray
         Input data points used for parameter estimation.
@@ -176,7 +178,7 @@ def match_clusters_for_models_akaike(
 
     Returns
     -------
-    tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]
+    tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]
         A tuple containing:
 
         - The original list of models
