@@ -20,6 +20,7 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential, Normal, Weibull
 from ....optimizers import Optimizer
+from ....utils.typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 
@@ -33,7 +34,10 @@ NUMERICAL_TOLERANCE = 1e-9
 
 @singledispatch
 def q_function_strategy(
-    component: ContinuousDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: ContinuousDistribution[DType],
+    state: PipelineState[DType],
+    block: OptimizationBlock,
+    optimizer: Optimizer,
 ) -> tuple[int, dict[str, float]]:
     """Generic M-step strategy that maximizes the Q-function numerically.
 
@@ -47,7 +51,7 @@ def q_function_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution
+    component : ContinuousDistribution[DType]
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline, containing the data :attr:`X` and the
@@ -97,7 +101,7 @@ def q_function_strategy(
 
 @q_function_strategy.register(Exponential)
 def _(
-    component: Exponential, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """Specialized Q-function parameter estimation strategy for
     the Exponential distribution using an analytical solution.
@@ -166,7 +170,7 @@ def _(
 
 @q_function_strategy.register(Normal)
 def _(
-    component: Normal, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """Specialized Q-function parameter estimation strategy for
     the normal distribution using an analytical solution.
@@ -232,7 +236,7 @@ def _(
 
 @q_function_strategy.register(Weibull)
 def _(
-    component: Weibull, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: Weibull[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """Specialized Q-function parameter estimation strategy for
     the Weibull distribution using an analytical solution.

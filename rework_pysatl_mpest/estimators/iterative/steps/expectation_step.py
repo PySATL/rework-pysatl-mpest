@@ -8,11 +8,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.special import logsumexp
 
+from ....utils.typings import DType
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 
 
-class ExpectationStep(PipelineStep):
+class ExpectationStep(PipelineStep[DType]):
     """A pipeline step that performs the Expectation (E-step).
 
     This step calculates the responsibility matrix H, where H[i, j] is
@@ -57,7 +58,7 @@ class ExpectationStep(PipelineStep):
 
         return [MaximizationStep]
 
-    def run(self, state: PipelineState) -> PipelineState:
+    def run(self, state: PipelineState[DType]) -> PipelineState[DType]:
         """Executes the E-step by calculating the responsibility matrix H.
 
         This method computes the log-likelihood of each data point under each
@@ -67,13 +68,13 @@ class ExpectationStep(PipelineStep):
 
         Parameters
         ----------
-        state : PipelineState
+        state : PipelineState[DType]
             The current state of the pipeline, which must contain the input
             data X and the current mixture model curr_mixture.
 
         Returns
         -------
-        PipelineState
+        PipelineState[DType]
             The updated pipeline state with the H attribute computed and set.
         """
 

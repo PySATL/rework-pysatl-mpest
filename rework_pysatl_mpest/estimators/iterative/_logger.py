@@ -11,17 +11,17 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Generic, Optional
 
-from numpy import float64
 from numpy.typing import NDArray
 
 from ...core import MixtureModel
+from ...utils.typings import DType
 from .pruner import Pruner
 
 
 @dataclass
-class IterationRecord:
+class IterationRecord(Generic[DType]):
     """Data class representing a single pipeline iteration snapshot.
 
     This class captures the complete state of a pipeline iteration after
@@ -32,15 +32,15 @@ class IterationRecord:
     ----------
     iteration : int
         The iteration number (0-based index).
-    mixture : MixtureModel
+    mixture : MixtureModel[DType]
         The state of the mixture model after pruning in this iteration.
-    X : NDArray[float64]
+    X : NDArray[DType]
         The input data sample being processed (conventionally named `X`).
-    H : Optional[NDArray[float64]]
+    H : Optional[NDArray[DType]]
         The responsibility matrix (posterior probabilities) if available,
         where `H[i, j]` represents the probability that data point `i`
         belongs to component `j`. May be `None` if not computed.
-    pruners_used : Optional[list[Pruner]]
+    pruners_used : Optional[list[Pruner[DType]]]
         List of pruner instances that were applied during this iteration.
         `None` or empty if no pruning occurred.
     error : Optional[Exception]
@@ -49,14 +49,14 @@ class IterationRecord:
     """
 
     iteration: int
-    mixture: MixtureModel
-    X: NDArray[float64]
-    H: Optional[NDArray[float64]]
-    pruners_used: Optional[list[Pruner]]
+    mixture: MixtureModel[DType]
+    X: NDArray[DType]
+    H: Optional[NDArray[DType]]
+    pruners_used: Optional[list[Pruner[DType]]]
     error: Optional[Exception]
 
 
-class IterationsHistory:
+class IterationsHistory(Generic[DType]):
     """A container for storing and accessing pipeline iteration history.
 
     `IterationsHistory` collects and stores snapshots of each pipeline iteration
@@ -98,7 +98,7 @@ class IterationsHistory:
     _counter : int
         Internal counter tracking the total number of `log()` calls
         (i.e., total iterations processed, not just recorded ones).
-    _logs : list[IterationRecord]
+    _logs : list[IterationRecord[DType]]
         List of stored iteration records. Only iterations matching the
         recording frequency are appended.
 
@@ -123,11 +123,11 @@ class IterationsHistory:
         if once_in_iterations < 1:
             raise ValueError("once_in_iterations must be a positive integer")
 
-        self._logs: list[IterationRecord] = []
+        self._logs: list[IterationRecord[DType]] = []
         self._counter: int = 0
         self.once_in_iterations = once_in_iterations
 
-    def log(self, record: IterationRecord) -> None:
+    def log(self, record: IterationRecord[DType]) -> None:
         """Store an iteration record based on the configured frequency.
 
         The record is stored only if the current internal counter is divisible
@@ -136,7 +136,7 @@ class IterationsHistory:
 
         Parameters
         ----------
-        record : IterationRecord
+        record : IterationRecord[DType]
             The iteration snapshot to potentially store. The `record.iteration`
             should ideally match the logger's internal state, though this is
             not enforced.
@@ -168,7 +168,7 @@ class IterationsHistory:
         """
         return len(self._logs)
 
-    def __getitem__(self, index: int) -> IterationRecord:
+    def __getitem__(self, index: int) -> IterationRecord[DType]:
         """Access a stored iteration record by index.
 
         Supports both positive (0-based) and negative indexing (e.g., `-1` for last).
@@ -181,7 +181,7 @@ class IterationsHistory:
 
         Returns
         -------
-        IterationRecord
+        IterationRecord[DType]
             The recorded state of the specified iteration.
 
         Raises

@@ -28,6 +28,7 @@ class TestClusterizeInitializer:
             dist.lpdf = Mock(return_value=np.array([-0.5, -1.0, -1.5]))
             dist.get_params_vector = Mock(return_value=np.array([0.0, 1.0]))
             dist.q_function = Mock(return_value=-10.0)
+            dist.dtype = np.float64
 
     @pytest.mark.parametrize("is_accurate,is_soft", [(True, True), (True, False), (False, True), (False, False)])
     def test_initialization_parameters(self, is_accurate, is_soft):
@@ -307,6 +308,7 @@ class TestClusterizeInitializer:
             mock_dist = Mock(spec=ContinuousDistribution)
             mock_dist.params = params
             mock_dist.set_params_from_vector = Mock()
+            mock_dist.dtype = np.float64
             distributions.append(mock_dist)
 
         self.mock_clusterizer.fit_transform = Mock(return_value=H)
@@ -344,6 +346,7 @@ class TestClusterizeInitializer:
         distributions = [Mock(spec=ContinuousDistribution) for _ in range(2)]
 
         for dist in distributions:
+            dist.dtype = np.float64
             dist.set_params_from_vector = Mock()
 
         self.mock_clusterizer.fit_transform = Mock(return_value=H)

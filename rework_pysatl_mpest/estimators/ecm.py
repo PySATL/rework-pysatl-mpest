@@ -17,6 +17,7 @@ from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
+from ..utils.typings import DType
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
@@ -30,7 +31,7 @@ from .iterative import (
 from .iterative._logger import IterationsHistory
 
 
-class ECM(BaseEstimator):
+class ECM(BaseEstimator[DType]):
     """An estimator that implements the Expectation-Conditional Maximization (ECM) algorithm.
 
     This class encapsulates the logic for the ECM algorithm, a variant of the
@@ -87,7 +88,7 @@ class ECM(BaseEstimator):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)
         self.optimizer = optimizer
-        self._logger: IterationsHistory | None = None
+        self._logger: IterationsHistory[DType] | None = None
 
     @property
     def logger(self) -> IterationsHistory:
@@ -103,7 +104,7 @@ class ECM(BaseEstimator):
             raise AttributeError("Logger is not available. Call the 'fit' method first.")
         return self._logger
 
-    def fit(self, X: ArrayLike, mixture: MixtureModel, once_in_iterations: int = 1) -> MixtureModel:
+    def fit(self, X: ArrayLike, mixture: MixtureModel[DType], once_in_iterations: int = 1) -> MixtureModel[DType]:
         """Fits the mixture model to the data using the ECM algorithm.
 
         This method sets up and runs an iterative pipeline to estimate the
@@ -115,7 +116,7 @@ class ECM(BaseEstimator):
         ----------
         X : ArrayLike
             The input dataset for fitting the model.
-        mixture : MixtureModel
+        mixture : MixtureModel[DType]
             The initial mixture model to be fitted.
         once_in_iterations : int, optional
             The logging frequency. A value of `n` means logging occurs every
@@ -123,7 +124,7 @@ class ECM(BaseEstimator):
 
         Returns
         -------
-        MixtureModel
+        MixtureModel[DType]
             The mixture model with the estimated parameters.
         """
 
@@ -132,7 +133,7 @@ class ECM(BaseEstimator):
             block = OptimizationBlock(i, comp.params_to_optimize, MaximizationStrategy.QFUNCTION)
             blocks.append(block)
 
-        pipeline = Pipeline(
+        pipeline: Pipeline[DType] = Pipeline(
             [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,

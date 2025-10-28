@@ -22,13 +22,14 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
+from ....utils.typings import DType
 from .._strategies import q_function_strategy
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
 
 
-class MaximizationStep(PipelineStep):
+class MaximizationStep(PipelineStep[DType]):
     """A pipeline step that performs the Maximization (M-step).
 
     This step updates the parameters of each component in the mixture model,
@@ -98,7 +99,7 @@ class MaximizationStep(PipelineStep):
         param_values = list(params.values())
         component.set_params_from_vector(param_names, param_values)
 
-    def run(self, state: PipelineState) -> PipelineState:
+    def run(self, state: PipelineState[DType]) -> PipelineState[DType]:
         """Executes the M-step.
 
         This method iterates through the configured optimization blocks,
@@ -108,13 +109,13 @@ class MaximizationStep(PipelineStep):
 
         Parameters
         ----------
-        state : PipelineState
+        state : PipelineState[DType]
             The current state of the pipeline. Must contain the responsibility
             matrix :attr:`H` and the mixture model :attr:`curr_mixture`.
 
         Returns
         -------
-        PipelineState
+        PipelineState[DType]
             The updated pipeline state with the modified :attr:`curr_mixture`. If the
             :attr:`H` matrix is not available in the input state, the state is
             returned with an error set, and no modifications are made.

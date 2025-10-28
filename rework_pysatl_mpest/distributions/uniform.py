@@ -6,7 +6,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import numpy as np
-from numpy import float64
 from scipy.stats import uniform
 
 from ..core import Parameter
@@ -14,7 +13,7 @@ from ..utils.typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
-class Uniform(ContinuousDistribution):
+class Uniform(ContinuousDistribution[DType]):
     """
     The Uniform continuous probability distribution.
 
@@ -101,7 +100,7 @@ class Uniform(ContinuousDistribution):
         NDArray[np.float64]
             The PDF values corresponding to each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         return np.where(
             (self.left_border <= X) & (self.right_border >= X), 1.0 / (self.right_border - self.left_border), 0.0
         )
@@ -128,7 +127,7 @@ class Uniform(ContinuousDistribution):
         NDArray[np.float64]
             The PPF values corresponding to each probability in :attr:`P`.
         """
-        P = np.asarray(P, dtype=float64)
+        P = np.asarray(P, dtype=self.dtype)
         return np.where((P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), np.nan)
 
     def lpdf(self, X):
@@ -154,7 +153,7 @@ class Uniform(ContinuousDistribution):
         NDArray[np.float64]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_range = (self.left_border <= X) & (self.right_border >= X)
         valid_dist = self.right_border > self.left_border
         return np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), -np.inf)
@@ -170,7 +169,7 @@ class Uniform(ContinuousDistribution):
         right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_range = (self.left_border <= X) & (self.right_border >= X)
         return np.where(in_range, 1.0 / (self.right_border - self.left_border), 0.0)
 
@@ -185,7 +184,7 @@ class Uniform(ContinuousDistribution):
         right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         in_range = (self.left_border <= X) & (self.right_border >= X)
         return np.where(in_range, -1.0 / (self.right_border - self.left_border), 0.0)
 
@@ -208,7 +207,7 @@ class Uniform(ContinuousDistribution):
             to the sorted order of :attr:`self.params_to_optimize`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.LEFT_BORDER: self._dlog_left_border,
@@ -239,7 +238,7 @@ class Uniform(ContinuousDistribution):
         """
 
         return np.asarray(
-            uniform.rvs(loc=self.left_border, scale=self.right_border - self.left_border, size=size), dtype=float64
+            uniform.rvs(loc=self.left_border, scale=self.right_border - self.left_border, size=size), dtype=self.dtype
         )
 
     def __repr__(self) -> str:

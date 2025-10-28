@@ -6,7 +6,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import numpy as np
-from numpy import float64
 from scipy.stats import weibull_min
 
 from ..core import Parameter
@@ -14,7 +13,7 @@ from ..utils.typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
-class Weibull(ContinuousDistribution):
+class Weibull(ContinuousDistribution[DType]):
     """Class for the three-parameter Weibull distribution.
 
     Parameters
@@ -92,11 +91,11 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         z = (X - self.loc) / self.scale
 
         # PDF is 0 for x < loc, and handle cases where z=0 and shape<1
@@ -123,11 +122,11 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
 
-        P = np.asarray(P, dtype=float64)
+        P = np.asarray(P, dtype=self.dtype)
         ppf_vals = self.loc + self.scale * np.power(-np.log(1 - P), 1.0 / self.shape)
         return np.where((P >= 0) & (P <= 1), ppf_vals, np.nan)
 
@@ -149,11 +148,11 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore"):
             lpdf_vals = np.log(self.shape) - np.log(self.scale) + (self.shape - 1) * np.log(z) - np.power(z, self.shape)
@@ -162,7 +161,7 @@ class Weibull(ContinuousDistribution):
     def _dlog_shape(self, X):
         """Partial derivative of the lpdf w.r.t. the shape parameter."""
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
             grad = 1.0 / self.shape + np.log(z) - np.power(z, self.shape) * np.log(z)
@@ -171,7 +170,7 @@ class Weibull(ContinuousDistribution):
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
             grad = -(self.shape - 1) / (X - self.loc) + (self.shape / self.scale) * np.power(z, self.shape - 1)
@@ -180,7 +179,7 @@ class Weibull(ContinuousDistribution):
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         z = (X - self.loc) / self.scale
         grad = -self.shape / self.scale + (self.shape / self.scale) * np.power(z, self.shape)
         return np.where(self.loc < X, grad, 0.0)
@@ -195,13 +194,13 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.PARAM_SHAPE: self._dlog_shape,
@@ -228,11 +227,11 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
-        return np.asarray(weibull_min.rvs(c=self.shape, loc=self.loc, scale=self.scale, size=size), dtype=float64)
+        return np.asarray(weibull_min.rvs(c=self.shape, loc=self.loc, scale=self.scale, size=size), dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
