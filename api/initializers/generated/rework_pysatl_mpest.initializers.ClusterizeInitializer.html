@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>mpest.estimators.iterative &#8212; Mpest 1.0 documentation</title>
+    <title>ClusterizeInitializer &#8212; Mpest 1.0 documentation</title>
   
   
   
@@ -41,11 +41,11 @@
     <script src="../../../_static/documentation_options.js?v=f2a433a1"></script>
     <script src="../../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'api/estimators/iterative/index';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer';</script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="next" title="Pipeline" href="generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html" />
-    <link rel="prev" title="mpest.estimators.direct" href="../direct/index.html" />
+    <link rel="next" title="ClusterMatchStrategy" href="rework_pysatl_mpest.initializers.ClusterMatchStrategy.html" />
+    <link rel="prev" title="Initializer" href="rework_pysatl_mpest.initializers.Initializer.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -282,22 +282,22 @@
 <li class="toctree-l2"><a class="reference internal" href="../../distributions/generated/rework_pysatl_mpest.distributions.Beta.html">Beta</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">mpest.estimators</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../direct/index.html">mpest.estimators.direct</a></li>
-<li class="toctree-l2 current active has-children"><a class="current reference internal" href="#">mpest.estimators.iterative</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html">Pipeline</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.PipelineStep.html">PipelineStep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.PipelineState.html">PipelineState</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.Breakpointer.html">Breakpointer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.Pruner.html">Pruner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.ExpectationStep.html">ExpectationStep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.MaximizationStep.html">MaximizationStep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.StepBreakpointer.html">StepBreakpointer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner.html">PriorThresholdPruner</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../estimators/index.html">mpest.estimators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../estimators/direct/index.html">mpest.estimators.direct</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../estimators/iterative/index.html">mpest.estimators.iterative</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html">Pipeline</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PipelineStep.html">PipelineStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PipelineState.html">PipelineState</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Breakpointer.html">Breakpointer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pruner.html">Pruner</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.ExpectationStep.html">ExpectationStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.MaximizationStep.html">MaximizationStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.StepBreakpointer.html">StepBreakpointer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner.html">PriorThresholdPruner</a></li>
 </ul>
 </details></li>
-<li class="toctree-l2"><a class="reference internal" href="../generated/rework_pysatl_mpest.estimators.ECM.html">ECM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../generated/rework_pysatl_mpest.estimators.BaseEstimator.html">BaseEstimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../estimators/generated/rework_pysatl_mpest.estimators.ECM.html">ECM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../estimators/generated/rework_pysatl_mpest.estimators.BaseEstimator.html">BaseEstimator</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../optimizers/index.html">mpest.optimizers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
@@ -306,11 +306,11 @@
 <li class="toctree-l2"><a class="reference internal" href="../../optimizers/generated/rework_pysatl_mpest.optimizers.ScipyPowell.html">ScipyPowell</a></li>
 </ul>
 </details></li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../../initializers/index.html">mpest.initializers</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../initializers/generated/rework_pysatl_mpest.initializers.Initializer.html">Initializer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer.html">ClusterizeInitializer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../initializers/generated/rework_pysatl_mpest.initializers.ClusterMatchStrategy.html">ClusterMatchStrategy</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../initializers/generated/rework_pysatl_mpest.initializers.EstimationStrategy.html">EstimationStrategy</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">mpest.initializers</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="rework_pysatl_mpest.initializers.Initializer.html">Initializer</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">ClusterizeInitializer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rework_pysatl_mpest.initializers.ClusterMatchStrategy.html">ClusterMatchStrategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rework_pysatl_mpest.initializers.EstimationStrategy.html">EstimationStrategy</a></li>
 </ul>
 </details></li>
 </ul>
@@ -357,9 +357,9 @@
     <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">API Reference</a></li>
     
     
-    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">mpest.estimators</a></li>
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">mpest.initializers</a></li>
     
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">mpest.estimators.iterative</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">ClusterizeInitializer</span></li>
   </ul>
 </nav>
 </div>
@@ -376,85 +376,68 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="mpest-estimators-iterative">
-<span id="api-estimators-direct"></span><h1>mpest.estimators.iterative<a class="headerlink" href="#mpest-estimators-iterative" title="Link to this heading">#</a></h1>
-<p id="module-rework_pysatl_mpest.estimators.iterative">Provides a flexible framework for building iterative algorithms.</p>
-<p>This package contains components for creating customizable iterative processes for
-estimating parameters of mixture models, such as the Expectation-Maximization (EM)
-algorithm and its variations.</p>
-<p>The core idea is to construct a <cite>Pipeline</cite> that consists of a sequence of
-<cite>PipelineStep`s. This pipeline cyclically executes the defined steps until one
-of the stopping conditions (`Breakpointer</cite>) is met. Additionally, after each
-iteration, <cite>Pruner</cite> strategies can be applied to remove insignificant components
-from the model. The state of the entire process at each iteration is stored in a
-<cite>PipelineState</cite> object.</p>
-<section id="abstract-classes">
-<h2>Abstract Classes<a class="headerlink" href="#abstract-classes" title="Link to this heading">#</a></h2>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html#rework_pysatl_mpest.estimators.iterative.Pipeline" title="rework_pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pipeline</span></code></a></p></td>
-<td><p>An estimator that fits a mixture model via a configurable iterative process.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.PipelineStep.html#rework_pysatl_mpest.estimators.iterative.PipelineStep" title="rework_pysatl_mpest.estimators.iterative.PipelineStep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PipelineStep</span></code></a></p></td>
-<td><p>Abstract base class for a single step in a processing pipeline.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.PipelineState.html#rework_pysatl_mpest.estimators.iterative.PipelineState" title="rework_pysatl_mpest.estimators.iterative.PipelineState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PipelineState</span></code></a></p></td>
-<td><p>Represents the state of a pipeline at a specific point in its execution.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.Breakpointer.html#rework_pysatl_mpest.estimators.iterative.Breakpointer" title="rework_pysatl_mpest.estimators.iterative.Breakpointer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Breakpointer</span></code></a></p></td>
-<td><p>Abstract base class for a pipeline stopping condition.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.Pruner.html#rework_pysatl_mpest.estimators.iterative.Pruner" title="rework_pysatl_mpest.estimators.iterative.Pruner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pruner</span></code></a></p></td>
-<td><p>Abstract base class for component pruning strategies.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<section id="available-implementations">
-<h3>Available Implementations<a class="headerlink" href="#available-implementations" title="Link to this heading">#</a></h3>
-<p>The concrete implementations of the base classes, available for use when
-building a pipeline, will be listed below.</p>
-<section id="steps-pipelinestep">
-<h4>Steps (<cite>PipelineStep</cite>):<a class="headerlink" href="#steps-pipelinestep" title="Link to this heading">#</a></h4>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.ExpectationStep.html#rework_pysatl_mpest.estimators.iterative.ExpectationStep" title="rework_pysatl_mpest.estimators.iterative.ExpectationStep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ExpectationStep</span></code></a></p></td>
-<td><p>A pipeline step that performs the Expectation (E-step).</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.MaximizationStep.html#rework_pysatl_mpest.estimators.iterative.MaximizationStep" title="rework_pysatl_mpest.estimators.iterative.MaximizationStep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MaximizationStep</span></code></a></p></td>
-<td><p>A pipeline step that performs the Maximization (M-step).</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="breakpointers-breakpointer">
-<h4>Breakpointers (<cite>Breakpointer</cite>):<a class="headerlink" href="#breakpointers-breakpointer" title="Link to this heading">#</a></h4>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.StepBreakpointer.html#rework_pysatl_mpest.estimators.iterative.StepBreakpointer" title="rework_pysatl_mpest.estimators.iterative.StepBreakpointer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StepBreakpointer</span></code></a></p></td>
-<td><p>Stops the pipeline after a fixed number of iterations.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-<section id="pruners-pruner">
-<h4>Pruners (<cite>Pruner</cite>):<a class="headerlink" href="#pruners-pruner" title="Link to this heading">#</a></h4>
-<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner.html#rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner" title="rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PriorThresholdPruner</span></code></a></p></td>
-<td><p>A pruner that removes mixture components based on a weight threshold.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-</section>
-</section>
-<section id="usage-example">
-<h3>Usage Example<a class="headerlink" href="#usage-example" title="Link to this heading">#</a></h3>
-</section>
-</section>
+  <section id="clusterizeinitializer">
+<h1>ClusterizeInitializer<a class="headerlink" href="#clusterizeinitializer" title="Link to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="rework_pysatl_mpest.initializers.ClusterizeInitializer">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ClusterizeInitializer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">is_accurate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_soft</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clusterizer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/rework_pysatl_mpest/initializers/clusterize_initializer.html#ClusterizeInitializer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#rework_pysatl_mpest.initializers.ClusterizeInitializer" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="rework_pysatl_mpest.initializers.Initializer.html#rework_pysatl_mpest.initializers.Initializer" title="rework_pysatl_mpest.initializers.initializer.Initializer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Initializer</span></code></a></p>
+<p>Cluster-based initializer for mixture model parameters.</p>
+<p>This initializer uses clustering algorithms to partition the data and then
+estimates initial parameters for mixture components based on the clustering results.
+Supports both hard clustering (crisp assignments) and soft clustering (fuzzy assignments).
+For homogeneous mixtures fast (is_accurate = False) initialization is recommended.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Variables<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>MIN_SAMPLES</strong> (<em>int</em>) – Minimum number of samples required for a cluster to be considered valid.
+Mapping of cluster matching strategies to their implementation functions.</p></li>
+<li><p><strong>n_components</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Number of mixture components to initialize.</p></li>
+<li><p><strong>cluster_match_strategy</strong> (<a class="reference internal" href="rework_pysatl_mpest.initializers.ClusterMatchStrategy.html#rework_pysatl_mpest.initializers.ClusterMatchStrategy" title="rework_pysatl_mpest.initializers.ClusterMatchStrategy"><em>ClusterMatchStrategy</em></a>) – Strategy for matching clusters to distribution models.</p></li>
+<li><p><strong>estimation_strategies</strong> (<em>list</em><em>[</em><a class="reference internal" href="rework_pysatl_mpest.initializers.EstimationStrategy.html#rework_pysatl_mpest.initializers.EstimationStrategy" title="rework_pysatl_mpest.initializers.EstimationStrategy"><em>EstimationStrategy</em></a><em>]</em>) – List of estimation strategies for each distribution model.</p></li>
+<li><p><strong>models</strong> (<em>list</em><em>[</em><a class="reference internal" href="../../distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.html#rework_pysatl_mpest.distributions.ContinuousDistribution" title="rework_pysatl_mpest.distributions.ContinuousDistribution"><em>ContinuousDistribution</em></a><em>]</em>) – List of distribution models to initialize.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>is_accurate</strong> (<em>bool</em>) – If True, uses accurate initialization with optimal cluster-model matching.
+If False, uses fast initialization with direct cluster assignments.</p></li>
+<li><p><strong>is_soft</strong> (<em>bool</em>) – If True, uses soft clustering (fuzzy assignments).
+If False, uses hard clustering (crisp assignments).</p></li>
+<li><p><strong>clusterizer</strong> (<em>Any</em>) – The clustering algorithm instance. Must have <cite>fit_transform</cite> method for soft
+clustering or <cite>fit_predict</cite> method for hard clustering.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<dl class="simple">
+<dt>perform(X, dists, cluster_match_strategy, estimation_strategies, optimizer)</dt><dd><p>Performs cluster-based initialization of mixture model parameters.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p><strong>Supported Clustering Types</strong></p>
+<ul class="simple">
+<li><p>Soft clustering: Requires clusterizer with <cite>fit_transform</cite> method that returns
+a weight matrix where each element represents the probability of a data point
+belonging to a cluster.</p></li>
+<li><p>Hard clustering: Requires clusterizer with <cite>fit_predict</cite> method that returns
+cluster labels for each data point.</p></li>
+</ul>
+<p><strong>Initialization Modes</strong></p>
+<ul class="simple">
+<li><p>Accurate mode: Uses optimal cluster-model matching based on the specified strategy
+(likelihood or AIC e.t.c). Evaluates multiple assignments to find the best fit.</p></li>
+<li><p>Fast mode: Directly assigns each cluster to a model in order, providing faster
+but potentially suboptimal initialization.</p></li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul class="simple">
+<li><p>Validates clusterizer compatibility with the specified clustering type.</p></li>
+<li><p>Handles outliers in hard clustering by distributing weights evenly.</p></li>
+<li><p>Falls back to fast initialization if accurate initialization fails.</p></li>
+</ul>
+</dd></dl>
+
 </section>
 
 
@@ -468,20 +451,20 @@ building a pipeline, will be listed below.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../direct/index.html"
+       href="rework_pysatl_mpest.initializers.Initializer.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">mpest.estimators.direct</p>
+        <p class="prev-next-title">Initializer</p>
       </div>
     </a>
     <a class="right-next"
-       href="generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html"
+       href="rework_pysatl_mpest.initializers.ClusterMatchStrategy.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Pipeline</p>
+        <p class="prev-next-title">ClusterMatchStrategy</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -504,16 +487,7 @@ building a pipeline, will be listed below.</p>
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#abstract-classes">Abstract Classes</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#available-implementations">Available Implementations</a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#steps-pipelinestep">Steps (<cite>PipelineStep</cite>):</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#breakpointers-breakpointer">Breakpointers (<cite>Breakpointer</cite>):</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#pruners-pruner">Pruners (<cite>Pruner</cite>):</a></li>
-</ul>
-</li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#usage-example">Usage Example</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#rework_pysatl_mpest.initializers.ClusterizeInitializer"><code class="docutils literal notranslate"><span class="pre">ClusterizeInitializer</span></code></a></li>
 </ul>
   </nav></div>
 
@@ -521,7 +495,7 @@ building a pipeline, will be listed below.</p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="../../../_sources/api/estimators/iterative/index.rst.txt"
+      <li><a href="../../../_sources/api/initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div></div>

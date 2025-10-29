@@ -1,0 +1,30 @@
+﻿
+ClusterizeInitializer
+=====================
+
+.. currentmodule:: rework_pysatl_mpest.initializers
+
+.. autoclass:: rework_pysatl_mpest.initializers.ClusterizeInitializer
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~ClusterizeInitializer.perform
+
+
+

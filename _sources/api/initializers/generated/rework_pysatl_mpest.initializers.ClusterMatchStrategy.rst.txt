@@ -1,0 +1,12 @@
+﻿
+ClusterMatchStrategy
+====================
+
+.. currentmodule:: rework_pysatl_mpest.initializers
+
+.. autoclass:: rework_pysatl_mpest.initializers.ClusterMatchStrategy
+   :show-inheritance:
+
+
+
+

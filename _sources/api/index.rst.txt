@@ -10,3 +10,4 @@ API Reference
    distributions/index
    estimators/index
    optimizers/index
+   initializers/index

@@ -1,0 +1,776 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>rework_pysatl_mpest.initializers.clusterize_initializer &#8212; Mpest 1.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs'
+
+const make_config = () => {
+  let prefersDark = localStorage.getItem('theme') === 'dark' || (localStorage.getItem('theme') === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return({
+    startOnLoad:false,
+    darkMode: prefersDark,
+    theme: prefersDark ? "dark" : "default"
+  })
+}
+
+const init_mermaid = () => {
+    let graphs = document.querySelectorAll(".mermaid");
+    [...graphs].forEach((element) => {
+        if (!element.hasAttribute("data-source")) {
+            element.setAttribute("data-source", element.innerText);
+        }
+        if (element.hasAttribute("data-processed")) {
+            let new_elt = document.createElement("pre");
+            let graph_source = element.getAttribute("data-source");
+            new_elt.appendChild(document.createTextNode(graph_source));
+            new_elt.classList.add("mermaid");
+            new_elt.setAttribute("data-source", graph_source);
+            element.replaceWith(new_elt);
+        }
+    });
+
+    let config = make_config()
+    mermaid.initialize(config);
+    mermaid.run();
+}
+
+init_mermaid();
+
+let theme_observer = new MutationObserver(init_mermaid);
+let body = document.getElementsByTagName("body")[0];
+theme_observer.observe(body, {attributes: true});
+window.theme_observer = theme_observer;
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
+window.addEventListener("load", () => mermaid.run());
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/rework_pysatl_mpest/initializers/clusterize_initializer';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Mpest 1.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../design/index.html">
+    Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../user_guide/index.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../design/index.html">
+    Design
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">rework_pysatl_mpest.initializers.clusterize_initializer</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for rework_pysatl_mpest.initializers.clusterize_initializer</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A module providing a cluster-based initializer for mixture models.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Viktor Khanukaev&quot;</span>
+<span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">&quot;Copyright (c) 2025 PySATL project&quot;</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;SPDX-License-Identifier: MIT&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.core.mixture</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.distributions.continuous_dist</span><span class="w"> </span><span class="kn">import</span> <span class="n">ContinuousDistribution</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.initializers._estimation_strategies.q_function</span><span class="w"> </span><span class="kn">import</span> <span class="n">q_function_strategy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.initializers.cluster_match_strategy</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">match_clusters_for_models_akaike</span><span class="p">,</span>
+    <span class="n">match_clusters_for_models_log_likelihood</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.initializers.initializer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Initializer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.initializers.strategies</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClusterMatchStrategy</span><span class="p">,</span> <span class="n">EstimationStrategy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.optimizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rework_pysatl_mpest.optimizers.scipy_nelder_mead</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScipyNelderMead</span>
+
+
+<div class="viewcode-block" id="ClusterizeInitializer">
+<a class="viewcode-back" href="../../../api/initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer.html#rework_pysatl_mpest.initializers.ClusterizeInitializer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ClusterizeInitializer</span><span class="p">(</span><span class="n">Initializer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cluster-based initializer for mixture model parameters.</span>
+
+<span class="sd">    This initializer uses clustering algorithms to partition the data and then</span>
+<span class="sd">    estimates initial parameters for mixture components based on the clustering results.</span>
+<span class="sd">    Supports both hard clustering (crisp assignments) and soft clustering (fuzzy assignments).</span>
+<span class="sd">    For homogeneous mixtures fast (is_accurate = False) initialization is recommended.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    MIN_SAMPLES : int</span>
+<span class="sd">        Minimum number of samples required for a cluster to be considered valid.</span>
+<span class="sd">        Mapping of cluster matching strategies to their implementation functions.</span>
+<span class="sd">    n_components : Optional[int]</span>
+<span class="sd">        Number of mixture components to initialize.</span>
+<span class="sd">    cluster_match_strategy : ClusterMatchStrategy</span>
+<span class="sd">        Strategy for matching clusters to distribution models.</span>
+<span class="sd">    estimation_strategies : list[EstimationStrategy]</span>
+<span class="sd">        List of estimation strategies for each distribution model.</span>
+<span class="sd">    models : list[ContinuousDistribution]</span>
+<span class="sd">        List of distribution models to initialize.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    is_accurate : bool</span>
+<span class="sd">        If True, uses accurate initialization with optimal cluster-model matching.</span>
+<span class="sd">        If False, uses fast initialization with direct cluster assignments.</span>
+<span class="sd">    is_soft : bool</span>
+<span class="sd">        If True, uses soft clustering (fuzzy assignments).</span>
+<span class="sd">        If False, uses hard clustering (crisp assignments).</span>
+<span class="sd">    clusterizer : Any</span>
+<span class="sd">        The clustering algorithm instance. Must have `fit_transform` method for soft</span>
+<span class="sd">        clustering or `fit_predict` method for hard clustering.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    perform(X, dists, cluster_match_strategy, estimation_strategies, optimizer)</span>
+<span class="sd">        Performs cluster-based initialization of mixture model parameters.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    **Supported Clustering Types**</span>
+
+<span class="sd">    - Soft clustering: Requires clusterizer with `fit_transform` method that returns</span>
+<span class="sd">      a weight matrix where each element represents the probability of a data point</span>
+<span class="sd">      belonging to a cluster.</span>
+<span class="sd">    - Hard clustering: Requires clusterizer with `fit_predict` method that returns</span>
+<span class="sd">      cluster labels for each data point.</span>
+
+<span class="sd">    **Initialization Modes**</span>
+
+<span class="sd">    - Accurate mode: Uses optimal cluster-model matching based on the specified strategy</span>
+<span class="sd">      (likelihood or AIC e.t.c). Evaluates multiple assignments to find the best fit.</span>
+<span class="sd">    - Fast mode: Directly assigns each cluster to a model in order, providing faster</span>
+<span class="sd">      but potentially suboptimal initialization.</span>
+
+<span class="sd">    **Error Handling**</span>
+
+<span class="sd">    - Validates clusterizer compatibility with the specified clustering type.</span>
+<span class="sd">    - Handles outliers in hard clustering by distributing weights evenly.</span>
+<span class="sd">    - Falls back to fast initialization if accurate initialization fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">MIN_SAMPLES</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">_estimation_strategies</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="n">EstimationStrategy</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]]</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">EstimationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span><span class="p">:</span> <span class="n">q_function_strategy</span><span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">_cluster_match_strategies</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="n">ClusterMatchStrategy</span><span class="p">,</span> <span class="n">Callable</span><span class="p">]]</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="n">ClusterMatchStrategy</span><span class="o">.</span><span class="n">LIKELIHOOD</span><span class="p">:</span> <span class="n">match_clusters_for_models_log_likelihood</span><span class="p">,</span>
+            <span class="n">ClusterMatchStrategy</span><span class="o">.</span><span class="n">AKAIKE</span><span class="p">:</span> <span class="n">match_clusters_for_models_akaike</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">is_accurate</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">is_soft</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">clusterizer</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the cluster-based initializer.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        is_accurate : bool</span>
+<span class="sd">            If True, uses accurate initialization with optimal cluster-model matching.</span>
+<span class="sd">            If False, uses fast initialization with direct cluster assignments.</span>
+<span class="sd">        is_soft : bool</span>
+<span class="sd">            If True, uses soft clustering (fuzzy assignments).</span>
+<span class="sd">            If False, uses hard clustering (crisp assignments).</span>
+<span class="sd">        clusterizer : Any</span>
+<span class="sd">            The clustering algorithm instance. Must have appropriate methods for</span>
+<span class="sd">            the specified clustering type.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_soft</span> <span class="o">=</span> <span class="n">is_soft</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_accurate</span> <span class="o">=</span> <span class="n">is_accurate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clusterizer</span> <span class="o">=</span> <span class="n">clusterizer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_match_strategy</span><span class="p">:</span> <span class="n">ClusterMatchStrategy</span> <span class="o">=</span> <span class="n">ClusterMatchStrategy</span><span class="o">.</span><span class="n">LIKELIHOOD</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimation_strategies</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EstimationStrategy</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ContinuousDistribution</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clusterize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">clusterizer</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs clustering on the input data and returns weight matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : np.ndarray</span>
+<span class="sd">            Input data points to cluster.</span>
+<span class="sd">        clusterizer : Any</span>
+<span class="sd">            The clustering algorithm instance.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        H : np.ndarray</span>
+<span class="sd">            Weight matrix where H[i, k] represents the probability that data point i</span>
+<span class="sd">            belongs to cluster k.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the clusterizer doesn&#39;t have the required method for the specified</span>
+<span class="sd">            clustering type, or if clustering fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_soft</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">clusterizer</span><span class="p">,</span> <span class="s2">&quot;fit_transform&quot;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">H</span> <span class="o">=</span> <span class="n">clusterizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">H</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fuzzy clusterizer failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_soft</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">clusterizer</span><span class="p">,</span> <span class="s2">&quot;fit_predict&quot;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">labels</span> <span class="o">=</span> <span class="n">clusterizer</span><span class="o">.</span><span class="n">fit_predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+                <span class="n">unique_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+                <span class="n">valid_labels</span> <span class="o">=</span> <span class="n">unique_labels</span><span class="p">[</span><span class="n">unique_labels</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">n_clusters</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">valid_labels</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">n_clusters</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">n_clusters</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="n">valid_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+                <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">n_clusters</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">labels</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">outlier_mask</span> <span class="o">=</span> <span class="n">labels</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span>
+                    <span class="n">non_outlier_mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">outlier_mask</span>
+                    <span class="n">H</span><span class="p">[</span><span class="n">outlier_mask</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">n_clusters</span>
+                    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">non_outlier_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="n">label</span> <span class="o">=</span> <span class="n">labels</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                        <span class="n">cluster_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">valid_labels</span> <span class="o">==</span> <span class="n">label</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">H</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">cluster_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">labels</span><span class="p">):</span>
+                        <span class="n">cluster_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">valid_labels</span> <span class="o">==</span> <span class="n">label</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">H</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">cluster_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="k">return</span> <span class="n">H</span>
+
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Hard clusterizer failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Clusterizer doesn&#39;t have required method&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_accurate_init</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">H</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">:</span> <span class="n">Optimizer</span> <span class="o">=</span> <span class="n">ScipyNelderMead</span><span class="p">()</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">ContinuousDistribution</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs accurate initialization with optimal cluster-model matching.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : np.ndarray</span>
+<span class="sd">            Input data points.</span>
+<span class="sd">        H : np.ndarray</span>
+<span class="sd">            Weight matrix from clustering.</span>
+<span class="sd">        optimizer : Optimizer</span>
+<span class="sd">            Optimizer that will be used in estimation strategies.</span>
+<span class="sd">            By default, ScipyNelderMead.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[list[ContinuousDistribution], list[float]]</span>
+<span class="sd">            A tuple containing:</span>
+<span class="sd">            - List of initialized distribution models</span>
+<span class="sd">            - List of component weights</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If n_components is not set or if the number of estimation strategies</span>
+<span class="sd">            doesn&#39;t match the number of models.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components must be set before calling _accurate_init&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">estimation_strategies</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Count of models must match count of estimation strategies&quot;</span><span class="p">)</span>
+
+        <span class="n">cluster_match_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cluster_match_strategies</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster_match_strategy</span><span class="p">]</span>
+
+        <span class="n">estimation_funcs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_estimation_strategies</span><span class="p">[</span><span class="n">strategy</span><span class="p">]</span> <span class="k">for</span> <span class="n">strategy</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_strategies</span><span class="p">]</span>
+
+        <span class="n">distributions</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="n">cluster_match_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">estimation_funcs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fast_init</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">)</span>
+
+        <span class="n">new_distributions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dist</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">distributions</span><span class="p">):</span>
+            <span class="n">params_names</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">params_values</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="n">dist</span><span class="o">.</span><span class="n">set_params_from_vector</span><span class="p">(</span><span class="n">params_names</span><span class="p">,</span> <span class="n">params_values</span><span class="p">)</span>
+            <span class="n">new_distributions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">new_distributions</span><span class="p">,</span> <span class="n">weights</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fast_init</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">H</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">:</span> <span class="n">Optimizer</span> <span class="o">=</span> <span class="n">ScipyNelderMead</span><span class="p">()</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">ContinuousDistribution</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs fast initialization with direct cluster assignments.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : np.ndarray</span>
+<span class="sd">            Input data points.</span>
+<span class="sd">        H : np.ndarray</span>
+<span class="sd">            Weight matrix from clustering.</span>
+<span class="sd">        optimizer : Optimizer</span>
+<span class="sd">            Optimizer that will be used in estimation strategies.</span>
+<span class="sd">            By default, ScipyNelderMead.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[list[ContinuousDistribution], list[float]]</span>
+<span class="sd">            A tuple containing:</span>
+<span class="sd">            - List of initialized distribution models</span>
+<span class="sd">            - List of component weights</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If n_components is not set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;n_components must be set before calling _fast_init&quot;</span><span class="p">)</span>
+
+        <span class="n">distributions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ContinuousDistribution</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">weights</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">estimation_funcs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_estimation_strategies</span><span class="p">[</span><span class="n">strategy</span><span class="p">]</span> <span class="k">for</span> <span class="n">strategy</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">estimation_strategies</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+            <span class="n">H_k</span> <span class="o">=</span> <span class="n">H</span><span class="p">[:,</span> <span class="n">k</span><span class="p">]</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="n">estimation_funcs</span><span class="p">[</span><span class="n">k</span><span class="p">](</span><span class="n">model</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">H_k</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">)</span>
+            <span class="n">params_names</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">params_values</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">set_params_from_vector</span><span class="p">(</span><span class="n">params_names</span><span class="p">,</span> <span class="n">params_values</span><span class="p">)</span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)[</span><span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+            <span class="n">distributions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">weights</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">weight</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">distributions</span><span class="p">,</span> <span class="n">weights</span>
+
+<div class="viewcode-block" id="ClusterizeInitializer.perform">
+<a class="viewcode-back" href="../../../api/initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer.perform.html#rework_pysatl_mpest.initializers.ClusterizeInitializer.perform">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">perform</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+        <span class="n">dists</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ContinuousDistribution</span><span class="p">],</span>
+        <span class="n">cluster_match_strategy</span><span class="p">:</span> <span class="n">ClusterMatchStrategy</span><span class="p">,</span>
+        <span class="n">estimation_strategies</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EstimationStrategy</span><span class="p">],</span>
+        <span class="n">optimizer</span><span class="p">:</span> <span class="n">Optimizer</span> <span class="o">=</span> <span class="n">ScipyNelderMead</span><span class="p">(),</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Performs cluster-based initialization of mixture model parameters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : ArrayLike</span>
+<span class="sd">            Input data points for initialization.</span>
+<span class="sd">        dists : list[ContinuousDistribution]</span>
+<span class="sd">            List of distribution models to initialize.</span>
+<span class="sd">        cluster_match_strategy : ClusterMatchStrategy</span>
+<span class="sd">            Strategy for matching clusters to distribution models.</span>
+<span class="sd">        estimation_strategies : list[EstimationStrategy]</span>
+<span class="sd">            List of estimation strategies for each distribution model.</span>
+<span class="sd">        optimizer : Optimizer</span>
+<span class="sd">            Optimizer that will be used in estimation strategies.</span>
+<span class="sd">            By default, ScipyNelderMead.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MixtureModel</span>
+<span class="sd">            Initialized mixture model with estimated parameters and weights.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The method follows these steps:</span>
+<span class="sd">        1. Sets up the models and configuration</span>
+<span class="sd">        2. Performs clustering on the input data</span>
+<span class="sd">        3. Estimates parameters using either accurate or fast initialization</span>
+<span class="sd">        4. Normalizes component weights</span>
+<span class="sd">        5. Returns the initialized mixture model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">models</span> <span class="o">=</span> <span class="n">dists</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dists</span><span class="p">)</span>
+        <span class="n">H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clusterize</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">clusterizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_match_strategy</span> <span class="o">=</span> <span class="n">cluster_match_strategy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">estimation_strategies</span> <span class="o">=</span> <span class="n">estimation_strategies</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_accurate</span><span class="p">:</span>
+            <span class="n">distributions</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_accurate_init</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">distributions</span><span class="p">,</span> <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fast_init</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">)</span>
+
+        <span class="n">total_weight</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="n">normalized_weights</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">w</span> <span class="o">/</span> <span class="n">total_weight</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">]</span>
+        <span class="n">current_mixture</span> <span class="o">=</span> <span class="n">MixtureModel</span><span class="p">(</span><span class="n">distributions</span><span class="p">,</span> <span class="n">normalized_weights</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">current_mixture</span></div>
+</div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Danil Totmyanin, Anton Kazancev.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

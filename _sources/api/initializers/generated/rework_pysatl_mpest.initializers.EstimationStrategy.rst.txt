@@ -1,0 +1,12 @@
+﻿
+EstimationStrategy
+==================
+
+.. currentmodule:: rework_pysatl_mpest.initializers
+
+.. autoclass:: rework_pysatl_mpest.initializers.EstimationStrategy
+   :show-inheritance:
+
+
+
+
