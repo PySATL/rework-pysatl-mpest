@@ -58,16 +58,5 @@ Pruners (`Pruner`):
 
    ~PriorThresholdPruner
 
-Logging Implementations
-~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-   :toctree: generated
-   :nosignatures:
-   :template: class.rst
-
-   ~IterationsHistory
-   ~IterationRecord
-
 Usage Example
 -------------
