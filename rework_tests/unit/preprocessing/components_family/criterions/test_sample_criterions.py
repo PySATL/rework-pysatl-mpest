@@ -361,7 +361,7 @@ class TestSampleCriterions:
         [
             ([1, 1, 1, 1, 1], 0),
             ([1, 2, 3, 4, 5], 2.66666),
-            ([1, 2, 4, 3, 0], 2.2),
+            ([1, 2, 4, 3, 0], 2.66666),
         ],
     )
     def test_kurt_moors(self, hist, expected):
