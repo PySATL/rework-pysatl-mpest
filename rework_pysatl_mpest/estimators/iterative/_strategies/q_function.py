@@ -8,7 +8,7 @@ efficient analytical solutions for specific distribution types like the
 `Exponential` distribution.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -18,9 +18,10 @@ from functools import singledispatch
 
 import numpy as np
 
+from rework_pysatl_mpest.typings import DType
+
 from ....distributions import ContinuousDistribution, Exponential, Normal, Weibull
 from ....optimizers import Optimizer
-from ....utils.typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 
@@ -38,7 +39,7 @@ def q_function_strategy(
     state: PipelineState[DType],
     block: OptimizationBlock,
     optimizer: Optimizer,
-) -> tuple[int, dict[str, float]]:
+) -> tuple[int, dict[str, DType]]:
     """Generic M-step strategy that maximizes the Q-function numerically.
 
     This function serves as the default implementation for updating a

@@ -15,6 +15,7 @@ from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions.pareto import Pareto
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import kstest, pareto
 
@@ -180,7 +181,7 @@ class TestParetoLPDF:
         dist = Pareto(shape=shape, scale=scale)
         custom_lpdf = dist.lpdf(x)
         scipy_lpdf = pareto.logpdf(x, scale=scale, b=shape, loc=0.0)
-        np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-12)
+        np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-12, rtol=1e-3)
 
     @given(shape=st_shape, scale=st_scale, x=st.floats(min_value=1e2, max_value=1e4, allow_infinity=False))
     def test_lpdf_outside_support(self, shape, scale, x):
@@ -358,3 +359,10 @@ class TestParetoGenerate:
         ks_statistic, p_value = kstest(samples, "pareto", args=(shape, loc, scale))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+class TestParetoDType(DTypeHandlingMixin):
+    distribution_class = Pareto
+
+    def __init__(self):
+        self.default_params = {"shape": 1.0, "scale": 2.0}

@@ -2,7 +2,7 @@
 A module providing cluster matching strategies for mixture model initialization.
 """
 
-__author__ = "Viktor Khanukaev"
+__author__ = "Viktor Khanukaev, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -14,8 +14,7 @@ import numpy as np
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
-
-from ..utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 
 def match_clusters_for_models_log_likelihood(

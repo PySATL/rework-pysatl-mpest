@@ -2,7 +2,7 @@
 A module providing a cluster-based initializer for mixture models.
 """
 
-__author__ = "Viktor Khanukaev"
+__author__ = "Viktor Khanukaev, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -24,8 +24,7 @@ from rework_pysatl_mpest.initializers.initializer import Initializer
 from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
 from rework_pysatl_mpest.optimizers import Optimizer
 from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
-
-from ..utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 
 class ClusterizeInitializer(Initializer, Generic[DType]):

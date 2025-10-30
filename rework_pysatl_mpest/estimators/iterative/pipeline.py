@@ -7,7 +7,7 @@ combining different steps (:class:`PipelineStep`), stopping criteria (:class:`Br
 and component pruning strategies (:class:`Pruner`).
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -18,8 +18,9 @@ from copy import copy
 import numpy as np
 from numpy.typing import ArrayLike
 
+from rework_pysatl_mpest.typings import DType
+
 from ...core import MixtureModel
-from ...utils.typings import DType
 from ..base_estimator import BaseEstimator
 from ._logger import IterationRecord, IterationsHistory
 from .breakpointer import Breakpointer

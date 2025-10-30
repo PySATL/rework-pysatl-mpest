@@ -9,7 +9,7 @@ log-likelihood, using the responsibilities computed in a preceding
 Expectation-step.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -20,9 +20,10 @@ from typing import Callable, ClassVar
 
 import numpy as np
 
+from rework_pysatl_mpest.typings import DType
+
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
-from ....utils.typings import DType
 from .._strategies import q_function_strategy
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep

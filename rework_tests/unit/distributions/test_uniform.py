@@ -12,6 +12,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Uniform
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import kstest, uniform
 
@@ -314,3 +315,10 @@ class TestUniformGenerate:
         ks_statistic, p_value = kstest(samples, "uniform", args=(left_border, right_border - left_border))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+class TestUniformDType(DTypeHandlingMixin):
+    distribution_class = Uniform
+
+    def __init__(self):
+        self.default_params = {"left_border": 0.0, "right_border": 1.0}

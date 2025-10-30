@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.stats import expon
 
-from rework_pysatl_mpest.utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 from ..core import Parameter
 from .continuous_dist import ContinuousDistribution
@@ -88,8 +88,9 @@ class Exponential(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
 
-        return np.where(self.loc <= X, self.rate * np.exp(-self.rate * (X - self.loc)), 0.0)
+        return np.where(self.loc <= X, self.rate * np.exp(-self.rate * (X - self.loc)), DTYPE(0.0))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -112,8 +113,9 @@ class Exponential(ContinuousDistribution[DType]):
         """
 
         P = np.asarray(P, dtype=self.dtype)
+        DTYPE = self.dtype
 
-        return np.where((P >= 0) & (P <= 1), self.loc - np.log(1 - P) / self.rate, np.nan)
+        return np.where((P >= 0) & (P <= 1), self.loc - np.log(DTYPE(1) - P) / self.rate, DTYPE(np.nan))
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -136,7 +138,9 @@ class Exponential(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        return np.where(self.loc <= X, np.log(self.rate) - self.rate * (X - self.loc), -np.inf)
+        DTYPE = self.dtype
+
+        return np.where(self.loc <= X, np.log(self.rate) - self.rate * (X - self.loc), DTYPE(-np.inf))
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
@@ -161,7 +165,9 @@ class Exponential(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        return np.where(self.loc <= X, self.rate, 0.0)
+        DTYPE = self.dtype
+
+        return np.where(self.loc <= X, self.rate, DTYPE(0.0))
 
     def _dlog_rate(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`rate` parameter.
@@ -186,7 +192,8 @@ class Exponential(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        return np.where(self.loc <= X, 1.0 / self.rate - (X - self.loc), 0.0)
+        DTYPE = self.dtype
+        return np.where(self.loc <= X, DTYPE(1.0) / self.rate - (X - self.loc), DTYPE(0.0))
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -217,7 +224,7 @@ class Exponential(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 

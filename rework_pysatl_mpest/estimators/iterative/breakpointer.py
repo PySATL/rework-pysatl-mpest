@@ -5,14 +5,15 @@ contract for implementing custom stopping conditions (or convergence criteria)
 within an iterative estimation `Pipeline`.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 from typing import Generic
 
-from ...utils.typings import DType
+from rework_pysatl_mpest.typings import DType
+
 from .pipeline_state import PipelineState
 
 

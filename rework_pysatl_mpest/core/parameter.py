@@ -5,12 +5,14 @@ and validate parameters in classes inheriting from `ContinuousDistribution`.
 It allows you to set invariants for parameter values and handle assignment errors,
 as well as to fix parameters from changes."""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
 from typing import Callable, Union, overload
+
+import numpy as np
 
 
 class Parameter:
@@ -87,10 +89,10 @@ class Parameter:
         """If access is via a class, return the descriptor object itself."""
 
     @overload
-    def __get__(self, instance: object, owner: type[object]) -> float:
+    def __get__(self, instance: object, owner: type[object]) -> Union[float, np.floating]:
         """If access is via an object, return the value."""
 
-    def __get__(self, instance: object | None, owner: type[object]) -> Union[float, "Parameter"]:
+    def __get__(self, instance: object | None, owner: type[object]) -> Union[float, np.floating, "Parameter"]:
         """Returns the parameter value or the descriptor itself.
 
         If access is through an instance of the class, it returns the
@@ -107,7 +109,7 @@ class Parameter:
 
         Returns
         -------
-        float or Parameter
+        DType or Parameter
             The value of the parameter or the descriptor itself.
         """
 
@@ -143,7 +145,10 @@ class Parameter:
                 "This parameter is fixed."
             )
 
-        if not self.invariant(value):
+        owner_dtype = getattr(instance, "dtype", float)
+        d_value = owner_dtype(value)
+
+        if not self.invariant(d_value):
             raise ValueError(f"Invalid value for '{self.public_name}': {self.error_message}")
 
-        setattr(instance, self.private_name, value)
+        setattr(instance, self.private_name, d_value)

@@ -13,6 +13,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Exponential
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import expon, kstest
 
@@ -300,3 +301,10 @@ class TestExponentialGenerate:
         ks_statistic, p_value = kstest(samples, "expon", args=(loc, 1 / rate))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+class TestExponentialDType(DTypeHandlingMixin):
+    distribution_class = Exponential
+
+    def __init__(self):
+        self.default_params = {"loc": 0.0, "rate": 1.0}

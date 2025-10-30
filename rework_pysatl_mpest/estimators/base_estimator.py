@@ -1,6 +1,6 @@
 """A module that provides an abstract class for implementing custom estimators."""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -9,8 +9,9 @@ from typing import Generic
 
 from numpy.typing import ArrayLike
 
+from rework_pysatl_mpest.typings import DType
+
 from ..core import MixtureModel
-from ..utils.typings import DType
 
 
 class BaseEstimator(ABC, Generic[DType]):

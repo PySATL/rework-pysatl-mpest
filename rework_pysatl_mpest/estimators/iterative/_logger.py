@@ -6,7 +6,7 @@ including mixture models, input data, responsibilities, pruning actions,
 and errors across iterations.
 """
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -15,8 +15,9 @@ from typing import Generic, Optional
 
 from numpy.typing import NDArray
 
+from rework_pysatl_mpest.typings import DType
+
 from ...core import MixtureModel
-from ...utils.typings import DType
 from .pruner import Pruner
 
 

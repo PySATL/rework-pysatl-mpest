@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.stats import norm
 
-from rework_pysatl_mpest.utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 from ..core import Parameter
 from .continuous_dist import ContinuousDistribution
@@ -89,8 +89,10 @@ class Normal(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
-        return np.exp(-(z**2) / 2.0) / (self.scale * np.sqrt(2.0 * np.pi))
+        return np.exp(-(z**2) / DTYPE(2.0)) / (self.scale * np.sqrt(DTYPE(2.0) * DTYPE(np.pi)))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -111,7 +113,9 @@ class Normal(ContinuousDistribution[DType]):
         """
 
         P = np.asarray(P, dtype=self.dtype)
-        return norm.ppf(P, loc=self.loc, scale=self.scale)
+        result = norm.ppf(P, loc=self.loc, scale=self.scale)
+
+        return np.asarray(result, dtype=self.dtype)
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -135,8 +139,10 @@ class Normal(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
-        return -np.log(self.scale) - 0.5 * np.log(2.0 * np.pi) - 0.5 * z**2
+        return -np.log(self.scale) - DTYPE(0.5) * np.log(DTYPE(2.0) * DTYPE(np.pi)) - DTYPE(0.5) * z**2
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
@@ -148,8 +154,10 @@ class Normal(ContinuousDistribution[DType]):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z_sq = ((X - self.loc) / self.scale) ** 2
-        return (z_sq - 1.0) / self.scale
+        return (z_sq - DTYPE(1.0)) / self.scale
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -178,7 +186,7 @@ class Normal(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
         return np.stack(gradients, axis=1)

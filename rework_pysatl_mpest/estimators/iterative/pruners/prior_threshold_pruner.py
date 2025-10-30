@@ -7,14 +7,15 @@ components whose prior probabilities (weights) fall below a specified
 threshold.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
 from copy import copy
 
-from ....utils.typings import DType
+from rework_pysatl_mpest.typings import DType
+
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
 

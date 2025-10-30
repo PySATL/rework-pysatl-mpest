@@ -9,7 +9,7 @@ import numpy as np
 from scipy.special import digamma
 from scipy.stats import beta as beta_dist
 
-from rework_pysatl_mpest.utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 from ..core import Parameter
 from .continuous_dist import ContinuousDistribution
@@ -102,10 +102,12 @@ class Beta(ContinuousDistribution[DType]):
             The PPF values corresponding to each probability in :attr:`P`.
         """
         P = np.asarray(P, dtype=self.dtype)
+        DTYPE = self.dtype
+
         return np.where(
             (P >= 0) & (P <= 1),
-            (self.lower_bound + (self.upper_bound - self.lower_bound) * beta_dist.ppf(P, self.alpha, self.beta)),
-            np.nan,
+            (self.lower_bound + (self.upper_bound - self.lower_bound) * DTYPE(beta_dist.ppf(P, self.alpha, self.beta))),
+            DTYPE(np.nan),
         )
 
     def lpdf(self, X):
@@ -138,12 +140,14 @@ class Beta(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
 
         Z = (X - self.lower_bound) / (self.upper_bound - self.lower_bound)
 
-        log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta)
+        log_pdf_standard = DTYPE(beta_dist.logpdf(Z, self.alpha, self.beta))
+        result = log_pdf_standard - np.log(self.upper_bound - self.lower_bound)
 
-        return log_pdf_standard - np.log(self.upper_bound - self.lower_bound)
+        return np.atleast_1d(result)
 
     def _dlog_alpha(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`alpha` parameter.
@@ -173,13 +177,15 @@ class Beta(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
             np.log(X - self.lower_bound)
             - np.log(self.upper_bound - self.lower_bound)
-            - (digamma(self.alpha) - digamma(self.alpha + self.beta)),
-            0.0,
+            - (DTYPE(digamma(self.alpha)) - DTYPE(digamma(self.alpha + self.beta))),
+            DTYPE(0.0),
         )
 
     def _dlog_beta(self, X):
@@ -210,13 +216,15 @@ class Beta(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
             np.log(self.upper_bound - X)
             - np.log(self.upper_bound - self.lower_bound)
-            - (digamma(self.beta) - digamma(self.alpha + self.beta)),
-            0.0,
+            - (DTYPE(digamma(self.beta)) - DTYPE(digamma(self.alpha + self.beta))),
+            DTYPE(0.0),
         )
 
     def _dlog_lower_bound(self, X):
@@ -245,14 +253,16 @@ class Beta(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
             (
-                ((self.alpha + self.beta - 1) / (self.upper_bound - self.lower_bound))
-                - ((self.alpha - 1) / (X - self.lower_bound))
+                ((self.alpha + self.beta - DTYPE(1)) / (self.upper_bound - self.lower_bound))
+                - ((self.alpha - DTYPE(1)) / (X - self.lower_bound))
             ),
-            0.0,
+            DTYPE(0.0),
         )
 
     def _dlog_upper_bound(self, X):
@@ -280,14 +290,16 @@ class Beta(ContinuousDistribution[DType]):
             The gradient of the lpdf with respect to :attr:`upper_bound` for each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_bounds = (self.lower_bound < X) & (self.upper_bound >= X)
         return np.where(
             in_bounds,
             (
-                ((self.beta - 1) / (self.upper_bound - X))
-                - ((self.alpha + self.beta - 1) / (self.upper_bound - self.lower_bound))
+                ((self.beta - DTYPE(1)) / (self.upper_bound - X))
+                - ((self.alpha + self.beta - DTYPE(1)) / (self.upper_bound - self.lower_bound))
             ),
-            0.0,
+            DTYPE(0.0),
         )
 
     def log_gradients(self, X):
@@ -320,7 +332,7 @@ class Beta(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 

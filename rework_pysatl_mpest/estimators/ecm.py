@@ -6,7 +6,7 @@ It uses a pipeline architecture (:class:`~rework_pysatl_mpest.estimators.iterati
 to fit the parameters of a mixture model to data.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -15,9 +15,10 @@ from collections.abc import Sequence
 
 from numpy.typing import ArrayLike
 
+from rework_pysatl_mpest.typings import DType
+
 from ..core import MixtureModel
 from ..optimizers import Optimizer
-from ..utils.typings import DType
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,

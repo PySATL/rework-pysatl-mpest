@@ -2,7 +2,7 @@
 A module providing an abstract base class for mixture model initializers.
 """
 
-__author__ = "Viktor Khanukaev"
+__author__ = "Viktor Khanukaev, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -13,8 +13,7 @@ from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
-
-from ..utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 
 class Initializer(ABC, Generic[DType]):

@@ -5,13 +5,15 @@ for implementing various optimization algorithms. Any concrete optimizer should
 inherit from this class and implement the :meth:`minimize` method.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
 from abc import ABC, abstractmethod
 from typing import Callable
+
+from rework_pysatl_mpest.typings import DType
 
 
 class Optimizer(ABC):
@@ -33,7 +35,7 @@ class Optimizer(ABC):
     """
 
     @abstractmethod
-    def minimize(self, target: Callable, params: list[float]) -> list[float]:
+    def minimize(self, target: Callable, params: list[DType]) -> list[DType]:
         """Finds the parameters that minimize a target function.
 
         This abstract method must be implemented by subclasses to perform the

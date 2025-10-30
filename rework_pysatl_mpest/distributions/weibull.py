@@ -8,8 +8,9 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.stats import weibull_min
 
+from rework_pysatl_mpest.typings import DType
+
 from ..core import Parameter
-from ..utils.typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
@@ -96,14 +97,16 @@ class Weibull(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
 
         # PDF is 0 for x < loc, and handle cases where z=0 and shape<1
         # which would lead to division by zero.
         with np.errstate(divide="ignore", invalid="ignore"):
-            pdf_vals = (self.shape / self.scale) * np.power(z, self.shape - 1) * np.exp(-np.power(z, self.shape))
+            pdf_vals = (self.shape / self.scale) * np.power(z, self.shape - DTYPE(1)) * np.exp(-np.power(z, self.shape))
 
-        return np.where(self.loc <= X, np.nan_to_num(pdf_vals, nan=0.0, posinf=np.inf), 0.0)
+        return np.where(self.loc <= X, np.nan_to_num(pdf_vals, nan=DTYPE(0.0), posinf=DTYPE(np.inf)), DTYPE(0.0))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -127,8 +130,10 @@ class Weibull(ContinuousDistribution[DType]):
         """
 
         P = np.asarray(P, dtype=self.dtype)
-        ppf_vals = self.loc + self.scale * np.power(-np.log(1 - P), 1.0 / self.shape)
-        return np.where((P >= 0) & (P <= 1), ppf_vals, np.nan)
+        DTYPE = self.dtype
+
+        ppf_vals = self.loc + self.scale * np.power(-np.log(DTYPE(1) - P), DTYPE(1.0) / self.shape)
+        return np.where((P >= 0) & (P <= 1), ppf_vals, DTYPE(np.nan))
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -153,36 +158,48 @@ class Weibull(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore"):
-            lpdf_vals = np.log(self.shape) - np.log(self.scale) + (self.shape - 1) * np.log(z) - np.power(z, self.shape)
-        return np.where(self.loc < X, lpdf_vals, -np.inf)
+            lpdf_vals = (
+                np.log(self.shape) - np.log(self.scale) + (self.shape - DTYPE(1)) * np.log(z) - np.power(z, self.shape)
+            )
+        return np.where(self.loc < X, lpdf_vals, DTYPE(-np.inf))
 
     def _dlog_shape(self, X):
         """Partial derivative of the lpdf w.r.t. the shape parameter."""
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
-            grad = 1.0 / self.shape + np.log(z) - np.power(z, self.shape) * np.log(z)
-        return np.where(self.loc < X, np.nan_to_num(grad), 0.0)
+            grad = DTYPE(1.0) / self.shape + np.log(z) - np.power(z, self.shape) * np.log(z)
+        return np.where(self.loc < X, np.nan_to_num(grad), DTYPE(0.0))
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
-            grad = -(self.shape - 1) / (X - self.loc) + (self.shape / self.scale) * np.power(z, self.shape - 1)
-        return np.where(self.loc < X, np.nan_to_num(grad), 0.0)
+            grad = -(self.shape - DTYPE(1)) / (X - self.loc) + (self.shape / self.scale) * np.power(
+                z, self.shape - DTYPE(1)
+            )
+        return np.where(self.loc < X, np.nan_to_num(grad), DTYPE(0.0))
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         z = (X - self.loc) / self.scale
         grad = -self.shape / self.scale + (self.shape / self.scale) * np.power(z, self.shape)
-        return np.where(self.loc < X, grad, 0.0)
+        return np.where(self.loc < X, grad, DTYPE(0.0))
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -211,7 +228,7 @@ class Weibull(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 

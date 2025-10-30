@@ -13,6 +13,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Cauchy
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import cauchy, kstest
 
@@ -268,3 +269,10 @@ class TestCauchyGenerate:
         ks_statistic, p_value = kstest(samples, "cauchy", args=(loc, scale))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+class TestCauchyDType(DTypeHandlingMixin):
+    distribution_class = Cauchy
+
+    def __init__(self):
+        self.default_params = {"loc": 0.0, "scale": 1.0}

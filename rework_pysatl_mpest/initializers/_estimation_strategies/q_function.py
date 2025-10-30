@@ -14,8 +14,7 @@ import numpy as np
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.distributions.exponential import Exponential
 from rework_pysatl_mpest.optimizers import Optimizer
-
-from ...utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 NUMERICAL_TOLERANCE = 0.33
 
@@ -23,7 +22,7 @@ NUMERICAL_TOLERANCE = 0.33
 @singledispatch
 def q_function_strategy(
     component: ContinuousDistribution[DType], X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
-) -> dict[str, float]:
+) -> dict[str, DType]:
     """Generic Q-function optimization strategy for continuous distributions.
 
     This function provides a general-purpose parameter estimation strategy that

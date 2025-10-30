@@ -1,12 +1,13 @@
 """Module that provides a :class:`rework_pysatl_mpest.estimators.iterative.Pipeline`
 stopping strategy based on the number of iterations"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from ....utils.typings import DType
+from rework_pysatl_mpest.typings import DType
+
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
 

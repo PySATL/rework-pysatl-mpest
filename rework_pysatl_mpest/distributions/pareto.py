@@ -10,7 +10,7 @@ from scipy.stats import pareto
 
 from rework_pysatl_mpest.core.parameter import Parameter
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 
 class Pareto(ContinuousDistribution[DType]):
@@ -79,8 +79,11 @@ class Pareto(ContinuousDistribution[DType]):
         :attr:`scale` parameter. The function is zero for :math:`x < \\beta`.
         """
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
 
-        return np.where(self.scale <= X, (self.shape * (self.scale**self.shape)) / X ** (self.shape + 1), 0.0)
+        return np.where(
+            self.scale <= X, (self.shape * (self.scale**self.shape)) / X ** (self.shape + DTYPE(1)), DTYPE(0.0)
+        )
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -103,8 +106,9 @@ class Pareto(ContinuousDistribution[DType]):
         """
 
         P = np.asarray(P, dtype=self.dtype)
+        DTYPE = self.dtype
 
-        return np.where((P >= 0) & (P <= 1), self.scale * (1 - P) ** (-1.0 / self.shape), np.nan)
+        return np.where((P >= 0) & (P <= 1), self.scale * (DTYPE(1) - P) ** (DTYPE(-1.0) / self.shape), DTYPE(np.nan))
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -130,10 +134,12 @@ class Pareto(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         return np.where(
             self.scale <= X,
-            np.log(self.shape) + self.shape * np.log(self.scale) - (1 + self.shape) * np.log(X),
-            -np.inf,
+            np.log(self.shape) + self.shape * np.log(self.scale) - (DTYPE(1) + self.shape) * np.log(X),
+            DTYPE(-np.inf),
         )
 
     def _dlog_shape(self, X):
@@ -144,7 +150,7 @@ class Pareto(ContinuousDistribution[DType]):
         .. math::
 
             \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\alpha} =
-            \\ln \\beta - \\ln x
+            \\frac{1}{\\alpha} + \\ln \\beta - \\ln x
 
         where :math:`\\alpha` is the :attr:`shape` parameter and :math:`\\beta` is the
         :attr:`scale` parameter.
@@ -161,7 +167,9 @@ class Pareto(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        return np.where(self.scale <= X, 1.0 / self.shape + np.log(self.scale) - np.log(X), 0.0)
+        DTYPE = self.dtype
+
+        return np.where(self.scale <= X, DTYPE(1.0) / self.shape + np.log(self.scale) - np.log(X), DTYPE(0.0))
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`scale` parameter.
@@ -187,7 +195,9 @@ class Pareto(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        return np.where(self.scale <= X, self.shape / self.scale, 0.0)
+        DTYPE = self.dtype
+
+        return np.where(self.scale <= X, self.shape / self.scale, DTYPE(0.0))
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -218,7 +228,7 @@ class Pareto(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 

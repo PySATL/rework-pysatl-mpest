@@ -1,6 +1,6 @@
 """A module that provides a Powell optimizer using the SciPy library."""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -8,6 +8,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 from typing import Callable
 
 from scipy.optimize import minimize
+
+from rework_pysatl_mpest.typings import DType
 
 from .optimizer import Optimizer
 
@@ -29,7 +31,7 @@ class ScipyPowell(Optimizer):
         minimize
     """
 
-    def minimize(self, target: Callable, params: list[float]) -> list[float]:
+    def minimize(self, target: Callable, params: list[DType]) -> list[DType]:
         """Minimizes a target function using Powell's method.
 
         This method leverages the `scipy.optimize.minimize` function to find

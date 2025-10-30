@@ -6,7 +6,7 @@ for all data passed between different steps of a :class:`Pipeline`, such as
 optimized, and other metadata required for the estimation process.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -15,8 +15,9 @@ from typing import Generic, Optional
 
 from numpy.typing import NDArray
 
+from rework_pysatl_mpest.typings import DType
+
 from ...core import MixtureModel
-from ...utils.typings import DType
 
 
 @dataclass

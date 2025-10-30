@@ -12,6 +12,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Normal
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import kstest, norm
 
@@ -228,3 +229,10 @@ class TestNormalGenerate:
         samples = dist.generate(size=size)
         ks_statistic, p_value = kstest(samples, "norm", args=(loc, scale))
         assert p_value > expected_p_value
+
+
+class TestNormalDType(DTypeHandlingMixin):
+    distribution_class = Normal
+
+    def __init__(self):
+        self.default_params = {"loc": 0.0, "scale": 1.0}

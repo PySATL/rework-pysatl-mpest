@@ -8,8 +8,9 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.stats import uniform
 
+from rework_pysatl_mpest.typings import DType
+
 from ..core import Parameter
-from ..utils.typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
@@ -101,8 +102,12 @@ class Uniform(ContinuousDistribution[DType]):
             The PDF values corresponding to each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         return np.where(
-            (self.left_border <= X) & (self.right_border >= X), 1.0 / (self.right_border - self.left_border), 0.0
+            (self.left_border <= X) & (self.right_border >= X),
+            DTYPE(1.0) / (self.right_border - self.left_border),
+            DTYPE(0.0),
         )
 
     def ppf(self, P):
@@ -128,7 +133,11 @@ class Uniform(ContinuousDistribution[DType]):
             The PPF values corresponding to each probability in :attr:`P`.
         """
         P = np.asarray(P, dtype=self.dtype)
-        return np.where((P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), np.nan)
+        DTYPE = self.dtype
+
+        return np.where(
+            (P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), DTYPE(np.nan)
+        )
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -154,9 +163,11 @@ class Uniform(ContinuousDistribution[DType]):
             The log-PDF values corresponding to each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_range = (self.left_border <= X) & (self.right_border >= X)
         valid_dist = self.right_border > self.left_border
-        return np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), -np.inf)
+        return np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), DTYPE(-np.inf))
 
     def _dlog_left_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`left_border` parameter.
@@ -170,8 +181,10 @@ class Uniform(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        return np.where(in_range, 1.0 / (self.right_border - self.left_border), 0.0)
+        return np.where(in_range, DTYPE(1.0) / (self.right_border - self.left_border), DTYPE(0.0))
 
     def _dlog_right_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`right_border` parameter.
@@ -185,8 +198,10 @@ class Uniform(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        return np.where(in_range, -1.0 / (self.right_border - self.left_border), 0.0)
+        return np.where(in_range, DTYPE(-1.0) / (self.right_border - self.left_border), DTYPE(0.0))
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -217,7 +232,7 @@ class Uniform(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 

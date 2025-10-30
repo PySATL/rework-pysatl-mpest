@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.stats import cauchy
 
-from rework_pysatl_mpest.utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 from ..core import Parameter
 from .continuous_dist import ContinuousDistribution
@@ -88,7 +88,9 @@ class Cauchy(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        return 1.0 / (np.pi * self.scale * (1.0 + ((X - self.loc) / self.scale) ** 2))
+        DTYPE = self.dtype
+
+        return DTYPE(1.0) / (DTYPE(np.pi) * self.scale * (DTYPE(1.0) + ((X - self.loc) / self.scale) ** 2))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -113,14 +115,16 @@ class Cauchy(ContinuousDistribution[DType]):
             The PPF values corresponding to each probability in :attr:`P`.
         """
         P = np.asarray(P, dtype=self.dtype)
+        DTYPE = self.dtype
+
         return np.where(
             (P >= 0) & (P <= 1),
             np.where(
                 (P == 0) | (P == 1),
-                np.where(P == 1, np.inf, -np.inf),
-                self.loc + self.scale * np.tan(np.pi * (P - 0.5)),
+                np.where(P == 1, DTYPE(np.inf), DTYPE(-np.inf)),
+                self.loc + self.scale * np.tan(DTYPE(np.pi) * (P - DTYPE(0.5))),
             ),
-            np.nan,
+            DTYPE(np.nan),
         )
 
     def lpdf(self, X):
@@ -146,7 +150,11 @@ class Cauchy(ContinuousDistribution[DType]):
             The log-PDF values corresponding to each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
-        return np.log(1.0) - np.log(np.pi * self.scale * (1.0 + ((X - self.loc) / self.scale) ** 2))
+        DTYPE = self.dtype
+
+        return np.log(DTYPE(1.0)) - np.log(
+            DTYPE(np.pi) * self.scale * (DTYPE(1.0) + ((X - self.loc) / self.scale) ** 2)
+        )
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
@@ -173,8 +181,12 @@ class Cauchy(ContinuousDistribution[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         return np.where(
-            self.loc <= X, (2 * X - 2 * self.loc) / (self.scale**2 + X**2 - 2 * self.loc * X + self.loc**2), 0.0
+            self.loc <= X,
+            (DTYPE(2) * X - DTYPE(2) * self.loc) / (self.scale**2 + X**2 - DTYPE(2) * self.loc * X + self.loc**2),
+            DTYPE(0.0),
         )
 
     def _dlog_scale(self, X):
@@ -201,11 +213,13 @@ class Cauchy(ContinuousDistribution[DType]):
             The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
+        DTYPE = self.dtype
+
         return np.where(
             self.loc <= X,
-            (-(self.scale**2) + X**2 - 2 * self.loc * X + self.loc**2)
-            / (self.scale**3 + self.scale * (X**2) - 2 * self.loc * self.scale * X + self.scale * self.loc**2),
-            0.0,
+            (-(self.scale**2) + X**2 - DTYPE(2) * self.loc * X + self.loc**2)
+            / (self.scale**3 + self.scale * (X**2) - DTYPE(2) * self.loc * self.scale * X + self.scale * self.loc**2),
+            DTYPE(0.0),
         )
 
     def log_gradients(self, X):
@@ -236,7 +250,7 @@ class Cauchy(ContinuousDistribution[DType]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 

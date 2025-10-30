@@ -13,7 +13,7 @@ from typing import Generic
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from ..utils.typings import DType
+from rework_pysatl_mpest.typings import DType
 
 
 class ContinuousDistribution(ABC, Generic[DType]):
@@ -140,7 +140,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         self._fixed_params.discard(name)
 
-    def get_params_vector(self, param_names: Sequence[str]) -> list[float]:
+    def get_params_vector(self, param_names: Sequence[str]) -> list[DType]:
         """Retrieves specified parameter values as a list.
 
         Parameters
@@ -167,7 +167,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         return [getattr(self, name) for name in param_names]
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[float]):
+    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[DType]):
         """Sets parameter values from a sequence of floats.
 
         Updates the distribution's parameters using values from the provided
@@ -306,6 +306,31 @@ class ContinuousDistribution(ABC, Generic[DType]):
             A NumPy array containing the generated samples.
         """
 
+    def _to_dtype(self, new_dtype: type[DType]) -> "ContinuousDistribution[DType]":
+        """Creates a copy of the distribution with a new data type.
+
+        Parameters
+        ----------
+        new_dtype : type[DType]
+            The target NumPy data type for the new distribution instance.
+
+        Returns
+        -------
+        ContinuousDistribution[DType]
+            A new distribution instance with all parameters converted to the
+            specified `new_dtype`, or the original instance if the `dtype` is
+            unchanged.
+        """
+        if self._dtype is new_dtype:
+            return self
+
+        params_dict = {p: new_dtype(getattr(self, p)) for p in self.params}
+
+        new_instance = self.__class__(**params_dict, dtype=new_dtype)
+        new_instance._fixed_params = self._fixed_params.copy()
+
+        return new_instance
+
     def __copy__(self) -> "ContinuousDistribution[DType]":
         """Creates a copy of the distribution instance.
 
@@ -316,8 +341,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
         """
         params_dict = {p: getattr(self, p) for p in self.params}
 
-        new_instance = self.__class__(**params_dict)
-        new_instance._dtype = self._dtype
+        new_instance = self.__class__(**params_dict, dtype=self.dtype)
         new_instance._fixed_params = self._fixed_params.copy()
 
         return new_instance

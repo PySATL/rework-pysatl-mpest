@@ -15,6 +15,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Beta
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import beta, kstest
 
@@ -422,3 +423,10 @@ class TestBetaGenerate:
         ks_statistic, p_value = kstest(samples, "beta", args=(shape1, shape2, lower_bound, upper_bound - lower_bound))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+class TestBetaDType(DTypeHandlingMixin):
+    distribution_class = Beta
+
+    def __init__(self):
+        self.default_params = {"alpha": 1.0, "beta": 2.0, "lower_bound": -1.0, "upper_bound": 1.0}

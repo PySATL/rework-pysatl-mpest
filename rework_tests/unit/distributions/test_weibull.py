@@ -13,6 +13,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Weibull
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.special import gamma
 from scipy.stats import kstest, weibull_min
@@ -335,3 +336,10 @@ class TestWeibullGenerate:
         # args for scipy's weibull_min are (shape, loc, scale)
         ks_statistic, p_value = kstest(samples, "weibull_min", args=(shape, loc, scale))
         assert p_value > expected_p_value
+
+
+class TestWeibullDType(DTypeHandlingMixin):
+    distribution_class = Weibull
+
+    def __init__(self):
+        self.default_params = {"shape": 2.0, "loc": 0.0, "scale": 1.0}

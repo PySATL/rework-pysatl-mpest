@@ -1,6 +1,6 @@
 """Tests for PriorThresholdPruner"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -19,8 +19,8 @@ from rework_pysatl_mpest.estimators.iterative import PipelineState, PriorThresho
 class DummyDistribution(ContinuousDistribution):
     """A simple mock implementation of ContinuousDistribution for testing purposes."""
 
-    def __init__(self, name: str):
-        super().__init__()
+    def __init__(self, name: str, dtype: np.floating | None = None):
+        super().__init__(dtype=dtype)
         self._name = name
 
     @property
@@ -47,7 +47,7 @@ class DummyDistribution(ContinuousDistribution):
         pass
 
     def __repr__(self):
-        return f"DummyDistribution(name='{self.name}')"
+        return f"DummyDistribution(name='{self.name}, dtype='{self.dtype}')"
 
 
 # --- Fixtures ---
