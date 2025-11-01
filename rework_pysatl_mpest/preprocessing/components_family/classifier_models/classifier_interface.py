@@ -9,20 +9,18 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
-class ClassifierInterface(ABC):
+class IClassifiere(ABC):
     """Class representing an interface for classification models"""
 
-    def __init__(self) -> None:
-        self.is_fitted = False
-
+    @property
     @abstractmethod
-    def _load_model(self, model_path: str) -> None:
-        """An abstract method for implementing model loading"""
+    def is_fitted(self) -> bool:
+        """A property indicating whether the model has been trained"""
 
     @abstractmethod
     def predict(self, criterions: dict[str, float]) -> np.ndarray:
         """Abstract method for implementing a model prediction"""
 
+    @abstractmethod
     def load_model(self, model_path: str) -> None:
-        self._load_model(model_path)
-        self.is_fitted = True
+        """An abstract method for implementing model loading"""

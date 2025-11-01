@@ -13,7 +13,7 @@ from rework_pysatl_mpest.preprocessing.components_family.classifier_criterions i
     MixtureClassifierCriterions,
 )
 from rework_pysatl_mpest.preprocessing.components_family.classifier_models import (
-    ClassifierInterface,
+    IClassifiere,
 )
 from rework_pysatl_mpest.preprocessing.utils import Distribution
 from sklearn.preprocessing import LabelEncoder
@@ -25,7 +25,7 @@ class MixtureClassifierModel:
 
     Parameters
     ----------
-    :model:         ClassifierInterface               — Classifier Model
+    :model:         IClassifiere                      — Classifier Model
     :model_path:    str                               — Path to model folder
     :label_path:    str                               — Path to label folder
     :criterions:    MixtureClassifierCriterions       — Mixture Classifier Criterions
@@ -34,7 +34,7 @@ class MixtureClassifierModel:
 
     def __init__(
         self,
-        model: ClassifierInterface,
+        model: IClassifiere,
         model_link: str | None,
         model_path: str,
         labels_path: str,
