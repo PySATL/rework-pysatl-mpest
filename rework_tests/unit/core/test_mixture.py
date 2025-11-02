@@ -521,6 +521,7 @@ class TestMixtureModelComparison:
         assert model.n_components == expected_n_components
         assert old_hash != new_hash
 
+
 class TestMixtureModelDTypeHandling:
     """Tests related to dtype handling and type casting in MixtureModel."""
 
@@ -585,7 +586,7 @@ class TestMixtureModelDTypeHandling:
         assert isinstance(loglik, target_dtype)
 
     def test_generate_empty_returns_array_with_correct_dtype(self):
-        """Проверяет dtype пустого массива из generate(0)."""
+        """Tests that checks dtype empty array from generation(0)."""
         target_dtype = np.float32
         mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
 
