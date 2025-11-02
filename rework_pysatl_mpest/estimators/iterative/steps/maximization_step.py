@@ -85,14 +85,14 @@ class MaximizationStep(PipelineStep[DType]):
 
         return [ExpectationStep]
 
-    def _update_components_params(self, component: ContinuousDistribution, params: dict[str, float]):
+    def _update_components_params(self, component: ContinuousDistribution, params: dict[str, DType]):
         """Helper method to update parameters for a single component.
 
         Parameters
         ----------
         component : ContinuousDistribution
             The component whose parameters are to be updated.
-        params : dict[str, float]
+        params : dict[str, DType]
             A dictionary mapping parameter names to their new optimized values.
         """
 
@@ -130,6 +130,8 @@ class MaximizationStep(PipelineStep[DType]):
         results = []
         curr_mixture = state.curr_mixture
 
+        DTYPE = curr_mixture.dtype
+
         for block in self.blocks:
             strategy = self._strategies[block.maximization_strategy]
             component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
@@ -141,6 +143,6 @@ class MaximizationStep(PipelineStep[DType]):
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]
-        curr_mixture.log_weights = np.log(new_weights + 1e-30)
+        curr_mixture.log_weights = np.log(new_weights + DTYPE(1e-30))
 
         return state

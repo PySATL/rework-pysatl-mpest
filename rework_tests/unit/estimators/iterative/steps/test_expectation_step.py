@@ -1,6 +1,6 @@
 """Tests for ExpectationStep"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -30,6 +30,7 @@ def mock_mixture(mocker):
     mixture = mocker.create_autospec(MixtureModel, instance=True)
     mixture.components = (mock_component_1, mock_component_2)
     mixture.log_weights = np.log([0.7, 0.3])
+    mixture.dtype = np.float64
 
     return mixture
 
@@ -44,6 +45,40 @@ def initial_pipeline_state(mock_mixture) -> PipelineState:
         H=None,
         prev_mixture=None,
         curr_mixture=mock_mixture,
+        error=None,
+    )
+
+
+@pytest.fixture
+def mock_mixture_float32(mocker):
+    """
+    Creates a mock MixtureModel object with two components using pytest-mock and dtype float32.
+    """
+
+    mock_component_1 = mocker.MagicMock()
+    mock_component_2 = mocker.MagicMock()
+
+    mock_component_1.lpdf.return_value = np.log([0.6, 0.8], dtype=np.float32)
+    mock_component_2.lpdf.return_value = np.log([0.1, 0.3], dtype=np.float32)
+
+    mixture = mocker.create_autospec(MixtureModel, instance=True)
+    mixture.components = (mock_component_1, mock_component_2)
+    mixture.log_weights = np.log([0.7, 0.3])
+    mixture.dtype = np.float32
+
+    return mixture
+
+
+@pytest.fixture
+def initial_pipeline_state_float32(mock_mixture_float32) -> PipelineState:
+    """
+    Creates an initial PipelineState for use in tests with type of input data(e.g. 'X') if float32.
+    """
+    return PipelineState(
+        X=np.array([[1], [2]], dtype=np.float32),
+        H=None,
+        prev_mixture=None,
+        curr_mixture=mock_mixture_float32,
         error=None,
     )
 
@@ -149,3 +184,17 @@ def test_run_returns_state_and_modifies_only_h(initial_pipeline_state):
         "`prev_mixture` object reference should not be changed"
     )
     assert result_state.error is original_error_ref, "`error` object reference should not be changed"
+
+
+def test_h_matrix_dtype_matches_mixture_dtype(initial_pipeline_state_float32):
+    """
+    Verifies that the H matrix computed by the `run` method has the same dtype
+    as the input mixture model.
+    """
+
+    state = initial_pipeline_state_float32
+    step = ExpectationStep(is_soft=False)
+
+    result_state = step.run(state)
+
+    assert result_state.H.dtype == np.float32

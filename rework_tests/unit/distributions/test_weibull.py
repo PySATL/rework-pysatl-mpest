@@ -6,6 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import random
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -97,6 +98,7 @@ class TestWeibullPDF:
     @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-6, 1e6))
     def test_pdf_against_scipy(self, shape, loc, scale, x):
         """Compares the custom PDF implementation against scipy's implementation."""
+        assume(x > loc)
 
         dist = Weibull(shape=shape, loc=loc, scale=scale)
         custom_pdf = dist.pdf(x)
@@ -108,7 +110,7 @@ class TestWeibullPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
 
         dist = Weibull(shape=shape, loc=loc, scale=scale)
-        integral, error = quad(dist.pdf, loc, np.inf)
+        integral, error = quad(lambda x: dist.pdf(x).item(), loc, np.inf)
         np.testing.assert_allclose(1.0, integral, atol=1e-6)
 
     @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(max_value=-1e6, allow_infinity=False))
@@ -273,6 +275,23 @@ class TestWeibullGradients:
         if "shape" in expected_params:
             np.testing.assert_allclose(gradients[:, sorted_params.index("shape")], dist._dlog_shape(x))
 
+    @given(
+        shape=st_shape,
+        loc=st_loc,
+        scale=st_scale,
+        x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)),
+    )
+    def test_dlog_methods_returns_correct_dtype(self, shape, loc, scale, x):
+        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
+
+        assume(np.all(x > loc + self.h))
+
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=np.float32)
+
+        assert dist._dlog_shape(x).dtype == np.float32
+        assert dist._dlog_loc(x).dtype == np.float32
+        assert dist._dlog_scale(x).dtype == np.float32
+
 
 class TestWeibullGenerate:
     """Tests for the generate method."""
@@ -340,6 +359,13 @@ class TestWeibullGenerate:
 
 class TestWeibullDType(DTypeHandlingMixin):
     distribution_class = Weibull
+    default_params: ClassVar[dict] = {"shape": 2.0, "loc": 0.0, "scale": 1.0}
 
-    def __init__(self):
-        self.default_params = {"shape": 2.0, "loc": 0.0, "scale": 1.0}
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_methods_taking_x_return_correct_dtype(self, method_name, x_data):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def test_ppf_returns_correct_dtype(self, p_data):
+        self.check_ppf_returns_correct_dtype(p_data)

@@ -24,7 +24,7 @@ def match_clusters_for_models_log_likelihood(
     estimation_strategies: list[Callable],
     min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
-) -> tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]:
+) -> tuple[list[ContinuousDistribution[DType]], list[dict[str, DType]], list[DType]]:
     """Matches clusters to models using weighted log-likelihood criteria.
 
     This function assigns each distribution model to the cluster that maximizes
@@ -52,7 +52,7 @@ def match_clusters_for_models_log_likelihood(
 
     Returns
     -------
-    tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]
+    tuple[list[ContinuousDistribution[DType]], list[dict[str, DType]], list[DType]]
         A tuple containing:
 
         - The original list of models
@@ -85,6 +85,8 @@ def match_clusters_for_models_log_likelihood(
     n_clusters = H.shape[1]
     n_models = len(models)
 
+    DTYPE = models[0].dtype
+
     if len(estimation_strategies) != n_models:
         raise ValueError("Number of estimation functions must match number of models")
 
@@ -96,7 +98,7 @@ def match_clusters_for_models_log_likelihood(
     valid_clusters = [k for k in range(n_clusters) if cluster_weights[k] >= min_samples]
     if len(valid_clusters) != n_models:
         default_params: list[dict] = [{} for _ in range(n_models)]
-        equal_weights = [1.0 / n_models] * n_models
+        equal_weights = [DTYPE(1.0) / DTYPE(n_models)] * n_models
         return models, default_params, equal_weights
 
     used_clusters = set()
@@ -104,7 +106,7 @@ def match_clusters_for_models_log_likelihood(
     for i, (model, estimation_func) in enumerate(zip(models, estimation_strategies)):
         best_score = -np.inf
         best_params = {}
-        best_cluster_weight = 0.0
+        best_cluster_weight = DTYPE(0.0)
         best_cluster = None
         temp_model = copy(model)
         default_params_names, default_params_values = (
@@ -122,7 +124,7 @@ def match_clusters_for_models_log_likelihood(
             param_values = new_params.values()
             temp_model.set_params_from_vector(param_names, param_values)
 
-            log_probs = np.clip(temp_model.lpdf(X), -1e9, -1e-9)
+            log_probs = np.clip(temp_model.lpdf(X), DTYPE(-1e9), DTYPE(-1e-9))
             weighted_log_likelihood = np.sum(H_k * log_probs)
 
             effective_n = cluster_weights[k]
@@ -131,14 +133,14 @@ def match_clusters_for_models_log_likelihood(
             if score > best_score:
                 best_score = score
                 best_params = new_params
-                best_cluster_weight = cluster_weights[k] / len(X)
+                best_cluster_weight = cluster_weights[k] / DTYPE(len(X))
                 best_cluster = k
 
             temp_model.set_params_from_vector(default_params_names, default_params_values)
 
         used_clusters.add(best_cluster)
         updated_params_list.append(best_params)
-        model_weights.append(float(best_cluster_weight))
+        model_weights.append(best_cluster_weight)
 
     return models, updated_params_list, model_weights
 
@@ -150,7 +152,7 @@ def match_clusters_for_models_akaike(
     estimation_strategies: list[Callable],
     min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
-) -> tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]:
+) -> tuple[list[ContinuousDistribution[DType]], list[dict[str, DType]], list[DType]]:
     """Matches clusters to models using Akaike Information Criterion (AIC).
 
     This function evaluates all possible permutations of cluster-model assignments
@@ -177,7 +179,7 @@ def match_clusters_for_models_akaike(
 
     Returns
     -------
-    tuple[list[ContinuousDistribution[DType]], list[dict[str, float]], list[float]]
+    tuple[list[ContinuousDistribution[DType]], list[dict[str, DType]], list[DType]]
         A tuple containing:
 
         - The original list of models
@@ -211,6 +213,8 @@ def match_clusters_for_models_akaike(
     if len(estimation_strategies) != n_models:
         raise ValueError("Number of estimation functions must match number of models")
 
+    DTYPE = models[0].dtype
+
     aic_scores_dict = {}
 
     cluster_weights = np.sum(H, axis=0)
@@ -218,7 +222,7 @@ def match_clusters_for_models_akaike(
 
     if len(valid_clusters) != n_models:
         default_params: list[dict] = [{} for _ in range(n_models)]
-        equal_weights = [1.0 / n_models] * n_models
+        equal_weights = [DTYPE(1.0) / DTYPE(n_models)] * n_models
         return models, default_params, equal_weights
 
     for i, (model, estimation_func) in enumerate(zip(models, estimation_strategies)):
@@ -235,18 +239,18 @@ def match_clusters_for_models_akaike(
             param_values = new_params.values()
             temp_model.set_params_from_vector(param_names, param_values)
 
-            log_probs = np.clip(temp_model.lpdf(X), -1e9, -1e-9)
+            log_probs = np.clip(temp_model.lpdf(X), DTYPE(-1e9), DTYPE(-1e-9))
             weighted_log_likelihood = np.sum(H_k * log_probs)
 
             k_params = len(model.params)
 
-            aic_score = 2 * k_params - 2 * weighted_log_likelihood
+            aic_score = DTYPE(2) * k_params - DTYPE(2) * weighted_log_likelihood
 
             key = f"{i}_{k}"
             aic_scores_dict[key] = {
                 "aic_score": aic_score,
                 "params": new_params,
-                "cluster_weight": cluster_weights[k] / len(X),
+                "cluster_weight": cluster_weights[k] / DTYPE(len(X)),
                 "model_idx": i,
                 "cluster_idx": k,
             }

@@ -7,6 +7,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import random
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -139,7 +140,7 @@ class TestParetoPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
 
         dist = Pareto(shape=shape, scale=scale)
-        integral, error = quad(dist.pdf, scale, np.inf, epsabs=1e-10, epsrel=1e-10, limit=100)
+        integral, error = quad(lambda x: dist.pdf(x).item(), scale, np.inf, epsabs=1e-10, epsrel=1e-10, limit=100)
         assert np.isfinite(integral), f"Integral diverged: {integral}"
         np.testing.assert_allclose(1.0, integral, rtol=1e-8, atol=1e-10)
 
@@ -297,6 +298,18 @@ class TestParetoGradients:
             idx = sorted(expected_params).index("scale")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_scale(x))
 
+    @settings(suppress_health_check=[HealthCheck.filter_too_much])
+    @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
+    def test_dlog_methods_returns_correct_dtype(self, shape, scale, x):
+        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
+
+        assume(np.all(x > scale + self.h))
+
+        dist = Pareto(shape=shape, scale=scale, dtype=np.float32)
+
+        assert dist._dlog_shape(x).dtype == np.float32
+        assert dist._dlog_scale(x).dtype == np.float32
+
 
 class TestParetoGenerate:
     """Tests for the generate method."""
@@ -363,6 +376,13 @@ class TestParetoGenerate:
 
 class TestParetoDType(DTypeHandlingMixin):
     distribution_class = Pareto
+    default_params: ClassVar[dict] = {"shape": 1.0, "scale": 2.0}
 
-    def __init__(self):
-        self.default_params = {"shape": 1.0, "scale": 2.0}
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_methods_taking_x_return_correct_dtype(self, method_name, x_data):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def test_ppf_returns_correct_dtype(self, p_data):
+        self.check_ppf_returns_correct_dtype(p_data)

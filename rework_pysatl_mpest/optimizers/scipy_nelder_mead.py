@@ -7,6 +7,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from typing import Callable
 
+import numpy as np
 from scipy.optimize import minimize
 
 from rework_pysatl_mpest.typings import DType
@@ -54,4 +55,6 @@ class ScipyNelderMead(Optimizer):
             function, as found by the Nelder-Mead algorithm.
         """
 
-        return list(minimize(target, params, method="Nelder-Mead").x)
+        DTYPE = params[0].dtype
+
+        return list(np.asarray(minimize(target, params, method="Nelder-Mead").x, dtype=DTYPE))

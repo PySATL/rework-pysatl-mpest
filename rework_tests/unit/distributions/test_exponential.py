@@ -6,6 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import random
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -91,6 +92,8 @@ class TestExponentialPDF:
     def test_pdf_against_scipy(self, loc, rate, x):
         """Compares the custom PDF implementation against scipy's implementation."""
 
+        assume(x > loc)
+
         dist = Exponential(loc=loc, rate=rate)
         custom_pdf = dist.pdf(x)
         scipy_pdf = expon.pdf(x, loc=loc, scale=1 / rate)
@@ -101,7 +104,7 @@ class TestExponentialPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
 
         dist = Exponential(loc=loc, rate=rate)
-        integral, error = quad(dist.pdf, loc, np.inf)
+        integral, error = quad(lambda x: dist.pdf(x).item(), loc, np.inf)
         np.testing.assert_allclose(1.0, integral)
 
     @given(loc=st_loc, rate=st_rate, x=st.floats(max_value=-1e6, allow_infinity=False))
@@ -128,6 +131,8 @@ class TestExponentialLPDF:
     @given(loc=st_loc, rate=st_rate, x=st.floats(1e-6, 1e6))
     def test_lpdf_against_scipy(self, loc, rate, x):
         """Compares the custom LPDF implementation against scipy's implementation."""
+
+        assume(x > loc)
 
         dist = Exponential(loc=loc, rate=rate)
         custom_lpdf = dist.lpdf(x)
@@ -239,6 +244,17 @@ class TestExponentialGradients:
             idx = sorted(expected_params).index("rate")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_rate(x))
 
+    @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
+    def test_dlog_methods_returns_correct_dtype(self, loc, rate, x):
+        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
+
+        assume(np.all(x > (loc + self.h)))
+
+        dist = Exponential(loc=loc, rate=rate, dtype=np.float32)
+
+        assert dist._dlog_loc(x).dtype == np.float32
+        assert dist._dlog_rate(x).dtype == np.float32
+
 
 class TestExponentialGenerate:
     """Tests for the generate method."""
@@ -305,6 +321,13 @@ class TestExponentialGenerate:
 
 class TestExponentialDType(DTypeHandlingMixin):
     distribution_class = Exponential
+    default_params: ClassVar[dict] = {"loc": 0.0, "rate": 1.0}
 
-    def __init__(self):
-        self.default_params = {"loc": 0.0, "rate": 1.0}
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_methods_taking_x_return_correct_dtype(self, method_name, x_data):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def test_ppf_returns_correct_dtype(self, p_data):
+        self.check_ppf_returns_correct_dtype(p_data)

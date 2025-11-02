@@ -5,6 +5,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import random
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -107,7 +108,7 @@ class TestUniformPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border)
-        integral, error = quad(dist.pdf, left_border, right_border)
+        integral, error = quad(lambda x: dist.pdf(x).item(), left_border, right_border)
         np.testing.assert_allclose(1.0, integral)
 
     @given(borders=st_valid_border(), x=st.floats(max_value=-1e9, allow_infinity=False))
@@ -253,6 +254,18 @@ class TestUniformGradients:
             idx = sorted(expected_params).index("right_border")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_right_border(x))
 
+    @given(input_data=st_valid_grad_input())
+    def test_dlog_methods_returns_correct_dtype(self, input_data):
+        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
+
+        borders, x = input_data
+        left_border, right_border = borders
+
+        dist = Uniform(left_border=left_border, right_border=right_border, dtype=np.float32)
+
+        assert dist._dlog_left_border(x).dtype == np.float32
+        assert dist._dlog_right_border(x).dtype == np.float32
+
 
 class TestUniformGenerate:
     """Tests for the generate method."""
@@ -319,6 +332,13 @@ class TestUniformGenerate:
 
 class TestUniformDType(DTypeHandlingMixin):
     distribution_class = Uniform
+    default_params: ClassVar[dict] = {"left_border": 0.0, "right_border": 1.0}
 
-    def __init__(self):
-        self.default_params = {"left_border": 0.0, "right_border": 1.0}
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_methods_taking_x_return_correct_dtype(self, method_name, x_data):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def test_ppf_returns_correct_dtype(self, p_data):
+        self.check_ppf_returns_correct_dtype(p_data)

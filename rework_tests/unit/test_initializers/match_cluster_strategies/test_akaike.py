@@ -1,6 +1,6 @@
 """A module that provides tests for cluster match strategy with Akaike information criterion"""
 
-__author__ = "Viktor Khanukaev"
+__author__ = "Viktor Khanukaev, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -8,6 +8,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import pytest
+from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.initializers.cluster_match_strategy import (
     match_clusters_for_models_akaike,
@@ -24,6 +25,7 @@ class TestMatchClustersForModelsAkaike:
             model.params = {"param1", "param2"}
             model.set_params_from_vector = Mock()
             model.lpdf = Mock(return_value=np.array([-1.0, -2.0, -3.0]))
+            model.dtype = np.float64
         return models
 
     @pytest.fixture
@@ -99,11 +101,13 @@ class TestMatchClustersForModelsAkaike:
         model1.params = {"a", "b", "c"}
         model1.set_params_from_vector = Mock()
         model1.lpdf.return_value = np.array([-0.5, -1.0, -1.5])
+        model1.dtype = np.float64
 
         model2 = Mock(spec=ContinuousDistribution)
         model2.params = {"x", "y"}
         model2.set_params_from_vector = Mock()
         model2.lpdf.return_value = np.array([-1.0, -2.0, -3.0])
+        model2.dtype = np.float64
 
         models = [model1, model2]
         len_models = len(models)
@@ -126,6 +130,7 @@ class TestMatchClustersForModelsAkaike:
             m.params = {"param"}
             m.set_params_from_vector = Mock()
             m.lpdf.return_value = np.array([-0.5, -1.0, -1.5])
+            m.dtype = np.float64
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]])
@@ -143,6 +148,7 @@ class TestMatchClustersForModelsAkaike:
         model.params = {"p"}
         model.set_params_from_vector = Mock()
         model.lpdf.return_value = np.array([-1.0, -2.0])
+        model.dtype = np.float64
 
         X = np.array([1.0, 2.0])
         H = np.array([[1.0], [1.0]])
@@ -174,6 +180,7 @@ class TestMatchClustersForModelsAkaike:
             model.params = {"param"}
             model.set_params_from_vector = Mock()
             model.lpdf.return_value = np.array([-0.5 - i, -1.0 - i, -1.5 - i])
+            model.dtype = np.float64
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.full((3, 3), 1 / 3)
@@ -207,6 +214,7 @@ class TestMatchClustersForModelsAkaike:
             model.params = {"param"}
             model.set_params_from_vector = Mock()
             model.lpdf.return_value = np.array([-1.0, -2.0, -3.0])
+            model.dtype = np.float64
 
         X = np.array([1.0, 2.0, 3.0])
         H = np.array([[0.5, 0.5], [0.5, 0.5], [0.5, 0.5]])
@@ -218,3 +226,34 @@ class TestMatchClustersForModelsAkaike:
         assert len(params) == len_models
         assert all(p != {} for p in params)
         assert abs(sum(weights) - 1.0) < COMPARISON_CONSTANT
+
+    @pytest.fixture
+    def models_and_data_float32(self):
+        """Provides models, data, and strategies with dtype=np.float32."""
+        dtype = np.float32
+        models = [Exponential(loc=1.0, rate=2.0, dtype=dtype), Exponential(loc=10.0, rate=0.5, dtype=dtype)]
+        X = np.array([1, 2, 11, 12], dtype=dtype)
+        H = np.array([[0.9, 0.1], [0.8, 0.2], [0.1, 0.9], [0.2, 0.8]], dtype=dtype)
+
+        est_funcs = [
+            Mock(return_value={"loc": dtype(1.5), "rate": dtype(1.9)}),
+            Mock(return_value={"loc": dtype(10.5), "rate": dtype(0.4)}),
+        ]
+        return models, X, H, est_funcs
+
+    def test_preserves_dtype_in_outputs(self, models_and_data_float32):
+        """
+        Verifies that the function preserves the dtype (e.g., np.float32)
+        in the returned parameters and weights.
+        """
+        models, X, H, est_funcs = models_and_data_float32
+        expected_dtype = np.float32
+
+        _, params_list, weights_list = match_clusters_for_models_akaike(models, X, H, est_funcs, min_samples=1)
+
+        for params_dict in params_list:
+            for param_name, param_value in params_dict.items():
+                assert isinstance(param_value, expected_dtype)
+
+        for i, weight in enumerate(weights_list):
+            assert isinstance(weight, expected_dtype)

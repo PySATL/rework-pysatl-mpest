@@ -89,6 +89,29 @@ class TestMixtureModelInitialization:
         with pytest.raises(ValueError, match="List of components cannot be an empty"):
             MixtureModel(components=[])
 
+    def test_init_casts_component_dtypes(self):
+        """Tests that the MixtureModel casts all components to its own dtype during initialization."""
+        comp1_f64 = Exponential(loc=0.0, rate=1.0)
+        comp2_f64 = Exponential(loc=5.0, rate=2.0)
+        assert comp1_f64.dtype == np.float64
+
+        target_dtype = np.float32
+        mixture = MixtureModel(components=[comp1_f64, comp2_f64], dtype=target_dtype)
+
+        assert mixture.dtype == target_dtype
+        assert mixture.weights.dtype == target_dtype
+
+        for component in mixture.components:
+            assert component.dtype == target_dtype
+            for param in component.params:
+                assert isinstance(getattr(component, param), target_dtype)
+
+        # Original components have not changed
+        for component in [comp1_f64, comp2_f64]:
+            assert component.dtype == np.float64
+            for param in component.params:
+                assert isinstance(getattr(component, param), np.float64)
+
 
 class TestMixtureModelProperties:
     """Tests for the properties of the MixtureModel class."""
@@ -143,6 +166,14 @@ class TestMixtureModelProperties:
         with pytest.raises(ValueError, match="The length of the new logit vector does not match"):
             mixture_model.log_weights = np.log([0.1, 0.2, 0.7])
 
+    def test_properties_have_correct_dtype(self):
+        """Tests that checks the dtype of the weights and log_weights properties."""
+        target_dtype = np.float32
+        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
+
+        assert mixture.weights.dtype == target_dtype
+        assert mixture.log_weights.dtype == target_dtype
+
 
 class TestMixtureModelModification:
     """Tests for methods that modify the MixtureModel instance."""
@@ -174,6 +205,26 @@ class TestMixtureModelModification:
 
         with pytest.raises(ValueError, match="The weight of the new component must be in the range"):
             mixture_model.add_component(Exponential(10, 3), weight=invalid_weight)
+
+    def test_add_component_casts_dtype(self):
+        """Tests that the add_component method casts the type of the new component to the dtype of the mixture."""
+        comp = Exponential(loc=0.0, rate=1.0)
+        target_dtype = np.float32
+        mixture = MixtureModel(components=[comp], dtype=target_dtype)
+
+        new_comp_f64 = Exponential(loc=10.0, rate=2.0)
+        assert new_comp_f64.dtype == np.float64
+
+        mixture.add_component(new_comp_f64, weight=0.3)
+
+        added_component_in_mixture = mixture.components[-1]
+        assert added_component_in_mixture.dtype == target_dtype
+        assert isinstance(added_component_in_mixture.loc, target_dtype)
+
+        # Original component have not changed
+        assert comp.dtype == np.float64
+        for param in comp.params:
+            assert isinstance(getattr(comp, param), np.float64)
 
     def test_remove_component(self):
         """Tests removing a component and verifies weight renormalization."""
@@ -233,6 +284,18 @@ class TestMixtureModelCalculations:
         assert isinstance(calculated_lpdf, np.ndarray)
         np.testing.assert_allclose(calculated_lpdf, expected_lpdf)
 
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf"])
+    def test_pdf_lpdf_methods_return_correct_dtype(self, method_name: str):
+        """Tests that pdf and lpdf methods return arrays of the correct dtype."""
+        target_dtype = np.float32
+        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
+        method_to_test = getattr(mixture, method_name)
+
+        input_x = np.array([1.0, 2.0, 3.0])
+        result = method_to_test(input_x)
+
+        assert result.dtype == target_dtype
+
     def test_loglikelihood_calculation(self, mixture_model: MixtureModel):
         """Tests that loglikelihood is the sum of LPDF values."""
 
@@ -240,8 +303,17 @@ class TestMixtureModelCalculations:
         expected_loglikelihood = np.sum(mixture_model.lpdf(X))
         calculated_loglikelihood = mixture_model.loglikelihood(X)
 
-        assert isinstance(calculated_loglikelihood, float)
+        assert isinstance(calculated_loglikelihood, np.float64)
         assert np.isclose(calculated_loglikelihood, expected_loglikelihood)
+
+    def test_loglikelihood_returns_numpy_scalar_with_correct_dtype(self):
+        """Tests that checks that loglikelihood returns a NumPy scalar of the correct type."""
+        target_dtype = np.float32
+        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
+
+        loglik = mixture.loglikelihood(np.array([1, 2, 3]))
+
+        assert isinstance(loglik, target_dtype)
 
 
 class TestMixtureModelGenerate:
@@ -297,6 +369,16 @@ class TestMixtureModelGenerate:
         samples_from_c1 = samples[samples < midpoint_between_means]
         proportion_c1 = len(samples_from_c1) / n_samples
         assert proportion_c1 == pytest.approx(weights[0], abs=0.05)
+
+    @pytest.mark.parametrize("size", [0, 10])
+    def test_generate_returns_array_with_correct_dtype(self, size):
+        """Tests that generate returns an array with the correct dtype."""
+        target_dtype = np.float32
+        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
+
+        empty_array = mixture.generate(size=size)
+        assert empty_array.shape == (size,)
+        assert empty_array.dtype == target_dtype
 
 
 class TestMixtureModelDunderMethods:
@@ -520,76 +602,3 @@ class TestMixtureModelComparison:
 
         assert model.n_components == expected_n_components
         assert old_hash != new_hash
-
-
-class TestMixtureModelDTypeHandling:
-    """Tests related to dtype handling and type casting in MixtureModel."""
-
-    def test_init_casts_component_dtypes(self):
-        """Tests that the MixtureModel casts all components to its own dtype during initialization."""
-        comp1_f64 = Exponential(loc=0.0, rate=1.0)
-        comp2_f64 = Exponential(loc=5.0, rate=2.0)
-        assert comp1_f64.dtype == np.float64
-
-        target_dtype = np.float32
-        mixture = MixtureModel(components=[comp1_f64, comp2_f64], dtype=target_dtype)
-
-        assert mixture.dtype == target_dtype
-        assert mixture.weights.dtype == target_dtype
-
-        for component in mixture.components:
-            assert component.dtype == target_dtype
-            for param in component.params:
-                assert isinstance(getattr(component, param), target_dtype)
-
-        # Original components have not changed
-        for component in [comp1_f64, comp2_f64]:
-            assert component.dtype == np.float64
-            for param in component.params:
-                assert isinstance(getattr(component, param), np.float64)
-
-    def test_add_component_casts_dtype(self):
-        """Tests that the add_component method casts the type of the new component to the dtype of the mixture."""
-        comp = Exponential(loc=0.0, rate=1.0)
-        target_dtype = np.float32
-        mixture = MixtureModel(components=[comp], dtype=target_dtype)
-
-        new_comp_f64 = Exponential(loc=10.0, rate=2.0)
-        assert new_comp_f64.dtype == np.float64
-
-        mixture.add_component(new_comp_f64, weight=0.3)
-
-        added_component_in_mixture = mixture.components[-1]
-        assert added_component_in_mixture.dtype == target_dtype
-        assert isinstance(added_component_in_mixture.loc, target_dtype)
-
-        # Original component have not changed
-        assert comp.dtype == np.float64
-        for param in comp.params:
-            assert isinstance(getattr(comp, param), np.float64)
-
-    def test_properties_have_correct_dtype(self):
-        """Tests that checks the dtype of the weights and log_weights properties."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
-
-        assert mixture.weights.dtype == target_dtype
-        assert mixture.log_weights.dtype == target_dtype
-
-    def test_loglikelihood_returns_numpy_scalar_with_correct_dtype(self):
-        """Tests that checks that loglikelihood returns a NumPy scalar of the correct type."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
-
-        loglik = mixture.loglikelihood(np.array([1, 2, 3]))
-
-        assert isinstance(loglik, target_dtype)
-
-    def test_generate_empty_returns_array_with_correct_dtype(self):
-        """Tests that checks dtype empty array from generation(0)."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
-
-        empty_array = mixture.generate(size=0)
-        assert empty_array.shape == (0,)
-        assert empty_array.dtype == target_dtype

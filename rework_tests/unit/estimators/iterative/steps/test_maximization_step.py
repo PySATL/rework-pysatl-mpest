@@ -1,6 +1,6 @@
 """Tests for MaximizationStep"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 from rework_pysatl_mpest.core import MixtureModel
-from rework_pysatl_mpest.distributions import ContinuousDistribution
+from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential, Normal
 from rework_pysatl_mpest.estimators.iterative import (
     ExpectationStep,
     MaximizationStep,
@@ -43,6 +43,7 @@ def mock_mixture(mocker: MockerFixture, mock_components: list) -> MixtureModel:
 
     mixture = mocker.MagicMock(spec=MixtureModel)
     mixture.__getitem__.side_effect = lambda i: mock_components[i]
+    mixture.dtype = np.float64
     return mixture
 
 
@@ -53,6 +54,21 @@ def pipeline_state(mock_mixture: MixtureModel) -> PipelineState:
     X = np.array([[1.0], [2.0], [3.0], [4.0]])
     H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]])
     return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mock_mixture, error=None)
+
+
+@pytest.fixture
+def real_mixture_float32() -> MixtureModel:
+    """Fixture to create a real MixtureModel with dtype=np.float32."""
+    components = [Exponential(loc=1.0, rate=2.0), Normal(loc=10.0, scale=3.0)]
+    return MixtureModel(components=components, weights=[0.4, 0.6], dtype=np.float32)
+
+
+@pytest.fixture
+def pipeline_state_float32(real_mixture_float32: MixtureModel) -> PipelineState:
+    """Fixture to create a PipelineState with dtype=np.float32."""
+    X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=np.float32)
+    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=np.float32)
+    return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=real_mixture_float32, error=None)
 
 
 class TestMaximizationStep:
@@ -238,3 +254,37 @@ class TestMaximizationStep:
         # Assert that parameters were updated for both components
         component1.set_params_from_vector.assert_called_once_with(["rate"], [1.1])
         component0.set_params_from_vector.assert_called_once_with(["loc"], [2.2])
+
+    def test_run_updates_params_and_weights_with_correct_dtype(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        pipeline_state_float32: PipelineState,
+    ):
+        """
+        Verifies that MaximizationStep updates component parameters and mixture weights,
+        preserving the correct dtype (np.float32).
+        """
+        state = pipeline_state_float32
+        expected_dtype = np.float32
+
+        block = OptimizationBlock(
+            component_id=0,
+            params_to_optimize={"loc"},
+            maximization_strategy=MaximizationStrategy.QFUNCTION,
+        )
+        step = MaximizationStep(blocks=[block], optimizer=mock_optimizer)
+
+        mock_strategy = mocker.Mock()
+        expected_new_loc = np.float32(5.5)
+        optimized_params = {"loc": expected_new_loc}
+        mock_strategy.return_value = (0, optimized_params)
+
+        mocker.patch.object(MaximizationStep, "_strategies", {MaximizationStrategy.QFUNCTION: mock_strategy})
+
+        result_state = step.run(state)
+
+        assert isinstance(result_state.curr_mixture.components[0].loc, expected_dtype)
+
+        updated_weights = result_state.curr_mixture.weights
+        assert updated_weights.dtype == expected_dtype

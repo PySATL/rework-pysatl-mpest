@@ -106,7 +106,10 @@ class Beta(ContinuousDistribution[DType]):
 
         return np.where(
             (P >= 0) & (P <= 1),
-            (self.lower_bound + (self.upper_bound - self.lower_bound) * DTYPE(beta_dist.ppf(P, self.alpha, self.beta))),
+            (
+                self.lower_bound
+                + (self.upper_bound - self.lower_bound) * beta_dist.ppf(P, self.alpha, self.beta).astype(DTYPE)
+            ),
             DTYPE(np.nan),
         )
 
@@ -144,7 +147,7 @@ class Beta(ContinuousDistribution[DType]):
 
         Z = (X - self.lower_bound) / (self.upper_bound - self.lower_bound)
 
-        log_pdf_standard = DTYPE(beta_dist.logpdf(Z, self.alpha, self.beta))
+        log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta).astype(DTYPE)
         result = log_pdf_standard - np.log(self.upper_bound - self.lower_bound)
 
         return np.atleast_1d(result)

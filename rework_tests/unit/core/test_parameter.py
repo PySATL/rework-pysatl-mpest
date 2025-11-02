@@ -56,7 +56,7 @@ def owner_instance() -> _OwnerClass:
 
 
 @pytest.fixture
-def owner_instance_with_dtype() -> _OwnerClassWithDType:
+def owner_instance_float32() -> _OwnerClassWithDType:
     """
     Pytest fixture to provide a clean instance of _OwnerClassWithDType for each test.
     """
@@ -207,14 +207,14 @@ def test_can_set_unfixed_parameter_after_fixing_another(owner_instance: _OwnerCl
     assert owner_instance.positive_param == expected_positive_value
 
 
-def test_get_from_instance_with_dtype_returns_correct_type(owner_instance_with_dtype: _OwnerClassWithDType):
+def test_get_from_instance_with_dtype_returns_correct_type(owner_instance_float32: _OwnerClassWithDType):
     """
     Tests that __get__ returns a value of the correct DType when the owner
     instance has a `dtype` attribute.
     """
 
-    positive_value = owner_instance_with_dtype.positive_param
-    any_value = owner_instance_with_dtype.any_param
+    positive_value = owner_instance_float32.positive_param
+    any_value = owner_instance_float32.any_param
 
     assert isinstance(positive_value, np.float32)
     assert isinstance(any_value, np.float32)
@@ -223,15 +223,15 @@ def test_get_from_instance_with_dtype_returns_correct_type(owner_instance_with_d
     assert any_value == np.float32(-5.0)
 
 
-def test_set_and_get_with_dtype_casting(owner_instance_with_dtype: _OwnerClassWithDType):
+def test_set_and_get_with_dtype_casting(owner_instance_float32: _OwnerClassWithDType):
     """
     Tests the full set -> get cycle with dtype casting.
     """
 
     new_positive_value = 123.45
-    owner_instance_with_dtype.positive_param = new_positive_value
+    owner_instance_float32.positive_param = new_positive_value
 
-    retrieved_value = owner_instance_with_dtype.positive_param
+    retrieved_value = owner_instance_float32.positive_param
 
     assert isinstance(retrieved_value, np.float32)
     assert retrieved_value == np.float32(new_positive_value)

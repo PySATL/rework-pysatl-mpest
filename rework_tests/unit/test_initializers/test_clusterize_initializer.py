@@ -1,6 +1,6 @@
 """A module that provides tests for ClusterizeInitializer"""
 
-__author__ = "Viktor Khanukaev"
+__author__ = "Viktor Khanukaev, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 from rework_pysatl_mpest.core.mixture import MixtureModel
+from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.initializers.clusterize_initializer import ClusterizeInitializer
 from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
@@ -371,3 +372,64 @@ class TestClusterizeInitializer:
         assert EstimationStrategy.QFUNCTION in ClusterizeInitializer._estimation_strategies
         assert ClusterMatchStrategy.LIKELIHOOD in ClusterizeInitializer._cluster_match_strategies
         assert ClusterMatchStrategy.AKAIKE in ClusterizeInitializer._cluster_match_strategies
+
+    @pytest.mark.parametrize("is_accurate", [False, True], ids=["fast_init", "accurate_init"])
+    def test_perform_preserves_dtype(self, mocker, is_accurate):
+        """
+        Verifies that the initializer preserves the dtype (e.g., np.float32)
+        throughout the entire process, from input to the final MixtureModel.
+        """
+        expected_dtype = np.float32
+
+        dists_float32 = [
+            Exponential(loc=0.0, rate=1.0, dtype=expected_dtype),
+            Exponential(loc=10.0, rate=0.5, dtype=expected_dtype),
+        ]
+
+        X_float32 = np.array([1, 2, 3, 11, 12, 13], dtype=expected_dtype)
+
+        mock_clusterizer = Mock()
+        initializer = ClusterizeInitializer(is_accurate=is_accurate, is_soft=True, clusterizer=mock_clusterizer)
+
+        mock_h_matrix = np.array(
+            [[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8], [0.3, 0.7]], dtype=expected_dtype
+        )
+        mocker.patch.object(initializer, "_clusterize", return_value=mock_h_matrix)
+
+        if is_accurate:
+            mock_match_strategy = mocker.patch(
+                "rework_pysatl_mpest.initializers.clusterize_initializer.match_clusters_for_models_log_likelihood"
+            )
+            mock_match_strategy.return_value = (
+                dists_float32,
+                [
+                    {"loc": expected_dtype(1.5), "rate": expected_dtype(0.9)},
+                    {"loc": expected_dtype(11.5), "rate": expected_dtype(0.4)},
+                ],
+                [0.5, 0.5],
+            )
+        else:
+            mock_estimation_strategy = mocker.patch(
+                "rework_pysatl_mpest.initializers.clusterize_initializer.q_function_strategy"
+            )
+            mock_estimation_strategy.side_effect = [
+                {"loc": expected_dtype(1.5), "rate": expected_dtype(0.9)},
+                {"loc": expected_dtype(11.5), "rate": expected_dtype(0.4)},
+            ]
+
+        result_mixture = initializer.perform(
+            X=X_float32,
+            dists=dists_float32,
+            cluster_match_strategy=ClusterMatchStrategy.LIKELIHOOD,
+            estimation_strategies=[EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION],
+        )
+
+        assert isinstance(result_mixture, MixtureModel), "Результат должен быть MixtureModel"
+        assert result_mixture.dtype == expected_dtype
+
+        assert result_mixture.weights.dtype == expected_dtype
+
+        for component in result_mixture.components:
+            assert component.dtype == expected_dtype
+            assert isinstance(component.loc, expected_dtype)
+            assert isinstance(component.rate, expected_dtype)

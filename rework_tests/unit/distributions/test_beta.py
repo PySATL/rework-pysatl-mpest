@@ -7,11 +7,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import random
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Beta
@@ -175,7 +176,7 @@ class TestBetaPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
         shape1, shape2, lower_bound, upper_bound = params
         dist = Beta(shape1, shape2, lower_bound, upper_bound)
-        integral, error = quad(dist.pdf, lower_bound, upper_bound)
+        integral, error = quad(lambda x: dist.pdf(x).item(), lower_bound, upper_bound)
         np.testing.assert_allclose(1.0, integral, rtol=1e-6, atol=1e-8)
 
     @given(x=st.floats(min_value=1e-4, max_value=1e2, allow_infinity=False))
@@ -203,6 +204,9 @@ class TestBetaLPDF:
         """Compares the custom LPDF implementation against scipy's implementation."""
 
         shape1, shape2, lower_bound, upper_bound = params
+
+        assume(lower_bound < x < upper_bound)
+
         dist = Beta(shape1, shape2, lower_bound, upper_bound)
         custom_lpdf = dist.lpdf(x)
         scipy_lpdf = beta.logpdf(x, shape1, shape2, loc=lower_bound, scale=upper_bound - lower_bound)
@@ -358,6 +362,18 @@ class TestBetaGradients:
             idx = sorted(expected_params).index("upper_bound")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_upper_bound(x))
 
+    @given(params_x=st_params_and_x_for_grad())
+    def test_dlog_methods_returns_correct_dtype(self, params_x):
+        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
+
+        shape1, shape2, lower_bound, upper_bound, x = params_x
+        dist = Beta(shape1, shape2, lower_bound, upper_bound, dtype=np.float32)
+
+        assert dist._dlog_alpha(x).dtype == np.float32
+        assert dist._dlog_beta(x).dtype == np.float32
+        assert dist._dlog_lower_bound(x).dtype == np.float32
+        assert dist._dlog_upper_bound(x).dtype == np.float32
+
 
 class TestBetaGenerate:
     """Tests for the generate method."""
@@ -427,6 +443,13 @@ class TestBetaGenerate:
 
 class TestBetaDType(DTypeHandlingMixin):
     distribution_class = Beta
+    default_params: ClassVar[dict] = {"alpha": 1.0, "beta": 2.0, "lower_bound": -1.0, "upper_bound": 1.0}
 
-    def __init__(self):
-        self.default_params = {"alpha": 1.0, "beta": 2.0, "lower_bound": -1.0, "upper_bound": 1.0}
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_methods_taking_x_return_correct_dtype(self, method_name, x_data):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def test_ppf_returns_correct_dtype(self, p_data):
+        self.check_ppf_returns_correct_dtype(p_data)

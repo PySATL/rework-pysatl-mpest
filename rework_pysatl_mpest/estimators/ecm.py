@@ -92,7 +92,7 @@ class ECM(BaseEstimator[DType]):
         self._logger: IterationsHistory[DType] | None = None
 
     @property
-    def logger(self) -> IterationsHistory:
+    def logger(self) -> IterationsHistory[DType]:
         """An object that collects information about each iteration.
 
         Raises

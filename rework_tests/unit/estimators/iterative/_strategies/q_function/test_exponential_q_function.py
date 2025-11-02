@@ -1,6 +1,6 @@
 """Tests for Q-function optimization strategy for Exponential distribution"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -24,11 +24,34 @@ def exponential_component() -> Exponential:
 
 
 @pytest.fixture
+def exponential_component_float32() -> Exponential:
+    """Fixture that creates an Exponential component with dtype float32."""
+    return Exponential(loc=0.0, rate=1.0, dtype=np.float32)
+
+
+@pytest.fixture
 def pipeline_state() -> PipelineState:
     """Fixture that creates a basic PipelineState with some data."""
     state = PipelineState(
         X=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
         H=np.array([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.6, 0.4], [0.5, 0.5]]),
+        prev_mixture=None,
+        curr_mixture=None,
+        error=None,
+    )
+    return state
+
+
+@pytest.fixture
+def pipeline_state_float32() -> PipelineState:
+    """Fixture that creates a PipelineState with some data with dtype float32.
+
+    In a real-world scenario, the parent
+    estimator (Pipeline) is responsible for ensuring that the input data `X`
+    passed between steps matches the `dtype` of the mixture model being fitted."""
+    state = PipelineState(
+        X=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float32),
+        H=np.array([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.6, 0.4], [0.5, 0.5]], dtype=np.float32),
         prev_mixture=None,
         curr_mixture=None,
         error=None,
@@ -74,7 +97,7 @@ def test_q_function_exponential_returns_correct_types(exponential_component, pip
     if result[1]:
         key, value = next(iter(result[1].items()))
         assert isinstance(key, str)
-        assert isinstance(value, float)
+        assert isinstance(value, np.float64)
 
 
 @pytest.mark.parametrize(
@@ -162,3 +185,16 @@ def test_q_function_exponential_recovers_true_params_on_ideal_data(data):
     # For a large enough sample, the estimates should be reasonably close.
     assert new_params[Exponential.PARAM_LOC] == pytest.approx(true_loc, abs=0.01)
     assert new_params[Exponential.PARAM_RATE] == pytest.approx(true_rate, rel=0.01)
+
+
+def test_exponential_strategy_returns_correct_dtype(exponential_component_float32, pipeline_state_float32):
+    """Tests that the analytical strategy for Exponential preserves the component's dtype."""
+    block = OptimizationBlock(
+        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+    )
+
+    _, new_params_dict = q_function_strategy(
+        exponential_component_float32, pipeline_state_float32, block, optimizer=None
+    )
+    for param in new_params_dict.values():
+        assert isinstance(param, np.float32)

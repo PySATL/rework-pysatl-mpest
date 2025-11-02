@@ -167,7 +167,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         return [getattr(self, name) for name in param_names]
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[DType]):
+    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence):
         """Sets parameter values from a sequence of floats.
 
         Updates the distribution's parameters using values from the provided
@@ -178,7 +178,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
         ----------
         param_names : Sequence[str]
             A sequence of parameter names to update.
-        vector : Sequence[float]
+        vector : Sequence
             A sequence of new values for the parameters.
 
         Raises
@@ -196,7 +196,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
             raise ValueError(f"Invalid parameter names provided: {invalid_params}")
 
         for name, value in zip(param_names, vector):
-            setattr(self, name, value)
+            setattr(self, name, self.dtype(value))
 
     @property
     def dtype(self) -> type[DType]:

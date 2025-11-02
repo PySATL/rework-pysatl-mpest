@@ -146,6 +146,9 @@ class ClusterizeInitializer(Initializer, Generic[DType]):
             If the clusterizer doesn't have the required method for the specified
             clustering type, or if clustering fails.
         """
+
+        DTYPE = X.dtype
+
         if self.is_soft and hasattr(clusterizer, "fit_transform"):
             try:
                 H = clusterizer.fit_transform(X)
@@ -163,7 +166,7 @@ class ClusterizeInitializer(Initializer, Generic[DType]):
                     n_clusters = 1
                     valid_labels = np.array([0])
                     labels = np.zeros_like(labels)
-                H = np.zeros((len(X), n_clusters))
+                H = np.zeros((len(X), n_clusters), dtype=DTYPE)
                 if np.any(labels == -1):
                     outlier_mask = labels == -1
                     non_outlier_mask = ~outlier_mask
@@ -278,7 +281,7 @@ class ClusterizeInitializer(Initializer, Generic[DType]):
             weight = np.sum(H, axis=0)[k] / len(X)
 
             distributions.append(model)
-            weights.append(float(weight))
+            weights.append(weight)
 
         return distributions, weights
 
@@ -323,8 +326,8 @@ class ClusterizeInitializer(Initializer, Generic[DType]):
         if not dists:
             raise ValueError("List of distributions for initialization cannot be empty.")
 
-        _dtype = dists[0].dtype
-        X = np.asarray(X, dtype=_dtype)
+        DTYPE = dists[0].dtype
+        X = np.asarray(X, dtype=DTYPE)
         self.models = dists
         self.n_components = len(dists)
         H = self._clusterize(X, self.clusterizer)
@@ -340,5 +343,5 @@ class ClusterizeInitializer(Initializer, Generic[DType]):
 
         total_weight = sum(weights)
         normalized_weights: list[float] = [w / total_weight for w in weights]
-        current_mixture = MixtureModel(distributions, normalized_weights, dtype=_dtype)
+        current_mixture = MixtureModel(distributions, normalized_weights, dtype=DTYPE)
         return current_mixture

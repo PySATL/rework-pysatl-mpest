@@ -47,7 +47,7 @@ def q_function_strategy(
 
     Returns
     -------
-    dict[str, float]
+    dict[str, DType]
         Dictionary mapping parameter names to their estimated values.
 
     See Also
@@ -88,7 +88,7 @@ def q_function_strategy(
     def target(vector_params):
         temp_comp.set_params_from_vector(params_to_optimize, vector_params)
         lpdf_values = temp_comp.lpdf(X)
-        return -np.dot(H_j, lpdf_values).item()
+        return -np.dot(H_j, lpdf_values)
 
     initial_params = temp_comp.get_params_vector(params_to_optimize)
     new_params_vector = optimizer.minimize(target, initial_params)
@@ -100,7 +100,7 @@ def q_function_strategy(
 @q_function_strategy.register(Exponential)
 def q_function_strategy_exponential(
     component: Exponential[DType], X: np.ndarray, H_j: np.ndarray, optimizer: Optimizer
-) -> dict[str, float]:
+) -> dict[str, DType]:
     """Specialized Q-function optimization strategy for Exponential distribution.
 
     This function provides an analytical solution for parameter estimation of
@@ -121,7 +121,7 @@ def q_function_strategy_exponential(
 
     Returns
     -------
-    dict[str, float]
+    dict[str, DType]
         Dictionary containing estimated values for 'loc' and 'rate' parameters.
 
     See Also
@@ -165,20 +165,22 @@ def q_function_strategy_exponential(
     >>> print(f"Estimated loc: {params['loc']:.3f}, rate: {params['rate']:.3f}")
     """
 
-    new_params = {}
-    N_j = np.sum(H_j).item()
+    DTYPE = component.dtype
 
-    if np.any(H_j > NUMERICAL_TOLERANCE):
-        relevant_X = X[H_j > NUMERICAL_TOLERANCE]
-        new_params["loc"] = np.min(relevant_X).item()
+    new_params = {}
+    N_j = np.sum(H_j)
+
+    if np.any(H_j > DTYPE(NUMERICAL_TOLERANCE)):
+        relevant_X = X[H_j > DTYPE(NUMERICAL_TOLERANCE)]
+        new_params["loc"] = np.min(relevant_X)
     else:
         new_params["loc"] = component.loc
 
     loc = new_params.get("loc", component.loc)
 
-    weighted_sum = np.dot(H_j, np.maximum(X - loc, NUMERICAL_TOLERANCE)).item()
+    weighted_sum = np.dot(H_j, np.maximum(X - loc, DTYPE(NUMERICAL_TOLERANCE)))
 
-    if weighted_sum > NUMERICAL_TOLERANCE:
+    if weighted_sum > DTYPE(NUMERICAL_TOLERANCE):
         new_params["rate"] = N_j / weighted_sum
     else:
         new_params["rate"] = component.rate

@@ -1,6 +1,6 @@
 """A module that provides tests for q_function"""
 
-__author__ = "Viktor Khanukaev"
+__author__ = "Viktor Khanukaev, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -19,6 +19,7 @@ class TestQFunctionStrategyExponential:
     def setup_method(self):
         self.mock_optimizer = Mock(spec=Optimizer)
         self.component = Exponential(loc=1.0, rate=2.0)
+        self.component_float32 = Exponential(loc=1.0, rate=2.0, dtype=np.float32)
 
     def test_normal_case(self):
         X = np.array([1.5, 2.0, 2.5, 3.0, 3.5])
@@ -88,6 +89,15 @@ class TestQFunctionStrategyExponential:
         weighted_sum = np.dot(H_j, np.maximum(X - 1.0, NUMERICAL_TOLERANCE)).item()
         expected_rate = N_j / weighted_sum
         assert abs(result[Exponential.PARAM_RATE] - expected_rate) < COMPARISON_CONSTANT
+
+    def test_q_function_strategy_exponential_returns_correct_dtype(self):
+        """Tests that the strategy for Exponential preserves the component's dtype."""
+        X = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+        H_j = np.array([0.8, 0.9, 1.0], dtype=np.float32)
+
+        result = q_function_strategy(self.component_float32, X, H_j, self.mock_optimizer)
+        for param in result.values():
+            assert isinstance(param, np.float32)
 
 
 class TestQFunctionStrategyGeneric:
