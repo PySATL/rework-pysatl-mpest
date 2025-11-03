@@ -320,6 +320,8 @@ class ClusterizeInitializer(Initializer):
         5. Returns the initialized mixture model
         """
         X = np.asarray(X, dtype=np.float64)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
         self.models = dists
         self.n_components = len(dists)
         H = self._clusterize(X, self.clusterizer)
