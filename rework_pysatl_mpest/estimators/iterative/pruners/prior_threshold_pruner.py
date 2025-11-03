@@ -83,10 +83,13 @@ class PriorThresholdPruner(Pruner):
         # TODO: Now this implementation replace mixture with new mixture, so logger will not log this.
 
         mixture = copy(state.curr_mixture)
+        removed_components_indices = []
 
         for i in range(mixture.n_components - 1, -1, -1):  # Reverse order to avoid indexing confusion
             if mixture.weights[i] < self.threshold and mixture.n_components > 1:
                 mixture.remove_component(i)
+                removed_components_indices.append(i)
 
         state.curr_mixture = mixture
+        state.removed_components_indices = sorted(removed_components_indices)
         return state

@@ -14,6 +14,8 @@ from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.estimators.iterative import Breakpointer, Pipeline, PipelineState, PipelineStep, Pruner
 from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, IterationsHistory
+from rework_pysatl_mpest.estimators.iterative.pruners.prior_threshold_pruner import PriorThresholdPruner
+from rework_pysatl_mpest.estimators.iterative.steps import OptimizationBlock
 
 # --- Mock objects for isolated testing ---
 
@@ -257,6 +259,8 @@ class TestPipelineValidation:
 
 # --- Fit Method Tests ---
 
+CONST = 2
+
 
 class TestPipelineFit:
     """A group of tests for the fit method."""
@@ -475,3 +479,150 @@ class TestPipelineFit:
         assert pipeline.logger[0].iteration == EXPECTED_ITERATIONS[0]
         assert pipeline.logger[1].iteration == EXPECTED_ITERATIONS[1]
         assert pipeline.logger[1].mixture == fitted_mixture
+
+    def test_optimization_blocks_updated_after_pruning(self, initial_mixture, sample_data):
+        """Tests that optimization blocks are correctly updated when components are pruned."""
+
+        # Create a mixture with 3 components
+        components = [Exponential(loc=0, rate=1), Exponential(loc=2, rate=1), Exponential(loc=4, rate=1)]
+        weights = [0.1, 0.6, 0.3]  # First component will be pruned (weight < 0.2)
+        mixture = MixtureModel(components, weights)
+
+        #  Create optimization blocks for all components
+        optimization_blocks = [
+            OptimizationBlock(0, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(1, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(2, {"loc"}, "q_function"),
+        ]
+
+        # Create pipeline state with optimization blocks - FIXED H matrix dimensions
+        X = np.array([1.0, 2.0, 3.0])
+        # H should be (n_samples, n_components) = (3, 3)
+        H = np.array(
+            [
+                [0.1, 0.8, 0.1],  # Sample 1 responsibilities
+                [0.2, 0.7, 0.1],  # Sample 2 responsibilities
+                [0.1, 0.6, 0.3],  # Sample 3 responsibilities
+            ]
+        )
+        state = PipelineState(X, H, None, mixture, None, optimization_blocks)
+
+        # Create pruner and prune
+        pruner = PriorThresholdPruner(threshold=0.2)
+        state = pruner.prune(state)
+
+        # Verify components were pruned
+        assert state.curr_mixture.n_components == CONST
+        assert state.removed_components_indices == [0]  # First component removed
+
+        # Verify H matrix before handling (still original shape)
+        assert state.H.shape == (3, 3)  # (n_samples, n_components)
+
+        # Simulate pipeline handling pruning effects
+        pipeline = Pipeline([MockSingleStep()], [MockBreakpointer(stop_at_iteration=2)], [pruner])
+        pipeline._handle_pruning_effects(state)
+
+        # Now H should be updated to (3, 2)
+        assert state.H.shape == (3, 2)  # Should now be (n_samples, n_components) = (3, 2)
+
+        # Verify optimization blocks were updated
+        assert len(state.optimization_blocks) == CONST
+
+        # Check that component_ids were updated correctly
+        remaining_component_ids = [block.component_id for block in state.optimization_blocks]
+        assert remaining_component_ids == [0, 1]  # Should be reindexed
+
+        # Verify the parameters to optimize are preserved
+        assert state.optimization_blocks[0].params_to_optimize == {"loc", "rate"}  # Originally component 1
+        assert state.optimization_blocks[1].params_to_optimize == {"loc"}  # Originally component 2
+
+    def test_pruning_with_no_optimization_blocks(self, initial_mixture, sample_data):
+        """Tests that pruning works correctly when no optimization blocks are present."""
+        # Create a mixture that will be pruned
+        components = [Exponential(loc=0, rate=1), Exponential(loc=2, rate=1)]
+        weights = [0.1, 0.9]  # First component will be pruned
+        mixture = MixtureModel(components, weights)
+
+        X = np.array([1.0, 2.0])
+        # H should be (n_samples, n_components) = (2, 2)
+        H = np.array(
+            [
+                [0.2, 0.8],  # Sample 1 responsibilities
+                [0.1, 0.9],  # Sample 2 responsibilities
+            ]
+        )
+        state = PipelineState(X, H, None, mixture, None, None)  # No optimization blocks
+
+        pruner = PriorThresholdPruner(threshold=0.2)
+        state = pruner.prune(state)
+
+        # Simulate pipeline handling (should handle H matrix but not crash on None optimization_blocks)
+        pipeline = Pipeline([MockSingleStep()], [MockBreakpointer(stop_at_iteration=2)], [pruner])
+        pipeline._handle_pruning_effects(state)
+
+        # Should work without errors even when optimization_blocks is None
+        assert state.curr_mixture.n_components == 1
+        assert state.removed_components_indices == [0]
+        assert state.H.shape == (2, 1)  # H matrix updated to (n_samples, n_components) = (2, 1)
+
+    def test_multiple_components_pruned_updates_optimization_blocks_correctly(self, initial_mixture, sample_data):
+        """Tests that optimization blocks are correctly updated when multiple components are pruned."""
+
+        # Create a mixture with 4 components, 2 will be pruned
+        components = [
+            Exponential(loc=0, rate=1),
+            Exponential(loc=1, rate=1),
+            Exponential(loc=2, rate=1),
+            Exponential(loc=3, rate=1),
+        ]
+        weights = [0.09, 0.05, 0.6, 0.26]  # First two components will be pruned (weights < 0.1)
+        mixture = MixtureModel(components, weights)
+
+        # Create optimization blocks for all components
+        optimization_blocks = [
+            OptimizationBlock(0, {"loc"}, "q_function"),
+            OptimizationBlock(1, {"rate"}, "q_function"),
+            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(3, {"loc"}, "q_function"),
+        ]
+
+        X = np.array([1.0, 2.0, 3.0, 4.0])
+        # H should be (n_samples, n_components) = (4, 4)
+        H = np.array(
+            [
+                [0.09, 0.05, 0.6, 0.26],  # Sample 1
+                [0.09, 0.05, 0.6, 0.26],  # Sample 2
+                [0.09, 0.05, 0.6, 0.26],  # Sample 3
+                [0.09, 0.05, 0.6, 0.26],  # Sample 4
+            ]
+        )
+        state = PipelineState(X, H, None, mixture, None, optimization_blocks)
+
+        # Create pruner and prune (threshold 0.1 will remove components 0 and 1)
+        pruner = PriorThresholdPruner(threshold=0.1)
+        state = pruner.prune(state)
+
+        # Verify components were pruned
+        assert state.curr_mixture.n_components == CONST
+        assert state.removed_components_indices == [0, 1]  # First two components removed
+
+        # Verify H matrix before handling (still original shape)
+        assert state.H.shape == (4, 4)  # (n_samples, n_components)
+
+        # Simulate pipeline handling pruning effects
+        pipeline = Pipeline([MockSingleStep()], [MockBreakpointer(stop_at_iteration=2)], [pruner])
+        pipeline._handle_pruning_effects(state)
+
+        # Now H should be updated to (4, 2)
+        assert state.H.shape == (4, 2)  # Should now be (n_samples, n_components) = (4, 2)
+
+        # Verify optimization blocks were updated
+        assert len(state.optimization_blocks) == CONST
+
+        # Check that component_ids were updated correctly
+        remaining_component_ids = [block.component_id for block in state.optimization_blocks]
+        assert remaining_component_ids == [0, 1]  # Should be reindexed
+
+        # Verify the parameters to optimize are preserved for the correct components
+        assert state.optimization_blocks[0].params_to_optimize == {"loc", "rate"}  # Originally component 2
+        assert state.optimization_blocks[1].params_to_optimize == {"loc"}  # Originally component 3

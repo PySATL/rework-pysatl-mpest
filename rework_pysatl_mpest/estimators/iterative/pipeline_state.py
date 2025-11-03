@@ -48,6 +48,11 @@ class PipelineState:
         A container for any exception that occurs during a pipeline step. If a
         step encounters a non-fatal error, it can place an exception object
         here to signal the pipeline to terminate gracefully.
+    optimization_blocks : list[OptimizationBlock] | None
+        The list of optimization blocks for component parameter optimization.
+        Each block corresponds to a component in the mixture model.
+    removed_components_indices : list[int] | None
+        Tracks which component indices were removed during pruning.
     """
 
     X: NDArray[float64]
@@ -55,3 +60,5 @@ class PipelineState:
     prev_mixture: Optional[MixtureModel]
     curr_mixture: MixtureModel
     error: Optional[Exception]
+    optimization_blocks: Optional[list] = None
+    removed_components_indices: Optional[list[int]] = None
