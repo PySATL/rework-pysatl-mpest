@@ -18,7 +18,7 @@ Abstract Classes
    :nosignatures:
    :template: class.rst
 
-   Initializer
+   rework_pysatl_mpest.initializers.Initializer
 
 Concrete Implementations
 ------------------------
@@ -28,7 +28,7 @@ Concrete Implementations
    :nosignatures:
    :template: class.rst
 
-   ClusterizeInitializer
+   rework_pysatl_mpest.initializers.ClusterizeInitializer
 
 Strategy Enumerations
 ---------------------
@@ -40,5 +40,5 @@ Enumeration types that define available strategies for initialization.
    :nosignatures:
    :template: class.rst
 
-   ClusterMatchStrategy
-   EstimationStrategy
+   rework_pysatl_mpest.initializers.ClusterMatchStrategy
+   rework_pysatl_mpest.initializers.EstimationStrategy
