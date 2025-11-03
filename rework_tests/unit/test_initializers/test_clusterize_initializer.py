@@ -183,7 +183,7 @@ class TestClusterizeInitializer:
     def test_perform_accurate_init_fallback_to_fast_init(self):
         initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
 
-        X = np.array([1.0, 2.0, 3.0])
+        X = np.array([[1.0], [2.0], [3.0]])
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.9, 0.1]])
         dists = [self.mock_distributions[0], self.mock_distributions[1]]
 

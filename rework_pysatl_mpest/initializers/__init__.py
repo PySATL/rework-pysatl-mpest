@@ -14,11 +14,11 @@ methods, helping to avoid poor local optima and improving convergence.
 
 .. code-block:: python
 
-    >>> from rework_pysatl_mpest import Exponential
-    >>> import numpy as np
+    >>> from rework_pysatl_mpest.distributions.exponential import Exponential
     >>> from sklearn.cluster import KMeans
-    >>> from rework_pysatl_mpest.initializers import ClusterizeInitializer
+    >>> from rework_pysatl_mpest.initializers.clusterize_initializer import ClusterizeInitializer
     >>> from rework_pysatl_mpest.initializers import ClusterMatchStrategy, EstimationStrategy
+    >>> from rework_pysatl_mpest.core.mixture import MixtureModel
 
     >>> # Create initializer with KMeans clustering
     >>> initializer_cluster = ClusterizeInitializer(
@@ -32,7 +32,8 @@ methods, helping to avoid poor local optima and improving convergence.
     >>>Exponential(loc=5.0, rate=0.05), Exponential(loc=10.0, rate=0.01)]
 
     >>> # Generate sample data
-    >>> X = np.linspace(0.01, 25.0, 300)
+    >>> mixture = MixtureModel(distributions, [0.3, 0.4, 0.3])
+    >>> X = mixture.generate(300)
 
     >>> # Perform initialization
     >>> mixture_model = initializer_cluster.perform(
