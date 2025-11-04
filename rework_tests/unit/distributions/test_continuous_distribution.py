@@ -6,11 +6,13 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from copy import copy
+from typing import ClassVar
 
 import numpy as np
 import pytest
 from numpy.typing import ArrayLike, NDArray
-from rework_pysatl_mpest.distributions import ContinuousDistribution
+from rework_pysatl_mpest.core import Parameter
+from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential, Normal
 
 # Dummy distribution classes
 # --------------------------
@@ -23,29 +25,16 @@ class DummyDistribution(ContinuousDistribution):
     and test the non-abstract methods of the base class.
     """
 
-    def __init__(self, param1: float = 1.0, param2: float = 2.0, name: str = "Dummy"):
+    param1 = Parameter()
+    param2 = Parameter()
+
+    def __init__(self, param1: float = 1.0, param2: float = 2.0, name: str = "Dummy", dtype: np.floating = np.float64):
         """Initializes with two simple parameters."""
 
-        super().__init__()
-        self._param1 = param1
-        self._param2 = param2
+        super().__init__(dtype=dtype)
+        self.param1 = param1
+        self.param2 = param2
         self._name = name
-
-    @property
-    def param1(self):
-        return self._param1
-
-    @param1.setter
-    def param1(self, value):
-        self._param1 = value
-
-    @property
-    def param2(self):
-        return self._param2
-
-    @param2.setter
-    def param2(self, value):
-        self._param2 = value
 
     @property
     def name(self) -> str:
@@ -96,6 +85,11 @@ def dummy_dist() -> DummyDistribution:
     """Provides a fresh instance of DummyDistribution for each test."""
 
     return DummyDistribution(param1=10.0, param2=20.0)
+
+
+@pytest.fixture
+def dummy_float32_dist() -> DummyDistribution:
+    return DummyDistribution(param1=10.0, param2=20.0, dtype=np.float32)
 
 
 @pytest.fixture
@@ -193,6 +187,13 @@ class TestContinuousDistribution:
         with pytest.raises(ValueError, match="Invalid parameter names provided"):
             dummy_dist.get_params_vector(["param1", "invalid_param"])
 
+    def test_get_params_vector_returns_correct_types(self, dummy_float32_dist: DummyDistribution):
+        """Tests that get_params_vector returns a list of scalars with the correct dtype."""
+        param_names = ["param1", "param2"]
+        vector = dummy_float32_dist.get_params_vector(param_names)
+        for param in vector:
+            assert isinstance(param, np.float32)
+
     # Test set_params_from_vector method
     # ----------------------------------
 
@@ -236,6 +237,84 @@ class TestContinuousDistribution:
 
         with pytest.raises(ValueError, match=error_msg_match):
             dummy_dist.set_params_from_vector(param_names, vector)
+
+    @pytest.mark.parametrize(
+        "param_names, vector_to_set",
+        [
+            (["param1", "param2"], [100.0, 200.0]),
+            (("param2",), (99.0,)),
+            (["param1", "param2"], np.array([1.5, 2.5])),
+        ],
+    )
+    def test_set_params_from_vector_correct_dtype(
+        self, dummy_float32_dist: DummyDistribution, param_names, vector_to_set
+    ):
+        """Tests setting parameter values from a vector."""
+
+        dummy_float32_dist.set_params_from_vector(param_names, vector_to_set)
+
+        for param_name in param_names:
+            param_value = getattr(dummy_float32_dist, param_name)
+            assert isinstance(param_value, np.float32)
+
+    # Test to_dtype method
+    # ----------------------------------
+
+    def test_to_dtype_successful_conversion(self, dummy_dist: DummyDistribution):
+        """
+        Tests that _to_dtype creates a new instance with the correct new dtype
+        and that the original instance remains unchanged.
+        """
+        assert dummy_dist.dtype == np.float64
+        for param in dummy_dist.params:
+            assert isinstance(getattr(dummy_dist, param), np.float64)
+
+        target_dtype = np.float32
+        new_dist = dummy_dist.astype(target_dtype)
+
+        assert new_dist is not dummy_dist
+        assert new_dist != dummy_dist
+
+        assert new_dist.dtype == np.float32
+        for param in new_dist.params:
+            assert isinstance(getattr(new_dist, param), target_dtype)
+            assert getattr(new_dist, param) == np.float32(getattr(dummy_dist, param))
+
+        # original instance remains unchanged
+        assert dummy_dist.dtype == np.float64
+        for param in dummy_dist.params:
+            assert isinstance(getattr(dummy_dist, param), np.float64)
+
+    def test_to_dtype_returns_self_if_same_dtype(self, dummy_dist: DummyDistribution):
+        """
+        Tests that _to_dtype returns the same instance if the target dtype
+        is identical to the current one, avoiding unnecessary copying.
+        """
+        assert dummy_dist.dtype == np.float64
+
+        same_dtype_dist = dummy_dist.astype(np.float64)
+
+        assert same_dtype_dist is dummy_dist
+
+    def test_to_dtype_preserves_fixed_params(self, dummy_dist: DummyDistribution):
+        """
+        Tests that the set of fixed parameters is correctly copied to the
+        new instance after dtype conversion.
+        """
+        dummy_dist.fix_param("param1")
+        assert "param1" in dummy_dist._fixed_params
+
+        new_dist = dummy_dist.astype(np.float32)
+
+        assert new_dist.dtype == np.float32
+        for param in new_dist.params:
+            assert isinstance(getattr(new_dist, param), np.float32)
+            assert getattr(new_dist, param) == np.float32(getattr(dummy_dist, param))
+
+        assert "param1" in new_dist._fixed_params
+        assert new_dist._fixed_params == dummy_dist._fixed_params
+
+        assert new_dist._fixed_params is not dummy_dist._fixed_params
 
 
 class TestContinuousDistributionCopying:
@@ -299,8 +378,8 @@ class TestContinuousDistributionComparison:
     def test_neq_different_type(self):
         """Tests that two instances with different types are not equal."""
 
-        d1 = DummyDistribution(param1=1.0, param2=2.0)
-        d2 = DummyDistribution(param1=1.0, param2=2.0, name="Dummy2")
+        d1 = Normal(loc=0.0, scale=1.0)
+        d2 = Exponential(loc=0.0, rate=1.0)
         assert d1 != d2
 
     def test_neq_other_object(self):
@@ -309,6 +388,13 @@ class TestContinuousDistributionComparison:
         d1 = DummyDistribution(param1=1.0, param2=2.0)
         other = "not_a_distribution"
         assert d1 != other
+
+    def test_neq_different_dtype(self):
+        """Tests that two instances with different dtypes are not equal."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=1.0, param2=2.0, dtype=np.float32)
+        assert d1 != d2
 
     def test_hash_consistency(self):
         """Tests that two equal distribution instances have the same hash."""
@@ -333,3 +419,70 @@ class TestContinuousDistributionComparison:
         d2 = DummyDistribution(param1=1.0, param2=2.0, name="Dummy2")
         assert d1 != d2
         assert hash(d1) != hash(d2)
+
+    def test_hash_inequality_dtype(self):
+        """Tests that two non-equal type distribution instances have different hashes."""
+
+        d1 = DummyDistribution(param1=1.0, param2=2.0)
+        d2 = DummyDistribution(param1=1.0, param2=2.0, dtype=np.float32)
+        assert d1 != d2
+        assert hash(d1) != hash(d2)
+
+
+class DTypeHandlingMixin:
+    """A test mixin to verify correct dtype handling in all subclasses of ContinuousDistribution."""
+
+    distribution_class: ClassVar[type[ContinuousDistribution] | None] = None
+    default_params: ClassVar[dict] = {}
+
+    # Tests initialization
+    # --------------------
+
+    def check_init_with_dtype_sets_correct_types(self, dtype):
+        """Tests that the constructor and the Parameter descriptor correctly cast parameter types."""
+
+        dist = self.distribution_class(**self.default_params, dtype=dtype)
+
+        assert dist.dtype == dtype
+
+        for param_name in self.default_params:
+            param_value = getattr(dist, param_name)
+            assert isinstance(param_value, dtype)
+
+    # Tests generate
+    # --------------------
+
+    def check_generate_returns_correct_dtype(self, size, dtype):
+        """Tests the dtype of the array returned by the generate method."""
+        dist = self.distribution_class(**self.default_params, dtype=dtype)
+
+        result = dist.generate(size=size)
+
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == dtype
+
+    # Tests calculations
+    # --------------------
+
+    def check_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
+        """Helper method with the logic for testing methods that take X."""
+        dist = self.distribution_class(**self.default_params, dtype=dtype)
+        method_to_test = getattr(dist, method_name)
+        result = method_to_test(x_data)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == dtype
+
+    def check_ppf_returns_correct_dtype(self, p_data, dtype):
+        """Helper method with the logic for testing the ppf method."""
+        dist = self.distribution_class(**self.default_params, dtype=dtype)
+        result = dist.ppf(p_data)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype == dtype
+
+    def check_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
+        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
+
+        dist = self.distribution_class(**self.default_params, dtype=dtype)
+        method = getattr(dist, method_name)
+
+        assert method(x_data).dtype == dtype

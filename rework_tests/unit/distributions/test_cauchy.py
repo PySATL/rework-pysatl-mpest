@@ -6,6 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import random
+from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -13,8 +14,11 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Cauchy
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import cauchy, kstest
+
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
 st_scale = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
 st_loc = st.floats(min_value=-1e3, max_value=1e3, allow_nan=False, allow_infinity=False)
@@ -100,7 +104,7 @@ class TestCauchyPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
 
         dist = Cauchy(loc=loc, scale=scale)
-        integral, error = quad(dist.pdf, loc - 186_124 * scale, loc + 186_124 * scale)
+        integral, error = quad(lambda x: dist.pdf(x).item(), loc - 186_124 * scale, loc + 186_124 * scale)
         print(f"integral = {integral}, loc = {loc}, scale = {scale}")
         np.testing.assert_allclose(1.0, integral, rtol=1e-5)
 
@@ -268,3 +272,30 @@ class TestCauchyGenerate:
         ks_statistic, p_value = kstest(samples, "cauchy", args=(loc, scale))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+class TestCauchyDType(DTypeHandlingMixin):
+    distribution_class = Cauchy
+    default_params: ClassVar[dict] = {"loc": 0.0, "scale": 1.0}
+
+    def test_init_with_dtype_sets_correct_types(self, dtype):
+        self.check_init_with_dtype_sets_correct_types(dtype)
+
+    @pytest.mark.parametrize("size", [0, 10])
+    def test_generate_returns_correct_dtype(self, size, dtype):
+        self.check_generate_returns_correct_dtype(size, dtype)
+
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1e3)))
+    def check_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data, dtype)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def check_ppf_returns_correct_dtype(self, p_data, dtype):
+        self.check_ppf_returns_correct_dtype(p_data, dtype)
+
+    @pytest.mark.parametrize("method_name", ["_dlog_loc", "_dlog_scale"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1e6)))
+    def test_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
+        self.check_dlog_methods_returns_correct_dtype(x_data, method_name, dtype)

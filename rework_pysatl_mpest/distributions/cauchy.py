@@ -1,18 +1,19 @@
 """Module providing Cauchy distribution class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+
 import numpy as np
-from numpy import float64
 from scipy.stats import cauchy
 
 from ..core import Parameter
+from ..typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
-class Cauchy(ContinuousDistribution):
+class Cauchy(ContinuousDistribution[DType]):
     """Class for the two-parameter cauchy distribution.
 
     Parameters
@@ -49,8 +50,8 @@ class Cauchy(ContinuousDistribution):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0.0, "Scale parameter should be positive")
 
-    def __init__(self, loc: float, scale: float):
-        super().__init__()
+    def __init__(self, loc: float, scale: float, dtype: type[DType] = np.float64):  # type: ignore[assignment]
+        super().__init__(dtype=dtype)
         self.loc = loc
         self.scale = scale
 
@@ -81,12 +82,14 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
-        return 1.0 / (np.pi * self.scale * (1.0 + ((X - self.loc) / self.scale) ** 2))
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
+        return dtype(1.0) / (dtype(np.pi) * self.scale * (dtype(1.0) + ((X - self.loc) / self.scale) ** 2))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -107,18 +110,20 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
-        P = np.asarray(P, dtype=float64)
+        P = np.asarray(P, dtype=self.dtype)
+        dtype = self.dtype
+
         return np.where(
             (P >= 0) & (P <= 1),
             np.where(
                 (P == 0) | (P == 1),
-                np.where(P == 1, np.inf, -np.inf),
-                self.loc + self.scale * np.tan(np.pi * (P - 0.5)),
+                np.where(P == 1, dtype(np.inf), dtype(-np.inf)),
+                self.loc + self.scale * np.tan(dtype(np.pi) * (P - dtype(0.5))),
             ),
-            np.nan,
+            dtype(np.nan),
         )
 
     def lpdf(self, X):
@@ -140,11 +145,14 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
-        return np.log(1.0) - np.log(np.pi) - np.log(self.scale) - np.log(1.0 + ((X - self.loc) / self.scale) ** 2)
+
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
+        return np.log(dtype(1.0)) - np.log(dtype(np.pi)) - np.log(self.scale) - np.log(dtype(1.0) + ((X - self.loc) / self.scale) ** 2)
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
@@ -166,12 +174,14 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`loc` for each point in ::attr`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
-        return (2 * X - 2 * self.loc) / (self.scale**2 + X**2 - 2 * self.loc * X + self.loc**2)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
+        return (dtype(2) * X - dtype(2) * self.loc) / (self.scale**2 + X**2 - dtype(2) * self.loc * X + self.loc**2)
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`scale` parameter.
@@ -193,12 +203,14 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
-        return (-(self.scale**2) + X**2 - 2 * self.loc * X + self.loc**2) / (
-            self.scale**3 + self.scale * (X**2) - 2 * self.loc * self.scale * X + self.scale * self.loc**2
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
+        return (-(self.scale**2) + X**2 - dtype(2) * self.loc * X + self.loc**2) / (
+            self.scale**3 + self.scale * (X**2) - dtype(2) * self.loc * self.scale * X + self.scale * self.loc**2
         )
 
     def log_gradients(self, X):
@@ -213,13 +225,13 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.PARAM_LOC: self._dlog_loc,
@@ -229,7 +241,7 @@ class Cauchy(ContinuousDistribution):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -245,11 +257,11 @@ class Cauchy(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
-        return np.asarray(cauchy.rvs(loc=self.loc, scale=self.scale, size=size), dtype=float64)
+        return np.asarray(cauchy.rvs(loc=self.loc, scale=self.scale, size=size), dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
