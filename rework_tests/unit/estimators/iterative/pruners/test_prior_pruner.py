@@ -134,7 +134,7 @@ def test_prune_removes_correct_components(
     initial_mixture = MixtureModel(dummy_components, weights=initial_weights)
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
-    new_state = pruner.prune(state)
+    new_state, removed_components_indices = pruner.prune(state)  # Unpack the tuple
 
     # Check that the number of components matches the expected value
     assert new_state.curr_mixture.n_components == expected_n_components
@@ -159,7 +159,7 @@ def test_prune_does_not_remove_last_component(dummy_components):
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
     # After the first prune, one component will remain, which should not be removed
-    new_state = pruner.prune(state)
+    new_state, removed_components_indices = pruner.prune(state)  # Unpack the tuple
     assert new_state.curr_mixture.n_components == 1
 
 
@@ -187,7 +187,7 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
     initial_error_id = id(initial_state.error)
     initial_curr_mix_id = id(initial_state.curr_mixture)
 
-    new_state = pruner.prune(initial_state)
+    new_state, removed_components_indices = pruner.prune(initial_state)  # Unpack the tuple
 
     # Verify that other state attributes have not changed (are the same objects)
     assert id(new_state.X) == initial_X_id
@@ -254,7 +254,7 @@ def test_prune_with_hypothesis_generated_data(weights_list, threshold):
     initial_mixture = MixtureModel(components, weights=initial_weights)
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
-    new_state = pruner.prune(state)
+    new_state, removed_components_indices = pruner.prune(state)  # Unpack the tuple
     new_mixture = new_state.curr_mixture
 
     # Property 1: The mixture must always have at least one component remaining
