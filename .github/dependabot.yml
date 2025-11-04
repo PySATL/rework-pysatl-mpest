@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    target-branch: "refactor/rework-arch"
     groups:
       github-actions:
         patterns:
@@ -12,6 +13,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "refactor/rework-arch"
     commit-message:
       prefix: "deps: "
     groups:
