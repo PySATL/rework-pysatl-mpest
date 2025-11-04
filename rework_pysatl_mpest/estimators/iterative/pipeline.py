@@ -14,6 +14,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 import warnings
 from collections.abc import Sequence
 from copy import copy
+from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -140,20 +141,20 @@ class Pipeline(BaseEstimator):
                     f"available next steps:'{curr_step.available_next_steps}', but got '{next_step}'"
                 )
 
-    def _handle_pruning_effects(self, state: PipelineState):
+    def _handle_pruning_effects(self, state: PipelineState, removed_components_indices: Optional[list[int]]):
         """Handles all effects of component pruning on pipeline state."""
-        if state.removed_components_indices is None or not state.removed_components_indices:
+        if removed_components_indices is None or not removed_components_indices:
             return
 
-        removed_indices = state.removed_components_indices
-
-        # Update responsibility matrix H
-        if state.H is not None:
-            state.H = np.delete(state.H, removed_indices, axis=1)
+        removed_indices = removed_components_indices
 
         # Update optimization blocks
         if state.optimization_blocks is not None:
             self._update_optimization_blocks(state, removed_indices)
+
+        # Update responsibility matrix H
+        if state.H is not None:
+            state.H = np.delete(state.H, removed_components_indices, axis=1)
 
     def _update_optimization_blocks(self, state: PipelineState, removed_components_indices: list[int]):
         """Updates optimization blocks after component pruning.
@@ -165,12 +166,10 @@ class Pipeline(BaseEstimator):
         ----------
         state : PipelineState
             The current pipeline state containing removed_components_indices
+        removed_components_indices : list[int] | None
+            Tracks which component indices were removed during pruning.
         """
-        if (
-            state.removed_components_indices is None
-            or not state.removed_components_indices
-            or state.optimization_blocks is None
-        ):
+        if removed_components_indices is None or not removed_components_indices or state.optimization_blocks is None:
             return
         removed_indices = set(removed_components_indices)
 
@@ -247,9 +246,9 @@ class Pipeline(BaseEstimator):
 
             # Pruning
             for pruner in self.pruners:
-                state = pruner.prune(state)
-                if state.removed_components_indices is not None:
-                    self._handle_pruning_effects(state)
+                state, removed_components_indices = pruner.prune(state)
+                if removed_components_indices is not None:
+                    self._handle_pruning_effects(state, removed_components_indices)
             # Log
             self.logger.log(
                 IterationRecord(self.logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)

@@ -13,6 +13,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from copy import copy
+from typing import Optional
 
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
@@ -57,7 +58,7 @@ class PriorThresholdPruner(Pruner):
             raise ValueError("Threshold must be between 0 and 1.")
         self.threshold = threshold
 
-    def prune(self, state: PipelineState) -> PipelineState:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, Optional[list[int]]]:
         """Removes components from the mixture whose weights are below the threshold.
 
         This method inspects :attr:`state.curr_mixture` and removes any component
@@ -78,6 +79,8 @@ class PriorThresholdPruner(Pruner):
             The updated pipeline state. If components were removed, :attr:`state.curr_mixture` will be a new,
             smaller :class:`rework_pysatl_mpest.core.MixtureModel` instance.
             Otherwise, the original state is returned.
+        removed_components_indices : list[int] | None
+            Tracks which component indices were removed during pruning.
         """
 
         # TODO: Now this implementation replace mixture with new mixture, so logger will not log this.
@@ -91,5 +94,6 @@ class PriorThresholdPruner(Pruner):
                 removed_components_indices.append(i)
 
         state.curr_mixture = mixture
-        state.removed_components_indices = sorted(removed_components_indices)
-        return state
+        removed_components_indices = sorted(removed_components_indices)
+
+        return (state, removed_components_indices)

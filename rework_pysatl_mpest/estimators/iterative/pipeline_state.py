@@ -51,8 +51,6 @@ class PipelineState:
     optimization_blocks : list[OptimizationBlock] | None
         The list of optimization blocks for component parameter optimization.
         Each block corresponds to a component in the mixture model.
-    removed_components_indices : list[int] | None
-        Tracks which component indices were removed during pruning.
     """
 
     X: NDArray[float64]
@@ -61,4 +59,3 @@ class PipelineState:
     curr_mixture: MixtureModel
     error: Optional[Exception]
     optimization_blocks: Optional[list] = None
-    removed_components_indices: Optional[list[int]] = None

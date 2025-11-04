@@ -10,6 +10,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from .pipeline_state import PipelineState
 
@@ -39,7 +40,7 @@ class Pruner(ABC):
     """
 
     @abstractmethod
-    def prune(self, state: PipelineState) -> PipelineState:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, Optional[list[int]]]:
         """Analyzes the pipeline state and prunes components from the mixture.
 
         This method is called by the :class:`Pipeline` to inspect the current mixture
@@ -59,4 +60,6 @@ class Pruner(ABC):
             The new pipeline state. If components were removed, this state
             contains the updated mixture model. Otherwise, it returns the
             original state.
+        removed_components_indices : list[int] | None
+            Tracks which component indices were removed during pruning.
         """
