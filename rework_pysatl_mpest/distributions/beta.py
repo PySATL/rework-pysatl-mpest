@@ -1,15 +1,16 @@
 """Module providing four parametric beta distribution distribution class"""
 
-__author__ = "Maksim Pastukhov"
+__author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+
 import numpy as np
-from numpy import float64
 from scipy.special import digamma
 from scipy.stats import beta as beta_dist
 
 from ..core import Parameter
+from ..typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
@@ -60,8 +61,15 @@ class Beta(ContinuousDistribution):
     left_border = Parameter()
     right_border = Parameter()
 
-    def __init__(self, alpha: float, beta: float, left_border: float, right_border: float):
-        super().__init__()
+    def __init__(
+        self,
+        alpha: float,
+        beta: float,
+        left_border: float,
+        right_border: float,
+        dtype: type[DType] = np.float64,  # type: ignore[assignment]
+    ):
+        super().__init__(dtype=dtype)
         if left_border >= right_border:
             raise ValueError("Left border must be less than right border")
         self.alpha = alpha
@@ -101,10 +109,11 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
 
         """
+        X = np.asarray(X, dtype=self.dtype)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -128,14 +137,19 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
-        P = np.asarray(P, dtype=float64)
+        P = np.asarray(P, dtype=self.dtype)
+        dtype = self.dtype
+
         return np.where(
             (P >= 0) & (P <= 1),
-            (self.left_border + (self.right_border - self.left_border) * beta_dist.ppf(P, self.alpha, self.beta)),
-            np.nan,
+            (
+                self.left_border
+                + (self.right_border - self.left_border) * beta_dist.ppf(P, self.alpha, self.beta).astype(dtype)
+            ),
+            dtype(np.nan),
         )
 
     def lpdf(self, X):
@@ -163,17 +177,19 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
 
         Z = (X - self.left_border) / (self.right_border - self.left_border)
 
-        log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta)
+        log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta).astype(dtype)
+        result = log_pdf_standard - np.log(self.right_border - self.left_border)
 
-        return log_pdf_standard - np.log(self.right_border - self.left_border)
+        return np.atleast_1d(result)
 
     def _dlog_alpha(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`alpha` parameter.
@@ -198,18 +214,20 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`alpha` for each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         return np.where(
             in_bounds,
             np.log(X - self.left_border)
             - np.log(self.right_border - self.left_border)
-            - (digamma(self.alpha) - digamma(self.alpha + self.beta)),
-            0.0,
+            - (dtype(digamma(self.alpha)) - dtype(digamma(self.alpha + self.beta))),
+            dtype(0.0),
         )
 
     def _dlog_beta(self, X):
@@ -235,18 +253,20 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`beta` for each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         return np.where(
             in_bounds,
             np.log(self.right_border - X)
             - np.log(self.right_border - self.left_border)
-            - (digamma(self.beta) - digamma(self.alpha + self.beta)),
-            0.0,
+            - (dtype(digamma(self.beta)) - dtype(digamma(self.alpha + self.beta))),
+            dtype(0.0),
         )
 
     def _dlog_left_border(self, X):
@@ -270,19 +290,21 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`left_border` for each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         return np.where(
             in_bounds,
             (
-                ((self.alpha + self.beta - 1) / (self.right_border - self.left_border))
-                - ((self.alpha - 1) / (X - self.left_border))
+                ((self.alpha + self.beta - dtype(1)) / (self.right_border - self.left_border))
+                - ((self.alpha - dtype(1)) / (X - self.left_border))
             ),
-            0.0,
+            dtype(0.0),
         )
 
     def _dlog_right_border(self, X):
@@ -306,18 +328,20 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The gradient of the lpdf with respect to :attr:`right_border` for each point in :attr:`X`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         return np.where(
             in_bounds,
             (
-                ((self.beta - 1) / (self.right_border - X))
-                - ((self.alpha + self.beta - 1) / (self.right_border - self.left_border))
+                ((self.beta - dtype(1)) / (self.right_border - X))
+                - ((self.alpha + self.beta - dtype(1)) / (self.right_border - self.left_border))
             ),
-            0.0,
+            dtype(0.0),
         )
 
     def log_gradients(self, X):
@@ -332,13 +356,13 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
         """
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.PARAM_ALPHA: self._dlog_alpha,
@@ -350,7 +374,7 @@ class Beta(ContinuousDistribution):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -366,7 +390,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
@@ -374,7 +398,7 @@ class Beta(ContinuousDistribution):
             beta_dist.rvs(
                 self.alpha, self.beta, loc=self.left_border, scale=self.right_border - self.left_border, size=size
             ),
-            dtype=float64,
+            dtype=self.dtype,
         )
 
     def __repr__(self) -> str:

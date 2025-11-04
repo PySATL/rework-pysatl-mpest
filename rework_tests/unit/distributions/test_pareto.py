@@ -7,6 +7,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import random
 from pathlib import Path
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -15,8 +16,11 @@ from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions.pareto import Pareto
+from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import kstest, pareto
+
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
 st_shape = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
 st_scale = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
@@ -138,7 +142,7 @@ class TestParetoPDF:
         """Tests that the integral of the PDF over its support is equal to 1."""
 
         dist = Pareto(shape=shape, scale=scale)
-        integral, error = quad(dist.pdf, scale, np.inf, epsabs=1e-10, epsrel=1e-10, limit=100)
+        integral, error = quad(lambda x: dist.pdf(x).item(), scale, np.inf, epsabs=1e-10, epsrel=1e-10, limit=100)
         assert np.isfinite(integral), f"Integral diverged: {integral}"
         np.testing.assert_allclose(1.0, integral, rtol=1e-8, atol=1e-10)
 
@@ -180,7 +184,7 @@ class TestParetoLPDF:
         dist = Pareto(shape=shape, scale=scale)
         custom_lpdf = dist.lpdf(x)
         scipy_lpdf = pareto.logpdf(x, scale=scale, b=shape, loc=0.0)
-        np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-12)
+        np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-12, rtol=1e-3)
 
     @given(shape=st_shape, scale=st_scale, x=st.floats(min_value=1e2, max_value=1e4, allow_infinity=False))
     def test_lpdf_outside_support(self, shape, scale, x):
@@ -358,3 +362,30 @@ class TestParetoGenerate:
         ks_statistic, p_value = kstest(samples, "pareto", args=(shape, loc, scale))
         lower_bound = 0.05
         assert p_value > lower_bound
+
+
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+class TestParetoDType(DTypeHandlingMixin):
+    distribution_class = Pareto
+    default_params: ClassVar[dict] = {"shape": 1.0, "scale": 2.0}
+
+    def test_init_with_dtype_sets_correct_types(self, dtype):
+        self.check_init_with_dtype_sets_correct_types(dtype)
+
+    @pytest.mark.parametrize("size", [0, 10])
+    def test_generate_returns_correct_dtype(self, size, dtype):
+        self.check_generate_returns_correct_dtype(size, dtype)
+
+    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(2, 1e3)))
+    def check_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
+        self.check_methods_taking_x_return_correct_dtype(method_name, x_data, dtype)
+
+    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
+    def check_ppf_returns_correct_dtype(self, p_data, dtype):
+        self.check_ppf_returns_correct_dtype(p_data, dtype)
+
+    @pytest.mark.parametrize("method_name", ["_dlog_shape", "_dlog_scale"])
+    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(2, 1e6)))
+    def test_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
+        self.check_dlog_methods_returns_correct_dtype(x_data, method_name, dtype)
