@@ -5,7 +5,7 @@ and validate parameters in classes inheriting from `ContinuousDistribution`.
 It allows you to set invariants for parameter values and handle assignment errors,
 as well as to fix parameters from changes."""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -65,7 +65,7 @@ class Parameter:
         self.invariant = invariant
         self.error_message = error_message
 
-    def __set_name__(self, owner: type[object], name: str):
+    def __set_name__(self, owner: type["ContinuousDistribution[DType]"], name: str):
         """Sets the name for the public and private attributes.
 
         This method is automatically called when a descriptor instance is created
@@ -74,7 +74,7 @@ class Parameter:
 
         Parameters
         ----------
-        owner : type[object]
+        owner : type[ContinuousDistribution]
             The class that uses the descriptor.
         name : str
             The attribute name assigned to the descriptor instance.
@@ -84,14 +84,16 @@ class Parameter:
         self.private_name = "_" + name
 
     @overload
-    def __get__(self, instance: None, owner: type[object]) -> "Parameter":
+    def __get__(self, instance: None, owner: type["ContinuousDistribution[DType]"]) -> "Parameter":
         """If access is via a class, return the descriptor object itself."""
 
     @overload
-    def __get__(self, instance: object, owner: type[object]) -> float:
+    def __get__(self, instance: "ContinuousDistribution[DType]", owner: type["ContinuousDistribution[DType]"]) -> DType:
         """If access is via an object, return the value."""
 
-    def __get__(self, instance: object | None, owner: type[object]) -> Union[float, "Parameter"]:
+    def __get__(
+        self, instance: Optional["ContinuousDistribution[DType]"], owner: type["ContinuousDistribution[DType]"]
+    ) -> Union[DType, "Parameter"]:
         """Returns the parameter value or the descriptor itself.
 
         If access is through an instance of the class, it returns the
@@ -100,15 +102,15 @@ class Parameter:
 
         Parameters
         ----------
-        instance : object or None
+        instance : ContinuousDistribution, optional
             An instance of the owner class, or `None` if access
             is through the class.
-        owner : type[object]
+        owner : type[ContinuousDistribution]
             The owner class.
 
         Returns
         -------
-        float or Parameter
+        DType or Parameter
             The value of the parameter or the descriptor itself.
         """
 
@@ -117,7 +119,7 @@ class Parameter:
 
         return getattr(instance, self.private_name)
 
-    def __set__(self, instance: object, value: float):
+    def __set__(self, instance: "ContinuousDistribution[DType]", value: float):
         """Sets the parameter value after validation.
 
         Before setting a new value, it checks whether the parameter is
@@ -125,7 +127,7 @@ class Parameter:
 
         Parameters
         ----------
-        instance : object
+        instance : "ContinuousDistribution[DType]"
             An instance of the owner class.
         value : float
             The new value for the parameter.
@@ -144,7 +146,10 @@ class Parameter:
                 "This parameter is fixed."
             )
 
-        if not self.invariant(value):
+        owner_dtype = getattr(instance, "dtype", np.float64)
+        d_value = owner_dtype(value)
+
+        if not self.invariant(d_value):
             raise ValueError(f"Invalid value for '{self.public_name}': {self.error_message}")
 
-        setattr(instance, self.private_name, value)
+        setattr(instance, self.private_name, d_value)

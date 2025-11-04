@@ -19,8 +19,8 @@ from rework_pysatl_mpest.estimators.iterative import PipelineState, PriorThresho
 class DummyDistribution(ContinuousDistribution):
     """A simple mock implementation of ContinuousDistribution for testing purposes."""
 
-    def __init__(self, name: str):
-        super().__init__()
+    def __init__(self, name: str, dtype: np.floating = np.float64):
+        super().__init__(dtype=dtype)
         self._name = name
 
     @property

@@ -1,18 +1,19 @@
 """Module providing normal (Gaussian) distribution class"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+
 import numpy as np
-from numpy import float64
 from scipy.stats import norm
 
 from ..core import Parameter
+from ..typings import DType
 from .continuous_dist import ContinuousDistribution
 
 
-class Normal(ContinuousDistribution):
+class Normal(ContinuousDistribution[DType]):
     """Class for the Normal (Gaussian) distribution.
 
     Parameters
@@ -49,8 +50,8 @@ class Normal(ContinuousDistribution):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0, "Scale parameter must be positive")
 
-    def __init__(self, loc: float, scale: float):
-        super().__init__()
+    def __init__(self, loc: float, scale: float, dtype: type[DType] = np.float64):  # type: ignore[assignment]
+        super().__init__(dtype=dtype)
         self.loc = loc
         self.scale = scale
 
@@ -82,13 +83,15 @@ class Normal(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         z = (X - self.loc) / self.scale
-        return np.exp(-(z**2) / 2.0) / (self.scale * np.sqrt(2.0 * np.pi))
+        return np.exp(-(z**2) / dtype(2.0)) / (self.scale * np.sqrt(dtype(2.0) * dtype(np.pi)))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -104,12 +107,14 @@ class Normal(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
 
-        P = np.asarray(P, dtype=float64)
-        return norm.ppf(P, loc=self.loc, scale=self.scale)
+        P = np.asarray(P, dtype=self.dtype)
+        result = norm.ppf(P, loc=self.loc, scale=self.scale)
+
+        return np.asarray(result, dtype=self.dtype)
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -128,26 +133,30 @@ class Normal(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         z = (X - self.loc) / self.scale
-        return -np.log(self.scale) - 0.5 * np.log(2.0 * np.pi) - 0.5 * z**2
+        return -np.log(self.scale) - dtype(0.5) * np.log(dtype(2.0) * dtype(np.pi)) - dtype(0.5) * z**2
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
         return (X - self.loc) / (self.scale**2)
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
         z_sq = ((X - self.loc) / self.scale) ** 2
-        return (z_sq - 1.0) / self.scale
+        return (z_sq - dtype(1.0)) / self.scale
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -159,14 +168,14 @@ class Normal(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
         """
 
-        X = np.asarray(X, dtype=float64)
+        X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
             self.PARAM_LOC: self._dlog_loc,
@@ -176,7 +185,7 @@ class Normal(ContinuousDistribution):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0))
+            return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
         return np.stack(gradients, axis=1)
@@ -193,11 +202,11 @@ class Normal(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
-        return np.asarray(norm.rvs(loc=self.loc, scale=self.scale, size=size), dtype=float64)
+        return np.asarray(norm.rvs(loc=self.loc, scale=self.scale, size=size), dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
