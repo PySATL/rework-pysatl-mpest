@@ -8,7 +8,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Generic
+from typing import Generic, Union
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -165,7 +165,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         return [getattr(self, name) for name in param_names]
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[float]):
+    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[Union[float, DType]]):
         """Sets parameter values from a sequence of floats.
 
         Updates the distribution's parameters using values from the provided
