@@ -6,12 +6,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
-    APeaksRecognitionCriterion,
+    APeaksClassifierCriterion,
 )
 from scipy.signal import peak_widths
 
 
-class CPeaksCount(APeaksRecognitionCriterion):
+class CPeaksCount(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Count Criterion"
@@ -21,7 +21,7 @@ class CPeaksCount(APeaksRecognitionCriterion):
         return len(peaks)
 
 
-class CPeaksDistMax(APeaksRecognitionCriterion):
+class CPeaksDistMax(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Distance Max Criterion"
@@ -31,7 +31,7 @@ class CPeaksDistMax(APeaksRecognitionCriterion):
         return np.max(np.abs(np.diff(peaks)) - 1) / len(hist) if len(peaks) > 1 else 0
 
 
-class CPeaksDistMean(APeaksRecognitionCriterion):
+class CPeaksDistMean(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Distance Mean Criterion"
@@ -41,7 +41,7 @@ class CPeaksDistMean(APeaksRecognitionCriterion):
         return np.mean(np.abs(np.diff(peaks)) - 1) / len(hist) if len(peaks) > 1 else 0
 
 
-class CPeaksDistMin(APeaksRecognitionCriterion):
+class CPeaksDistMin(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Distance Min Criterion"
@@ -51,7 +51,7 @@ class CPeaksDistMin(APeaksRecognitionCriterion):
         return np.min(np.abs(np.diff(peaks)) - 1) / len(hist) if len(peaks) > 1 else 0
 
 
-class CPeaksFirst(APeaksRecognitionCriterion):
+class CPeaksFirst(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks First Criterion"
@@ -61,7 +61,7 @@ class CPeaksFirst(APeaksRecognitionCriterion):
         return float(1 in peaks)
 
 
-class CPeaksLast(APeaksRecognitionCriterion):
+class CPeaksLast(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Last Criterion"
@@ -71,7 +71,7 @@ class CPeaksLast(APeaksRecognitionCriterion):
         return float(len(hist) in peaks)
 
 
-class CPeaksMax(APeaksRecognitionCriterion):
+class CPeaksMax(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Max Criterion"
@@ -82,7 +82,7 @@ class CPeaksMax(APeaksRecognitionCriterion):
         return hist[peaks].max()
 
 
-class CPeaksMean(APeaksRecognitionCriterion):
+class CPeaksMean(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Mean Criterion"
@@ -93,7 +93,7 @@ class CPeaksMean(APeaksRecognitionCriterion):
         return hist[peaks].mean()
 
 
-class CPeaksMin(APeaksRecognitionCriterion):
+class CPeaksMin(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Min Criterion"
@@ -104,7 +104,7 @@ class CPeaksMin(APeaksRecognitionCriterion):
         return hist[peaks].min()
 
 
-class CPeaksWidthMax(APeaksRecognitionCriterion):
+class CPeaksWidthMax(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Width Max Criterion"
@@ -114,7 +114,7 @@ class CPeaksWidthMax(APeaksRecognitionCriterion):
         return np.max(peak_widths(hist, peaks)[0]) / (len(hist) - 2)
 
 
-class CPeaksWidthMean(APeaksRecognitionCriterion):
+class CPeaksWidthMean(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Width Mean Criterion"
@@ -124,7 +124,7 @@ class CPeaksWidthMean(APeaksRecognitionCriterion):
         return np.mean(peak_widths(hist, peaks)[0]) / (len(hist) - 2)
 
 
-class CPeaksWidthMin(APeaksRecognitionCriterion):
+class CPeaksWidthMin(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Peaks Width Min Criterion"
@@ -134,7 +134,7 @@ class CPeaksWidthMin(APeaksRecognitionCriterion):
         return np.min(peak_widths(hist, peaks)[0]) / (len(hist) - 2)
 
 
-class CValleysDistMax(APeaksRecognitionCriterion):
+class CValleysDistMax(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Distance Max Criterion"
@@ -144,7 +144,7 @@ class CValleysDistMax(APeaksRecognitionCriterion):
         return np.max(np.abs(np.diff(valleys)) - 1) / len(hist) if len(valleys) > 1 else 0
 
 
-class CValleysDistMean(APeaksRecognitionCriterion):
+class CValleysDistMean(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Distance Mean Criterion"
@@ -154,7 +154,7 @@ class CValleysDistMean(APeaksRecognitionCriterion):
         return np.mean(np.abs(np.diff(valleys)) - 1) / len(hist) if len(valleys) > 1 else 0
 
 
-class CValleysDistMin(APeaksRecognitionCriterion):
+class CValleysDistMin(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Distance Min Criterion"
@@ -164,7 +164,7 @@ class CValleysDistMin(APeaksRecognitionCriterion):
         return np.min(np.abs(np.diff(valleys)) - 1) / len(hist) if len(valleys) > 1 else 0
 
 
-class CValleysMax(APeaksRecognitionCriterion):
+class CValleysMax(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Max Criterion"
@@ -175,7 +175,7 @@ class CValleysMax(APeaksRecognitionCriterion):
         return hist[valleys].max() if len(valleys) != 0 else 0
 
 
-class CValleysMean(APeaksRecognitionCriterion):
+class CValleysMean(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Mean Criterion"
@@ -186,7 +186,7 @@ class CValleysMean(APeaksRecognitionCriterion):
         return hist[valleys].mean() if len(valleys) != 0 else 0
 
 
-class CValleysMin(APeaksRecognitionCriterion):
+class CValleysMin(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Min Criterion"
@@ -197,7 +197,7 @@ class CValleysMin(APeaksRecognitionCriterion):
         return hist[valleys].min() if len(valleys) != 0 else 0
 
 
-class CValleysWidthMax(APeaksRecognitionCriterion):
+class CValleysWidthMax(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Width Max Criterion"
@@ -207,7 +207,7 @@ class CValleysWidthMax(APeaksRecognitionCriterion):
         return np.max(peak_widths(-hist, valleys)[0]) / (len(hist) - 2) if len(valleys) != 0 else 0
 
 
-class CValleysWidthMean(APeaksRecognitionCriterion):
+class CValleysWidthMean(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Width Mean Criterion"
@@ -217,7 +217,7 @@ class CValleysWidthMean(APeaksRecognitionCriterion):
         return np.mean(peak_widths(-hist, valleys)[0]) / (len(hist) - 2) if len(valleys) != 0 else 0
 
 
-class CValleysWidthMin(APeaksRecognitionCriterion):
+class CValleysWidthMin(APeaksClassifierCriterion):
     @property
     def name(self) -> str:
         return "Valleys Width Min Criterion"

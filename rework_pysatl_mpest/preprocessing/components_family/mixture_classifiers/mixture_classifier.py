@@ -9,13 +9,13 @@ import os
 import gdown
 import numpy as np
 import pandas as pd
+from rework_pysatl_mpest.distributions import ContinuousDistribution
 from rework_pysatl_mpest.preprocessing.components_family.classifier_criterions import (
     MixtureClassifierCriterions,
 )
 from rework_pysatl_mpest.preprocessing.components_family.classifier_models import (
-    IClassifiere,
+    IClassifier,
 )
-from rework_pysatl_mpest.preprocessing.utils import Distribution
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -25,7 +25,7 @@ class MixtureClassifierModel:
 
     Parameters
     ----------
-    :model:         IClassifiere                      — Classifier Model
+    :model:         IClassifier                      — Classifier Model
     :model_path:    str                               — Path to model folder
     :label_path:    str                               — Path to label folder
     :criterions:    MixtureClassifierCriterions       — Mixture Classifier Criterions
@@ -34,12 +34,12 @@ class MixtureClassifierModel:
 
     def __init__(
         self,
-        model: IClassifiere,
+        model: IClassifier,
         model_link: str | None,
         model_path: str,
         labels_path: str,
         criterions: MixtureClassifierCriterions,
-        distributions: dict[str, Distribution],
+        distributions: dict[str, ContinuousDistribution],
     ) -> None:
         self.model = model
         self.model_link = model_link
@@ -70,7 +70,7 @@ class MixtureClassifierModel:
         criterions = self.criterions.get_criterions(X)
         return self.model.predict(criterions)[0]
 
-    def transform(self, feature_id: int) -> list[Distribution]:
+    def transform(self, feature_id: int) -> list[ContinuousDistribution]:
         """Function for converting a model prediction into an appropriate format"""
 
         if not hasattr(self.le, "classes_"):

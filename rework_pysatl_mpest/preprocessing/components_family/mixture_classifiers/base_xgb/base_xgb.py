@@ -23,5 +23,12 @@ XGBBaseModel = MixtureClassifierModel(
     str(Path(__file__).parent / "xgb_model.ubj"),
     str(Path(__file__).parent / "labels.csv"),
     MixtureClassifierCriterions(),
-    {"G": Normal, "W": Weibull, "U": Uniform, "C": Cauchy, "E": Exponential, "B": Beta},
+    {
+        "G": Normal(0.0, 1.0),
+        "W": Weibull(1.0, 0.0, 1.0),
+        "U": Uniform(0.0, 1.0),
+        "C": Cauchy(0.0, 1.0),
+        "E": Exponential(0.0, 1.0),
+        "B": Beta(0.0, 0.0, 0.0, 1.0)
+    },
 )

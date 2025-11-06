@@ -10,9 +10,9 @@ from math import ceil
 import numpy as np
 from rework_pysatl_mpest.preprocessing.components_family.criterions import base_criterions
 from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
-    AHistRecognitionCriterion,
-    APeaksRecognitionCriterion,
-    ASampleRecognitionCriterion,
+    AHistClassifierCriterion,
+    APeaksClassifierCriterion,
+    ASampleClassifierCriterion,
 )
 from scipy.stats import iqr
 
@@ -23,7 +23,7 @@ class MixtureClassifierCriterions:
 
     Parameters
     ----------
-    :criterions list[ASampleRecognitionCriterion | APeaksRecognitionCriterion | AHistRecognitionCriterion]
+    :criterions list[ASampleClassifierCriterion | APeaksClassifierCriterion | AHistClassifierCriterion]
 
     — List of criterions for the mixture classifiers
     """
@@ -31,8 +31,8 @@ class MixtureClassifierCriterions:
     def __init__(
         self,
         criterions: list[
-            ASampleRecognitionCriterion | APeaksRecognitionCriterion | AHistRecognitionCriterion
-        ] = base_criterions,
+            ASampleClassifierCriterion | APeaksClassifierCriterion | AHistClassifierCriterion
+            ] = base_criterions,
     ) -> None:
         self.criterions = criterions
 
@@ -55,13 +55,13 @@ class MixtureClassifierCriterions:
     def _get_criterion(
         X: np.ndarray,
         hist: np.ndarray,
-        criterion: (ASampleRecognitionCriterion | APeaksRecognitionCriterion | AHistRecognitionCriterion),
+        criterion: (ASampleClassifierCriterion | APeaksClassifierCriterion | AHistClassifierCriterion),
     ) -> float:
         """Function for obtaining a single criterion based on a sample"""
 
         warnings.filterwarnings("ignore")
 
-        if isinstance(criterion, ASampleRecognitionCriterion):
+        if isinstance(criterion, ASampleClassifierCriterion):
             return criterion.score(X)
 
         return criterion.score(hist)

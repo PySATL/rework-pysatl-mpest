@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 
-class IClassifiere(ABC):
+class IClassifier(ABC):
     """Class representing an interface for classification models"""
 
     @property

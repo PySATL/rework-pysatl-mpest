@@ -5,11 +5,11 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
+from rework_pysatl_mpest.distributions import ContinuousDistribution
 from rework_pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
     MixtureClassifierModel,
 )
 from rework_pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
-from rework_pysatl_mpest.preprocessing.utils import Distribution
 
 
 class ComponentsFamily:
@@ -36,7 +36,7 @@ class ComponentsFamily:
         self.components_number = components_number
         self.state = state
 
-    def predict(self, X: np.ndarray, k: int | list[int] | None = None) -> list[list[Distribution]]:
+    def predict(self, X: np.ndarray, k: int | list[int] | None = None) -> list[list[ContinuousDistribution]]:
         """
         Function for evaluating the top k most probable configurations
 
@@ -76,7 +76,7 @@ class ComponentsFamily:
 
         n = __get_components_n(k)
         prob = self.model.predict(X)
-        result: list[list[Distribution]] = []
+        result: list[list[ContinuousDistribution]] = []
 
         for i in np.argsort(prob)[::-1]:
             if len(result) == self.top_k:
