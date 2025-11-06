@@ -7,14 +7,14 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from pywt import wavedec
 from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
-    AHistRecognitionCriterion,
+    AHistClassifierCriterion,
 )
 from scipy.fft import rfft
 from scipy.fftpack import dct
 from scipy.signal import periodogram
 
 
-class CDct(AHistRecognitionCriterion):
+class CDct(AHistClassifierCriterion):
     def __init__(self, dct_type: int) -> None:
         self.dct_type = dct_type
 
@@ -29,7 +29,7 @@ class CDct(AHistRecognitionCriterion):
         return d[self.dct_type] if len(d) > self.dct_type else 0
 
 
-class CDctEnergy(AHistRecognitionCriterion):
+class CDctEnergy(AHistClassifierCriterion):
     @property
     def name(self) -> str:
         return "DCT Energy Criterion"
@@ -42,7 +42,7 @@ class CDctEnergy(AHistRecognitionCriterion):
         return np.sum(d[k:] ** 2) if len(d) > k else 0
 
 
-class CSpecBandwidth(AHistRecognitionCriterion):
+class CSpecBandwidth(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -59,7 +59,7 @@ class CSpecBandwidth(AHistRecognitionCriterion):
         return np.sqrt(np.sum((freq - centroid) ** 2 * spec) / (np.sum(spec) + self.noise))
 
 
-class CSpecCentroid(AHistRecognitionCriterion):
+class CSpecCentroid(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -75,7 +75,7 @@ class CSpecCentroid(AHistRecognitionCriterion):
         return np.sum(spec * freq) / (np.sum(spec) + self.noise)
 
 
-class CSpecDecrease(AHistRecognitionCriterion):
+class CSpecDecrease(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -94,7 +94,7 @@ class CSpecDecrease(AHistRecognitionCriterion):
         return np.sum((m1[1:] - m1[:-1]) / np.arange(1, len(m1))) / (np.sum(m1) + self.noise)
 
 
-class CSpecEnergy(AHistRecognitionCriterion):
+class CSpecEnergy(AHistClassifierCriterion):
     @property
     def name(self) -> str:
         return "Spectral Energy Criterion"
@@ -106,7 +106,7 @@ class CSpecEnergy(AHistRecognitionCriterion):
         return np.sum(np.abs(spec**2))
 
 
-class CSpecEntropy(AHistRecognitionCriterion):
+class CSpecEntropy(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -122,7 +122,7 @@ class CSpecEntropy(AHistRecognitionCriterion):
         return -np.sum(psd * np.log2(psd + self.noise))
 
 
-class CSpecFlatness(AHistRecognitionCriterion):
+class CSpecFlatness(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -138,7 +138,7 @@ class CSpecFlatness(AHistRecognitionCriterion):
         return gmean / np.mean(spec)
 
 
-class CSpecRolloff(AHistRecognitionCriterion):
+class CSpecRolloff(AHistClassifierCriterion):
     def __init__(self, roll: float = 0.85) -> None:
         self.roll = roll
 
@@ -154,7 +154,7 @@ class CSpecRolloff(AHistRecognitionCriterion):
         return np.where(cumsum >= self.roll * cumsum[-1])[0][0]
 
 
-class CSpecSlope(AHistRecognitionCriterion):
+class CSpecSlope(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -171,7 +171,7 @@ class CSpecSlope(AHistRecognitionCriterion):
         return np.sum((freq - fm) * (spec - sm)) / (np.sum((freq - fm) ** 2) + self.noise)
 
 
-class CWaveletEnergy(AHistRecognitionCriterion):
+class CWaveletEnergy(AHistClassifierCriterion):
     def __init__(self, level: int = 1, level_max: int = 3, wavelet: str = "haar") -> None:
         self.level = level
         self.level_max = level_max
@@ -190,7 +190,7 @@ class CWaveletEnergy(AHistRecognitionCriterion):
         return np.sum(coeffs[self.level - 1] ** 2) / total
 
 
-class CWaveletEntropy(AHistRecognitionCriterion):
+class CWaveletEntropy(AHistClassifierCriterion):
     def __init__(
         self,
         level: int = 1,
@@ -217,7 +217,7 @@ class CWaveletEntropy(AHistRecognitionCriterion):
         return -np.sum(c_norm * np.log(c_norm + self.noise))
 
 
-class CWaveletLarge(AHistRecognitionCriterion):
+class CWaveletLarge(AHistClassifierCriterion):
     def __init__(
         self,
         level: int = 1,
@@ -243,7 +243,7 @@ class CWaveletLarge(AHistRecognitionCriterion):
         return np.mean(c_abs > np.max(c_abs) * self.threshold)
 
 
-class CWaveletMean(AHistRecognitionCriterion):
+class CWaveletMean(AHistClassifierCriterion):
     def __init__(self, level: int = 1, level_max: int = 3, wavelet: str = "haar") -> None:
         self.level = level
         self.level_max = level_max
@@ -261,7 +261,7 @@ class CWaveletMean(AHistRecognitionCriterion):
         return np.mean(coeffs[self.level - 1])
 
 
-class CWaveletStd(AHistRecognitionCriterion):
+class CWaveletStd(AHistClassifierCriterion):
     def __init__(self, level: int = 1, level_max: int = 3, wavelet: str = "haar") -> None:
         self.level = level
         self.level_max = level_max

@@ -10,7 +10,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 
-class ASampleRecognitionCriterion(ABC):
+class ASampleClassifierCriterion(ABC):
     """Abstract class of sample feature for mixture classifier"""
 
     @property
@@ -23,7 +23,7 @@ class ASampleRecognitionCriterion(ABC):
         """Function evaluating sample feature for a mixture classifier"""
 
 
-class APeaksRecognitionCriterion(ABC):
+class APeaksClassifierCriterion(ABC):
     """Abstract class of peaks feature for mixture classifier"""
 
     @property
@@ -46,7 +46,7 @@ class APeaksRecognitionCriterion(ABC):
         """Function evaluating peaks feature for a mixture classifier"""
 
 
-class AHistRecognitionCriterion(ABC):
+class AHistClassifierCriterion(ABC):
     """Abstract class of hist feature for mixture classifier"""
 
     @property

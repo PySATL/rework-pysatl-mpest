@@ -7,11 +7,11 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 import xgboost as xgb
 from rework_pysatl_mpest.preprocessing.components_family.classifier_models.classifier_interface import (
-    IClassifiere,
+    IClassifier,
 )
 
 
-class XGBClassifier(IClassifiere):
+class XGBClassifier(IClassifier):
     """Implementation of XGBoosting-based classifier"""
 
     def __init__(self) -> None:

@@ -5,10 +5,10 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from rework_pysatl_mpest.preprocessing.components_family.classifier_models.classifier_interface import (
-    IClassifiere,
+    IClassifier,
 )
 from rework_pysatl_mpest.preprocessing.components_family.classifier_models.classifier_models import (
     XGBClassifier,
 )
 
-__all__ = ["IClassifiere", "XGBClassifier"]
+__all__ = ["IClassifier", "XGBClassifier"]

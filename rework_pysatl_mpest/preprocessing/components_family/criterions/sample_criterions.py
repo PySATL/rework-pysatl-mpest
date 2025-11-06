@@ -6,48 +6,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
-    ASampleRecognitionCriterion,
+    ASampleClassifierCriterion,
 )
-from scipy.stats import gmean, iqr, kurtosis, median_abs_deviation, skew, zscore
+from scipy.stats import iqr, kurtosis, skew, zscore
 
 
-class CMedian(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Median Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return np.median(X)
-
-
-class CMean(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Mean Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return np.mean(X)
-
-
-class CMad(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "MAD Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return median_abs_deviation(X)
-
-
-class CNegativeValue(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Negative Value Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return float(np.min(X) < 0)
-
-
-class CKurt(ASampleRecognitionCriterion):
+class CKurt(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Kurtosis Criterion"
@@ -57,7 +21,16 @@ class CKurt(ASampleRecognitionCriterion):
         return kurtosis(X) if not np.isnan(result) else 0
 
 
-class CIqr(ASampleRecognitionCriterion):
+class CNegativeValue(ASampleClassifierCriterion):
+    @property
+    def name(self) -> str:
+        return "Negative Value Criterion"
+
+    def score(self, X: np.ndarray) -> float:
+        return float(np.min(X) < 0)
+
+
+class CIqr(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "IQR Criterion"
@@ -66,7 +39,7 @@ class CIqr(ASampleRecognitionCriterion):
         return iqr(X) / np.median(X)
 
 
-class CKurtMoors(ASampleRecognitionCriterion):
+class CKurtMoors(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Kurtosis Moors Criterion"
@@ -77,7 +50,7 @@ class CKurtMoors(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class CLogRatio(ASampleRecognitionCriterion):
+class CLogRatio(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Log Extreme Ratio Criterion"
@@ -89,7 +62,7 @@ class CLogRatio(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class COutlierFraction(ASampleRecognitionCriterion):
+class COutlierFraction(ASampleClassifierCriterion):
     def __init__(self, k: float = 3) -> None:
         self.k = k
 
@@ -102,7 +75,7 @@ class COutlierFraction(ASampleRecognitionCriterion):
         return np.mean(np.abs(X - mu) > self.k * sigma)
 
 
-class CRange(ASampleRecognitionCriterion):
+class CRange(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Range Criterion"
@@ -111,7 +84,7 @@ class CRange(ASampleRecognitionCriterion):
         return np.ptp(X)
 
 
-class CSkew(ASampleRecognitionCriterion):
+class CSkew(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Skewness Criterion"
@@ -121,7 +94,7 @@ class CSkew(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class CSkewBowley(ASampleRecognitionCriterion):
+class CSkewBowley(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Skewness Bowley Criterion"
@@ -132,7 +105,7 @@ class CSkewBowley(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class CSpacingGap(ASampleRecognitionCriterion):
+class CSpacingGap(ASampleClassifierCriterion):
     def __init__(self, rate: float = 5) -> None:
         self.rate = rate
 
@@ -146,7 +119,7 @@ class CSpacingGap(ASampleRecognitionCriterion):
         return np.mean(diff > self.rate * dmedian)
 
 
-class CSpacingGini(ASampleRecognitionCriterion):
+class CSpacingGini(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Spacing Gini Criterion"
@@ -160,29 +133,7 @@ class CSpacingGini(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class CSpacingVar(ASampleRecognitionCriterion):
-    def __init__(self, n_boot: int = 200) -> None:
-        self.n_boot = n_boot
-
-    @property
-    def name(self) -> str:
-        return "Spacing Var Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        diff = np.diff(np.sort(X))
-        return np.var(diff)
-
-
-class CStd(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Standard Deviation Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return np.std(X)
-
-
-class CMaxZscore(ASampleRecognitionCriterion):
+class CMaxZscore(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Z-Score Criterion"
@@ -192,46 +143,7 @@ class CMaxZscore(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class CPercentileMedian(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Percentile Median Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        result = (np.percentile(X, 75) - np.median(X)) / (np.median(X) - np.percentile(X, 25))
-        return result if not np.isnan(result) else 0
-
-
-class CPercentileRange(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Percentile Range Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return np.percentile(X, 95) - np.percentile(X, 5)
-
-
-class CPercentileTail(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Percentile Tail Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        median = np.median(X)
-        return (np.percentile(X, 99) - median) - (median - np.percentile(X, 1))
-
-
-class CPercentileExtreme(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Percentile Extreme Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        median = np.median(X)
-        return (np.percentile(X, 99.9) - median) - (np.percentile(X, 99) - median)
-
-
-class CBootKurt(ASampleRecognitionCriterion):
+class CBootKurt(ASampleClassifierCriterion):
     def __init__(self, n_boot: int = 200, state: int | None = None) -> None:
         self.n_boot = n_boot
         self.state = state
@@ -249,50 +161,7 @@ class CBootKurt(ASampleRecognitionCriterion):
         return result if not np.isnan(result) else 0
 
 
-class CBootMean(ASampleRecognitionCriterion):
-    def __init__(self, n_boot: int = 200, state: int | None = None) -> None:
-        self.n_boot = n_boot
-        self.state = state
-
-    @property
-    def name(self) -> str:
-        return "Bootstrap Mean Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        np.random.seed(self.state)
-
-        n = len(X)
-        means = [np.mean(np.random.choice(X, size=n, replace=True)) for _ in range(self.n_boot)]
-        return np.var(means)
-
-
-class CBootVar(ASampleRecognitionCriterion):
-    def __init__(self, n_boot: int = 200, state: int | None = None) -> None:
-        self.n_boot = n_boot
-        self.state = state
-
-    @property
-    def name(self) -> str:
-        return "Bootstrap Var Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        np.random.seed(self.state)
-
-        n = len(X)
-        means = [np.var(np.random.choice(X, size=n, replace=True)) for _ in range(self.n_boot)]
-        return np.var(means)
-
-
-class CGmean(ASampleRecognitionCriterion):
-    @property
-    def name(self) -> str:
-        return "Geometric Mean Criterion"
-
-    def score(self, X: np.ndarray) -> float:
-        return gmean(np.abs(X))
-
-
-class CHillAbs(ASampleRecognitionCriterion):
+class CHillAbs(ASampleClassifierCriterion):
     @property
     def name(self) -> str:
         return "Hill Abs Criterion"

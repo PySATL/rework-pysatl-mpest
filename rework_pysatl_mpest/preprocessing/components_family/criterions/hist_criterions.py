@@ -6,13 +6,13 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
-    AHistRecognitionCriterion,
+    AHistClassifierCriterion,
 )
 from scipy.ndimage import sobel
 from scipy.spatial.distance import jensenshannon
 
 
-class CHistEnergy(AHistRecognitionCriterion):
+class CHistEnergy(AHistClassifierCriterion):
     @property
     def name(self) -> str:
         return "Hist Energy Criterion"
@@ -22,7 +22,7 @@ class CHistEnergy(AHistRecognitionCriterion):
         return np.sum(hist**2)
 
 
-class CHistEntropy(AHistRecognitionCriterion):
+class CHistEntropy(AHistClassifierCriterion):
     def __init__(self, noise: float = 10**-12) -> None:
         self.noise = noise
 
@@ -35,7 +35,7 @@ class CHistEntropy(AHistRecognitionCriterion):
         return -np.sum(hist * np.log2(hist + self.noise))
 
 
-class CHistFlat(AHistRecognitionCriterion):
+class CHistFlat(AHistClassifierCriterion):
     def __init__(self, rate: float = 0.05) -> None:
         self.rate = rate
 
@@ -48,7 +48,7 @@ class CHistFlat(AHistRecognitionCriterion):
         return np.mean(np.abs(np.diff(hist)) < self.rate)
 
 
-class CHistLength(AHistRecognitionCriterion):
+class CHistLength(AHistClassifierCriterion):
     @property
     def name(self) -> str:
         return "Hist Length Criterion"
@@ -58,7 +58,7 @@ class CHistLength(AHistRecognitionCriterion):
         return np.sum(np.abs(np.diff(hist)))
 
 
-class CHistUniform(AHistRecognitionCriterion):
+class CHistUniform(AHistClassifierCriterion):
     @property
     def name(self) -> str:
         return "Hist Uniform Criterion"
@@ -71,7 +71,7 @@ class CHistUniform(AHistRecognitionCriterion):
         return jensenshannon(hist, uniform)
 
 
-class CSobelCount(AHistRecognitionCriterion):
+class CSobelCount(AHistClassifierCriterion):
     def __init__(self, threshold: float = 0.01) -> None:
         self.threshold = threshold
 
@@ -86,7 +86,7 @@ class CSobelCount(AHistRecognitionCriterion):
         return np.mean(np.abs(sob) > np.max(np.abs(sob)) * self.threshold)
 
 
-class CSobelMax(AHistRecognitionCriterion):
+class CSobelMax(AHistClassifierCriterion):
     def __init__(self, threshold: float = 0.01) -> None:
         self.threshold = threshold
 
@@ -101,7 +101,7 @@ class CSobelMax(AHistRecognitionCriterion):
         return np.max(np.abs(sob))
 
 
-class CSobelMean(AHistRecognitionCriterion):
+class CSobelMean(AHistClassifierCriterion):
     def __init__(self, threshold: float = 0.01) -> None:
         self.threshold = threshold
 
@@ -116,7 +116,7 @@ class CSobelMean(AHistRecognitionCriterion):
         return np.mean(np.abs(sob))
 
 
-class CSobelMin(AHistRecognitionCriterion):
+class CSobelMin(AHistClassifierCriterion):
     def __init__(self, threshold: float = 0.01) -> None:
         self.threshold = threshold
 
