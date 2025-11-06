@@ -32,7 +32,7 @@ class MixtureClassifierCriterions:
         self,
         criterions: list[
             ASampleClassifierCriterion | APeaksClassifierCriterion | AHistClassifierCriterion
-            ] = base_criterions,
+        ] = base_criterions,
     ) -> None:
         self.criterions = criterions
 

@@ -29,6 +29,6 @@ XGBBaseModel = MixtureClassifierModel(
         "U": Uniform(0.0, 1.0),
         "C": Cauchy(0.0, 1.0),
         "E": Exponential(0.0, 1.0),
-        "B": Beta(0.0, 0.0, 0.0, 1.0)
+        "B": Beta(0.0, 0.0, 0.0, 1.0),
     },
 )
