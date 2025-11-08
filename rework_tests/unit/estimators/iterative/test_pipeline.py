@@ -15,7 +15,7 @@ from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.estimators.iterative import Breakpointer, Pipeline, PipelineState, PipelineStep, Pruner
 from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, IterationsHistory
 from rework_pysatl_mpest.estimators.iterative.pruners import PriorThresholdPruner
-from rework_pysatl_mpest.estimators.iterative.steps import OptimizationBlock
+from rework_pysatl_mpest.estimators.iterative.steps import OptimizationBlock, MaximizationStep
 
 # --- Mock objects for isolated testing ---
 
@@ -34,6 +34,8 @@ class MockStepA(PipelineStep):
         self.call_log.append("A")
         return state
 
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
 
 class MockStepB(PipelineStep):
     """A concrete mock step 'B' that can follow 'A' and loop back."""
@@ -48,6 +50,9 @@ class MockStepB(PipelineStep):
     def run(self, state: PipelineState) -> PipelineState:
         self.call_log.append("B")
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
 
 
 class MockSingleStep(PipelineStep):
@@ -64,6 +69,9 @@ class MockSingleStep(PipelineStep):
         if self.call_log is not None:
             self.call_log.append("SingleStep")
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
 
 
 class MockStepWithError(MockSingleStep):
@@ -73,6 +81,9 @@ class MockStepWithError(MockSingleStep):
         super().run(state)
         state.error = ValueError(f"Simulated error in {self.__class__.__name__}")
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
 
 
 class ModifyingStep(PipelineStep):
@@ -95,6 +106,9 @@ class ModifyingStep(PipelineStep):
             state.curr_mixture.remove_component(1)
 
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
 
 
 class ParameterIncrementStep(PipelineStep):
@@ -121,6 +135,9 @@ class ParameterIncrementStep(PipelineStep):
 
         state.curr_mixture.log_weights = np.log(new_weights + 1e-30)
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
 
 
 class MockBreakpointer(Breakpointer):
@@ -481,149 +498,118 @@ class TestPipelineFit:
         assert pipeline.logger[1].iteration == EXPECTED_ITERATIONS[1]
         assert pipeline.logger[1].mixture == fitted_mixture
 
-    def test_optimization_blocks_updated_after_pruning(self, initial_mixture, sample_data):
-        """Tests that optimization blocks are correctly updated when components are pruned."""
+    
+    def test_clear_after_prune_called_during_fit(self, initial_mixture, sample_data):
+        """Tests that clear_after_prune is called for all steps during pipeline execution."""
+        
+        call_log = []
+        
+        class TrackingStep(MockSingleStep):
+            def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+                call_log.append(f"clear_after_prune called with {removed_components_indices}")
+        
+        # Create steps that track clear_after_prune calls
+        steps = [TrackingStep(), TrackingStep()]
+        pruners = [MockPruner("pruner")]
+        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        
+        pipeline = Pipeline(steps, breakpointers, pruners)
+        pipeline.fit(sample_data, initial_mixture)
 
-        # Create a mixture with 3 components
-        components = [Exponential(loc=0, rate=1), Exponential(loc=2, rate=1), Exponential(loc=4, rate=1)]
-        weights = [0.1, 0.6, 0.3]  # First component will be pruned (weight < 0.2)
-        mixture = MixtureModel(components, weights)
+        # Verify clear_after_prune was called for each step
+        assert len(call_log) == 2  # Called for each step
+        assert "clear_after_prune called with" in call_log[0]
 
-        # Create optimization blocks for all components
-        optimization_blocks = [
-            OptimizationBlock(0, {"loc", "rate"}, "q_function"),
-            OptimizationBlock(1, {"loc", "rate"}, "q_function"),
-            OptimizationBlock(2, {"loc"}, "q_function"),
-        ]
 
-        # Create pipeline state with optimization blocks - FIXED H matrix dimensions
-        X = np.array([1.0, 2.0, 3.0])
-        # H should be (n_samples, n_components) = (3, 3)
-        H = np.array(
-            [
-                [0.1, 0.8, 0.1],  # Sample 1 responsibilities
-                [0.2, 0.7, 0.1],  # Sample 2 responsibilities
-                [0.1, 0.6, 0.3],  # Sample 3 responsibilities
-            ]
-        )
-        state = PipelineState(X, H, None, mixture, None, optimization_blocks)
+# --- Tests for MaximizationStep clear_after_prune method ---
 
-        # Create pruner and prune - now returns tuple
-        pruner = PriorThresholdPruner(threshold=0.2)
-        state, removed_components_indices = pruner.prune(state)
-
-        # Verify components were pruned
-        assert state.curr_mixture.n_components == CONST
-        assert removed_components_indices == [0]  # First component removed
-
-        # Verify H matrix before handling (still original shape)
-        assert state.H.shape == (3, 3)  # (n_samples, n_components)
-
-        # Simulate pipeline handling pruning effects - now pass removed_components_indices
-        pipeline = Pipeline([MockSingleStep()], [MockBreakpointer(stop_at_iteration=2)], [pruner])
-        pipeline._handle_pruning_effects(state, removed_components_indices)
-
-        # Now H should be updated to (3, 2)
-        assert state.H.shape == (3, 2)  # Should now be (n_samples, n_components) = (3, 2)
-
-        # Verify optimization blocks were updated
-        assert len(state.optimization_blocks) == CONST
-
-        # Check that component_ids were updated correctly
-        remaining_component_ids = [block.component_id for block in state.optimization_blocks]
-        assert remaining_component_ids == [0, 1]  # Should be reindexed
-
-        # Verify the parameters to optimize are preserved
-        assert state.optimization_blocks[0].params_to_optimize == {"loc", "rate"}  # Originally component 1
-        assert state.optimization_blocks[1].params_to_optimize == {"loc"}  # Originally component 2
-
-    def test_pruning_with_no_optimization_blocks(self, initial_mixture, sample_data):
-        """Tests that pruning works correctly when no optimization blocks are present."""
-        # Create a mixture that will be pruned
-        components = [Exponential(loc=0, rate=1), Exponential(loc=2, rate=1)]
-        weights = [0.1, 0.9]  # First component will be pruned
-        mixture = MixtureModel(components, weights)
-
-        X = np.array([1.0, 2.0])
-        # H should be (n_samples, n_components) = (2, 2)
-        H = np.array(
-            [
-                [0.2, 0.8],  # Sample 1 responsibilities
-                [0.1, 0.9],  # Sample 2 responsibilities
-            ]
-        )
-        state = PipelineState(X, H, None, mixture, None, None)  # No optimization blocks
-
-        pruner = PriorThresholdPruner(threshold=0.2)
-        state, removed_components_indices = pruner.prune(state)
-
-        # Simulate pipeline handling - now pass removed_components_indices
-        pipeline = Pipeline([MockSingleStep()], [MockBreakpointer(stop_at_iteration=2)], [pruner])
-        pipeline._handle_pruning_effects(state, removed_components_indices)
-
-        # Should work without errors even when optimization_blocks is None
-        assert state.curr_mixture.n_components == 1
-        assert removed_components_indices == [0]
-        assert state.H.shape == (2, 1)  # H matrix updated to (n_samples, n_components) = (2, 1)
-
-    def test_multiple_components_pruned_updates_optimization_blocks_correctly(self, initial_mixture, sample_data):
-        """Tests that optimization blocks are correctly updated when multiple components are pruned."""
-
-        # Create a mixture with 4 components, 2 will be pruned
-        components = [
-            Exponential(loc=0, rate=1),
-            Exponential(loc=1, rate=1),
-            Exponential(loc=2, rate=1),
-            Exponential(loc=3, rate=1),
-        ]
-        weights = [0.09, 0.05, 0.6, 0.26]  # First two components will be pruned (weights < 0.1)
-        mixture = MixtureModel(components, weights)
-
-        # Create optimization blocks for all components
-        optimization_blocks = [
+class TestMaximizationStepClearAfterPrune:
+    """Unit tests for the clear_after_prune method of MaximizationStep."""
+    
+    def test_clear_after_prune_removes_blocks_for_pruned_components(self):
+        """Tests that clear_after_prune removes optimization blocks for pruned components."""
+        
+        blocks = [
             OptimizationBlock(0, {"loc"}, "q_function"),
             OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
-            OptimizationBlock(3, {"loc"}, "q_function"),
+            OptimizationBlock(2, {"loc", "rate"}, "q_function")
         ]
+        
+        step = MaximizationStep(blocks=blocks, optimizer=None)
+        
+        # Remove component 1
+        removed_indices = [1]
+        step.clear_after_prune(removed_indices)
+        
+        # Should have 2 blocks left
+        assert len(step.blocks) == 2
+        # Blocks should be for original components 0 and 2
+        assert step.blocks[0].component_id == 0
+        assert step.blocks[1].component_id == 1  # Reindexed from 2 to 1
 
-        X = np.array([1.0, 2.0, 3.0, 4.0])
-        # H should be (n_samples, n_components) = (4, 4)
-        H = np.array(
-            [
-                [0.09, 0.05, 0.6, 0.26],  # Sample 1
-                [0.09, 0.05, 0.6, 0.26],  # Sample 2
-                [0.09, 0.05, 0.6, 0.26],  # Sample 3
-                [0.09, 0.05, 0.6, 0.26],  # Sample 4
-            ]
-        )
-        state = PipelineState(X, H, None, mixture, None, optimization_blocks)
+    def test_clear_after_prune_preserves_optimization_parameters(self):
+        """Tests that clear_after_prune preserves optimization parameters for remaining blocks."""
+        
+        blocks = [
+            OptimizationBlock(0, {"loc"}, "q_function"),
+            OptimizationBlock(1, {"rate", "scale"}, "q_function"),
+            OptimizationBlock(2, {"loc", "rate"}, "q_function")
+        ]
+        
+        step = MaximizationStep(blocks=blocks, optimizer=None)
+        
+        # Remove component 1
+        removed_indices = [1]
+        step.clear_after_prune(removed_indices)
+        
+        # Check that optimization parameters are preserved
+        assert step.blocks[0].params_to_optimize == {"loc"}
+        assert step.blocks[1].params_to_optimize == {"loc", "rate"}
 
-        # Create pruner and prune (threshold 0.1 will remove components 0 and 1) - now returns tuple
-        pruner = PriorThresholdPruner(threshold=0.1)
-        state, removed_components_indices = pruner.prune(state)
+    def test_clear_after_prune_with_empty_removal(self):
+        """Tests that clear_after_prune does nothing when no components are removed."""
+        
+        blocks = [
+            OptimizationBlock(0, {"loc"}, "q_function"),
+            OptimizationBlock(1, {"rate"}, "q_function")
+        ]
+        
+        step = MaximizationStep(blocks=blocks, optimizer=None)
+        original_blocks = list(step.blocks)  # Create a copy
+        
+        step.clear_after_prune([])
+        
+        # Blocks should remain unchanged
+        assert step.blocks == original_blocks
 
-        # Verify components were pruned
-        assert state.curr_mixture.n_components == CONST
-        assert removed_components_indices == [0, 1]  # First two components removed
+    def test_clear_after_prune_with_none_blocks(self):
+        """Tests that clear_after_prune handles None blocks gracefully."""
+        
+        step = MaximizationStep(blocks=[], optimizer=None)
+        
+        # Should not raise an error
+        step.clear_after_prune([0, 1])
+        assert step.blocks == []
 
-        # Verify H matrix before handling (still original shape)
-        assert state.H.shape == (4, 4)  # (n_samples, n_components)
-
-        # Simulate pipeline handling pruning effects - now pass removed_components_indices
-        pipeline = Pipeline([MockSingleStep()], [MockBreakpointer(stop_at_iteration=2)], [pruner])
-        pipeline._handle_pruning_effects(state, removed_components_indices)
-
-        # Now H should be updated to (4, 2)
-        assert state.H.shape == (4, 2)  # Should now be (n_samples, n_components) = (4, 2)
-
-        # Verify optimization blocks were updated
-        assert len(state.optimization_blocks) == CONST
-
-        # Check that component_ids were updated correctly
-        remaining_component_ids = [block.component_id for block in state.optimization_blocks]
-        assert remaining_component_ids == [0, 1]  # Should be reindexed
-
-        # Verify the parameters to optimize are preserved for the correct components
-        assert state.optimization_blocks[0].params_to_optimize == {"loc", "rate"}  # Originally component 2
-        assert state.optimization_blocks[1].params_to_optimize == {"loc"}  # Originally component 3
+    def test_clear_after_prune_with_multiple_removals(self):
+        """Tests clear_after_prune with multiple components removed."""
+        
+        blocks = [
+            OptimizationBlock(0, {"loc"}, "q_function"),
+            OptimizationBlock(1, {"rate"}, "q_function"),
+            OptimizationBlock(2, {"scale"}, "q_function"),
+            OptimizationBlock(3, {"loc", "rate"}, "q_function")
+        ]
+        
+        step = MaximizationStep(blocks=blocks, optimizer=None)
+        
+        # Remove components 1 and 3
+        removed_indices = [1, 3]
+        step.clear_after_prune(removed_indices)
+        
+        assert len(step.blocks) == 2
+        assert step.blocks[0].component_id == 0  # Originally component 0
+        assert step.blocks[1].component_id == 1  # Originally component 2, now reindexed to 1
+        
+        assert step.blocks[0].params_to_optimize == {"loc"}
+        assert step.blocks[1].params_to_optimize == {"scale"}

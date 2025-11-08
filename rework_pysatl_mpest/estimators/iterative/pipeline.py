@@ -141,51 +141,6 @@ class Pipeline(BaseEstimator):
                     f"available next steps:'{curr_step.available_next_steps}', but got '{next_step}'"
                 )
 
-    def _handle_pruning_effects(self, state: PipelineState, removed_components_indices: Optional[list[int]]):
-        """Handles all effects of component pruning on pipeline state."""
-        if removed_components_indices is None or not removed_components_indices:
-            return
-
-        removed_indices = removed_components_indices
-
-        # Update optimization blocks
-        if state.optimization_blocks is not None:
-            self._update_optimization_blocks(state, removed_indices)
-
-        # Update responsibility matrix H
-        if state.H is not None:
-            state.H = np.delete(state.H, removed_components_indices, axis=1)
-
-    def _update_optimization_blocks(self, state: PipelineState, removed_components_indices: list[int]):
-        """Updates optimization blocks after component pruning.
-
-        This method removes optimization blocks associated with pruned components
-        and updates the component_id in the remaining blocks to maintain consistency.
-
-        Parameters
-        ----------
-        state : PipelineState
-            The current pipeline state containing removed_components_indices
-        removed_components_indices : list[int] | None
-            Tracks which component indices were removed during pruning.
-        """
-        if removed_components_indices is None or not removed_components_indices or state.optimization_blocks is None:
-            return
-        removed_indices = set(removed_components_indices)
-
-        state.optimization_blocks = [
-            block for block in state.optimization_blocks if block.component_id not in removed_indices
-        ]
-
-        old_to_new_mapping = {}
-        new_component_id = 0
-        for old_component_id in range(len(state.optimization_blocks) + len(removed_indices)):
-            if old_component_id not in removed_indices:
-                old_to_new_mapping[old_component_id] = new_component_id
-                new_component_id += 1
-        for block in state.optimization_blocks:
-            if block.component_id in old_to_new_mapping:
-                block.component_id = old_to_new_mapping[block.component_id]
 
     def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
         """Fits the mixture model to the data using the configured pipeline.
@@ -216,12 +171,17 @@ class Pipeline(BaseEstimator):
         state = PipelineState(X, None, None, copied_mixture, None)
 
         while True:
+            removed_indices = []
             # Updating the state before starting an iteration
             state.prev_mixture = copy(state.curr_mixture)
+            # Update responsibility matrix H
+            if state.H is not None:
+                state.H = np.delete(state.H, removed_indices, axis=1)
 
             # Performing steps
             for step in self.steps:
                 result_state = step.run(state)
+                step.clear_after_prune(removed_indices)
                 if result_state.error:
                     if len(self.logger) > 0:
                         self.logger[-1].error = result_state.error
@@ -248,7 +208,7 @@ class Pipeline(BaseEstimator):
             for pruner in self.pruners:
                 state, removed_components_indices = pruner.prune(state)
                 if removed_components_indices is not None:
-                    self._handle_pruning_effects(state, removed_components_indices)
+                   removed_indices.extend(removed_components_indices)
             # Log
             self.logger.log(
                 IterationRecord(self.logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
