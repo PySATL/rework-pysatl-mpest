@@ -169,7 +169,7 @@ class Pipeline(BaseEstimator):
         state = PipelineState(X, None, None, copied_mixture, None)
 
         while True:
-            removed_indices = []
+            removed_indices: list[int] = []
             # Updating the state before starting an iteration
             state.prev_mixture = copy(state.curr_mixture)
             # Update responsibility matrix H
