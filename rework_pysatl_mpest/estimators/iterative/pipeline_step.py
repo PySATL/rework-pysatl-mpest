@@ -75,3 +75,32 @@ class PipelineStep(ABC):
             The updated state of the pipeline. This can be the mutated input
             `state` object or a completely new instance.
         """
+
+    @abstractmethod
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        """
+        Cleans up internal per-component state after pruning.
+
+        This method is called by the pipeline after a pruning step has removed
+        components from the mixture model. It receives the list of indices
+        (relative to the pre-pruning mixture) that were removed, and should
+        update or remove any internal data structures that are tied to those
+        components.
+
+        Common use cases include:
+        - Deleting cached values or buffers associated with pruned components
+        - Re-indexing remaining component-specific data to maintain contiguous
+          indexing
+
+        The implementation should ensure that after this method completes,
+        all internal state is consistent with the new (smaller) mixture model,
+        where component indices are renumbered contiguously starting from 0.
+
+        Parameters
+        ----------
+        removed_components_indices : list[int]
+            A list of component indices that were removed during pruning.
+            These indices refer to positions in the mixture model **before**
+            pruning occurred. The list is guaranteed to be sorted in ascending
+            order and contain no duplicates.
+        """
