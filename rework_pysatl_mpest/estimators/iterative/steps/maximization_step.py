@@ -142,3 +142,35 @@ class MaximizationStep(PipelineStep):
         curr_mixture.log_weights = np.log(new_weights + 1e-30)
 
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        """Updates optimization blocks after component pruning.
+
+        This method removes optimization blocks associated with pruned components
+        and updates the component_id in the remaining blocks to maintain consistency.
+
+        Parameters
+        ----------
+        state : PipelineState
+            The current pipeline state containing removed_components_indices
+        removed_components_indices : list[int] | None
+            Tracks which component indices were removed during pruning.
+        """
+        if removed_components_indices is None or not removed_components_indices or self.blocks is None:
+            return
+        removed_indices = set(removed_components_indices)
+
+        self.blocks = [
+            block for block in self.blocks if block.component_id not in removed_indices
+        ]
+
+        old_to_new_mapping = {}
+        new_component_id = 0
+        for old_component_id in range(len(self.blocks) + len(removed_indices)):
+            if old_component_id not in removed_indices:
+                old_to_new_mapping[old_component_id] = new_component_id
+                new_component_id += 1
+
+        for block in self.blocks:
+            if block.component_id in old_to_new_mapping:
+                block.component_id = old_to_new_mapping[block.component_id]

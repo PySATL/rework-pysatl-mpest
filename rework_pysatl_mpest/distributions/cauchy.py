@@ -20,7 +20,7 @@ class Cauchy(ContinuousDistribution):
     loc : float
         Location parameter. Can be any real number.
     scale : float
-        Scale parameter (gamma). Must be positive.
+        Scale parameter. Must be positive.
 
     Attributes
     ----------
@@ -144,12 +144,12 @@ class Cauchy(ContinuousDistribution):
             The log-PDF values corresponding to each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=float64)
-        return np.log(1.0) - np.log(np.pi * self.scale * (1.0 + ((X - self.loc) / self.scale) ** 2))
+        return np.log(1.0) - np.log(np.pi) - np.log(self.scale) - np.log(1.0 + ((X - self.loc) / self.scale) ** 2)
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
 
-        The derivative is non-zero only for `X >= loc`.
+        The derivative is defined over all real numbers.
 
         .. math::
 
@@ -171,14 +171,12 @@ class Cauchy(ContinuousDistribution):
         """
 
         X = np.asarray(X, dtype=float64)
-        return np.where(
-            self.loc <= X, (2 * X - 2 * self.loc) / (self.scale**2 + X**2 - 2 * self.loc * X + self.loc**2), 0.0
-        )
+        return (2 * X - 2 * self.loc) / (self.scale**2 + X**2 - 2 * self.loc * X + self.loc**2)
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`scale` parameter.
 
-        The derivative is non-zero only for `X >= loc`.
+        The derivative is defined over all real numbers.
 
         .. math::
 
@@ -199,11 +197,8 @@ class Cauchy(ContinuousDistribution):
             The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=float64)
-        return np.where(
-            self.loc <= X,
-            (-(self.scale**2) + X**2 - 2 * self.loc * X + self.loc**2)
-            / (self.scale**3 + self.scale * (X**2) - 2 * self.loc * self.scale * X + self.scale * self.loc**2),
-            0.0,
+        return (-(self.scale**2) + X**2 - 2 * self.loc * X + self.loc**2) / (
+            self.scale**3 + self.scale * (X**2) - 2 * self.loc * self.scale * X + self.scale * self.loc**2
         )
 
     def log_gradients(self, X):

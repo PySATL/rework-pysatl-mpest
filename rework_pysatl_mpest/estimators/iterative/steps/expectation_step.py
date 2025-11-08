@@ -101,3 +101,6 @@ class ExpectationStep(PipelineStep):
             state.H = H_soft
 
         return state
+    
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
