@@ -422,4 +422,3 @@ class TestBetaGenerate:
         ks_statistic, p_value = kstest(samples, "beta", args=(shape1, shape2, left_border, right_border - left_border))
         lower_bound = 0.05
         assert p_value > lower_bound
-
