@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from numpy.typing import ArrayLike
 
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.initializers.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 
 
 class Initializer(ABC):
@@ -52,7 +52,8 @@ class Initializer(ABC):
         self,
         X: ArrayLike,
         dists: list[ContinuousDistribution],
-        cluster_match_info: ClusterMatchStrategy,
+        cluster_match_info: MatchingMethod,
+        score_function: ScoringMethod,
         estimation_info: list[EstimationStrategy],
     ):
         """Performs initialization of mixture model parameters.

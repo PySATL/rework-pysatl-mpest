@@ -6,9 +6,9 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Any, ClassVar
+from typing import Any, Callable, ClassVar, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -16,12 +16,9 @@ from numpy.typing import ArrayLike
 from rework_pysatl_mpest.core.mixture import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.initializers._estimation_strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.initializers.cluster_match_strategy import (
-    match_clusters_for_models_akaike,
-    match_clusters_for_models_log_likelihood,
-)
+from rework_pysatl_mpest.initializers.cluster_match_strategy import match_clusters_for_models
 from rework_pysatl_mpest.initializers.initializer import Initializer
-from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from rework_pysatl_mpest.initializers.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 from rework_pysatl_mpest.optimizers import Optimizer
 from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
 
@@ -41,8 +38,6 @@ class ClusterizeInitializer(Initializer):
         Mapping of cluster matching strategies to their implementation functions.
     n_components : Optional[int]
         Number of mixture components to initialize.
-    cluster_match_strategy : ClusterMatchStrategy
-        Strategy for matching clusters to distribution models.
     estimation_strategies : list[EstimationStrategy]
         List of estimation strategies for each distribution model.
     models : list[ContinuousDistribution]
@@ -93,12 +88,6 @@ class ClusterizeInitializer(Initializer):
     _estimation_strategies: ClassVar[Mapping[EstimationStrategy, Callable]] = MappingProxyType(
         {EstimationStrategy.QFUNCTION: q_function_strategy}
     )
-    _cluster_match_strategies: ClassVar[Mapping[ClusterMatchStrategy, Callable]] = MappingProxyType(
-        {
-            ClusterMatchStrategy.LIKELIHOOD: match_clusters_for_models_log_likelihood,
-            ClusterMatchStrategy.AKAIKE: match_clusters_for_models_akaike,
-        }
-    )
 
     def __init__(self, is_accurate: bool, is_soft: bool, clusterizer: Any):
         """Initializes the cluster-based initializer.
@@ -118,8 +107,9 @@ class ClusterizeInitializer(Initializer):
         self.is_soft = is_soft
         self.is_accurate = is_accurate
         self.clusterizer = clusterizer
-        self.n_components: int | None = None
-        self.cluster_match_strategy: ClusterMatchStrategy = ClusterMatchStrategy.LIKELIHOOD
+        self.n_components: Optional[int] = None
+        self.method: MatchingMethod = MatchingMethod.GREEDY
+        self.score_func: ScoringMethod = ScoringMethod.LIKELIHOOD
         self.estimation_strategies: list[EstimationStrategy] = []
         self.models: list[ContinuousDistribution] = []
 
@@ -216,19 +206,26 @@ class ClusterizeInitializer(Initializer):
         if len(self.estimation_strategies) != len(self.models):
             raise ValueError("Count of models must match count of estimation strategies")
 
-        cluster_match_func = self._cluster_match_strategies[self.cluster_match_strategy]
-
         estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
-        distributions, params, weights = cluster_match_func(self.models, X, H, estimation_funcs)
-        if not np.all(params):
+        distributions, params, weights = match_clusters_for_models(
+            models=self.models,
+            X=X,
+            H=H,
+            estimation_strategies=estimation_funcs,
+            method=self.method,
+            score_func=self.score_func,
+            min_samples=self.MIN_SAMPLES,
+            optimizer=optimizer,
+        )
+        if not all(params):
             return self._fast_init(X, H, optimizer)
 
         new_distributions = []
         for i, dist in enumerate(distributions):
             params_names = params[i].keys()
             params_values = params[i].values()
-            dist.set_params_from_vector(params_names, params_values)
+            dist.set_params_from_vector(list(params_names), list(params_values))
             new_distributions.append(dist)
 
         return new_distributions, weights
@@ -285,7 +282,8 @@ class ClusterizeInitializer(Initializer):
         self,
         X: ArrayLike,
         dists: list[ContinuousDistribution],
-        cluster_match_strategy: ClusterMatchStrategy,
+        method: MatchingMethod,
+        score_func: ScoringMethod,
         estimation_strategies: list[EstimationStrategy],
         optimizer: Optimizer = ScipyNelderMead(),
     ) -> MixtureModel:
@@ -297,8 +295,6 @@ class ClusterizeInitializer(Initializer):
             Input data points for initialization.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize.
-        cluster_match_strategy : ClusterMatchStrategy
-            Strategy for matching clusters to distribution models.
         estimation_strategies : list[EstimationStrategy]
             List of estimation strategies for each distribution model.
         optimizer : Optimizer
@@ -325,7 +321,8 @@ class ClusterizeInitializer(Initializer):
         self.models = dists
         self.n_components = len(dists)
         H = self._clusterize(X, self.clusterizer)
-        self.cluster_match_strategy = cluster_match_strategy
+        self.method = method
+        self.score_func = score_func
         self.estimation_strategies = estimation_strategies
 
         if self.is_accurate:
@@ -335,5 +332,5 @@ class ClusterizeInitializer(Initializer):
 
         total_weight = sum(weights)
         normalized_weights: list[float] = [w / total_weight for w in weights]
-        current_mixture = MixtureModel(distributions, normalized_weights)  # type: ignore[var-annotated]
+        current_mixture = MixtureModel(distributions, normalized_weights)
         return current_mixture
