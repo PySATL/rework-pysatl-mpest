@@ -238,71 +238,67 @@ class TestMaximizationStep:
         # Assert that parameters were updated for both components
         component1.set_params_from_vector.assert_called_once_with(["rate"], [1.1])
         component0.set_params_from_vector.assert_called_once_with(["loc"], [2.2])
-    
+
     def test_clear_after_prune_removes_blocks_for_pruned_components(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune removes optimization blocks for pruned components."""
-    
+
+        CONST = 2
+
         blocks = [
             OptimizationBlock(0, {"loc"}, "q_function"),
             OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function")
+            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
         ]
-    
+
         step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
-    
+
         # Remove component 1
         removed_indices = [1]
         step.clear_after_prune(removed_indices)
-    
+
         # Should have 2 blocks left
-        assert len(step.blocks) == 2
+        assert len(step.blocks) == CONST
         # Blocks should be for original components 0 and 2
         assert step.blocks[0].component_id == 0
         assert step.blocks[1].component_id == 1  # Reindexed from 2 to 1
 
-
     def test_clear_after_prune_preserves_optimization_parameters(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune preserves optimization parameters for remaining blocks."""
-    
+
         blocks = [
             OptimizationBlock(0, {"loc"}, "q_function"),
             OptimizationBlock(1, {"rate", "scale"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function")
+            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
         ]
-    
+
         step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
-    
+
         # Remove component 1
         removed_indices = [1]
         step.clear_after_prune(removed_indices)
-    
+
         # Check that optimization parameters are preserved
         assert step.blocks[0].params_to_optimize == {"loc"}
         assert step.blocks[1].params_to_optimize == {"loc", "rate"}
 
-
     def test_clear_after_prune_with_empty_removal(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune does nothing when no components are removed."""
-    
-        blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function")
-        ]
-    
+
+        blocks = [OptimizationBlock(0, {"loc"}, "q_function"), OptimizationBlock(1, {"rate"}, "q_function")]
+
         step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
         original_blocks = list(step.blocks)  # Create a copy
-    
+
         step.clear_after_prune([])
-    
+
         # Blocks should remain unchanged
         assert step.blocks == original_blocks
 
-
     def test_clear_after_prune_with_none_blocks(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune handles None blocks gracefully."""
-    
+
         step = MaximizationStep(blocks=[], optimizer=mock_optimizer)
-    
+
         # Should not raise an error
         step.clear_after_prune([0, 1])
         assert step.blocks == []

@@ -187,7 +187,7 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
     initial_error_id = id(initial_state.error)
     initial_curr_mix_id = id(initial_state.curr_mixture)
 
-    new_state, removed_components_indices = pruner.prune(initial_state) 
+    new_state, removed_components_indices = pruner.prune(initial_state)
 
     # Verify that other state attributes have not changed (are the same objects)
     assert id(new_state.X) == initial_X_id

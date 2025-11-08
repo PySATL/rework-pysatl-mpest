@@ -14,7 +14,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 import warnings
 from collections.abc import Sequence
 from copy import copy
-from typing import Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -141,7 +140,6 @@ class Pipeline(BaseEstimator):
                     f"available next steps:'{curr_step.available_next_steps}', but got '{next_step}'"
                 )
 
-
     def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
         """Fits the mixture model to the data using the configured pipeline.
 
@@ -208,7 +206,7 @@ class Pipeline(BaseEstimator):
             for pruner in self.pruners:
                 state, removed_components_indices = pruner.prune(state)
                 if removed_components_indices is not None:
-                   removed_indices.extend(removed_components_indices)
+                    removed_indices.extend(removed_components_indices)
             # Log
             self.logger.log(
                 IterationRecord(self.logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
