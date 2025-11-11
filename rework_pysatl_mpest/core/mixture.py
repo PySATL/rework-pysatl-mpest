@@ -301,7 +301,7 @@ class MixtureModel(Generic[DType]):
 
         Returns
         -------
-        float
+        DType
             The total log-likelihood value.
         """
 
