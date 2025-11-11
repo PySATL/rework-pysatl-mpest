@@ -100,7 +100,7 @@ class MixtureModel(Generic[DType]):
             self._validate_weights(n_components, weights)
 
         self._components = [comp.astype(self.dtype) for comp in components]
-        self._log_weights = np.log(weights + self.dtype(1e-30))
+        self._log_weights = np.log(weights + np.finfo(self.dtype).tiny)
         self._cached_weights: Optional[NDArray[DType]] = None
 
         self._sorted_pairs_cache: Optional[list[tuple[ContinuousDistribution[DType], DType]]] = None
@@ -308,7 +308,7 @@ class MixtureModel(Generic[DType]):
 
         Returns
         -------
-        float
+        DType
             The total log-likelihood value.
         """
 

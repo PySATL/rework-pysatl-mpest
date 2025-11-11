@@ -257,12 +257,12 @@ class TestContinuousDistribution:
             param_value = getattr(dummy_float32_dist, param_name)
             assert isinstance(param_value, np.float32)
 
-    # Test to_dtype method
+    # Test astype method
     # ----------------------------------
 
-    def test_to_dtype_successful_conversion(self, dummy_dist: DummyDistribution):
+    def test_astype_successful_conversion(self, dummy_dist: DummyDistribution):
         """
-        Tests that _to_dtype creates a new instance with the correct new dtype
+        Tests that astype creates a new instance with the correct new dtype
         and that the original instance remains unchanged.
         """
         assert dummy_dist.dtype == np.float64
@@ -285,9 +285,9 @@ class TestContinuousDistribution:
         for param in dummy_dist.params:
             assert isinstance(getattr(dummy_dist, param), np.float64)
 
-    def test_to_dtype_returns_self_if_same_dtype(self, dummy_dist: DummyDistribution):
+    def test_astype_returns_self_if_same_dtype(self, dummy_dist: DummyDistribution):
         """
-        Tests that _to_dtype returns the same instance if the target dtype
+        Tests that astype returns the same instance if the target dtype
         is identical to the current one, avoiding unnecessary copying.
         """
         assert dummy_dist.dtype == np.float64
@@ -296,7 +296,7 @@ class TestContinuousDistribution:
 
         assert same_dtype_dist is dummy_dist
 
-    def test_to_dtype_preserves_fixed_params(self, dummy_dist: DummyDistribution):
+    def test_astype_preserves_fixed_params(self, dummy_dist: DummyDistribution):
         """
         Tests that the set of fixed parameters is correctly copied to the
         new instance after dtype conversion.
