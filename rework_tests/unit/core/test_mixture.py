@@ -387,9 +387,9 @@ class TestMixtureModelGenerate:
         target_dtype = np.float32
         mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
 
-        empty_array = mixture.generate(size=size)
-        assert empty_array.shape == (size,)
-        assert empty_array.dtype == target_dtype
+        samples = mixture.generate(size=size)
+        assert samples.shape == (size,)
+        assert samples.dtype == target_dtype
 
 
 class TestMixtureModelDunderMethods:
