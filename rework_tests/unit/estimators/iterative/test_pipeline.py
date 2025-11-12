@@ -15,6 +15,9 @@ from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.estimators.iterative import Breakpointer, Pipeline, PipelineState, PipelineStep, Pruner
 from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, IterationsHistory
 from rework_pysatl_mpest.estimators.iterative.steps import MaximizationStep, OptimizationBlock
+from rework_pysatl_mpest.exceptions import NumericalStabilityError
+
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
 # --- Mock objects for isolated testing ---
 
@@ -86,6 +89,19 @@ class MockStepWithError(MockSingleStep):
         pass
 
 
+class MockStepThatOverlowsOnFloat16(MockSingleStep):
+    """A mock step that simulates an error occurring only on float16"""
+
+    @property
+    def available_next_steps(self) -> list[type[PipelineStep]]:
+        return [ParameterIncrementStep]
+
+    def run(self, state: PipelineState) -> PipelineState:
+        if state.curr_mixture.dtype == np.float16:
+            state.error = NumericalStabilityError("Overflow!")
+        return state
+
+
 class ModifyingStep(PipelineStep):
     """A concrete mock step that actively modifies the mixture's state."""
 
@@ -116,7 +132,7 @@ class ParameterIncrementStep(PipelineStep):
 
     @property
     def available_next_steps(self) -> list[type[PipelineStep]]:
-        return [ParameterIncrementStep]
+        return [MockStepThatOverlowsOnFloat16, ParameterIncrementStep]
 
     def run(self, state: PipelineState) -> PipelineState:
         # Increment 'loc' for each component by 1
@@ -174,17 +190,19 @@ class MockPruner(Pruner):
 # --- Fixtures for tests ---
 
 
-@pytest.fixture
-def initial_mixture() -> MixtureModel:
-    """Provides a basic MixtureModel with two components."""
-    components = [Exponential(loc=0, rate=1), Exponential(loc=5, rate=2)]
-    return MixtureModel(components, weights=[0.5, 0.5])
+@pytest.fixture(params=DTYPES_TO_TEST)
+def initial_mixture(request) -> MixtureModel:
+    """Provides a basic MixtureModel with two components with parametrized dtype."""
+    dtype = request.param
+    components = [Exponential(loc=0, rate=1, dtype=dtype), Exponential(loc=5, rate=2, dtype=dtype)]
+    return MixtureModel(components, weights=[0.5, 0.5], dtype=dtype)
 
 
-@pytest.fixture
-def sample_data() -> np.ndarray:
-    """Provides a simple data array."""
-    return np.array([1, 2, 6, 7])
+@pytest.fixture(params=DTYPES_TO_TEST)
+def sample_data(request) -> np.ndarray:
+    """Provides a simple data array with parametrized dtype."""
+    dtype = request.param
+    return np.array([1, 2, 6, 7], dtype=dtype)
 
 
 # --- Initialization (`__init__`) Tests ---
@@ -291,6 +309,7 @@ class TestPipelineFit:
         """
 
         expected_n_components = 2
+        dtype = initial_mixture.dtype
 
         steps = [ParameterIncrementStep()]
         breakpointers = [MockBreakpointer(stop_at_iteration=3)]
@@ -304,27 +323,39 @@ class TestPipelineFit:
         # Iter 1: locs=[1, 6], weights=[0.6, 0.4]
         # Iter 2: locs=[2, 7], weights=[0.7, 0.3]
 
-        expected_final_locs = [2.0, 7.0]
-        expected_final_rates = [1.0, 2.0]  # Rates should not change
-        expected_final_weights = [0.7, 0.3]
+        expected_final_locs = np.array([2.0, 7.0], dtype=dtype)
+        expected_final_rates = np.array([1.0, 2.0], dtype=dtype)  # Rates should not change
+        expected_final_weights = np.array([0.7, 0.3], dtype=dtype)
 
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
 
         assert fitted_mixture.n_components == expected_n_components
+        # Check type
+        assert fitted_mixture.dtype == dtype
+        assert fitted_mixture.weights.dtype == dtype
+        for component in fitted_mixture.components:
+            assert component.dtype == dtype
 
         # Check weights
+        if dtype == np.float16:
+            rtol = 1e-3
+        elif dtype == np.float32:
+            rtol = 1e-5
+        else:  # float64
+            rtol = 1e-7
+
         np.testing.assert_allclose(
             fitted_mixture.weights,
             expected_final_weights,
-            rtol=1e-6,
+            rtol=rtol,
             err_msg="Mixture weights did not reach the expected values.",
         )
 
-        final_locs = [comp.loc for comp in fitted_mixture.components]
-        final_rates = [comp.rate for comp in fitted_mixture.components]
+        final_locs = np.array([comp.loc for comp in fitted_mixture.components], dtype=dtype)
+        final_rates = np.array([comp.rate for comp in fitted_mixture.components], dtype=dtype)
 
-        assert final_locs == expected_final_locs
-        assert final_rates == expected_final_rates
+        np.testing.assert_allclose(final_locs, expected_final_locs, rtol=rtol)
+        np.testing.assert_allclose(final_rates, expected_final_rates, rtol=rtol)
 
     def test_fit_does_not_modify_original_mixture(self, initial_mixture, sample_data):
         """
@@ -521,6 +552,34 @@ class TestPipelineFit:
         assert len(call_log) == LEN_CALL_LOG  # Called for each step
         for removed_indices in call_log:
             assert removed_indices == [0]
+
+    def test_fit_handles_numerical_stability_error_and_upcasts_dtype(self, mocker):
+        """Tests that Pipeline catches NumericalStabilityError and upgrades the dtype precision to float64."""
+
+        initial_mixture_f16 = MixtureModel([Exponential(loc=0, rate=1, dtype=np.float16)], dtype=np.float16)
+        sample_data_f16 = np.array([1, 2], dtype=np.float16)
+
+        steps = [MockStepThatOverlowsOnFloat16(), ParameterIncrementStep()]
+        breakpointers = [MockBreakpointer(stop_at_iteration=3)]
+
+        pipeline = Pipeline(steps, breakpointers)
+
+        fit_spy = mocker.spy(pipeline, "fit")
+
+        with pytest.warns(UserWarning, match="Restarting pipeline with higher precision"):
+            final_mixture = pipeline.fit(sample_data_f16, initial_mixture_f16)
+
+        expected_count_calls = 2  # One original call, one recursive
+        assert fit_spy.call_count == expected_count_calls
+
+        # Check that the final model in float64
+        assert final_mixture.dtype == np.float64
+        assert final_mixture.weights.dtype == np.float64
+        for component in final_mixture.components:
+            assert component.dtype == np.float64
+
+        # Step logic worked after increasing the precision
+        assert final_mixture.components[0].loc == pytest.approx(2.0)
 
 
 # --- Tests for MaximizationStep clear_after_prune method ---

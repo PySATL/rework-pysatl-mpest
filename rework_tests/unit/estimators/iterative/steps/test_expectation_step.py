@@ -1,6 +1,6 @@
 """Tests for ExpectationStep"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -13,37 +13,36 @@ from rework_pysatl_mpest.estimators.iterative import ExpectationStep, Maximizati
 
 # --- Test Fixtures ---
 
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
-@pytest.fixture
-def mock_mixture(mocker):
+
+@pytest.fixture(params=DTYPES_TO_TEST)
+def initial_pipeline_state(request, mocker) -> PipelineState:
     """
-    Creates a mock MixtureModel object with two components using pytest-mock.
-    This allows for complete control over the inputs for the step being tested.
+    Creates an initial PipelineState for use in tests.
+
+    This fixture is executed for each data type in DTYPES_TO_TEST. It constructs
+    a mock mixture model and a pipeline state where all relevant components
+    (lpdf return values, weights, input data X) share the same parametrized dtype.
     """
+    dtype = request.param
 
     mock_component_1 = mocker.MagicMock()
     mock_component_2 = mocker.MagicMock()
 
-    mock_component_1.lpdf.return_value = np.log([0.6, 0.8])
-    mock_component_2.lpdf.return_value = np.log([0.1, 0.3])
+    mock_component_1.lpdf.return_value = np.log([0.6, 0.8]).astype(dtype)
+    mock_component_2.lpdf.return_value = np.log([0.1, 0.3]).astype(dtype)
 
     mixture = mocker.create_autospec(MixtureModel, instance=True)
     mixture.components = (mock_component_1, mock_component_2)
-    mixture.log_weights = np.log([0.7, 0.3])
+    mixture.log_weights = np.log([0.7, 0.3]).astype(dtype)
+    mixture.dtype = dtype
 
-    return mixture
-
-
-@pytest.fixture
-def initial_pipeline_state(mock_mixture) -> PipelineState:
-    """
-    Creates an initial PipelineState for use in tests.
-    """
     return PipelineState(
-        X=np.array([[1], [2]]),
+        X=np.array([[1], [2]], dtype=dtype),
         H=None,
         prev_mixture=None,
-        curr_mixture=mock_mixture,
+        curr_mixture=mixture,
         error=None,
     )
 
@@ -89,12 +88,15 @@ def test_run_soft_assignment_calculates_h_correctly(initial_pipeline_state):
     state = initial_pipeline_state
     step = ExpectationStep(is_soft=True)
 
-    expected_h = np.array([[0.42 / 0.45, 0.03 / 0.45], [0.56 / 0.65, 0.09 / 0.65]])
+    expected_h = np.array([[0.42 / 0.45, 0.03 / 0.45], [0.56 / 0.65, 0.09 / 0.65]], dtype=state.curr_mixture.dtype)
 
     result_state = step.run(state)
 
     assert result_state.H is not None
-    assert_allclose(result_state.H, expected_h, rtol=1e-6, err_msg="Soft H matrix calculation is incorrect")
+    atol = 1e-3 if state.curr_mixture.dtype == np.float16 else 1e-6
+    assert_allclose(result_state.H, expected_h, rtol=1e-6, atol=atol, err_msg="Soft H matrix calculation is incorrect")
+    # dtype correct
+    assert result_state.H.dtype == state.curr_mixture.dtype
 
 
 def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
@@ -106,7 +108,7 @@ def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
     state = initial_pipeline_state
     step = ExpectationStep(is_soft=False)
 
-    expected_h_hard = np.array([[1.0, 0.0], [1.0, 0.0]])
+    expected_h_hard = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=state.curr_mixture.dtype)
 
     result_state = step.run(state)
 
@@ -116,6 +118,8 @@ def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
         expected_h_hard,
         err_msg="Hard H matrix calculation is incorrect",
     )
+    # dtype correct
+    assert result_state.H.dtype == state.curr_mixture.dtype
 
 
 def test_run_returns_state_and_modifies_only_h(initial_pipeline_state):

@@ -401,6 +401,52 @@ class TestMixtureModelGenerate:
         assert proportion_c1 == pytest.approx(weights[0], abs=0.05)
 
 
+class TestMixtureModelAstype:
+    """Tests for astype method of MixtureModel"""
+
+    def test_astype_successful_conversion(self, exp_components: tuple[Exponential, Exponential]):
+        """
+        Tests that astype creates a new instance with the correct new dtype
+        and that the original instance remains unchanged.
+        """
+        mixture_model = MixtureModel(components=exp_components, weights=[0.5, 0.5], dtype=np.float64)
+
+        assert mixture_model.dtype == np.float64
+        assert mixture_model.log_weights.dtype == np.float64
+        for component in mixture_model.components:
+            assert component.dtype == np.float64
+
+        target_dtype = np.float32
+        new_mixture = mixture_model.astype(target_dtype)
+
+        assert new_mixture is not mixture_model
+        assert new_mixture != mixture_model
+
+        assert new_mixture.dtype == np.float32
+        assert new_mixture.log_weights.dtype == np.float32
+        for component in new_mixture.components:
+            assert component.dtype == np.float32
+
+        # original instance remains unchanged
+        assert mixture_model.dtype == np.float64
+        assert mixture_model.log_weights.dtype == np.float64
+        for component in mixture_model.components:
+            assert component.dtype == np.float64
+
+    def test_astype_returns_self_if_same_dtype(self, exp_components: tuple[Exponential, Exponential]):
+        """
+        Tests that astype returns the same instance if the target dtype
+        is identical to the current one, avoiding unnecessary copying.
+        """
+        mixture_model = MixtureModel(components=exp_components, weights=[0.5, 0.5], dtype=np.float64)
+
+        assert mixture_model.dtype == np.float64
+
+        same_dtype_dist = mixture_model.astype(np.float64)
+
+        assert same_dtype_dist is mixture_model
+
+
 class TestMixtureModelDunderMethods:
     """Tests for special (dunder) methods of MixtureModel."""
 

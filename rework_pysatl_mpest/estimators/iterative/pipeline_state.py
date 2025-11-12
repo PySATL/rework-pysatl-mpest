@@ -6,20 +6,20 @@ for all data passed between different steps of a :class:`Pipeline`, such as
 optimized, and other metadata required for the estimation process.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
 
-from numpy import float64
 from numpy.typing import NDArray
 
 from ...core import MixtureModel
+from ...typings import DType
 
 
 @dataclass
-class PipelineState:
+class PipelineState(Generic[DType]):
     """Represents the state of a pipeline at a specific point in its execution.
 
     This dataclass is a mutable container that centralizes all information
@@ -29,18 +29,18 @@ class PipelineState:
 
     Args
     ----------
-    X : NDArray[float64]
+    X : NDArray[DType]
         The input data sample. This data is typically treated as read-only
         throughout the pipeline's execution.
-    H : NDArray[float64] | None
+    H : NDArray[DType] | None
         The responsibility matrix (posterior probabilities). `H[i, j]`
         represents the probability that data point `i` belongs to component
         `j`. It may not be computed at every step.
-    prev_mixture : MixtureModel | None
+    prev_mixture : MixtureModel[DType] | None
         A snapshot of the mixture model from the previous iteration. This is
         useful for convergence checks, such as comparing log-likelihood values.
         It is `None` at the start of the pipeline.
-    curr_mixture : MixtureModel
+    curr_mixture : MixtureModel[DType]
         The current state of the mixture model that is being actively
         optimized by the pipeline steps.
     error : Exception | None

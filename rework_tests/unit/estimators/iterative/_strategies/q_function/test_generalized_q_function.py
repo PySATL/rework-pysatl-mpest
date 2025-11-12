@@ -13,7 +13,10 @@ from rework_pysatl_mpest.core import MixtureModel, Parameter
 from rework_pysatl_mpest.distributions import ContinuousDistribution
 from rework_pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
 from rework_pysatl_mpest.estimators.iterative._strategies import q_function_strategy
+from rework_pysatl_mpest.exceptions import NumericalStabilityError
 from rework_pysatl_mpest.optimizers import Optimizer
+
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
 # Helper classes for test isolation
 # ---------------------------------
@@ -48,7 +51,7 @@ class DummyDistribution(ContinuousDistribution):
         return np.array([])
 
     def lpdf(self, X):
-        return np.log(np.array([0.5] * len(X)))
+        return np.log(np.array([0.5] * len(X), dtype=self.dtype))
 
     def log_gradients(self, X):
         return np.array([])
@@ -65,71 +68,50 @@ class DummyDistribution(ContinuousDistribution):
 # --- Test Fixtures ---
 
 
-@pytest.fixture
-def mock_component() -> DummyDistribution:
-    """Fixture that creates an instance of DummyDistribution."""
-
-    return DummyDistribution(param1=1.0, param2=2.0)
-
-
-@pytest.fixture
-def mock_mixture(mocker, mock_component) -> MixtureModel:
-    """Fixture that creates a mock MixtureModel."""
-
-    mixture = mocker.create_autospec(MixtureModel, instance=True)
-    mixture.components = (mock_component,)  # Make the component accessible
-    return mixture
-
-
-@pytest.fixture
-def pipeline_state(mock_mixture) -> PipelineState:
+@pytest.fixture(params=DTYPES_TO_TEST)
+def parametrized_setup(
+    mocker, request
+) -> tuple[ContinuousDistribution, PipelineState, OptimizationBlock, OptimizationBlock, np.floating]:
     """
     Fixture that creates a more complete PipelineState with data.
     """
+    dtype = request.param
+
+    component = DummyDistribution(param1=1.0, param2=2.0, dtype=dtype)
+
+    mock_mixture = mocker.create_autospec(MixtureModel, instance=True)
+    mock_mixture.components = (component,)
 
     state = PipelineState(
-        X=np.array([10.0, 20.0, 30.0]),
-        H=np.array([[0.8, 0.2], [0.7, 0.3], [0.6, 0.4]]),
+        X=np.array([10.0, 20.0, 30.0], dtype=dtype),
+        H=np.array([[0.8, 0.2], [0.7, 0.3], [0.6, 0.4]], dtype=dtype),
         prev_mixture=None,
         curr_mixture=mock_mixture,
         error=None,
     )
-    return state
-
-
-@pytest.fixture
-def optimization_block() -> OptimizationBlock:
-    """
-    Fixture that creates a more complete optimization block for the component with ID=0.
-    """
-
-    return OptimizationBlock(
+    block = OptimizationBlock(
         component_id=0, params_to_optimize={"param1", "param2"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
-
-@pytest.fixture
-def mock_optimizer(mocker) -> Optimizer:
-    """Fixture that creates a mock Optimizer object."""
-
     optimizer = mocker.create_autospec(Optimizer, instance=True)
-    return optimizer
+    optimizer.minimize.return_value = [dtype(99.0), dtype(101.0)]
+
+    return component, state, block, optimizer, dtype
 
 
 # Tests
 # -----
 
 
-def test_q_function_strategy_does_not_modify_original_component(
-    mock_component, pipeline_state, optimization_block, mock_optimizer
-):
+def test_q_function_strategy_does_not_modify_original_component(parametrized_setup):
     """
     Verifies that the original component object is not modified,
     as the function should work with its copy.
     """
 
+    mock_component, pipeline_state, optimization_block, mock_optimizer, dtype = parametrized_setup
+
     original_component = copy(mock_component)
-    mock_optimizer.minimize.return_value = [99.0, 101.0]
 
     q_function_strategy(mock_component, pipeline_state, optimization_block, mock_optimizer)
 
@@ -137,26 +119,22 @@ def test_q_function_strategy_does_not_modify_original_component(
     assert mock_component.param2 == original_component.param2, "param2 should not have been changed"
 
 
-def test_q_function_strategy_calls_optimizer_minimize_once(
-    mock_component, pipeline_state, optimization_block, mock_optimizer
-):
+def test_q_function_strategy_calls_optimizer_minimize_once(parametrized_setup):
     """
     Verifies that the optimizer's minimize method is called exactly once.
     """
+    mock_component, pipeline_state, optimization_block, mock_optimizer, dtype = parametrized_setup
 
-    mock_optimizer.minimize.return_value = [5.0, 10.0]
     q_function_strategy(mock_component, pipeline_state, optimization_block, mock_optimizer)
     mock_optimizer.minimize.assert_called_once()
 
 
-def test_q_function_strategy_returns_correct_types(mock_component, pipeline_state, optimization_block, mock_optimizer):
+def test_q_function_strategy_returns_correct_types(parametrized_setup):
     """
     Verifies that the function returns a tuple with the correct
     data types (int, dict[str, float]).
     """
-
-    mock_optimizer.minimize.return_value = [5.0, 10.0]
-
+    mock_component, pipeline_state, optimization_block, mock_optimizer, dtype = parametrized_setup
     result = q_function_strategy(mock_component, pipeline_state, optimization_block, mock_optimizer)
 
     assert isinstance(result, tuple)
@@ -166,17 +144,16 @@ def test_q_function_strategy_returns_correct_types(mock_component, pipeline_stat
     if result[1]:
         key, value = next(iter(result[1].items()))
         assert isinstance(key, str)
-        assert isinstance(value, float)
+        assert isinstance(value, dtype)
 
 
-def test_q_function_strategy_raises_value_error_if_h_is_none(
-    mock_component, pipeline_state, optimization_block, mock_optimizer
-):
+def test_q_function_strategy_raises_value_error_if_h_is_none(parametrized_setup):
     """
     Verifies that a ValueError is raised if the responsibility
     matrix H in the pipeline state has not been computed (is None).
     """
 
+    mock_component, pipeline_state, optimization_block, mock_optimizer, _ = parametrized_setup
     pipeline_state.H = None
 
     with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
@@ -193,7 +170,7 @@ def test_q_function_strategy_raises_value_error_if_h_is_none(
     ],
 )
 def test_q_function_strategy_correctness_and_interaction(
-    mock_component, pipeline_state, mock_optimizer, params_to_optimize_in_block, expected_optimized_params_keys
+    parametrized_setup, params_to_optimize_in_block, expected_optimized_params_keys
 ):
     """
     Comprehensive test for correctness and interaction.
@@ -202,6 +179,8 @@ def test_q_function_strategy_correctness_and_interaction(
     - The optimizer is called with the correct initial values.
     - The target function logic works as expected (returns -q_function).
     """
+
+    mock_component, pipeline_state, optimization_block, mock_optimizer, dtype = parametrized_setup
 
     component_id = 0
     block = OptimizationBlock(
@@ -212,7 +191,7 @@ def test_q_function_strategy_correctness_and_interaction(
 
     # Simulate the return value from the optimizer.
     num_params_to_optimize = len(expected_optimized_params_keys)
-    mocked_new_params_vector = [p * 10.0 for p in range(1, num_params_to_optimize + 1)]
+    mocked_new_params_vector = [dtype(p * 10.0) for p in range(1, num_params_to_optimize + 1)]
     mock_optimizer.minimize.return_value = mocked_new_params_vector
 
     sorted_keys = sorted(list(expected_optimized_params_keys))
@@ -244,17 +223,18 @@ def test_q_function_strategy_correctness_and_interaction(
     assert target_func(test_vector) == -expected_q_value
 
 
-def test_q_function_strategy_respects_fixed_params(mock_component, pipeline_state, optimization_block, mock_optimizer):
+def test_q_function_strategy_respects_fixed_params(parametrized_setup):
     """
     Verifies that 'fixed' parameters are not passed to the
     optimizer, even if they are specified in the optimization_block.
     """
+    mock_component, pipeline_state, optimization_block, mock_optimizer, dtype = parametrized_setup
 
     # Fix 'param1', it should not be optimized
     mock_component.fix_param("param1")
 
     # The optimizer should return a value only for 'param2'
-    new_param2_value = 99.0
+    new_param2_value = dtype(99.0)
     mock_optimizer.minimize.return_value = [new_param2_value]
 
     _, new_params_dict = q_function_strategy(mock_component, pipeline_state, optimization_block, mock_optimizer)
@@ -269,3 +249,38 @@ def test_q_function_strategy_respects_fixed_params(mock_component, pipeline_stat
     _, initial_vector = args
     assert len(initial_vector) == 1
     assert initial_vector[0] == mock_component.param2
+
+
+def test_q_function_strategy_handles_numerical_overflow():
+    """
+    Verifies that the generic strategy correctly registers an error
+    when a numerical overflow occurs within the target function.
+    """
+    # --- Arrange ---
+    dtype = np.float16
+
+    class OverflowDistribution(DummyDistribution):
+        def lpdf(self, X):
+            return np.array([-40000, -40000], dtype=self.dtype)
+
+    component = OverflowDistribution(1.0, 2.0, dtype=dtype)
+    state = PipelineState(
+        X=np.array([1, 2], dtype=dtype),
+        H=np.array([[1.0, 0.0], [1.0, 0.0]], dtype=dtype),
+        curr_mixture=None,
+        prev_mixture=None,
+        error=None,
+    )
+    block = OptimizationBlock(0, {"param1", "param2"}, MaximizationStrategy.QFUNCTION)
+
+    class MockOptimizer(Optimizer):
+        def minimize(self, target, initial_vector):
+            target(initial_vector)
+            return initial_vector
+
+    # --- Act ---
+    q_function_strategy(component, state, block, MockOptimizer())
+
+    # --- Assert ---
+    assert state.error is not None
+    assert isinstance(state.error, NumericalStabilityError)
