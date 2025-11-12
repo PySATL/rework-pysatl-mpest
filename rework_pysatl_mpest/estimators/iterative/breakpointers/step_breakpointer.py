@@ -1,16 +1,17 @@
 """Module that provides a :class:`rework_pysatl_mpest.estimators.iterative.Pipeline`
 stopping strategy based on the number of iterations"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from ....typings import DType
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
 
 
-class StepBreakpointer(Breakpointer):
+class StepBreakpointer(Breakpointer[DType]):
     """Stops the pipeline after a fixed number of iterations.
 
     This breakpointer terminates the iterative process once a specified
@@ -57,7 +58,7 @@ class StepBreakpointer(Breakpointer):
         if max_steps <= 0:
             raise ValueError("The maximum number of steps must be greater than or equal to 1")
 
-    def check(self, state: PipelineState) -> bool:
+    def check(self, state: PipelineState[DType]) -> bool:
         """Checks if the maximum number of iterations has been reached.
 
         This method increments the internal step counter and compares it with
@@ -66,7 +67,7 @@ class StepBreakpointer(Breakpointer):
 
         Parameters
         ----------
-        state : PipelineState
+        state : PipelineState[DType]
             The current state of the pipeline. This parameter is unused in
             this specific breakpointer but required by the base class interface.
 

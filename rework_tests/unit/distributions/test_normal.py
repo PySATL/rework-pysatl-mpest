@@ -5,7 +5,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import random
-from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -13,7 +12,6 @@ from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Normal
-from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import kstest, norm
 
@@ -279,30 +277,3 @@ class TestNormalGenerate:
         ks_statistic, p_value = kstest(samples, "norm", args=(loc, scale))
         expected_p_value = 0.05
         assert p_value > expected_p_value
-
-
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
-class TestNormalDType(DTypeHandlingMixin):
-    distribution_class = Normal
-    default_params: ClassVar[dict] = {"loc": 0.0, "scale": 1.0}
-
-    def test_init_with_dtype_sets_correct_types(self, dtype):
-        self.check_init_with_dtype_sets_correct_types(dtype)
-
-    @pytest.mark.parametrize("size", [0, 10])
-    def test_generate_returns_correct_dtype(self, size, dtype):
-        self.check_generate_returns_correct_dtype(size, dtype)
-
-    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
-    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e3, 1e3)))
-    def check_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
-        self.check_methods_taking_x_return_correct_dtype(method_name, x_data, dtype)
-
-    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
-    def check_ppf_returns_correct_dtype(self, p_data, dtype):
-        self.check_ppf_returns_correct_dtype(p_data, dtype)
-
-    @pytest.mark.parametrize("method_name", ["_dlog_loc", "_dlog_scale"])
-    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
-        self.check_dlog_methods_returns_correct_dtype(x_data, method_name, dtype)

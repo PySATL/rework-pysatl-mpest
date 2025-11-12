@@ -7,7 +7,7 @@ combining different steps (:class:`PipelineStep`), stopping criteria (:class:`Br
 and component pruning strategies (:class:`Pruner`).
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -19,6 +19,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from ...core import MixtureModel
+from ...exceptions import NumericalStabilityError
+from ...typings import DType
 from ..base_estimator import BaseEstimator
 from ._logger import IterationRecord, IterationsHistory
 from .breakpointer import Breakpointer
@@ -27,7 +29,7 @@ from .pipeline_step import PipelineStep
 from .pruner import Pruner
 
 
-class Pipeline(BaseEstimator):
+class Pipeline(BaseEstimator[DType]):
     """An estimator that fits a mixture model via a configurable iterative process.
 
     The pipeline executes a sequence of defined steps in a loop. After each full
@@ -67,7 +69,7 @@ class Pipeline(BaseEstimator):
     pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    logger : IterationsHistory
+    logger : IterationsHistory[DType]
         object that collects comprehensive information about each
         iteration of a :class:`Pipeline` estimator.
     Raises
@@ -105,7 +107,7 @@ class Pipeline(BaseEstimator):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners) if pruners else []  # self.pruners will always be list
         self.steps = list(steps)
-        self.logger = IterationsHistory(once_in_iterations)
+        self.logger = IterationsHistory[DType](once_in_iterations)
 
     def _validate_steps(self, steps: list[PipelineStep]):
         """Validates the sequence of pipeline steps.
@@ -140,7 +142,7 @@ class Pipeline(BaseEstimator):
                     f"available next steps:'{curr_step.available_next_steps}', but got '{next_step}'"
                 )
 
-    def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
+    def fit(self, X: ArrayLike, mixture: MixtureModel[DType]) -> MixtureModel[DType]:
         """Fits the mixture model to the data using the configured pipeline.
 
         This method initializes the pipeline's state and runs the main loop.
@@ -152,18 +154,18 @@ class Pipeline(BaseEstimator):
         ----------
         X : ArrayLike
             The input data sample.
-        mixture : MixtureModel
+        mixture : MixtureModel[DType]
             The initial mixture model to be fitted. An internal copy of this
             model will be modified throughout the process.
 
         Returns
         -------
-        MixtureModel
+        MixtureModel[DType]
             The fitted mixture model after the pipeline has converged or been
             stopped.
         """
 
-        X = np.asarray(X, dtype=np.float64)
+        X = np.asarray(X, dtype=mixture.dtype)
         copied_mixture = copy(mixture)  # Copy to avoid modifying the original object
         removed_indices: list[int] = []
         state = PipelineState(X, None, None, copied_mixture, None)
@@ -193,6 +195,21 @@ class Pipeline(BaseEstimator):
                                 result_state.error,
                             )
                         )
+
+                    # Handle numerical stability errors by attempting a restart with higher precision
+                    if isinstance(result_state.error, NumericalStabilityError):
+                        new_dtype = np.promote_types(copied_mixture.dtype, np.float64).type
+                        if new_dtype is not copied_mixture.dtype:
+                            new_mixture = copied_mixture.astype(new_dtype)
+
+                            msg = (
+                                "Numerical stability issue detected. "
+                                f"Restarting pipeline with higher precision ({new_dtype.__name__})."
+                            )
+                            warnings.warn(msg, UserWarning)
+                            # Recursively call fit with the new, higher-precision model
+                            return self.fit(X, new_mixture)
+
                     warnings.warn(
                         f"Pipeline fitting stopped prematurely due to an error in step "
                         f"'{step.__class__.__name__}': {state.error}",

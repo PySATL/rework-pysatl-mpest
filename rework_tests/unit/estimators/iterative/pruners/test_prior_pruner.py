@@ -1,9 +1,10 @@
 """Tests for PriorThresholdPruner"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from copy import copy
 
 import numpy as np
 import pytest
@@ -14,6 +15,8 @@ from numpy.typing import ArrayLike, NDArray
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import ContinuousDistribution
 from rework_pysatl_mpest.estimators.iterative import PipelineState, PriorThresholdPruner
+
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
 
 class DummyDistribution(ContinuousDistribution):
@@ -47,7 +50,7 @@ class DummyDistribution(ContinuousDistribution):
         pass
 
     def __repr__(self):
-        return f"DummyDistribution(name='{self.name}')"
+        return f"DummyDistribution(name='{self.name}, dtype='{self.dtype}')"
 
 
 # --- Fixtures ---
@@ -99,6 +102,7 @@ def test_init_raises_value_error_for_invalid_threshold(invalid_threshold):
 # --- Tests for the prune method ---
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 @pytest.mark.parametrize(
     "threshold, initial_weights, expected_n_components, expected_remaining_indices, expected_removed_indices",
     [
@@ -128,6 +132,7 @@ def test_prune_removes_correct_components(
     expected_n_components,
     expected_remaining_indices,
     expected_removed_indices,
+    dtype,
 ):
     """
     Basic and edge case tests: checks the core logic of component removal.
@@ -136,25 +141,36 @@ def test_prune_removes_correct_components(
     """
 
     pruner = PriorThresholdPruner(threshold)
-    initial_mixture = MixtureModel(dummy_components, weights=initial_weights)
-    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+    components = [DummyDistribution(f"comp_{i}", dtype=dtype) for i in range(len(initial_weights))]
+    initial_mixture = MixtureModel(components, weights=initial_weights, dtype=dtype)
+    state = PipelineState(
+        X=np.array([], dtype=dtype), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
+    )
 
     new_state, removed_components_indices = pruner.prune(state)
-
     assert removed_components_indices == expected_removed_indices
 
+    new_mixture = new_state.curr_mixture
+
     # Check that the number of components matches the expected value
-    assert new_state.curr_mixture.n_components == expected_n_components
+    assert new_mixture.n_components == expected_n_components
 
     # Check that the correct components remain
-    expected_components = tuple(dummy_components[i] for i in expected_remaining_indices)
-    assert new_state.curr_mixture.components == expected_components
+    expected_components = tuple(components[i] for i in expected_remaining_indices)
+    assert new_mixture.components == expected_components
 
     # Check that the sum of weights after pruning is 1.0
-    assert np.isclose(np.sum(new_state.curr_mixture.weights), 1.0)
+    assert np.isclose(np.sum(new_mixture.weights), 1.0)
+
+    # --- Assert dtype preservation ---
+    assert new_mixture.dtype == dtype
+    assert new_mixture.weights.dtype == dtype
+    for comp in new_mixture.components:
+        assert comp.dtype == dtype
 
 
-def test_prune_does_not_remove_last_component(dummy_components):
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+def test_prune_does_not_remove_last_component(dtype):
     """
     Edge case test: verifies that the pruner does not remove the last component,
     even if its weight is below the threshold.
@@ -162,12 +178,19 @@ def test_prune_does_not_remove_last_component(dummy_components):
 
     pruner = PriorThresholdPruner(threshold=0.9)
     # Mixture with two components, both below the threshold
-    initial_mixture = MixtureModel(dummy_components[:2], weights=[0.5, 0.5])
-    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+    components = [DummyDistribution("comp_0", dtype=dtype), DummyDistribution("comp_1", dtype=dtype)]
+    initial_mixture = MixtureModel(components[:2], weights=[0.5, 0.5], dtype=dtype)
+    state = PipelineState(
+        X=np.array([], dtype=dtype), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
+    )
 
     # After the first prune, one component will remain, which should not be removed
     new_state, _ = pruner.prune(state)
     assert new_state.curr_mixture.n_components == 1
+
+    # type correct
+    assert new_state.curr_mixture.dtype == dtype
+    assert new_state.curr_mixture.weights.dtype == dtype
 
 
 def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
@@ -209,28 +232,26 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
     assert new_state.curr_mixture.n_components == 1  # The component with weight 0.1 should have been removed
 
 
-# This code commented, because need change copy to deepcopy in pruner and
-# for testing this need __eq__ and __ne__ methods for ContinuousDistribution
-# def test_prune_does_not_modify_original_mixture_object(dummy_components):
-#     """
-#     Verifies that the original MixtureModel object passed into PipelineState
-#     is not mutated, as `prune` is expected to work on a copy.
-#     """
-#
-#     pruner = PriorThresholdPruner(threshold=0.5)
-#     initial_mixture = MixtureModel(dummy_components[:2], weights=[0.1, 0.9])
-#
-#     # Create a deep copy for later comparison
-#     original_mixture_snapshot = deepcopy(initial_mixture)
-#
-#     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
-#
-#     pruner.prune(state)
-#
-#     # Verify that the original `initial_mixture` object has not changed
-#     assert initial_mixture.n_components == original_mixture_snapshot.n_components
-#     assert np.allclose(initial_mixture.weights, original_mixture_snapshot.weights)
-#     assert initial_mixture.components == original_mixture_snapshot.components
+def test_prune_does_not_modify_original_mixture_object(dummy_components):
+    """
+    Verifies that the original MixtureModel object passed into PipelineState
+    is not mutated, as `prune` is expected to work on a copy.
+    """
+
+    pruner = PriorThresholdPruner(threshold=0.5)
+    initial_mixture = MixtureModel(dummy_components[:2], weights=[0.1, 0.9])
+
+    # Create a deep copy for later comparison
+    original_mixture_snapshot = copy(initial_mixture)
+
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    pruner.prune(state)
+
+    # Verify that the original `initial_mixture` object has not changed
+    assert initial_mixture.n_components == original_mixture_snapshot.n_components
+    assert np.allclose(initial_mixture.weights, original_mixture_snapshot.weights)
+    assert initial_mixture.components == original_mixture_snapshot.components
 
 
 # --- Tests using Hypothesis ---
