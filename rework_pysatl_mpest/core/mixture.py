@@ -348,6 +348,30 @@ class MixtureModel(Generic[DType]):
         np.random.shuffle(samples)
         return samples
 
+    def astype(self, new_dtype: type[DType]) -> "MixtureModel[DType]":
+        """Creates a copy of the MixtureModel with a new data type.
+
+        If the specified `new_dtype` is the same as the instance's current `dtype`,
+        this method returns the original instance instead.
+
+        Parameters
+        ----------
+        new_dtype : type[DType]
+            The target NumPy data type for the new distribution instance.
+
+        Returns
+        -------
+        MixtureModel[DType]
+            A new MixtureModel instance with all components and weights converted to the
+            specified `new_dtype`, or the original instance if the `dtype` is
+            unchanged.
+        """
+        if self.dtype is new_dtype:
+            return self
+
+        new_mixture = MixtureModel(components=self.components, weights=self.weights.copy(), dtype=new_dtype)
+        return new_mixture
+
     def __getitem__(self, key: int) -> "ContinuousDistribution[DType]":
         """Retrieves components by index.
 

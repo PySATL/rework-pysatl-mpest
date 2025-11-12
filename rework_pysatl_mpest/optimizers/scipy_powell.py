@@ -1,14 +1,16 @@
 """A module that provides a Powell optimizer using the SciPy library."""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
 from typing import Callable
 
+import numpy as np
 from scipy.optimize import minimize
 
+from ..typings import DType
 from .optimizer import Optimizer
 
 
@@ -29,7 +31,7 @@ class ScipyPowell(Optimizer):
         minimize
     """
 
-    def minimize(self, target: Callable, params: list[float]) -> list[float]:
+    def minimize(self, target: Callable, params: list[DType]) -> list[DType]:
         """Minimizes a target function using Powell's method.
 
         This method leverages the `scipy.optimize.minimize` function to find
@@ -41,15 +43,17 @@ class ScipyPowell(Optimizer):
             The objective function to minimize. It must be a callable that
             accepts a list or NumPy array of parameters and returns a single
             scalar value.
-        params : list[float]
+        params : list[DType]
             A list of initial values for the parameters that serves as the
             starting point for the optimization.
 
         Returns
         -------
-        list[float]
+        list[DType]
             A list containing the set of parameters that minimizes the target
             function, as found by Powell's method.
         """
 
-        return list(minimize(target, params, method="Powell").x)
+        dtype = params[0].dtype
+
+        return list(np.asarray(minimize(target, params, method="Powell").x, dtype=dtype))

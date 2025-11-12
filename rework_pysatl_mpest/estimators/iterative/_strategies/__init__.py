@@ -9,12 +9,13 @@ from typing import Callable
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
+from ....typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 from .q_function import q_function_strategy as _q_function_strategy
 
 q_function_strategy: Callable[
-    [ContinuousDistribution, PipelineState, OptimizationBlock, Optimizer], tuple[int, dict[str, float]]
+    [ContinuousDistribution, PipelineState, OptimizationBlock, Optimizer], tuple[int, dict[str, DType]]
 ] = _q_function_strategy
 
 

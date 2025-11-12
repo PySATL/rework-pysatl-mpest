@@ -8,7 +8,7 @@ efficient analytical solutions for specific distribution types like the
 `Exponential` distribution.
 """
 
-__author__ = "Danil Totmyanin, Maksim Pastukhov"
+__author__ = "Danil Totmyanin, Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -19,7 +19,9 @@ from functools import singledispatch
 import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential, Normal, Pareto, Weibull
+from ....exceptions import NumericalStabilityError
 from ....optimizers import Optimizer
+from ....typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 
@@ -31,10 +33,35 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 
 
+def _handle_numerical_overflow(state: PipelineState[DType]) -> None:
+    """Creates and registers a numerical stability error in the pipeline state.
+
+    This helper function is called when a numerical instability (e.g., infinity)
+    is detected during the M-step. It creates a `NumericalStabilityError`,
+    places it in `state.error`.
+
+    The presence of this error in the state signals the `Pipeline` class to
+    take corrective action, such as restarting the fitting process with a
+    higher floating-point precision (e.g., `np.float64`).
+
+    Parameters
+    ----------
+    state : PipelineState[DType]
+        The current pipeline state where the error will be recorded.
+    """
+    error = NumericalStabilityError(
+        "Overflow detected during Q-function optimization. The pipeline will attempt to restart with higher precision."
+    )
+    state.error = error
+
+
 @singledispatch
 def q_function_strategy(
-    component: ContinuousDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
-) -> tuple[int, dict[str, float]]:
+    component: ContinuousDistribution[DType],
+    state: PipelineState[DType],
+    block: OptimizationBlock,
+    optimizer: Optimizer,
+) -> tuple[int, dict[str, DType]]:
     """Generic M-step strategy that maximizes the Q-function numerically.
 
     This function serves as the default implementation for updating a
@@ -47,7 +74,7 @@ def q_function_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution
+    component : ContinuousDistribution[DType]
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline, containing the data :attr:`X` and the
@@ -60,7 +87,7 @@ def q_function_strategy(
 
     Returns
     -------
-    tuple[int, dict[str, float]]
+    tuple[int, dict[str, DType]]
         A tuple containing the component's ID and a dictionary of the
         optimized parameter names and their new values.
 
@@ -74,6 +101,8 @@ def q_function_strategy(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
+    dtype = component.dtype
+
     X, H_j = state.X, state.H[:, block.component_id]
     component_id = block.component_id
 
@@ -83,8 +112,11 @@ def q_function_strategy(
     def target(vector_params):
         temp_comp.set_params_from_vector(params_to_optimize, vector_params)
         lpdf_values = temp_comp.lpdf(X)
-        safe_lpdf = np.where(H_j == 0, 0.0, lpdf_values)
-        return -np.dot(H_j, safe_lpdf).item()
+        safe_lpdf = np.where(H_j == 0, dtype(0.0), lpdf_values)
+        res = -np.dot(H_j, safe_lpdf)
+        if np.isinf(res):
+            _handle_numerical_overflow(state)
+        return -np.dot(H_j, safe_lpdf)
 
     new_params = optimizer.minimize(target, temp_comp.get_params_vector(params_to_optimize))
     return component_id, dict(zip(params_to_optimize, new_params))
@@ -97,8 +129,8 @@ def q_function_strategy(
 
 @q_function_strategy.register(Exponential)
 def _(
-    component: Exponential, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
-) -> tuple[int, dict[str, float]]:
+    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the Exponential distribution using an analytical solution.
 
@@ -122,23 +154,25 @@ def _(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
+    dtype = component.dtype
+
     X = state.X
     H_j = state.H[:, block.component_id]
 
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
     new_params = {}
 
-    N_j = np.sum(H_j).item()
+    N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if N_j < NUMERICAL_TOLERANCE:
+    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
 
     # Update location (loc) if it's in the optimization block
     if Exponential.PARAM_LOC in params_to_optimize:
         relevant_X = X[H_j > NUMERICAL_TOLERANCE]
         if relevant_X.size > 0:
-            new_params[Exponential.PARAM_LOC] = np.min(relevant_X).item()
+            new_params[Exponential.PARAM_LOC] = np.min(relevant_X)
         else:
             new_params[Exponential.PARAM_LOC] = component.loc
 
@@ -146,15 +180,17 @@ def _(
     if Exponential.PARAM_RATE in params_to_optimize:
         loc = new_params.get(Exponential.PARAM_LOC, component.loc)
 
-        weighted_sum_X = np.dot(H_j, X).item()
+        weighted_sum_X = np.dot(H_j, X)
+        if np.isinf(weighted_sum_X):
+            _handle_numerical_overflow(state)
 
         denominator = weighted_sum_X / N_j - loc
-        if denominator > NUMERICAL_TOLERANCE:
-            new_params[Exponential.PARAM_RATE] = 1.0 / denominator
-        else:
+        if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
             # If the weighted average is too close to loc,
             # leave rate unchanged to avoid infinity.
             new_params[Exponential.PARAM_RATE] = component.rate
+        else:
+            new_params[Exponential.PARAM_RATE] = dtype(1.0 / denominator)
 
     return block.component_id, new_params
 
@@ -166,8 +202,8 @@ def _(
 
 @q_function_strategy.register(Normal)
 def _(
-    component: Normal, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
-) -> tuple[int, dict[str, float]]:
+    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the normal distribution using an analytical solution.
 
@@ -188,23 +224,28 @@ def _(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
+    dtype = component.dtype
+
     X = state.X
     H_j = state.H[:, block.component_id]
 
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
     new_params = {}
 
-    N_j = np.sum(H_j).item()
+    N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if N_j < NUMERICAL_TOLERANCE:
+    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
 
     # Update mean (loc) if it's in the optimization block
     if Normal.PARAM_LOC in params_to_optimize:
-        weighted_sum_X = np.dot(H_j, X).item()
+        weighted_sum_X = np.dot(H_j, X)
+        if np.isinf(weighted_sum_X):
+            _handle_numerical_overflow(state)
+
         new_mu = weighted_sum_X / N_j
-        new_params[Normal.PARAM_LOC] = new_mu
+        new_params[Normal.PARAM_LOC] = dtype(new_mu)
 
     # Update std (scale) if it's in the optimization block
     if Normal.PARAM_SCALE in params_to_optimize:
@@ -212,15 +253,18 @@ def _(
         mu = new_params.get(Normal.PARAM_LOC, component.loc)
 
         # Calculate the weighted variance
-        weighted_sum_sq_diff = np.dot(H_j, (X - mu) ** 2).item()
+        weighted_sum_sq_diff = np.dot(H_j, (X - mu) ** 2)
+        if np.isinf(weighted_sum_sq_diff):
+            _handle_numerical_overflow(state)
+
         new_variance = weighted_sum_sq_diff / N_j
 
-        if new_variance > NUMERICAL_TOLERANCE:
-            new_params[Normal.PARAM_SCALE] = np.sqrt(new_variance)
-        else:
+        if np.isclose(new_variance, 0.0, NUMERICAL_TOLERANCE):
             # If variance is too small, it can lead to instability.
             # Keep the old scale to prevent it from collapsing to zero.
             new_params[Normal.PARAM_SCALE] = component.scale
+        else:
+            new_params[Normal.PARAM_SCALE] = dtype(np.sqrt(new_variance))
 
     return block.component_id, new_params
 
@@ -232,8 +276,8 @@ def _(
 
 @q_function_strategy.register(Weibull)
 def _(
-    component: Weibull, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
-) -> tuple[int, dict[str, float]]:
+    component: Weibull[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the Weibull distribution using an analytical solution.
     """
@@ -241,16 +285,18 @@ def _(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
+    dtype = component.dtype
+
     X = state.X
     H_j = state.H[:, block.component_id]
 
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
     new_params = {}
 
-    N_j = np.sum(H_j).item()
+    N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if N_j < NUMERICAL_TOLERANCE:
+    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
 
     # ------------------------
@@ -283,15 +329,17 @@ def _(
             X_minus_loc = X - final_loc
 
             # Use np.maximum to avoid taking powers of negative numbers if final_loc is slightly off
-            safe_X_minus_loc = np.maximum(X_minus_loc, NUMERICAL_TOLERANCE)
+            safe_X_minus_loc = np.maximum(X_minus_loc, dtype(NUMERICAL_TOLERANCE))
 
             weighted_sum = np.dot(H_j, safe_X_minus_loc**final_shape)
+            if np.isinf(weighted_sum):
+                _handle_numerical_overflow(state)
 
-            if weighted_sum > 0:
-                new_scale = (weighted_sum / N_j) ** (1.0 / final_shape)
-                new_params[Weibull.PARAM_SCALE] = new_scale
-            else:
+            if np.isclose(weighted_sum, 0.0, NUMERICAL_TOLERANCE):
                 new_params[Weibull.PARAM_SCALE] = component.scale
+            else:
+                new_scale = (weighted_sum / N_j) ** (dtype(1.0) / final_shape)
+                new_params[Weibull.PARAM_SCALE] = new_scale
 
     return block.component_id, new_params
 

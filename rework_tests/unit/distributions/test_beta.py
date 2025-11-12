@@ -7,7 +7,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import random
 from pathlib import Path
-from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -16,7 +15,6 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Beta
-from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import beta, kstest
 
@@ -225,7 +223,7 @@ class TestBetaLPDF:
 
         dist = Beta(shape1, shape2, left_border, right_border)
         custom_lpdf = dist.lpdf(x)
-        scipy_lpdf = beta.logpdf(x, shape1, shape2, loc=lower_bound, scale=upper_bound - lower_bound)
+        scipy_lpdf = beta.logpdf(x, shape1, shape2, loc=left_border, scale=right_border - left_border)
 
         np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-5)
 

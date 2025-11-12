@@ -1,6 +1,6 @@
 """Tests for MaximizationStep"""
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -20,6 +20,8 @@ from rework_pysatl_mpest.estimators.iterative import (
 )
 from rework_pysatl_mpest.optimizers import Optimizer
 
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
+
 
 @pytest.fixture
 def mock_optimizer(mocker: MockerFixture) -> Optimizer:
@@ -28,31 +30,30 @@ def mock_optimizer(mocker: MockerFixture) -> Optimizer:
     return mocker.MagicMock(spec=Optimizer)
 
 
-@pytest.fixture
-def mock_components(mocker: MockerFixture) -> list[ContinuousDistribution]:
-    """Fixture to create a list of mock distribution components."""
+@pytest.fixture(params=DTYPES_TO_TEST)
+def parametrized_state(request, mocker: MockerFixture) -> PipelineState:
+    """
+    Creates a parametrized PipelineState fixture for various dtypes.
+
+    This fixture runs for each data type in DTYPES_TO_TEST, constructing a
+    mock MixtureModel and PipelineState where all relevant arrays (X, H) and
+    model attributes share the same parametrized dtype. This enables robust
+    testing of data type preservation.
+    """
+    dtype = request.param
 
     comp1 = mocker.MagicMock(spec=ContinuousDistribution)
     comp2 = mocker.MagicMock(spec=ContinuousDistribution)
-    return [comp1, comp2]
-
-
-@pytest.fixture
-def mock_mixture(mocker: MockerFixture, mock_components: list) -> MixtureModel:
-    """Fixture to create a mock MixtureModel with two components."""
+    mock_components = [comp1, comp2]
 
     mixture = mocker.MagicMock(spec=MixtureModel)
     mixture.__getitem__.side_effect = lambda i: mock_components[i]
-    return mixture
+    mixture.__iter__.return_value = iter(mock_components)
+    mixture.dtype = dtype
 
-
-@pytest.fixture
-def pipeline_state(mock_mixture: MixtureModel) -> PipelineState:
-    """Fixture to create a basic PipelineState."""
-
-    X = np.array([[1.0], [2.0], [3.0], [4.0]])
-    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]])
-    return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mock_mixture, error=None)
+    X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=dtype)
+    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=dtype)
+    return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mixture, error=None)
 
 
 class TestMaximizationStep:
@@ -90,19 +91,20 @@ class TestMaximizationStep:
         assert next_steps[0] == ExpectationStep
 
     def test_run_with_none_h_matrix_sets_error_and_returns_state(
-        self, mock_optimizer: Optimizer, pipeline_state: PipelineState
+        self, mock_optimizer: Optimizer, parametrized_state: PipelineState
     ):
         """
         Verifies that if state.H is None, the step sets an
         error and returns the state unmodified.
         """
+        state = parametrized_state
 
-        pipeline_state.H = None
+        state.H = None
         step = MaximizationStep(blocks=[], optimizer=mock_optimizer)
 
-        result_state = step.run(pipeline_state)
+        result_state = step.run(state)
 
-        assert result_state is pipeline_state
+        assert result_state is state
         assert isinstance(result_state.error, ValueError)
         assert "Responsibility matrix H is not computed" in str(result_state.error)
 
@@ -110,13 +112,14 @@ class TestMaximizationStep:
         self,
         mocker: MockerFixture,
         mock_optimizer: Optimizer,
-        mock_components: list,
-        pipeline_state: PipelineState,
+        parametrized_state: PipelineState,
     ):
         """
         Verifies that the correct strategy is called with
         the correct arguments and that the component parameters are updated.
         """
+        state = parametrized_state
+        dtype = state.curr_mixture.dtype
 
         block = OptimizationBlock(
             component_id=0,
@@ -129,19 +132,19 @@ class TestMaximizationStep:
         mock_strategy = mocker.patch(
             "rework_pysatl_mpest.estimators.iterative.steps.maximization_step.q_function_strategy"
         )
-        optimized_params = {"loc": 1.5, "rate": 2.5}
+        optimized_params = {"loc": dtype(1.5), "rate": dtype(2.5)}
         mock_strategy.return_value = (0, optimized_params)
 
         # _strategies dict patching
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
 
-        target_component = mock_components[0]
+        target_component = state.curr_mixture[0]
 
-        step.run(pipeline_state)
+        step.run(state)
 
         # mock_strategy was called once
-        mock_strategy.assert_called_once_with(target_component, pipeline_state, block, mock_optimizer)
+        mock_strategy.assert_called_once_with(target_component, state, block, mock_optimizer)
 
         # The component parameters were updated
         # _update_components_params calls set_params_from_vector
@@ -149,25 +152,31 @@ class TestMaximizationStep:
         param_values = list(optimized_params.values())
         target_component.set_params_from_vector.assert_called_once_with(param_names, param_values)
 
+        # type correct
+        for value in param_values:
+            assert isinstance(value, dtype)
+
     def test_run_updates_mixture_weights_correctly(
-        self, mocker: MockerFixture, mock_optimizer: Optimizer, pipeline_state: PipelineState
+        self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
     ):
         """
         Verifies the correct update of mixture weights.
         """
+        state = parametrized_state
+        dtype = state.curr_mixture.dtype
 
         # Sum of responsibilities for component 0: 0.8 + 0.7 + 0.1 + 0.2 = 1.8
         # Sum of responsibilities for component 1: 0.2 + 0.3 + 0.9 + 0.8 = 2.2
         # New weights: [1.8/4, 2.2/4] = [0.45, 0.55]
-        expected_new_weights = np.array([0.45, 0.55])
-        expected_log_weights = np.log(expected_new_weights + 1e-30)
+        expected_new_weights = np.array([0.45, 0.55], dtype=dtype)
+        expected_log_weights = np.log(expected_new_weights + 1e-30).astype(dtype)
 
         # `log_weigths` patching
         p = mocker.PropertyMock()
-        type(pipeline_state.curr_mixture).log_weights = p
+        type(state.curr_mixture).log_weights = p
 
         step = MaximizationStep(blocks=[], optimizer=mock_optimizer)
-        step.run(pipeline_state)
+        step.run(state)
 
         # Check that `log_weigths` setter was called once
         property_mock = p
@@ -175,18 +184,22 @@ class TestMaximizationStep:
 
         # Check that `log_weigths` was set correctly
         actual_log_weights = p.call_args.args[0]
-        np.testing.assert_allclose(actual_log_weights, expected_log_weights)
+        atol = 1e-4 if dtype == np.float16 else 1e-7
+        np.testing.assert_allclose(actual_log_weights, expected_log_weights, atol=atol)
+
+        # type correct
+        assert actual_log_weights.dtype == dtype
 
     def test_run_processes_blocks_sequentially(
         self,
         mocker: MockerFixture,
         mock_optimizer: Optimizer,
-        mock_components: list,
-        pipeline_state: PipelineState,
+        parametrized_state: PipelineState,
     ):
         """
         Verifies that optimization blocks are processed sequentially in the specified order.
         """
+        state = parametrized_state
 
         expected_call_count = 2
 
@@ -213,14 +226,13 @@ class TestMaximizationStep:
             (0, {"loc": 2.2}),  # Return value for block0
         ]
 
-        component0 = mock_components[0]
-        component1 = mock_components[1]
+        component0, component1 = state.curr_mixture
 
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
 
         # Act
-        step.run(pipeline_state)
+        step.run(state)
 
         # Assert
         assert mock_strategy.call_count == expected_call_count

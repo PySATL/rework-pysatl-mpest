@@ -21,6 +21,8 @@ from rework_pysatl_mpest.estimators.iterative import (
 )
 from rework_pysatl_mpest.optimizers import Optimizer
 
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
+
 # --- Mocks and Fixtures for testing ECM ---
 
 
@@ -58,21 +60,22 @@ def mock_pruners() -> list[Pruner]:
     return []
 
 
-@pytest.fixture
-def sample_mixture() -> MixtureModel:
-    """Provides a mixture model with two components for testing."""
+@pytest.fixture(params=DTYPES_TO_TEST)
+def sample_mixture(request) -> MixtureModel:
+    """Provides a mixture model with two components for testing with parametrized dtype."""
 
-    components = [Normal(loc=0, scale=1), Exponential(loc=10, rate=1)]
+    dtype = request.param
+    components = [Normal(loc=0, scale=1, dtype=dtype), Exponential(loc=10, rate=1, dtype=dtype)]
     # Fix a parameter in one component to test if `params_to_optimize` is correctly used.
     components[1].fix_param("rate")
-    return MixtureModel(components, weights=[0.4, 0.6])
+    return MixtureModel(components, weights=[0.4, 0.6], dtype=dtype)
 
 
-@pytest.fixture
-def sample_data() -> np.ndarray:
-    """Provides a simple NumPy array of data."""
-
-    return np.array([1, 2, 3, 11, 12, 13])
+@pytest.fixture(params=DTYPES_TO_TEST)
+def sample_data(request) -> np.ndarray:
+    """Provides a simple NumPy array of data with parametrized dtype."""
+    dtype = request.param
+    return np.array([1, 2, 3, 11, 12, 13], dtype=dtype)
 
 
 # --- Test Cases ---
@@ -130,6 +133,12 @@ class TestECMFit:
         MockPipeline.assert_called_once()
         mock_pipeline_instance.fit.assert_called_once_with(sample_data, sample_mixture)
         assert result is sample_mixture
+
+        # Check types
+        assert result.dtype == sample_mixture.dtype
+        assert result.weights.dtype == sample_mixture.dtype
+        for component in result.components:
+            assert component.dtype == sample_mixture.dtype
 
     def test_fit_configures_pipeline_steps_correctly(
         self,
