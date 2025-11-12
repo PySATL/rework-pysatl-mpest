@@ -5,7 +5,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from copy import deepcopy
+from copy import copy
 from typing import Callable
 
 import numpy as np
@@ -309,7 +309,7 @@ class TestPipelineFit:
         even when the internal steps actively try to modify the state.
         """
 
-        original_mixture_copy = deepcopy(initial_mixture)
+        original_mixture_copy = copy(initial_mixture)
 
         steps = [ModifyingStep()]
         breakpointers = [MockBreakpointer(stop_at_iteration=2)]
