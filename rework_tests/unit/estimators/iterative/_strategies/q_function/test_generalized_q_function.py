@@ -5,7 +5,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from copy import deepcopy
+from copy import copy
 
 import numpy as np
 import pytest
@@ -28,10 +28,10 @@ class DummyDistribution(ContinuousDistribution):
     param1 = Parameter()
     param2 = Parameter()
 
-    def __init__(self, param1_val: float, param2_val: float):
+    def __init__(self, param1: float, param2: float):
         super().__init__()
-        self.param1 = param1_val
-        self.param2 = param2_val
+        self.param1 = param1
+        self.param2 = param2
 
     @property
     def name(self) -> str:
@@ -69,7 +69,7 @@ class DummyDistribution(ContinuousDistribution):
 def mock_component() -> DummyDistribution:
     """Fixture that creates an instance of DummyDistribution."""
 
-    return DummyDistribution(param1_val=1.0, param2_val=2.0)
+    return DummyDistribution(param1=1.0, param2=2.0)
 
 
 @pytest.fixture
@@ -125,10 +125,10 @@ def test_q_function_strategy_does_not_modify_original_component(
 ):
     """
     Verifies that the original component object is not modified,
-    as the function should work with its deep copy.
+    as the function should work with its copy.
     """
 
-    original_component = deepcopy(mock_component)
+    original_component = copy(mock_component)
     mock_optimizer.minimize.return_value = [99.0, 101.0]
 
     q_function_strategy(mock_component, pipeline_state, optimization_block, mock_optimizer)
@@ -237,7 +237,7 @@ def test_q_function_strategy_correctness_and_interaction(
 
     # Check that the target function correctly calls q_function with a negative sign
     test_vector = [1.0] * num_params_to_optimize
-    temp_comp = deepcopy(mock_component)
+    temp_comp = copy(mock_component)
     temp_comp.set_params_from_vector(sorted_keys, test_vector)
     expected_q_value = temp_comp.q_function(pipeline_state.X, pipeline_state.H[:, component_id])
 

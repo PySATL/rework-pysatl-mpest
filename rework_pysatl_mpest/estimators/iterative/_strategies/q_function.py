@@ -13,7 +13,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from copy import deepcopy
+from copy import copy
 from functools import singledispatch
 
 import numpy as np
@@ -78,7 +78,7 @@ def q_function_strategy(
     component_id = block.component_id
 
     params_to_optimize = sorted(list(component.params_to_optimize.intersection(block.params_to_optimize)))
-    temp_comp = deepcopy(component)
+    temp_comp = copy(component)
 
     def target(vector_params):
         temp_comp.set_params_from_vector(params_to_optimize, vector_params)
