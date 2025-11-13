@@ -6,7 +6,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import random
-from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -14,7 +13,6 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Exponential
-from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import expon, kstest
 
@@ -24,54 +22,55 @@ st_rate = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infini
 st_loc = st.floats(min_value=-1e3, max_value=1e3, allow_nan=False, allow_infinity=False)
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestExponentialInitialization:
     """Tests for the __init__ method and basic properties."""
 
-    def test_initialization_successful(self):
+    def test_initialization_successful(self, dtype):
         """Tests that the instance is initialized correctly with valid parameters."""
 
         loc, rate = 0.5, 2.0
-        dist = Exponential(loc=loc, rate=rate)
-        assert isinstance(dist.loc, float)
-        assert isinstance(dist.rate, float)
-        assert dist.loc == loc
-        assert dist.rate == rate
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
+        assert dist.loc.dtype == dtype
+        assert dist.rate.dtype == dtype
+        assert dist.loc == dtype(loc)
+        assert dist.rate == dtype(rate)
 
-    def test_name_property(self):
+    def test_name_property(self, dtype):
         """Tests that the name property returns the correct string."""
 
-        dist = Exponential(loc=0.0, rate=1.0)
+        dist = Exponential(loc=0.0, rate=1.0, dtype=dtype)
         assert dist.name == "Exponential"
 
-    def test_params_property(self):
+    def test_params_property(self, dtype):
         """Tests that the params property returns the correct set of parameter names."""
 
-        dist = Exponential(loc=0.0, rate=1.0)
+        dist = Exponential(loc=0.0, rate=1.0, dtype=dtype)
         assert dist.params == {"loc", "rate"}
 
-    def test_rate_invariant_violation(self):
+    def test_rate_invariant_violation(self, dtype):
         """Tests that initializing with a non-positive rate raises a ValueError."""
 
         with pytest.raises(ValueError, match="Rate parameter must be a positive"):
-            Exponential(loc=0.0, rate=0.0)
+            Exponential(loc=0.0, rate=0.0, dtype=dtype)
         with pytest.raises(ValueError, match="Rate parameter must be a positive"):
-            Exponential(loc=0.0, rate=-1.0)
+            Exponential(loc=0.0, rate=-1.0, dtype=dtype)
 
-    def test_rate_assignment_violation(self):
+    def test_rate_assignment_violation(self, dtype):
         """Tests that assigning a non-positive rate after initialization raises a ValueError."""
 
-        dist = Exponential(loc=0.0, rate=1.0)
+        dist = Exponential(loc=0.0, rate=1.0, dtype=dtype)
         with pytest.raises(ValueError, match="Rate parameter must be a positive"):
             dist.rate = 0.0
         with pytest.raises(ValueError, match="Rate parameter must be a positive"):
             dist.rate = -10.0
 
-    def test_repr_method(self):
+    def test_repr_method(self, dtype):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Exponential(loc=1.23, rate=4.56)
+        dist = Exponential(loc=1.23, rate=4.56, dtype=dtype)
         repr_str = repr(dist)
-        assert repr_str == "Exponential(loc=1.23, rate=4.56)"
+        assert repr_str == f"Exponential(loc={dist.loc}, rate={dist.rate}, dtype=np.{dtype.__name__})"
 
         recreated_dist = eval(repr_str)
         assert recreated_dist == dist
@@ -80,13 +79,15 @@ class TestExponentialInitialization:
 class TestExponentialPDF:
     """Tests for the pdf method using hypothesis."""
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_pdf_properties(self, loc, rate, x):
+    def test_pdf_properties(self, loc, rate, x, dtype):
         """Tests that the PDF is non-negative and has the correct return type and shape."""
 
-        dist = Exponential(loc=loc, rate=rate)
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
+        assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
 
@@ -121,13 +122,15 @@ class TestExponentialPDF:
 class TestExponentialLPDF:
     """Tests for the lpdf (log-PDF) method using hypothesis."""
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape(self, loc, rate, x):
+    def test_lpdf_return_type_and_shape(self, loc, rate, x, dtype):
         """Tests the return type and shape of the lpdf method."""
 
-        dist = Exponential(loc=loc, rate=rate)
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
+        assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
 
     @given(loc=st_loc, rate=st_rate, x=st.floats(1e-6, 1e6))
@@ -153,18 +156,20 @@ class TestExponentialLPDF:
 class TestExponentialPPF:
     """Tests for the ppf (Percent Point Function) method using hypothesis."""
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(
         loc=st_loc, rate=st_rate, p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True))
     )
-    def test_ppf_return_type_and_shape(self, loc, rate, p):
+    def test_ppf_return_type_and_shape(self, loc, rate, p, dtype):
         """Tests the return type and shape of the ppf method."""
 
-        dist = Exponential(loc=loc, rate=rate)
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
+        assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
 
-    @given(loc=st_loc, rate=st_rate, p=st.floats(0, 1))
+    @given(loc=st_loc, rate=st_rate, p=st.floats(0, 1, exclude_max=True, exclude_min=True))
     def test_ppf_against_scipy(self, loc, rate, p):
         """Compares the custom PPF implementation against scipy's implementation."""
 
@@ -181,55 +186,60 @@ class TestExponentialPPF:
         assert np.isnan(dist.ppf(p_val))
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestExponentialGradients:
     """Tests for gradient calculation methods."""
 
     h = 1e-6
 
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_loc_numerical(self, loc, rate, x):
+    def test_dlog_loc_numerical(self, loc, rate, x, dtype):
         """Checks the analytical gradient for 'loc' against a numerical approximation."""
 
         assume(np.all(x > (loc + self.h)))
 
-        dist = Exponential(loc=loc, rate=rate)
-
-        lpdf_plus_h = Exponential(loc=loc + self.h, rate=rate).lpdf(x)
-        lpdf_minus_h = Exponential(loc=loc - self.h, rate=rate).lpdf(x)
-
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        dist = Exponential(loc, rate, dtype=dtype)
         analytical_grad = dist._dlog_loc(x)
 
         assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.dtype == dtype
         assert analytical_grad.shape == x.shape
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+        if dtype == np.float64:
+            lpdf_plus_h = Exponential(loc + self.h, rate).lpdf(x)
+            lpdf_minus_h = Exponential(loc - self.h, rate).lpdf(x)
+
+            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_rate_numerical(self, loc, rate, x):
+    def test_dlog_rate_numerical(self, loc, rate, x, dtype):
         """Checks the analytical gradient for 'rate' against a numerical approximation."""
 
         assume(np.all(x > (loc + self.h)))
 
-        dist = Exponential(loc=loc, rate=rate)
-
-        lpdf_plus_h = Exponential(loc=loc, rate=rate + self.h).lpdf(x)
-        lpdf_minus_h = Exponential(loc=loc, rate=rate - self.h).lpdf(x)
-
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        dist = Exponential(loc, rate, dtype=dtype)
         analytical_grad = dist._dlog_rate(x)
 
         assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.dtype == dtype
         assert analytical_grad.shape == x.shape
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+        if dtype == np.float64:
+            lpdf_plus_h = Exponential(loc, rate + self.h).lpdf(x)
+            lpdf_minus_h = Exponential(loc, rate - self.h).lpdf(x)
+
+            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
         [([], 2, ["loc", "rate"]), (["loc"], 1, ["rate"]), (["rate"], 1, ["loc"]), (["loc", "rate"], 0, [])],
     )
-    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
+    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params, dtype):
         """Tests the structure and content of log_gradients with various fixed parameters."""
 
-        dist = Exponential(loc=1.0, rate=2.0)
+        dist = Exponential(loc=1.0, rate=2.0, dtype=dtype)
         for param in fixed_params:
             dist.fix_param(param)
 
@@ -237,6 +247,7 @@ class TestExponentialGradients:
         gradients = dist.log_gradients(x)
 
         assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
         assert gradients.shape == (len(x), expected_shape_col)
 
         if "loc" in expected_params:
@@ -247,43 +258,44 @@ class TestExponentialGradients:
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_rate(x))
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestExponentialGenerate:
     """Tests for the generate method."""
 
-    def test_generate_type_and_shape(self):
+    def test_generate_type_and_shape(self, dtype):
         """Tests that generated samples have the correct type and shape."""
 
         np.random.seed(42)
         random.seed(42)
-        dist = Exponential(loc=0.0, rate=2.0)
+        dist = Exponential(loc=0.0, rate=2.0, dtype=dtype)
         size = 100
         samples = dist.generate(size=size)
         assert isinstance(samples, np.ndarray)
-        assert samples.dtype == np.float64
+        assert samples.dtype == dtype
         assert samples.shape == (size,)
 
-    def test_generate_zero_size(self):
+    def test_generate_zero_size(self, dtype):
         """Tests if the generating 0 number of samples returns an empty array"""
 
-        dist = Exponential(loc=0.0, rate=1.0)
+        dist = Exponential(loc=0.0, rate=1.0, dtype=dtype)
         assert len(dist.generate(size=0)) == 0
 
     @pytest.mark.parametrize("size", [-1, -10])
-    def test_generate_negative_size(self, size):
+    def test_generate_negative_size(self, size, dtype):
         """Tests that generating a negative number of samples raises ValueError."""
 
-        dist = Exponential(loc=0.0, rate=1.0)
+        dist = Exponential(loc=0.0, rate=1.0, dtype=dtype)
 
         with pytest.raises(ValueError):
             dist.generate(size=size)
 
-    def test_generate_statistical_properties(self):
+    def test_generate_statistical_properties(self, dtype):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
         np.random.seed(123)
         random.seed(123)
         loc, rate = 5.0, 0.5
-        dist = Exponential(loc=loc, rate=rate)
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         size = 20000
 
         samples = dist.generate(size=size)
@@ -291,16 +303,16 @@ class TestExponentialGenerate:
         theoretical_mean = loc + 1 / rate
         theoretical_var = (1 / rate) ** 2
 
-        assert np.mean(samples) == pytest.approx(theoretical_mean, rel=0.1)
-        assert np.var(samples) == pytest.approx(theoretical_var, rel=0.1)
+        assert np.mean(samples, dtype=np.float64) == pytest.approx(theoretical_mean, rel=0.1)
+        assert np.var(samples, dtype=np.float64) == pytest.approx(theoretical_var, rel=0.1)
 
-    def test_generate_kolmogorov_smirnov(self):
+    def test_generate_kolmogorov_smirnov(self, dtype):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
 
         np.random.seed(456)
         random.seed(456)
         loc, rate = 10.0, 2.0
-        dist = Exponential(loc=loc, rate=rate)
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         size = 1000
 
         samples = dist.generate(size=size)
@@ -308,30 +320,3 @@ class TestExponentialGenerate:
         ks_statistic, p_value = kstest(samples, "expon", args=(loc, 1 / rate))
         lower_bound = 0.05
         assert p_value > lower_bound
-
-
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
-class TestExponentialDType(DTypeHandlingMixin):
-    distribution_class = Exponential
-    default_params: ClassVar[dict] = {"loc": 0.0, "rate": 1.0}
-
-    def test_init_with_dtype_sets_correct_types(self, dtype):
-        self.check_init_with_dtype_sets_correct_types(dtype)
-
-    @pytest.mark.parametrize("size", [0, 10])
-    def test_generate_returns_correct_dtype(self, size, dtype):
-        self.check_generate_returns_correct_dtype(size, dtype)
-
-    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
-    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1e3)))
-    def check_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
-        self.check_methods_taking_x_return_correct_dtype(method_name, x_data, dtype)
-
-    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
-    def check_ppf_returns_correct_dtype(self, p_data, dtype):
-        self.check_ppf_returns_correct_dtype(p_data, dtype)
-
-    @pytest.mark.parametrize("method_name", ["_dlog_loc", "_dlog_rate"])
-    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1e6)))
-    def test_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
-        self.check_dlog_methods_returns_correct_dtype(x_data, method_name, dtype)

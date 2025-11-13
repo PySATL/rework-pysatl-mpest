@@ -262,7 +262,10 @@ class Uniform(ContinuousDistribution[DType]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Uniform(left_border=0.0, right_border=2.0)".
+            "Uniform(left_border=0.0, right_border=2.0, dtype=np.float64)".
         """
 
-        return f"{self.__class__.__name__}(left_border={self.left_border}, right_border={self.right_border})"
+        return (
+            f"{self.__class__.__name__}(left_border={self.left_border}, "
+            f"right_border={self.right_border}, dtype=np.{self.dtype.__name__})"
+        )

@@ -7,7 +7,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import random
 from pathlib import Path
-from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -16,7 +15,6 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.distributions import Beta
-from rework_tests.unit.distributions.test_continuous_distribution import DTypeHandlingMixin
 from scipy.integrate import quad
 from scipy.stats import beta, kstest
 
@@ -72,82 +70,87 @@ def st_params_and_x_for_grad(draw):
     return (shape1, shape2, left, right, x)
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestBetaInitialization:
     """Tests for the __init__ method and basic properties."""
 
-    def test_initialization_successful(self):
+    def test_initialization_successful(self, dtype):
         """Tests that the instance is initialized correctly with valid parameters."""
 
         shape1, shape2, left_border, right_border = 0.5, 2.0, -1.0, 1.0
-        dist = Beta(alpha=shape1, beta=shape2, left_border=left_border, right_border=right_border)
-        assert isinstance(dist.alpha, float)
-        assert isinstance(dist.beta, float)
-        assert isinstance(dist.left_border, float)
-        assert isinstance(dist.right_border, float)
-        assert dist.alpha == shape1
-        assert dist.beta == shape2
-        assert dist.left_border == left_border
-        assert dist.right_border == right_border
+        dist = Beta(alpha=shape1, beta=shape2, lower_bound=left_border, upper_bound=right_border, dtype=dtype)
+        assert dist.alpha.dtype == dtype
+        assert dist.beta.dtype == dtype
+        assert dist.left_border.dtype == dtype
+        assert dist.right_border.dtype == dtype
+        assert dist.alpha == dtype(shape1)
+        assert dist.beta == dtype(shape2)
+        assert dist.left_border == dtype(left_border)
+        assert dist.right_border == dtype(right_border)
 
-    def test_name_property(self):
+    def test_name_property(self, dtype):
         """Tests that the name property returns the correct string."""
 
-        dist = Beta(alpha=1.0, beta=2.0, left_border=-1.0, right_border=1.0)
+        dist = Beta(alpha=1.0, beta=2.0, left_border=-1.0, right_border=1.0, dtype=dtype)
         assert dist.name == "Beta"
 
-    def test_params_property(self):
+    def test_params_property(self, dtype):
         """Tests that the params property returns the correct set of parameter names."""
 
-        dist = Beta(alpha=1.0, beta=2.0, left_border=-1.0, right_border=1.0)
+        dist = Beta(alpha=1.0, beta=2.0, left_border=-1.0, right_border=1.0, dtype=dtype)
         assert dist.params == {"alpha", "beta", "left_border", "right_border"}
 
-    def test_alpha_invariant_violation(self):
+    def test_alpha_invariant_violation(self, dtype):
         """Tests that initializing with a non-positive alpha raises a ValueError."""
 
         with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
-            Beta(alpha=-1.0, beta=2.0, left_border=10.0, right_border=20.0)
+            Beta(alpha=-1.0, beta=2.0, left_border=10.0, right_border=20.0, dtype=dtype)
         with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
-            Beta(alpha=-20.0, beta=2.0, left_border=10.0, right_border=20.0)
+            Beta(alpha=-20.0, beta=2.0, left_border=10.0, right_border=20.0, dtype=dtype)
 
-    def test_alpha_assignment_violation(self):
+    def test_alpha_assignment_violation(self, dtype):
         """Tests that assigning a non-positive rate after initialization raises a ValueError."""
 
-        dist = Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=20.0)
+        dist = Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=20.0, dtype=dtype)
         with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
             dist.alpha = -1.0
         with pytest.raises(ValueError, match="Alpha parameter should be positive or zero"):
             dist.alpha = -10.0
 
-    def test_beta_invariant_violation(self):
+    def test_beta_invariant_violation(self, dtype):
         """Tests that initializing with a non-positive beta raises a ValueError."""
 
         with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
-            Beta(alpha=1.0, beta=-2.0, left_border=10.0, right_border=20.0)
+            Beta(alpha=1.0, beta=-2.0, left_border=10.0, right_border=20.0, dtype=dtype)
         with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
-            Beta(alpha=1.0, beta=-20.0, left_border=10.0, right_border=20.0)
+            Beta(alpha=1.0, beta=-20.0, left_border=10.0, right_border=20.0, dtype=dtype)
 
-    def test_beta_assignment_violation(self):
+    def test_beta_assignment_violation(self, dtype):
         """Tests that assigning a non-positive beta after initialization raises a ValueError."""
 
-        dist = Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=20.0)
+        dist = Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=20.0, dtype=dtype)
         with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
             dist.beta = -1.0
         with pytest.raises(ValueError, match="Beta parameter should be positive or zero"):
             dist.beta = -10.0
 
-    def test_invariant_bounds_violation(self):
-        """Tests that initializing with a lower bound bigger upper bound  raises a ValueError."""
-        with pytest.raises(ValueError, match="Left border must be less than right border"):
-            Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=5.0)
-        with pytest.raises(ValueError, match="Left border must be less than right border"):
-            Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=10.0)
+    def test_invariant_bounds_violation(self, dtype):
+        """Tests that initializing with a left border bigger right border raises a ValueError."""
 
-    def test_repr_method(self):
+        with pytest.raises(ValueError, match="Left border must be less than right border"):
+            Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=5.0, dtype=dtype)
+        with pytest.raises(ValueError, match="Left border must be less than right border"):
+            Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=10.0, dtype=dtype)
+
+    def test_repr_method(self, dtype):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=20.0)
+        dist = Beta(alpha=1.1, beta=2.1, lower_bound=10.1, upper_bound=20.1, dtype=dtype)
         repr_str = repr(dist)
-        assert repr_str == "Beta(alpha=1.0, beta=2.0, left_border=10.0, right_border=20.0)"
+        assert (
+            repr_str == f"Beta(alpha={dist.alpha}, beta={dist.beta}, left_border={dist.left_border}, "
+            f"right_border={dist.right_border}, dtype=np.{dtype.__name__})"
+        )
 
         recreated_dist = eval(repr_str)
         assert dist == recreated_dist
@@ -156,19 +159,23 @@ class TestBetaInitialization:
 class TestBetaPDF:
     """Tests for the pdf method using hypothesis."""
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_pdf_properties(self, x):
+    def test_pdf_properties(self, x, dtype):
         """Tests that the PDF is non-negative and has the correct return type and shape."""
+
         alpha, beta, left_border, right_border = 1.0, 1.0, 2.9, 10.0
-        dist = Beta(alpha, beta, left_border, right_border)
+        dist = Beta(alpha, beta, left_border, right_border, dtype=dtype)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
+        assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
 
     @pytest.mark.parametrize("x,shape1,shape2,left_border,right_border,expected_pdf", load_r_test_cases())
     def test_pdf_against_R(self, x, shape1, shape2, left_border, right_border, expected_pdf):
         """Compares the custom PDF implementation against scipy's implementation."""
+
         dist = Beta(shape1, shape2, left_border, right_border)
         custom_pdf = dist.pdf(x)
         np.testing.assert_allclose(custom_pdf, expected_pdf, atol=1e-9)
@@ -176,6 +183,7 @@ class TestBetaPDF:
     @given(params=st_valid_params())
     def test_pdf_integral_is_one(self, params):
         """Tests that the integral of the PDF over its support is equal to 1."""
+
         shape1, shape2, left_border, right_border = params
         dist = Beta(shape1, shape2, left_border, right_border)
         integral, error = quad(lambda x: dist.pdf(x).item(), left_border, right_border)
@@ -184,6 +192,7 @@ class TestBetaPDF:
     @given(x=st.floats(min_value=1e-4, max_value=1e2, allow_infinity=False))
     def test_pdf_outside_support(self, x):
         """Tests that the PDF is zero for values less than the location parameter."""
+
         x_val = 2.0 - abs(x)
         dist = Beta(1.0, 1.0, 2.0, 10.0)
         assert dist.pdf(x_val) == 0.0
@@ -192,13 +201,16 @@ class TestBetaPDF:
 class TestBetaLPDF:
     """Tests for the lpdf (log-PDF) method using hypothesis."""
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(params=st_valid_params(), x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape(self, params, x):
+    def test_lpdf_return_type_and_shape(self, params, x, dtype):
         """Tests the return type and shape of the lpdf method."""
+
         shape1, shape2, left_border, right_border = params
-        dist = Beta(shape1, shape2, left_border, right_border)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
+        assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
 
     @given(params=st_valid_params(), x=st.floats(1e-6, 1e6))
@@ -218,6 +230,7 @@ class TestBetaLPDF:
     @given(params=st_valid_params(), x=st.floats(max_value=-1e6, allow_infinity=False))
     def test_lpdf_outside_support(self, params, x):
         """Tests that the LPDF is -inf for values less than the location parameter."""
+
         shape1, shape2, left_border, right_border = params
         x_val = left_border - abs(x)
         dist = Beta(shape1, shape2, left_border, right_border)
@@ -227,20 +240,24 @@ class TestBetaLPDF:
 class TestBetaPPF:
     """Tests for the ppf (Percent Point Function) method using hypothesis."""
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(
         params=st_valid_params(), p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True))
     )
-    def test_ppf_return_type_and_shape(self, params, p):
+    def test_ppf_return_type_and_shape(self, params, p, dtype):
         """Tests the return type and shape of the ppf method."""
+
         shape1, shape2, left_border, right_border = params
-        dist = Beta(shape1, shape2, left_border, right_border)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
+        assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
 
     @given(params=st_valid_params(), p=st.floats(0, 1))
     def test_ppf_against_scipy(self, params, p):
         """Compares the custom PPF implementation against scipy's implementation."""
+
         shape1, shape2, left_border, right_border = params
         dist = Beta(shape1, shape2, left_border, right_border)
         custom_ppf = dist.ppf(p)
@@ -255,78 +272,88 @@ class TestBetaPPF:
         assert np.isnan(dist.ppf(p_val))
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestBetaGradients:
     """Tests for gradient calculation methods."""
 
     h = 1e-6
 
     @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_shape1_numerical(self, params_x):
+    def test_dlog_shape1_numerical(self, params_x, dtype):
         """Checks the analytical gradient for 'shape1' against a numerical approximation."""
+
         shape1, shape2, left_border, right_border, x = params_x
 
-        dist = Beta(shape1, shape2, left_border, right_border)
-
-        lpdf_plus_h = Beta(shape1 + self.h, shape2, left_border, right_border).lpdf(x)
-        lpdf_minus_h = Beta(shape1 - self.h, shape2, left_border, right_border).lpdf(x)
-
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         analytical_grad = dist._dlog_alpha(x)
 
         assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.dtype == dtype
         assert analytical_grad.shape == x.shape
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+        if dtype == np.float64:
+            lpdf_plus_h = Beta(shape1 + self.h, shape2, left_border, right_border).lpdf(x)
+            lpdf_minus_h = Beta(shape1 - self.h, shape2, left_border, right_border).lpdf(x)
+
+            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
     @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_shape2_numerical(self, params_x):
+    def test_dlog_shape2_numerical(self, params_x, dtype):
         """Checks the analytical gradient for 'shape2' against a numerical approximation."""
         shape1, shape2, left_border, right_border, x = params_x
 
-        dist = Beta(shape1, shape2, left_border, right_border)
-
-        lpdf_plus_h = Beta(shape1, shape2 + self.h, left_border, right_border).lpdf(x)
-        lpdf_minus_h = Beta(shape1, shape2 - self.h, left_border, right_border).lpdf(x)
-
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         analytical_grad = dist._dlog_beta(x)
 
         assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.dtype == dtype
         assert analytical_grad.shape == x.shape
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+        if dtype == np.float64:
+            lpdf_plus_h = Beta(shape1, shape2 + self.h, left_border, right_border).lpdf(x)
+            lpdf_minus_h = Beta(shape1, shape2 - self.h, left_border, right_border).lpdf(x)
+
+            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
     @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_left_border_numerical(self, params_x):
+    def test_dlog_left_border_numerical(self, params_x, dtype):
         """Checks the analytical gradient for 'left_border' against a numerical approximation."""
         shape1, shape2, left_border, right_border, x = params_x
 
-        dist = Beta(shape1, shape2, left_border, right_border)
-
-        lpdf_plus_h = Beta(shape1, shape2, left_border + self.h, right_border).lpdf(x)
-        lpdf_minus_h = Beta(shape1, shape2, left_border - self.h, right_border).lpdf(x)
-
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         analytical_grad = dist._dlog_left_border(x)
 
         assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.dtype == dtype
         assert analytical_grad.shape == x.shape
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+        if dtype == np.float64:
+            lpdf_plus_h = Beta(shape1, shape2, left_border + self.h, right_border).lpdf(x)
+            lpdf_minus_h = Beta(shape1, shape2, left_border - self.h, right_border).lpdf(x)
+
+            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
     @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_right_border_numerical(self, params_x):
+    def test_dlog_right_border_numerical(self, params_x, dtype):
         """Checks the analytical gradient for 'right_border' against a numerical approximation."""
         shape1, shape2, left_border, right_border, x = params_x
 
-        dist = Beta(shape1, shape2, left_border, right_border)
-
-        lpdf_plus_h = Beta(shape1, shape2, left_border, right_border + self.h).lpdf(x)
-        lpdf_minus_h = Beta(shape1, shape2, left_border, right_border - self.h).lpdf(x)
-
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         analytical_grad = dist._dlog_right_border(x)
 
         assert isinstance(analytical_grad, np.ndarray)
+        assert analytical_grad.dtype == dtype
         assert analytical_grad.shape == x.shape
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+        if dtype == np.float64:
+            lpdf_plus_h = Beta(shape1, shape2, left_border, right_border + self.h).lpdf(x)
+            lpdf_minus_h = Beta(shape1, shape2, left_border, right_border - self.h).lpdf(x)
+
+            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -338,10 +365,10 @@ class TestBetaGradients:
             (["alpha", "beta", "left_border", "right_border"], 0, []),
         ],
     )
-    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
+    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params, dtype):
         """Tests the structure and content of log_gradients with various fixed parameters."""
 
-        dist = Beta(1.0, 1.0, 1.0, 10.0)
+        dist = Beta(1.0, 1.0, 1.0, 10.0, dtype=dtype)
         for param in fixed_params:
             dist.fix_param(param)
 
@@ -349,6 +376,7 @@ class TestBetaGradients:
         gradients = dist.log_gradients(x)
 
         assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
         assert gradients.shape == (len(x), expected_shape_col)
 
         if "alpha" in expected_params:
@@ -365,43 +393,40 @@ class TestBetaGradients:
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_right_border(x))
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestBetaGenerate:
     """Tests for the generate method."""
 
-    def test_generate_type_and_shape(self):
+    def test_generate_type_and_shape(self, dtype):
         """Tests that generated samples have the correct type and shape."""
 
         np.random.seed(42)
-        random.seed(42)
-        dist = Beta(1.0, 1.0, 1.0, 10.0)
+        dist = Beta(1.0, 1.0, 1.0, 10.0, dtype=dtype)
         size = 100
         samples = dist.generate(size=size)
         assert isinstance(samples, np.ndarray)
-        assert samples.dtype == np.float64
+        assert samples.dtype == dtype
         assert samples.shape == (size,)
 
-    def test_generate_zero_size(self):
+    def test_generate_zero_size(self, dtype):
         """Tests if the generating 0 number of samples returns an empty array"""
-
-        dist = Beta(1.0, 1.0, 1.0, 10.0)
+        dist = Beta(1.0, 1.0, 1.0, 10.0, dtype=dtype)
         assert len(dist.generate(size=0)) == 0
 
     @pytest.mark.parametrize("size", [-1, -10])
-    def test_generate_negative_size(self, size):
+    def test_generate_negative_size(self, size, dtype):
         """Tests that generating a negative number of samples raises ValueError."""
-
-        dist = Beta(1.0, 1.0, 1.0, 10.0)
-
+        dist = Beta(1.0, 1.0, 1.0, 10.0, dtype=dtype)
         with pytest.raises(ValueError):
             dist.generate(size=size)
 
-    def test_generate_statistical_properties(self):
+    def test_generate_statistical_properties(self, dtype):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
         np.random.seed(123)
         random.seed(123)
         shape1, shape2, left_border, right_border = 1.0, 1.0, 1.0, 10.0
-        dist = Beta(shape1, shape2, left_border, right_border)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         size = 20000
 
         samples = dist.generate(size=size)
@@ -412,16 +437,16 @@ class TestBetaGenerate:
             (right_border - left_border) ** 2 * shape1 * shape2 / ((shape1 + shape2) ** 2 * (shape1 + shape2 + 1))
         )
 
-        assert np.mean(samples) == pytest.approx(theoretical_mean, rel=0.1)
-        assert np.var(samples) == pytest.approx(theoretical_var, rel=0.1)
+        assert np.mean(samples, dtype=np.float64) == pytest.approx(theoretical_mean, rel=0.1)
+        assert np.var(samples, dtype=np.float64) == pytest.approx(theoretical_var, rel=0.1)
 
-    def test_generate_kolmogorov_smirnov(self):
+    def test_generate_kolmogorov_smirnov(self, dtype):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
 
         np.random.seed(456)
         random.seed(456)
         shape1, shape2, left_border, right_border = 1.0, 1.0, 1.0, 10.0
-        dist = Beta(shape1, shape2, left_border, right_border)
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
         size = 1000
 
         samples = dist.generate(size=size)
@@ -429,30 +454,3 @@ class TestBetaGenerate:
         ks_statistic, p_value = kstest(samples, "beta", args=(shape1, shape2, left_border, right_border - left_border))
         lower_bound = 0.05
         assert p_value > lower_bound
-
-
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
-class TestBetaDType(DTypeHandlingMixin):
-    distribution_class = Beta
-    default_params: ClassVar[dict] = {"alpha": 1.0, "beta": 2.0, "left_border": -1.0, "right_border": 1.0}
-
-    def test_init_with_dtype_sets_correct_types(self, dtype):
-        self.check_init_with_dtype_sets_correct_types(dtype)
-
-    @pytest.mark.parametrize("size", [0, 10])
-    def test_generate_returns_correct_dtype(self, size, dtype):
-        self.check_generate_returns_correct_dtype(size, dtype)
-
-    @pytest.mark.parametrize("method_name", ["pdf", "lpdf", "log_gradients"])
-    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1, 1)))
-    def test_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
-        self.check_methods_taking_x_return_correct_dtype(method_name, x_data, dtype)
-
-    @given(p_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
-    def test_ppf_returns_correct_dtype(self, p_data, dtype):
-        self.check_ppf_returns_correct_dtype(p_data, dtype)
-
-    @pytest.mark.parametrize("method_name", ["_dlog_alpha", "_dlog_beta", "_dlog_left_border", "_dlog_right_border"])
-    @given(x_data=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1, 1)))
-    def test_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
-        self.check_dlog_methods_returns_correct_dtype(x_data, method_name, dtype)
