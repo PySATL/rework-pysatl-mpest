@@ -6,7 +6,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from copy import copy
-from typing import ClassVar
 
 import numpy as np
 import pytest
@@ -427,62 +426,3 @@ class TestContinuousDistributionComparison:
         d2 = DummyDistribution(param1=1.0, param2=2.0, dtype=np.float32)
         assert d1 != d2
         assert hash(d1) != hash(d2)
-
-
-class DTypeHandlingMixin:
-    """A test mixin to verify correct dtype handling in all subclasses of ContinuousDistribution."""
-
-    distribution_class: ClassVar[type[ContinuousDistribution] | None] = None
-    default_params: ClassVar[dict] = {}
-
-    # Tests initialization
-    # --------------------
-
-    def check_init_with_dtype_sets_correct_types(self, dtype):
-        """Tests that the constructor and the Parameter descriptor correctly cast parameter types."""
-
-        dist = self.distribution_class(**self.default_params, dtype=dtype)
-
-        assert dist.dtype == dtype
-
-        for param_name in self.default_params:
-            param_value = getattr(dist, param_name)
-            assert isinstance(param_value, dtype)
-
-    # Tests generate
-    # --------------------
-
-    def check_generate_returns_correct_dtype(self, size, dtype):
-        """Tests the dtype of the array returned by the generate method."""
-        dist = self.distribution_class(**self.default_params, dtype=dtype)
-
-        result = dist.generate(size=size)
-
-        assert isinstance(result, np.ndarray)
-        assert result.dtype == dtype
-
-    # Tests calculations
-    # --------------------
-
-    def check_methods_taking_x_return_correct_dtype(self, method_name, x_data, dtype):
-        """Helper method with the logic for testing methods that take X."""
-        dist = self.distribution_class(**self.default_params, dtype=dtype)
-        method_to_test = getattr(dist, method_name)
-        result = method_to_test(x_data)
-        assert isinstance(result, np.ndarray)
-        assert result.dtype == dtype
-
-    def check_ppf_returns_correct_dtype(self, p_data, dtype):
-        """Helper method with the logic for testing the ppf method."""
-        dist = self.distribution_class(**self.default_params, dtype=dtype)
-        result = dist.ppf(p_data)
-        assert isinstance(result, np.ndarray)
-        assert result.dtype == dtype
-
-    def check_dlog_methods_returns_correct_dtype(self, x_data, method_name, dtype):
-        """Tests that each partial derivative method (_dlog_*) returns a NumPy array with the correct dtype."""
-
-        dist = self.distribution_class(**self.default_params, dtype=dtype)
-        method = getattr(dist, method_name)
-
-        assert method(x_data).dtype == dtype

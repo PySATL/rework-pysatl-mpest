@@ -257,7 +257,7 @@ class Pareto(ContinuousDistribution[DType]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Pareto(shape=0.0, scale=2.0)".
+            "Pareto(shape=0.0, scale=2.0, dtype=np.float64)".
         """
 
-        return f"{self.__class__.__name__}(shape={self.shape}, scale={self.scale})"
+        return f"{self.__class__.__name__}(shape={self.shape}, scale={self.scale}, dtype=np.{self.dtype.__name__})"
