@@ -215,7 +215,7 @@ class Normal(ContinuousDistribution[DType]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Normal(loc=0.0, scale=1.0)".
+            "Normal(loc=0.0, scale=1.0, dtype=np.float64)".
         """
 
-        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale})"
+        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale}, dtype=np.{self.dtype.__name__})"

@@ -270,7 +270,7 @@ class Cauchy(ContinuousDistribution[DType]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Cauchy(loc=0.0, scale=2.0)".
+            "Cauchy(loc=0.0, scale=2.0, dtype=np.float64)".
         """
 
-        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale})"
+        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale}, dtype=np.{self.dtype.__name__})"

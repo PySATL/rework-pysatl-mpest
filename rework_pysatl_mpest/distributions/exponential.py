@@ -252,7 +252,7 @@ class Exponential(ContinuousDistribution[DType]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Exponential(loc=0.0, rate=2.0)".
+            "Exponential(loc=0.0, rate=2.0, dtype=np.float64)".
         """
 
-        return f"{self.__class__.__name__}(loc={self.loc}, rate={self.rate})"
+        return f"{self.__class__.__name__}(loc={self.loc}, rate={self.rate}, dtype=np.{self.dtype.__name__})"

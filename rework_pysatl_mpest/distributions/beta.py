@@ -408,7 +408,7 @@ class Beta(ContinuousDistribution):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Beta(alpha=1.0, beta=2.0, left_border=0.0, right_border=1.0)".
+            "Beta(alpha=1.0, beta=2.0, left_border=0.0, right_border=1.0, dtype=np.float64)".
         """
 
         return (
@@ -416,5 +416,6 @@ class Beta(ContinuousDistribution):
             f"alpha={self.alpha}, "
             f"beta={self.beta}, "
             f"left_border={self.left_border}, "
-            f"right_border={self.right_border})"
+            f"right_border={self.right_border}, "
+            f"dtype=np.{self.dtype.__name__})"
         )
