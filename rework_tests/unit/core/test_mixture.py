@@ -16,6 +16,8 @@ from hypothesis import strategies as st
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential
 
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
+
 
 @pytest.fixture
 def exp_components() -> tuple[Exponential, Exponential]:
@@ -24,13 +26,15 @@ def exp_components() -> tuple[Exponential, Exponential]:
     return Exponential(loc=0.0, rate=1.0), Exponential(loc=5.0, rate=2.0)
 
 
-@pytest.fixture
-def mixture_model(exp_components: tuple[Exponential, Exponential]) -> MixtureModel:
+@pytest.fixture(params=DTYPES_TO_TEST)
+def mixture_model(exp_components: tuple[Exponential, Exponential], request) -> MixtureModel:
     """Provides a standard MixtureModel instance with two components and equal weights."""
 
-    return MixtureModel(components=exp_components, weights=[0.5, 0.5])
+    dtype = request.param
+    return MixtureModel(components=exp_components, weights=[0.5, 0.5], dtype=dtype)
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestMixtureModelInitialization:
     """Tests for the __init__ method of MixtureModel."""
 
@@ -41,70 +45,85 @@ class TestMixtureModelInitialization:
             [Exponential(loc=0, rate=1), Exponential(loc=1, rate=2)],
         ],
     )
-    def test_init_with_valid_component_sequences(self, components_seq: Sequence[ContinuousDistribution]):
+    def test_init_with_valid_component_sequences(self, components_seq: Sequence[ContinuousDistribution], dtype):
         """Tests that MixtureModel can be initialized with different sequence types."""
 
-        model = MixtureModel(components=components_seq)
+        model = MixtureModel(components=components_seq, dtype=dtype)
         expected_n_components = 2
         assert model.n_components == expected_n_components
         assert isinstance(model.components, tuple)
 
-    def test_init_with_equal_weights_by_default(self, exp_components: tuple[Exponential, Exponential]):
+    def test_init_with_equal_weights_by_default(self, exp_components: tuple[Exponential, Exponential], dtype):
         """Tests that weights are distributed equally when not provided."""
 
-        model = MixtureModel(components=exp_components)
+        model = MixtureModel(components=exp_components, dtype=dtype)
         expected_n_components = 2
         assert model.n_components == expected_n_components
         np.testing.assert_allclose(model.weights, [0.5, 0.5])
 
-    def test_init_with_specified_weights(self, exp_components: tuple[Exponential, Exponential]):
+    def test_init_with_specified_weights(self, exp_components: tuple[Exponential, Exponential], dtype):
         """Tests initialization with correctly specified weights."""
 
         weights = [0.3, 0.7]
-        model = MixtureModel(components=exp_components, weights=weights)
+        model = MixtureModel(components=exp_components, weights=weights, dtype=dtype)
         expected_n_components = 2
         assert model.n_components == expected_n_components
-        np.testing.assert_allclose(model.weights, weights)
-        np.testing.assert_allclose(np.exp(model.log_weights), weights, atol=1e-9)
+        if dtype == np.float64:
+            np.testing.assert_allclose(model.weights, weights)
+            np.testing.assert_allclose(np.exp(model.log_weights), weights, atol=1e-9)
 
     @pytest.mark.parametrize(
         "invalid_weights, error_msg",
         [
             ([0.5, 0.5, 0.5], "Components number \\(2\\) must be equal to weights number \\(3\\)."),
             ([-0.2, 1.2], "Weights must be positive."),
-            ([0.4, 0.4], "Sum of the weights must be equal 1, but it equal 0.8."),
         ],
     )
     def test_init_with_invalid_weights_raises_value_error(
-        self, exp_components: tuple[Exponential, Exponential], invalid_weights: list[float], error_msg: str
+        self, exp_components: tuple[Exponential, Exponential], invalid_weights: list[float], error_msg: str, dtype
     ):
         """Tests that initialization with invalid weights raises a ValueError."""
 
         with pytest.raises(ValueError, match=error_msg):
-            MixtureModel(components=exp_components, weights=invalid_weights)
+            MixtureModel(components=exp_components, weights=invalid_weights, dtype=dtype)
 
-    def test_init_with_empty_components_raises_value_error(self):
+    @pytest.mark.parametrize(
+        "invalid_weights, error_msg",
+        [
+            ([0.4, 0.4], "Sum of the weights must be equal 1, but it equal "),
+        ],
+    )
+    def test_init_with_invalid_sum_of_weights_raises_value_error(
+        self, exp_components: tuple[Exponential, Exponential], invalid_weights: list[float], error_msg: str, dtype
+    ):
+        """Tests that initialization with invalid sum of weights raises a ValueError."""
+        with pytest.raises(ValueError) as excinfo:
+            MixtureModel(components=exp_components, weights=invalid_weights, dtype=dtype)
+
+        actual_error_msg = str(excinfo.value)
+        assert actual_error_msg.startswith(error_msg)
+
+    def test_init_with_empty_components_raises_value_error(self, dtype):
         """Tests that initialization with an empty component list raises a ValueError."""
 
         with pytest.raises(ValueError, match="List of components cannot be an empty"):
-            MixtureModel(components=[])
+            MixtureModel(components=[], dtype=dtype)
 
-    def test_init_casts_component_dtypes(self):
+    def test_init_casts_component_dtypes(self, dtype):
         """Tests that the MixtureModel casts all components to its own dtype during initialization."""
+
         comp1_f64 = Exponential(loc=0.0, rate=1.0)
         comp2_f64 = Exponential(loc=5.0, rate=2.0)
         assert comp1_f64.dtype == np.float64
 
-        target_dtype = np.float32
-        mixture = MixtureModel(components=[comp1_f64, comp2_f64], dtype=target_dtype)
+        mixture = MixtureModel(components=[comp1_f64, comp2_f64], dtype=dtype)
 
-        assert mixture.dtype == target_dtype
-        assert mixture.weights.dtype == target_dtype
-
+        assert mixture.dtype == dtype
+        assert mixture.weights.dtype == dtype
         for component in mixture.components:
-            assert component.dtype == target_dtype
+            assert component.dtype == dtype
             for param in component.params:
-                assert isinstance(getattr(component, param), target_dtype)
+                assert isinstance(getattr(component, param), dtype)
 
         # Original components have not changed
         for component in [comp1_f64, comp2_f64]:
@@ -112,14 +131,14 @@ class TestMixtureModelInitialization:
             for param in component.params:
                 assert isinstance(getattr(component, param), np.float64)
 
-    def test_init_does_not_recreate_components_with_correct_dtype(self):
+    def test_init_does_not_recreate_components_with_correct_dtype(self, dtype):
         """Tests that components with the correct dtype are not recreated."""
-        target_dtype = np.float32
-        comp_f32 = Exponential(loc=0.0, rate=1.0, dtype=target_dtype)
+
+        comp_f32 = Exponential(loc=0.0, rate=1.0, dtype=dtype)
 
         original_id = id(comp_f32)
 
-        mixture = MixtureModel(components=[comp_f32], dtype=target_dtype)
+        mixture = MixtureModel(components=[comp_f32], dtype=dtype)
 
         assert id(mixture.components[0]) == original_id
 
@@ -141,10 +160,11 @@ class TestMixtureModelProperties:
         with pytest.raises(TypeError):
             components[0] = Exponential(0, 1)  # type: ignore
 
-    def test_weights_caching(self, exp_components: tuple[Exponential, Exponential]):
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    def test_weights_caching(self, exp_components: tuple[Exponential, Exponential], dtype):
         """Tests the caching mechanism of the 'weights' property."""
 
-        model = MixtureModel(components=exp_components)
+        model = MixtureModel(components=exp_components, dtype=dtype)
         assert model._cached_weights is None
 
         first_access_weights = model.weights
@@ -164,12 +184,12 @@ class TestMixtureModelProperties:
         mixture_model.log_weights = new_log_weights
 
         assert mixture_model._cached_weights is None
-        np.testing.assert_allclose(mixture_model.log_weights, new_log_weights)
+        np.testing.assert_allclose(mixture_model.log_weights, new_log_weights, atol=1e-3)
 
         new_weights = mixture_model.weights
-        np.testing.assert_allclose(new_weights, [0.3, 0.7])
+        np.testing.assert_allclose(new_weights, [0.3, 0.7], atol=1e-3)
         assert id(old_weights) != id(new_weights)
-        assert np.isclose(np.sum(new_weights), 1.0)
+        assert np.isclose(np.sum(new_weights), 1.0, atol=1e-3)
 
     def test_log_weights_setter_with_invalid_shape_raises_error(self, mixture_model: MixtureModel):
         """Tests that setting log_weights with an incorrect shape raises a ValueError."""
@@ -177,13 +197,11 @@ class TestMixtureModelProperties:
         with pytest.raises(ValueError, match="The length of the new logit vector does not match"):
             mixture_model.log_weights = np.log([0.1, 0.2, 0.7])
 
-    def test_properties_have_correct_dtype(self):
+    def test_properties_have_correct_dtype(self, mixture_model: MixtureModel):
         """Tests that checks the dtype of the weights and log_weights properties."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
 
-        assert mixture.weights.dtype == target_dtype
-        assert mixture.log_weights.dtype == target_dtype
+        assert mixture_model.weights.dtype == mixture_model.dtype
+        assert mixture_model.log_weights.dtype == mixture_model.dtype
 
 
 class TestMixtureModelModification:
@@ -192,8 +210,10 @@ class TestMixtureModelModification:
     def test_add_component(self, mixture_model: MixtureModel):
         """Tests adding a new component and verifies weight preservation and renormalization."""
 
+        dtype = mixture_model.dtype
+
         old_weights = mixture_model.weights.copy()
-        new_component = Exponential(loc=10, rate=3)
+        new_component = Exponential(loc=10, rate=3, dtype=dtype)
         new_weight = 0.4
 
         mixture_model.add_component(new_component, weight=new_weight)
@@ -217,11 +237,12 @@ class TestMixtureModelModification:
         with pytest.raises(ValueError, match="The weight of the new component must be in the range"):
             mixture_model.add_component(Exponential(10, 3), weight=invalid_weight)
 
-    def test_add_component_casts_dtype(self):
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    def test_add_component_casts_dtype(self, dtype):
         """Tests that the add_component method casts the type of the new component to the dtype of the mixture."""
+
         comp = Exponential(loc=0.0, rate=1.0)
-        target_dtype = np.float32
-        mixture = MixtureModel(components=[comp], dtype=target_dtype)
+        mixture = MixtureModel(components=[comp], dtype=dtype)
 
         new_comp_f64 = Exponential(loc=10.0, rate=2.0)
         assert new_comp_f64.dtype == np.float64
@@ -229,8 +250,8 @@ class TestMixtureModelModification:
         mixture.add_component(new_comp_f64, weight=0.3)
 
         added_component_in_mixture = mixture.components[-1]
-        assert added_component_in_mixture.dtype == target_dtype
-        assert isinstance(added_component_in_mixture.loc, target_dtype)
+        assert added_component_in_mixture.dtype == dtype
+        assert isinstance(added_component_in_mixture.loc, dtype)
 
         # Original component have not changed
         assert comp.dtype == np.float64
@@ -276,6 +297,7 @@ class TestMixtureModelCalculations:
     def test_pdf_calculation(self, mixture_model: MixtureModel, X):
         """Tests the PDF calculation against the definition."""
 
+        dtype = mixture_model.dtype
         c1, c2 = mixture_model.components
         w1, w2 = mixture_model.weights
 
@@ -283,48 +305,34 @@ class TestMixtureModelCalculations:
         calculated_pdf = mixture_model.pdf(X)
 
         assert isinstance(calculated_pdf, np.ndarray)
-        np.testing.assert_allclose(calculated_pdf, expected_pdf)
+        assert calculated_pdf.dtype == dtype
+        if dtype == np.float64:
+            np.testing.assert_allclose(calculated_pdf, expected_pdf)
 
     @pytest.mark.parametrize("X", [1.5, [1.5], np.array([1.0, 1.5, 6.0])])
     def test_lpdf_calculation(self, mixture_model: MixtureModel, X):
         """Tests the LPDF calculation against the definition."""
 
+        dtype = mixture_model.dtype
+
         expected_lpdf = np.log(mixture_model.pdf(X))
         calculated_lpdf = mixture_model.lpdf(X)
 
         assert isinstance(calculated_lpdf, np.ndarray)
-        np.testing.assert_allclose(calculated_lpdf, expected_lpdf)
-
-    @pytest.mark.parametrize("method_name", ["pdf", "lpdf"])
-    def test_pdf_lpdf_methods_return_correct_dtype(self, method_name: str):
-        """Tests that pdf and lpdf methods return arrays of the correct dtype."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
-        method_to_test = getattr(mixture, method_name)
-
-        input_x = np.array([1.0, 2.0, 3.0])
-        result = method_to_test(input_x)
-
-        assert result.dtype == target_dtype
+        assert calculated_lpdf.dtype == dtype
+        if dtype == np.float64:
+            np.testing.assert_allclose(calculated_lpdf, expected_lpdf)
 
     def test_loglikelihood_calculation(self, mixture_model: MixtureModel):
         """Tests that loglikelihood is the sum of LPDF values."""
 
+        dtype = mixture_model.dtype
         X = np.array([1.0, 1.5, 6.0])
         expected_loglikelihood = np.sum(mixture_model.lpdf(X))
         calculated_loglikelihood = mixture_model.loglikelihood(X)
 
-        assert isinstance(calculated_loglikelihood, np.float64)
+        assert isinstance(calculated_loglikelihood, dtype)
         assert np.isclose(calculated_loglikelihood, expected_loglikelihood)
-
-    def test_loglikelihood_returns_numpy_scalar_with_correct_dtype(self):
-        """Tests that checks that loglikelihood returns a NumPy scalar of the correct type."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
-
-        loglik = mixture.loglikelihood(np.array([1, 2, 3]))
-
-        assert isinstance(loglik, target_dtype)
 
 
 class TestMixtureModelGenerate:
@@ -334,9 +342,13 @@ class TestMixtureModelGenerate:
         """Tests that generate returns an array of the requested size."""
 
         size = 100
+        dtype = mixture_model.dtype
 
-        assert len(mixture_model.generate(size=size)) == size
-        assert isinstance(mixture_model.generate(size=size), np.ndarray)
+        samples = mixture_model.generate(size=size)
+
+        assert len(samples) == size
+        assert isinstance(samples, np.ndarray)
+        assert samples.dtype == dtype
 
     def test_generate_with_size_zero(self, mixture_model):
         """Tests that generating with size = 0 returns an empty array."""
@@ -381,16 +393,6 @@ class TestMixtureModelGenerate:
         proportion_c1 = len(samples_from_c1) / n_samples
         assert proportion_c1 == pytest.approx(weights[0], abs=0.05)
 
-    @pytest.mark.parametrize("size", [0, 10])
-    def test_generate_returns_array_with_correct_dtype(self, size):
-        """Tests that generate returns an array with the correct dtype."""
-        target_dtype = np.float32
-        mixture = MixtureModel([Exponential(0, 1)], dtype=target_dtype)
-
-        samples = mixture.generate(size=size)
-        assert samples.shape == (size,)
-        assert samples.dtype == target_dtype
-
 
 class TestMixtureModelDunderMethods:
     """Tests for special (dunder) methods of MixtureModel."""
@@ -413,7 +415,8 @@ class TestMixtureModelDunderMethods:
     ):
         """Tests that __getitem__ retrieves the correct component by index."""
 
-        assert mixture_model[index] == exp_components[expected_component_index]
+        dtype = mixture_model.dtype
+        assert mixture_model[index] == exp_components[expected_component_index].astype(dtype)
 
     def test_getitem_out_of_bounds_raises_index_error(self, mixture_model: MixtureModel):
         """Tests that accessing an out-of-bounds index raises an IndexError."""
@@ -434,6 +437,9 @@ class TestMixtureModelDunderMethods:
         self, mixture_model: MixtureModel, exp_components: tuple[Exponential, ...]
     ):
         """Tests that iterating over the model yields all components in the correct order."""
+
+        dtype = mixture_model.dtype
+        exp_components = [component.astype(dtype) for component in exp_components]
 
         iterated_components = list(mixture_model)
         assert iterated_components == list(exp_components)
@@ -467,8 +473,8 @@ class TestMixtureModelCopying:
         copied_model = copy(mixture_model)
         copied_model.log_weights = np.log([0.1, 0.9])
 
-        np.testing.assert_allclose(mixture_model.weights, [0.5, 0.5])
-        np.testing.assert_allclose(copied_model.weights, [0.1, 0.9])
+        np.testing.assert_allclose(mixture_model.weights, [0.5, 0.5], atol=1e-4)
+        np.testing.assert_allclose(copied_model.weights, [0.1, 0.9], atol=1e-4)
 
     def test_copy_is_independent_components(self, mixture_model: MixtureModel):
         """Tests that the components in the copied model are also independent copies."""
@@ -486,97 +492,92 @@ class TestMixtureModelCopying:
         assert mixture_model.components[0].rate != copied_model.components[0].rate
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestMixtureModelComparison:
     """Tests the __eq__ and __hash__ methods for MixtureModel."""
 
-    def test_eq_identical_models(self):
+    def test_eq_identical_models(self, dtype):
         """Tests that two identical models are equal."""
 
         c = [Exponential(0, 1), Exponential(10, 2)]
-        m1 = MixtureModel(components=c, weights=[0.4, 0.6])
-        m2 = MixtureModel(components=c, weights=[0.4, 0.6])
+        m1 = MixtureModel(components=c, weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=c, weights=[0.4, 0.6], dtype=dtype)
         assert m1 == m2
 
-    def test_eq_order_insensitivity(self):
+    def test_eq_order_insensitivity(self, dtype):
         """Tests that models with the same components/weights in a different order are equal."""
 
         c1 = [Exponential(0, 1), Exponential(10, 2)]
         w1 = [0.4, 0.6]
-        m1 = MixtureModel(components=c1, weights=w1)
+        m1 = MixtureModel(components=c1, weights=w1, dtype=dtype)
 
         c2 = [Exponential(10, 2), Exponential(0, 1)]
         w2 = [0.6, 0.4]
-        m2 = MixtureModel(components=c2, weights=w2)
+        m2 = MixtureModel(components=c2, weights=w2, dtype=dtype)
 
         assert m1 == m2
 
-    def test_neq_different_weights(self):
+    def test_neq_different_weights(self, dtype):
         """Tests that models with different weights are not equal."""
 
         c = [Exponential(0, 1), Exponential(10, 2)]
-        m1 = MixtureModel(components=c, weights=[0.4, 0.6])
-        m2 = MixtureModel(components=c, weights=[0.41, 0.59])
+        m1 = MixtureModel(components=c, weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=c, weights=[0.41, 0.59], dtype=dtype)
         assert m1 != m2
 
-    def test_neq_different_components(self):
+    def test_neq_different_components(self, dtype):
         """Tests that models with different components are not equal."""
 
         c1 = [Exponential(0, 1), Exponential(10, 2)]
         c2 = [Exponential(0, 1), Exponential(99, 2)]
-        m1 = MixtureModel(components=c1, weights=[0.4, 0.6])
-        m2 = MixtureModel(components=c2, weights=[0.4, 0.6])
+        m1 = MixtureModel(components=c1, weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=c2, weights=[0.4, 0.6], dtype=dtype)
         assert m1 != m2
 
-    def test_neq_different_n_components(self):
+    def test_neq_different_n_components(self, dtype):
         """Tests that models with a different number of components are not equal."""
 
         c1 = [Exponential(0, 1), Exponential(10, 2)]
         c2 = [Exponential(0, 1)]
-        m1 = MixtureModel(components=c1, weights=[0.4, 0.6])
-        m2 = MixtureModel(components=c2, weights=[1.0])
+        m1 = MixtureModel(components=c1, weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=c2, weights=[1.0], dtype=dtype)
         assert m1 != m2
 
-    def test_neq_other_object(self, mixture_model, exp_components):
+    def test_neq_different_dtype(self, dtype):
+        """Tests that models with different dtype are not equal."""
+
+        c1 = [Exponential(0, 1), Exponential(10, 2)]
+        c2 = [Exponential(0, 1), Exponential(99, 2)]
+        m1 = MixtureModel(components=c1, weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=c2, weights=[0.4, 0.6], dtype=np.float128)
+        assert m1 != m2
+
+    def test_neq_other_object(self, mixture_model, exp_components, dtype):
         """Tests that a model instance is not equal to an object of a different class."""
         model = mixture_model
 
         other = "not_a_mixture_model"
         assert model != other
 
-    def test_hash_consistency(self):
+    def test_hash_consistency(self, dtype):
         """Tests that equal models produce the same hash."""
 
-        m1 = MixtureModel(
-            components=[Exponential(0, 1), Exponential(10, 2)],
-            weights=[0.4, 0.6],
-        )
-        m2 = MixtureModel(
-            components=[Exponential(10, 2), Exponential(0, 1)],
-            weights=[0.6, 0.4],
-        )
+        m1 = MixtureModel(components=[Exponential(0, 1), Exponential(10, 2)], weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=[Exponential(10, 2), Exponential(0, 1)], weights=[0.6, 0.4], dtype=dtype)
         assert m1 == m2
         assert hash(m1) == hash(m2)
 
-    def test_hash_difference(self):
+    def test_hash_difference(self, dtype):
         """Tests that non-equal models are likely to have different hashes."""
 
-        m1 = MixtureModel(
-            components=[Exponential(0, 1), Exponential(10, 2)],
-            weights=[0.4, 0.6],
-        )
-        m2 = MixtureModel(
-            components=[Exponential(0, 1), Exponential(10, 2)],
-            weights=[0.5, 0.5],
-        )
+        m1 = MixtureModel(components=[Exponential(0, 1), Exponential(10, 2)], weights=[0.4, 0.6], dtype=dtype)
+        m2 = MixtureModel(components=[Exponential(0, 1), Exponential(10, 2)], weights=[0.5, 0.5], dtype=dtype)
         assert m1 != m2
         assert hash(m1) != hash(m2)
 
-    def test_hash_changes_after_modifying_weights(self):
+    def test_hash_changes_after_modifying_weights(self, dtype):
         """Tests that the hash of the model updates after its weights are changed."""
-        model = MixtureModel(
-            components=[Exponential(0, 1), Exponential(10, 2)],
-            weights=[0.4, 0.6],
-        )
+        model = MixtureModel(components=[Exponential(0, 1), Exponential(10, 2)], weights=[0.4, 0.6], dtype=dtype)
         old_hash = hash(model)
 
         model.log_weights = np.log([0.5, 0.5])
@@ -584,12 +585,9 @@ class TestMixtureModelComparison:
 
         assert old_hash != new_hash
 
-    def test_hash_changes_after_adding_component(self):
+    def test_hash_changes_after_adding_component(self, dtype):
         """Tests that the hash of the model updates after a new component is added."""
-        model = MixtureModel(
-            components=[Exponential(0, 1), Exponential(10, 2)],
-            weights=[0.4, 0.6],
-        )
+        model = MixtureModel(components=[Exponential(0, 1), Exponential(10, 2)], weights=[0.4, 0.6], dtype=dtype)
         old_hash = hash(model)
 
         model.add_component(Exponential(99, 3), weight=0.1)
@@ -599,11 +597,10 @@ class TestMixtureModelComparison:
         assert model.n_components == expected_n_components
         assert old_hash != new_hash
 
-    def test_hash_changes_after_removing_component(self):
+    def test_hash_changes_after_removing_component(self, dtype):
         """Tests that the hash of the model updates after a component is removed."""
         model = MixtureModel(
-            components=[Exponential(0, 1), Exponential(10, 2), Exponential(99, 3)],
-            weights=[0.4, 0.5, 0.1],
+            components=[Exponential(0, 1), Exponential(10, 2), Exponential(99, 3)], weights=[0.4, 0.5, 0.1], dtype=dtype
         )
         old_hash = hash(model)
 

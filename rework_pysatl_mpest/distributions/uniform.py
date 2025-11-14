@@ -97,7 +97,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
@@ -128,7 +128,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
         """
         P = np.asarray(P, dtype=self.dtype)
@@ -158,7 +158,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
         """
         X = np.asarray(X, dtype=self.dtype)
@@ -214,7 +214,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -247,7 +247,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[np.float64]
+        NDArray[DType]
             A NumPy array containing the generated samples.
         """
 
