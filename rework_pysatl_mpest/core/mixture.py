@@ -134,6 +134,7 @@ class MixtureModel(Generic[DType]):
     @property
     def dtype(self) -> type[DType]:
         """type[DType]: The numpy data type of the mixture's outputs."""
+
         return self._dtype
 
     @property
@@ -396,7 +397,8 @@ class MixtureModel(Generic[DType]):
         if self._sorted_pairs_cache is None or for_hashing:
             weights_to_use = self.weights
             if for_hashing:
-                weights_to_use = np.round(weights_to_use, 8)
+                decimals = np.finfo(self.dtype).precision
+                weights_to_use = np.round(weights_to_use, decimals)
 
             pairs = sorted(zip(self.components, weights_to_use), key=lambda p: hash(p[0]))
             if not for_hashing:
