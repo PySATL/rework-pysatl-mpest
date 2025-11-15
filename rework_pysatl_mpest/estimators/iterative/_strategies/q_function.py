@@ -8,7 +8,7 @@ efficient analytical solutions for specific distribution types like the
 `Exponential` distribution.
 """
 
-__author__ = "Danil Totmyanin"
+__author__ = "Danil Totmyanin, Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
@@ -18,7 +18,7 @@ from functools import singledispatch
 
 import numpy as np
 
-from ....distributions import ContinuousDistribution, Exponential, Normal, Weibull
+from ....distributions import ContinuousDistribution, Exponential, Normal, Pareto, Weibull
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
@@ -292,5 +292,75 @@ def _(
                 new_params[Weibull.PARAM_SCALE] = new_scale
             else:
                 new_params[Weibull.PARAM_SCALE] = component.scale
+
+    return block.component_id, new_params
+
+
+# ----------------------------
+# Pareto type 1 distribution strategy
+# ----------------------------
+
+
+@q_function_strategy.register(Pareto)
+def _(
+    component: Pareto, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, float]]:
+    """Specialized Q-function parameter estimation strategy for
+    the Pareto type 1 distribution using an analytical solution.
+
+    This function provides closed-form updates for the `scale` (minimum) and
+    `shape` parameters of a `Pareto` distribution, which is more efficient and
+    numerically stable than general-purpose numerical optimization.
+
+    Notes
+    -----
+    The analytical updates are as follows:
+    - The new `scale` parameter is set to the minimum value in the data `X`
+      among points with non-negligible responsibility (i.e., where H_j > tolerance).
+      This ensures the support constraint x >= scale is satisfied.
+
+    - The new `shape` parameter is computed as:
+      shape = (sum of responsibilities) / (sum of responsibilities * log(X / scale))
+      which is equivalent to the reciprocal of the responsibility-weighted average
+      of log(X / scale).
+
+    This implementation ignores the `optimizer` parameter as it does not
+    require numerical optimization.
+    """
+
+    if state.H is None:
+        raise ValueError("Responsibility matrix H is not computed.")
+
+    X = state.X
+    H_j = state.H[:, block.component_id]
+
+    params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
+    new_params = {}
+
+    N_j = np.sum(H_j).item()
+
+    # If the component has negligible responsibility, do not update its parameters.
+    if N_j < NUMERICAL_TOLERANCE:
+        return block.component_id, {}
+
+    # Update scale if it's in the optimization block
+    if Pareto.PARAM_SCALE in params_to_optimize:
+        mask = (H_j > NUMERICAL_TOLERANCE) & (X > 0)
+        if np.any(mask):
+            new_scale = np.min(X[mask]).item()
+        else:
+            new_params[Pareto.PARAM_SCALE] = component.scale
+
+        new_params[Pareto.PARAM_SCALE] = new_scale
+
+    # Update shape if it's in the optimization block
+    if Pareto.PARAM_SHAPE in params_to_optimize:
+        scale = new_params.get(Pareto.PARAM_SCALE, component.scale)
+
+        denominator = np.dot(H_j, np.log(X / scale)).item()
+        if denominator > NUMERICAL_TOLERANCE:
+            new_params[Pareto.PARAM_SHAPE] = N_j / denominator
+        else:
+            new_params[Pareto.PARAM_SHAPE] = component.shape
 
     return block.component_id, new_params
