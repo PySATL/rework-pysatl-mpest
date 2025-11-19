@@ -302,3 +302,26 @@ class TestMaximizationStep:
         # Should not raise an error
         step.clear_after_prune([0, 1])
         assert step.blocks == []
+
+    def test_clear_after_prune_with_multiple_removals(self):
+        """Tests clear_after_prune with multiple components removed."""
+        NUMBER_OF_BLOCKS = 2
+        blocks = [
+            OptimizationBlock(0, {"loc"}, "q_function"),
+            OptimizationBlock(1, {"rate"}, "q_function"),
+            OptimizationBlock(2, {"scale"}, "q_function"),
+            OptimizationBlock(3, {"loc", "rate"}, "q_function"),
+        ]
+
+        step = MaximizationStep(blocks=blocks, optimizer=None)
+
+        # Remove components 1 and 3
+        removed_indices = [1, 3]
+        step.clear_after_prune(removed_indices)
+
+        assert len(step.blocks) == NUMBER_OF_BLOCKS
+        assert step.blocks[0].component_id == 0  # Originally component 0
+        assert step.blocks[1].component_id == 1  # Originally component 2, now reindexed to 1
+
+        assert step.blocks[0].params_to_optimize == {"loc"}
+        assert step.blocks[1].params_to_optimize == {"scale"}

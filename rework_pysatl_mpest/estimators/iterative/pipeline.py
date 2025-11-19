@@ -165,11 +165,10 @@ class Pipeline(BaseEstimator):
 
         X = np.asarray(X, dtype=np.float64)
         copied_mixture = copy(mixture)  # Copy to avoid modifying the original object
-
+        removed_indices: list[int] = []
         state = PipelineState(X, None, None, copied_mixture, None)
 
         while True:
-            removed_indices: list[int] = []
             # Updating the state before starting an iteration
             state.prev_mixture = copy(state.curr_mixture)
             # Update responsibility matrix H
@@ -205,7 +204,7 @@ class Pipeline(BaseEstimator):
             # Pruning
             for pruner in self.pruners:
                 state, removed_components_indices = pruner.prune(state)
-                if removed_components_indices is not None:
+                if len(removed_components_indices) != 0:
                     removed_indices.extend(removed_components_indices)
             # Log
             self.logger.log(
