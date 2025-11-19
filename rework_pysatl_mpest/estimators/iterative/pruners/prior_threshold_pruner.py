@@ -13,7 +13,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from copy import copy
-from typing import Optional
 
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
@@ -58,7 +57,7 @@ class PriorThresholdPruner(Pruner):
             raise ValueError("Threshold must be between 0 and 1.")
         self.threshold = threshold
 
-    def prune(self, state: PipelineState) -> tuple[PipelineState, Optional[list[int]]]:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Removes components from the mixture whose weights are below the threshold.
 
         This method inspects :attr:`state.curr_mixture` and removes any component
@@ -75,25 +74,39 @@ class PriorThresholdPruner(Pruner):
 
         Returns
         -------
-        PipelineState
-            The updated pipeline state. If components were removed, :attr:`state.curr_mixture` will be a new,
-            smaller :class:`rework_pysatl_mpest.core.MixtureModel` instance.
-            Otherwise, the original state is returned.
-        removed_components_indices : list[int] | None
-            Tracks which component indices were removed during pruning.
+        tuple[PipelineState, list[int]]
+        A tuple containing:
+        - The updated pipeline state. If components were removed,
+          :attr:`state.curr_mixture` will be a new,
+          smaller :class:`rework_pysatl_mpest.core.MixtureModel` instance.
+          Otherwise, the original state object is returned unchanged.
+        - A list of the indices of components that were removed (sorted in increasing order).
         """
 
         # TODO: Now this implementation replace mixture with new mixture, so logger will not log this.
 
-        mixture = copy(state.curr_mixture)
-        removed_components_indices = []
+        mixture = state.curr_mixture
+        n = mixture.n_components
 
-        for i in range(mixture.n_components - 1, -1, -1):  # Reverse order to avoid indexing confusion
-            if mixture.weights[i] < self.threshold and mixture.n_components > 1:
-                mixture.remove_component(i)
-                removed_components_indices.append(i)
+        candidates_to_remove = [i for i, w in enumerate(mixture.weights) if w < self.threshold]
 
-        state.curr_mixture = mixture
-        removed_components_indices = sorted(removed_components_indices)
+        max_removals = n - 1
 
-        return (state, removed_components_indices)
+        if len(candidates_to_remove) > max_removals:
+            to_remove = candidates_to_remove[:max_removals]
+        else:
+            to_remove = candidates_to_remove
+
+        if not to_remove:
+            return (state, [])
+
+        new_mixture = copy(mixture)
+        for i in sorted(to_remove, reverse=True):
+            new_mixture.remove_component(i)
+
+        # Create a new PipelineState with the pruned mixture
+        new_state = PipelineState(
+            X=state.X, H=state.H, prev_mixture=state.prev_mixture, curr_mixture=new_mixture, error=state.error
+        )
+
+        return (new_state, sorted(to_remove))

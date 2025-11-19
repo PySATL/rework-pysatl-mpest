@@ -167,7 +167,7 @@ class MockPruner(Pruner):
         removed_components_indices = []
         if state.curr_mixture.n_components > 1:
             state.curr_mixture.remove_component(0)
-            removed_components_indices = [0]
+            removed_components_indices.append(0)
         return (state, removed_components_indices)
 
 
@@ -278,7 +278,7 @@ class TestPipelineValidation:
 
 # --- Fit Method Tests ---
 
-CONST = 2
+NUMBER_OF_BLOCKS = 2
 
 
 class TestPipelineFit:
@@ -490,6 +490,7 @@ class TestPipelineFit:
         pipeline = Pipeline(steps, breakpointers, once_in_iterations=2)
 
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
+
         EXPECTED_LEN_OF_LOGGER = 2
         EXPECTED_ITERATIONS = [0, 2]
 
@@ -502,10 +503,11 @@ class TestPipelineFit:
         """Tests that clear_after_prune is called for all steps during pipeline execution."""
 
         call_log = []
+        LEN_CALL_LOG = 2
 
         class TrackingStep(MockSingleStep):
             def clear_after_prune(self, removed_components_indices: list[int]) -> None:
-                call_log.append(f"clear_after_prune called with {removed_components_indices}")
+                call_log.append(removed_components_indices)
 
         # Create steps that track clear_after_prune calls
         steps = [TrackingStep(), TrackingStep()]
@@ -516,8 +518,9 @@ class TestPipelineFit:
         pipeline.fit(sample_data, initial_mixture)
 
         # Verify clear_after_prune was called for each step
-        assert len(call_log) == CONST  # Called for each step
-        assert "clear_after_prune called with" in call_log[0]
+        assert len(call_log) == LEN_CALL_LOG  # Called for each step
+        for removed_indices in call_log:
+            assert removed_indices == [0]
 
 
 # --- Tests for MaximizationStep clear_after_prune method ---
@@ -542,7 +545,7 @@ class TestMaximizationStepClearAfterPrune:
         step.clear_after_prune(removed_indices)
 
         # Should have 2 blocks left
-        assert len(step.blocks) == CONST
+        assert len(step.blocks) == NUMBER_OF_BLOCKS
         # Blocks should be for original components 0 and 2
         assert step.blocks[0].component_id == 0
         assert step.blocks[1].component_id == 1  # Reindexed from 2 to 1
@@ -604,7 +607,7 @@ class TestMaximizationStepClearAfterPrune:
         removed_indices = [1, 3]
         step.clear_after_prune(removed_indices)
 
-        assert len(step.blocks) == CONST
+        assert len(step.blocks) == NUMBER_OF_BLOCKS
         assert step.blocks[0].component_id == 0  # Originally component 0
         assert step.blocks[1].component_id == 1  # Originally component 2, now reindexed to 1
 

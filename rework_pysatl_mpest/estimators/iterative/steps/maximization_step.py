@@ -153,10 +153,10 @@ class MaximizationStep(PipelineStep):
         ----------
         state : PipelineState
             The current pipeline state containing removed_components_indices
-        removed_components_indices : list[int] | None
+        removed_components_indices : list[int]
             Tracks which component indices were removed during pruning.
         """
-        if removed_components_indices is None or not removed_components_indices or self.blocks is None:
+        if len(removed_components_indices) == 0 or self.blocks is None:
             return
         removed_indices = set(removed_components_indices)
 
@@ -170,5 +170,4 @@ class MaximizationStep(PipelineStep):
                 new_component_id += 1
 
         for block in self.blocks:
-            if block.component_id in old_to_new_mapping:
-                block.component_id = old_to_new_mapping[block.component_id]
+            block.component_id = old_to_new_mapping[block.component_id]

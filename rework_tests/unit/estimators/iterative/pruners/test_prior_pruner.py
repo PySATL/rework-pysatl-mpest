@@ -100,18 +100,18 @@ def test_init_raises_value_error_for_invalid_threshold(invalid_threshold):
 
 
 @pytest.mark.parametrize(
-    "threshold, initial_weights, expected_n_components, expected_remaining_indices",
+    "threshold, initial_weights, expected_n_components, expected_remaining_indices, expected_removed_indices",
     [
         # Case 1: No component is removed (all weights > threshold)
-        (0.05, [0.4, 0.3, 0.3], 3, [0, 1, 2]),
+        (0.05, [0.4, 0.3, 0.3], 3, [0, 1, 2], []),
         # Case 2: One component is removed
-        (0.15, [0.8, 0.1, 0.1], 1, [0]),
+        (0.15, [0.8, 0.1, 0.1], 1, [0], [1, 2]),
         # Case 3: Two components are removed
-        (0.2, [0.7, 0.15, 0.15], 1, [0]),
+        (0.2, [0.7, 0.15, 0.15], 1, [0], [1, 2]),
         # Case 4: The component with the smallest weight is removed
-        (0.1, [0.8, 0.15, 0.05], 2, [0, 1]),
+        (0.1, [0.8, 0.15, 0.05], 2, [0, 1], [2]),
         # Case 5: Nothing is removed as weight equals the threshold
-        (0.1, [0.8, 0.1, 0.1], 3, [0, 1, 2]),
+        (0.1, [0.8, 0.1, 0.1], 3, [0, 1, 2], []),
     ],
     ids=[
         "no_pruning",
@@ -122,7 +122,12 @@ def test_init_raises_value_error_for_invalid_threshold(invalid_threshold):
     ],
 )
 def test_prune_removes_correct_components(
-    dummy_components, threshold, initial_weights, expected_n_components, expected_remaining_indices
+    dummy_components,
+    threshold,
+    initial_weights,
+    expected_n_components,
+    expected_remaining_indices,
+    expected_removed_indices,
 ):
     """
     Basic and edge case tests: checks the core logic of component removal.
@@ -135,6 +140,8 @@ def test_prune_removes_correct_components(
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
     new_state, removed_components_indices = pruner.prune(state)
+
+    assert removed_components_indices == expected_removed_indices
 
     # Check that the number of components matches the expected value
     assert new_state.curr_mixture.n_components == expected_n_components
@@ -159,7 +166,7 @@ def test_prune_does_not_remove_last_component(dummy_components):
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
     # After the first prune, one component will remain, which should not be removed
-    new_state, removed_components_indices = pruner.prune(state)
+    new_state, _ = pruner.prune(state)
     assert new_state.curr_mixture.n_components == 1
 
 
@@ -187,7 +194,7 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
     initial_error_id = id(initial_state.error)
     initial_curr_mix_id = id(initial_state.curr_mixture)
 
-    new_state, removed_components_indices = pruner.prune(initial_state)
+    new_state, _ = pruner.prune(initial_state)
 
     # Verify that other state attributes have not changed (are the same objects)
     assert id(new_state.X) == initial_X_id
@@ -254,7 +261,7 @@ def test_prune_with_hypothesis_generated_data(weights_list, threshold):
     initial_mixture = MixtureModel(components, weights=initial_weights)
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
-    new_state, removed_components_indices = pruner.prune(state)
+    new_state, _ = pruner.prune(state)
     new_mixture = new_state.curr_mixture
 
     # Property 1: The mixture must always have at least one component remaining
@@ -280,3 +287,18 @@ def test_prune_with_hypothesis_generated_data(weights_list, threshold):
 
     # Property 4: The sum of weights must always be 1.0
     assert np.isclose(np.sum(new_mixture.weights), 1.0)
+
+
+def test_prune_returns_original_state_when_no_pruning(dummy_components):
+    """Test that original state is returned unchanged when no pruning occurs."""
+    pruner = PriorThresholdPruner(threshold=0.05)
+    initial_mixture = MixtureModel(dummy_components, weights=[0.4, 0.3, 0.3])
+    original_state = PipelineState(
+        X=np.array([1.0]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
+    )
+
+    new_state, removed = pruner.prune(original_state)
+
+    assert removed == []
+    assert new_state is original_state  # Same object
+    assert new_state.curr_mixture is initial_mixture  # Same mixture object
