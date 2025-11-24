@@ -351,8 +351,8 @@ def _(
 
 @q_function_strategy.register(Pareto)
 def _(
-    component: Pareto, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
-) -> tuple[int, dict[str, float]]:
+    component: Pareto, state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the Pareto type 1 distribution using an analytical solution.
 
@@ -379,13 +379,15 @@ def _(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
+    dtype = component.dtype
+
     X = state.X
     H_j = state.H[:, block.component_id]
 
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
     new_params = {}
 
-    N_j = np.sum(H_j).item()
+    N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
     if N_j < NUMERICAL_TOLERANCE:
@@ -395,19 +397,17 @@ def _(
     if Pareto.PARAM_SCALE in params_to_optimize:
         mask = (H_j > NUMERICAL_TOLERANCE) & (X > 0)
         if np.any(mask):
-            new_scale = np.min(X[mask]).item()
+            new_params[Pareto.PARAM_SCALE] = dtype(np.min(X[mask]))
         else:
             new_params[Pareto.PARAM_SCALE] = component.scale
-
-        new_params[Pareto.PARAM_SCALE] = new_scale
 
     # Update shape if it's in the optimization block
     if Pareto.PARAM_SHAPE in params_to_optimize:
         scale = new_params.get(Pareto.PARAM_SCALE, component.scale)
 
-        denominator = np.dot(H_j, np.log(X / scale)).item()
+        denominator = np.dot(H_j, np.log(X / scale))
         if denominator > NUMERICAL_TOLERANCE:
-            new_params[Pareto.PARAM_SHAPE] = N_j / denominator
+            new_params[Pareto.PARAM_SHAPE] = dtype(N_j / denominator)
         else:
             new_params[Pareto.PARAM_SHAPE] = component.shape
 
