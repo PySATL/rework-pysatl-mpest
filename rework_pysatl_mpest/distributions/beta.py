@@ -1,4 +1,4 @@
-"""Module providing four parametric beta distribution distribution class"""
+"""Module providing four parametric beta distribution class"""
 
 __author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
