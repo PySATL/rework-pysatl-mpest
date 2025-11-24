@@ -68,9 +68,10 @@ class TestMixtureModelInitialization:
         model = MixtureModel(components=exp_components, weights=weights, dtype=dtype)
         expected_n_components = 2
         assert model.n_components == expected_n_components
-        if dtype == np.float64:
-            np.testing.assert_allclose(model.weights, weights)
-            np.testing.assert_allclose(np.exp(model.log_weights), weights, atol=1e-9)
+
+        atol = np.finfo(dtype).eps
+        np.testing.assert_allclose(model.weights, weights, rtol=atol)
+        np.testing.assert_allclose(np.exp(model.log_weights), weights, rtol=atol)
 
     @pytest.mark.parametrize(
         "invalid_weights, error_msg",
@@ -134,11 +135,11 @@ class TestMixtureModelInitialization:
     def test_init_does_not_recreate_components_with_correct_dtype(self, dtype):
         """Tests that components with the correct dtype are not recreated."""
 
-        comp_f32 = Exponential(loc=0.0, rate=1.0, dtype=dtype)
+        comp = Exponential(loc=0.0, rate=1.0, dtype=dtype)
 
-        original_id = id(comp_f32)
+        original_id = id(comp)
 
-        mixture = MixtureModel(components=[comp_f32], dtype=dtype)
+        mixture = MixtureModel(components=[comp], dtype=dtype)
 
         assert id(mixture.components[0]) == original_id
 
@@ -304,24 +305,26 @@ class TestMixtureModelCalculations:
         expected_pdf = w1 * c1.pdf(X) + w2 * c2.pdf(X)
         calculated_pdf = mixture_model.pdf(X)
 
-        assert isinstance(calculated_pdf, np.ndarray)
         assert calculated_pdf.dtype == dtype
-        if dtype == np.float64:
-            np.testing.assert_allclose(calculated_pdf, expected_pdf)
+        if not np.isscalar(X):
+            assert isinstance(calculated_pdf, np.ndarray)
+
+        np.testing.assert_allclose(calculated_pdf, expected_pdf, rtol=np.finfo(dtype).eps)
 
     @pytest.mark.parametrize("X", [1.5, [1.5], np.array([1.0, 1.5, 6.0])])
     def test_lpdf_calculation(self, mixture_model: MixtureModel, X):
         """Tests the LPDF calculation against the definition."""
 
         dtype = mixture_model.dtype
+        c1, c2 = mixture_model.components
+        w1, w2 = mixture_model.weights
 
-        expected_lpdf = np.log(mixture_model.pdf(X))
+        expected_lpdf = np.log(w1 * c1.pdf(X) + w2 * c2.pdf(X))
         calculated_lpdf = mixture_model.lpdf(X)
 
         assert isinstance(calculated_lpdf, np.ndarray)
         assert calculated_lpdf.dtype == dtype
-        if dtype == np.float64:
-            np.testing.assert_allclose(calculated_lpdf, expected_lpdf)
+        np.testing.assert_allclose(calculated_lpdf, expected_lpdf, rtol=np.finfo(dtype).eps)
 
     def test_loglikelihood_calculation(self, mixture_model: MixtureModel):
         """Tests that loglikelihood is the sum of LPDF values."""
@@ -353,7 +356,11 @@ class TestMixtureModelGenerate:
     def test_generate_with_size_zero(self, mixture_model):
         """Tests that generating with size = 0 returns an empty array."""
 
-        assert len(mixture_model.generate(0)) == 0
+        dtype = mixture_model.dtype
+
+        samples = mixture_model.generate(0)
+        assert len(samples) == 0
+        assert samples.dtype == dtype
 
     @pytest.mark.parametrize("size", [-1, -10])
     def test_generate_with_negative_size(self, mixture_model: MixtureModel, size: int):
