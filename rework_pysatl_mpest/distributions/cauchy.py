@@ -152,7 +152,12 @@ class Cauchy(ContinuousDistribution[DType]):
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.log(dtype(1.0)) - np.log(dtype(np.pi)) - np.log(self.scale) - np.log(dtype(1.0) + ((X - self.loc) / self.scale) ** 2)
+        return (
+            np.log(dtype(1.0))
+            - np.log(dtype(np.pi))
+            - np.log(self.scale)
+            - np.log(dtype(1.0) + ((X - self.loc) / self.scale) ** 2)
+        )
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
