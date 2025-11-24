@@ -28,8 +28,8 @@ class DummyDistribution(ContinuousDistribution):
     param1 = Parameter()
     param2 = Parameter()
 
-    def __init__(self, param1: float, param2: float):
-        super().__init__()
+    def __init__(self, param1: float, param2: float, dtype: np.floating = np.float64):
+        super().__init__(dtype=dtype)
         self.param1 = param1
         self.param2 = param2
 

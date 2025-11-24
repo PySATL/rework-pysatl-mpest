@@ -78,7 +78,7 @@ class TestBetaInitialization:
         """Tests that the instance is initialized correctly with valid parameters."""
 
         shape1, shape2, left_border, right_border = 0.5, 2.0, -1.0, 1.0
-        dist = Beta(alpha=shape1, beta=shape2, lower_bound=left_border, upper_bound=right_border, dtype=dtype)
+        dist = Beta(alpha=shape1, beta=shape2, left_border=left_border, right_border=right_border, dtype=dtype)
         assert dist.alpha.dtype == dtype
         assert dist.beta.dtype == dtype
         assert dist.left_border.dtype == dtype
@@ -145,7 +145,7 @@ class TestBetaInitialization:
     def test_repr_method(self, dtype):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Beta(alpha=1.1, beta=2.1, lower_bound=10.1, upper_bound=20.1, dtype=dtype)
+        dist = Beta(alpha=1.1, beta=2.1, left_border=10.1, right_border=20.1, dtype=dtype)
         repr_str = repr(dist)
         assert (
             repr_str == f"Beta(alpha={dist.alpha}, beta={dist.beta}, left_border={dist.left_border}, "
