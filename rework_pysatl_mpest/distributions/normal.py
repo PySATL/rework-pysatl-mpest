@@ -83,15 +83,13 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
-
-        z = (X - self.loc) / self.scale
-        return np.exp(-(z**2) / dtype(2.0)) / (self.scale * np.sqrt(dtype(2.0) * dtype(np.pi)))
+        return np.exp(self.lpdf(X))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -107,13 +105,17 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=self.dtype)
         result = norm.ppf(P, loc=self.loc, scale=self.scale)
 
+        if is_scalar:
+            return self.dtype(result)
         return np.asarray(result, dtype=self.dtype)
 
     def lpdf(self, X):
@@ -133,8 +135,9 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
@@ -173,8 +176,10 @@ class Normal(ContinuousDistribution[DType]):
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
+            Returns a 1D array if X is a scalar.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
@@ -188,6 +193,9 @@ class Normal(ContinuousDistribution[DType]):
             return np.empty((len(X), 0), dtype=self.dtype)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
+
+        if is_scalar:
+            return np.array(gradients)
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):

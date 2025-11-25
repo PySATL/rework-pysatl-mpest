@@ -82,14 +82,13 @@ class Cauchy(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
-
-        return dtype(1.0) / (dtype(np.pi) * self.scale * (dtype(1.0) + ((X - self.loc) / self.scale) ** 2))
+        return np.exp(self.lpdf(X))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -110,13 +109,16 @@ class Cauchy(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
+
+        is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where(
+        result = np.where(
             (P >= 0) & (P <= 1),
             np.where(
                 (P == 0) | (P == 1),
@@ -125,6 +127,9 @@ class Cauchy(ContinuousDistribution[DType]):
             ),
             dtype(np.nan),
         )
+        if is_scalar:
+            return result[()]
+        return result
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -145,8 +150,9 @@ class Cauchy(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
@@ -179,14 +185,20 @@ class Cauchy(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`loc` for each point in ::attr`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return (dtype(2) * X - dtype(2) * self.loc) / (self.scale**2 + X**2 - dtype(2) * self.loc * X + self.loc**2)
+        result = (dtype(2) * X - dtype(2) * self.loc) / (self.scale**2 + X**2 - dtype(2) * self.loc * X + self.loc**2)
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`scale` parameter.
@@ -208,15 +220,22 @@ class Cauchy(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
+
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return (-(self.scale**2) + X**2 - dtype(2) * self.loc * X + self.loc**2) / (
+        result = (-(self.scale**2) + X**2 - dtype(2) * self.loc * X + self.loc**2) / (
             self.scale**3 + self.scale * (X**2) - dtype(2) * self.loc * self.scale * X + self.scale * self.loc**2
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -235,7 +254,10 @@ class Cauchy(ContinuousDistribution[DType]):
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
+            Returns a 1D array if X is a scalar.
         """
+
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
@@ -250,6 +272,8 @@ class Cauchy(ContinuousDistribution[DType]):
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
+        if is_scalar:
+            return np.array(gradients)
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):

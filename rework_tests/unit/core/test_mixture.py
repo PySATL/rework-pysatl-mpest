@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
+from hypothesis.extra.numpy import arrays
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import ContinuousDistribution, Exponential
 
@@ -291,45 +292,84 @@ class TestMixtureModelModification:
             mixture_model.remove_component(2)
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestMixtureModelCalculations:
     """Tests for calculation methods like pdf, lpdf, etc."""
 
-    @pytest.mark.parametrize("X", [1.5, [1.5], np.array([1.0, 1.5, 6.0])])
-    def test_pdf_calculation(self, mixture_model: MixtureModel, X):
+    @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_pdf_calculation_for_array(self, x, dtype):
         """Tests the PDF calculation against the definition."""
 
-        dtype = mixture_model.dtype
+        mixture_model = MixtureModel(
+            components=[Exponential(loc=0.0, rate=1.0), Exponential(loc=5.0, rate=2.0)], weights=[0.5, 0.5], dtype=dtype
+        )
         c1, c2 = mixture_model.components
         w1, w2 = mixture_model.weights
 
-        expected_pdf = w1 * c1.pdf(X) + w2 * c2.pdf(X)
-        calculated_pdf = mixture_model.pdf(X)
+        expected_pdf = w1 * c1.pdf(x) + w2 * c2.pdf(x)
+        calculated_pdf = mixture_model.pdf(x)
 
         assert calculated_pdf.dtype == dtype
-        if not np.isscalar(X):
+        if not np.isscalar(x):
             assert isinstance(calculated_pdf, np.ndarray)
 
-        np.testing.assert_allclose(calculated_pdf, expected_pdf, rtol=np.finfo(dtype).eps)
+        np.testing.assert_allclose(calculated_pdf, expected_pdf, atol=np.finfo(dtype).eps)
 
-    @pytest.mark.parametrize("X", [1.5, [1.5], np.array([1.0, 1.5, 6.0])])
-    def test_lpdf_calculation(self, mixture_model: MixtureModel, X):
-        """Tests the LPDF calculation against the definition."""
+    @given(x=st.floats(-1e6, 1e6))
+    def test_pdf_calculation_for_scalar(self, x, dtype):
+        """Tests the PDF calculation against the definition."""
 
-        dtype = mixture_model.dtype
+        mixture_model = MixtureModel(
+            components=[Exponential(loc=0.0, rate=1.0), Exponential(loc=5.0, rate=2.0)], weights=[0.5, 0.5], dtype=dtype
+        )
         c1, c2 = mixture_model.components
         w1, w2 = mixture_model.weights
 
-        expected_lpdf = np.log(w1 * c1.pdf(X) + w2 * c2.pdf(X))
-        calculated_lpdf = mixture_model.lpdf(X)
+        expected_pdf = w1 * c1.pdf(x) + w2 * c2.pdf(x)
+        calculated_pdf = mixture_model.pdf(x)
 
-        assert isinstance(calculated_lpdf, np.ndarray)
+        assert np.isscalar(calculated_pdf)
+        assert isinstance(calculated_pdf, dtype)
+        np.testing.assert_allclose(calculated_pdf, expected_pdf, atol=np.finfo(dtype).eps)
+
+    @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
+    def test_lpdf_calculation_for_array(self, x, dtype):
+        """Tests the LPDF calculation against the definition."""
+
+        mixture_model = MixtureModel(
+            components=[Exponential(loc=0.0, rate=1.0), Exponential(loc=5.0, rate=2.0)], weights=[0.5, 0.5], dtype=dtype
+        )
+
+        expected_pdf = mixture_model.pdf(x)
+        calculated_lpdf = mixture_model.lpdf(x)
+
+        if not np.isscalar(x):
+            assert isinstance(calculated_lpdf, np.ndarray)
+
         assert calculated_lpdf.dtype == dtype
-        np.testing.assert_allclose(calculated_lpdf, expected_lpdf, rtol=np.finfo(dtype).eps)
+        np.testing.assert_allclose(np.exp(calculated_lpdf), expected_pdf, atol=np.finfo(dtype).eps)
 
-    def test_loglikelihood_calculation(self, mixture_model: MixtureModel):
+    @given(x=st.floats(-1e6, 1e6))
+    def test_lpdf_calculation_for_scalar(self, x, dtype):
+        """Tests the LPDF calculation against the definition."""
+
+        mixture_model = MixtureModel(
+            components=[Exponential(loc=0.0, rate=1.0), Exponential(loc=5.0, rate=2.0)], weights=[0.5, 0.5], dtype=dtype
+        )
+
+        expected_pdf = mixture_model.pdf(x)
+        calculated_lpdf = mixture_model.lpdf(x)
+
+        assert np.isscalar(calculated_lpdf)
+        assert calculated_lpdf.dtype == dtype
+        np.testing.assert_allclose(np.exp(calculated_lpdf), expected_pdf, atol=np.finfo(dtype).eps)
+
+    def test_loglikelihood_calculation(self, dtype):
         """Tests that loglikelihood is the sum of LPDF values."""
 
-        dtype = mixture_model.dtype
+        mixture_model = MixtureModel(
+            components=[Exponential(loc=0.0, rate=1.0), Exponential(loc=5.0, rate=2.0)], weights=[0.5, 0.5], dtype=dtype
+        )
         X = np.array([1.0, 1.5, 6.0])
         expected_loglikelihood = np.sum(mixture_model.lpdf(X))
         calculated_loglikelihood = mixture_model.loglikelihood(X)
