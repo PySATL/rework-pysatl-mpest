@@ -77,13 +77,21 @@ class Pareto(ContinuousDistribution[DType]):
 
         where :math:`\\alpha` is the :attr:`shape` parameter and :math:`\\beta` is the
         :attr:`scale` parameter. The function is zero for :math:`x < \\beta`.
-        """
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
 
-        return np.where(
-            self.scale <= X, (self.shape * (self.scale**self.shape)) / X ** (self.shape + dtype(1)), dtype(0.0)
-        )
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points at which to evaluate the PDF.
+
+        Returns
+        -------
+        DType | NDArray[DType]
+            The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
+        """
+
+        X = np.asarray(X, dtype=self.dtype)
+        return np.exp(self.lpdf(X))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -101,14 +109,20 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where((P >= 0) & (P <= 1), self.scale * (dtype(1) - P) ** (dtype(-1.0) / self.shape), dtype(np.nan))
+        result = np.where((P >= 0) & (P <= 1), self.scale * (dtype(1) - P) ** (dtype(-1.0) / self.shape), dtype(np.nan))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -129,18 +143,24 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where(
+        result = np.where(
             self.scale <= X,
             np.log(self.shape) + self.shape * np.log(self.scale) - (dtype(1) + self.shape) * np.log(X),
             dtype(-np.inf),
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_shape(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`shape` parameter.
@@ -162,14 +182,20 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`shape` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where(self.scale <= X, dtype(1.0) / self.shape + np.log(self.scale) - np.log(X), dtype(0.0))
+        result = np.where(self.scale <= X, dtype(1.0) / self.shape + np.log(self.scale) - np.log(X), dtype(0.0))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`scale` parameter.
@@ -190,14 +216,19 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`scale` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where(self.scale <= X, self.shape / self.scale, dtype(0.0))
+        result = np.where(self.scale <= X, self.shape / self.scale, dtype(0.0))
+        if is_scalar:
+            return result[()]
+        return result
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -216,8 +247,10 @@ class Pareto(ContinuousDistribution[DType]):
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
+            Returns a 1D array if X is a scalar.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
@@ -232,6 +265,8 @@ class Pareto(ContinuousDistribution[DType]):
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
+        if is_scalar:
+            return np.array(gradients)
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):

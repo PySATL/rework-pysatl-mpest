@@ -86,10 +86,10 @@ class TestWeibullPDF:
         shape=st_shape,
         loc=st_loc,
         scale=st_scale,
-        x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)),
+        x=arrays(np.float64, st.integers(1, 10), elements=st.floats(-1e6, 1e6)),
     )
-    def test_pdf_properties(self, shape, loc, scale, x, dtype):
-        """Tests that the PDF is non-negative and has the correct return type and shape."""
+    def test_pdf_properties_for_array_input(self, shape, loc, scale, x, dtype):
+        """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
         dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
         pdf_values = dist.pdf(x)
@@ -97,6 +97,17 @@ class TestWeibullPDF:
         assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(-1e6, 1e6))
+    def test_pdf_properties_for_scalar_input(self, shape, loc, scale, x, dtype):
+        """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
+
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        pdf_value = dist.pdf(x)
+        assert np.isscalar(pdf_value)
+        assert isinstance(pdf_value, dtype)
+        assert pdf_value >= 0
 
     @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-6, 1e6))
     def test_pdf_against_scipy(self, shape, loc, scale, x):
@@ -135,14 +146,24 @@ class TestWeibullLPDF:
         scale=st_scale,
         x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)),
     )
-    def test_lpdf_return_type_and_shape(self, shape, loc, scale, x, dtype):
-        """Tests the return type and shape of the lpdf method."""
+    def test_lpdf_return_type_and_shape_for_array_input(self, shape, loc, scale, x, dtype):
+        """Tests the return type and shape of the lpdf method for array input."""
 
         dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
         assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(-1e6, 1e6))
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, shape, loc, scale, x, dtype):
+        """Tests the return type and shape of the lpdf method for scalar input."""
+
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        lpdf_value = dist.lpdf(x)
+        assert np.isscalar(lpdf_value)
+        assert isinstance(lpdf_value, dtype)
 
     @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-6, 1e6))
     def test_lpdf_against_scipy(self, shape, loc, scale, x):
@@ -173,14 +194,24 @@ class TestWeibullPPF:
         scale=st_scale,
         p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)),
     )
-    def test_ppf_return_type_and_shape(self, shape, loc, scale, p, dtype):
-        """Tests the return type and shape of the ppf method."""
+    def test_ppf_return_type_and_shape_for_array_input(self, shape, loc, scale, p, dtype):
+        """Tests the return type and shape of the ppf method for array input."""
 
         dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, p=st.floats(0, 1, exclude_max=True))
+    def test_ppf_return_type_and_shape_for_scalar_input(self, shape, loc, scale, p, dtype):
+        """Tests the return type and shape of the ppf method for scalar input."""
+
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        ppf_value = dist.ppf(p)
+        assert np.isscalar(ppf_value)
+        assert isinstance(ppf_value, dtype)
 
     @given(shape=st_shape, loc=st_loc, scale=st_scale, p=st.floats(0.01, 1))
     def test_ppf_against_scipy(self, shape, loc, scale, p):
@@ -211,8 +242,8 @@ class TestWeibullGradients:
         scale=st_scale,
         x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)),
     )
-    def test_dlog_shape_numerical(self, shape, loc, scale, x, dtype):
-        """Checks the analytical gradient for 'shape' against a numerical approximation."""
+    def test_dlog_shape_numerical_for_array_input(self, shape, loc, scale, x, dtype):
+        """Checks the analytical gradient for 'shape' against a numerical approximation for array input."""
 
         assume(np.all(x > loc))
         dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
@@ -227,14 +258,24 @@ class TestWeibullGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_shape_for_scalar_input(self, shape, loc, scale, x, dtype):
+        """Checks that the gradient for 'shape' for a scalar input returns a scalar."""
+
+        assume(x > loc)
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        analytical_grad = dist._dlog_shape(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
     @given(
         shape=st_shape,
         loc=st_loc,
         scale=st_scale,
         x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)),
     )
-    def test_dlog_loc_numerical(self, shape, loc, scale, x, dtype):
-        """Checks the analytical gradient for 'loc' against a numerical approximation."""
+    def test_dlog_loc_numerical_for_array_input(self, shape, loc, scale, x, dtype):
+        """Checks the analytical gradient for 'loc' against a numerical approximation for array input."""
 
         assume(np.all(x > (loc + self.h)))
         dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
@@ -249,14 +290,24 @@ class TestWeibullGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_loc_for_scalar_input(self, shape, loc, scale, x, dtype):
+        """Checks that the gradient for 'loc' for a scalar input returns a scalar."""
+
+        assume(x > loc)
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        analytical_grad = dist._dlog_loc(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
     @given(
         shape=st_shape,
         loc=st_loc,
         scale=st_scale,
         x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)),
     )
-    def test_dlog_scale_numerical(self, shape, loc, scale, x, dtype):
-        """Checks the analytical gradient for 'scale' against a numerical approximation."""
+    def test_dlog_scale_numerical_for_array_input(self, shape, loc, scale, x, dtype):
+        """Checks the analytical gradient for 'scale' against a numerical approximation for array input."""
 
         assume(np.all(x > loc))
         dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
@@ -270,6 +321,16 @@ class TestWeibullGradients:
             lpdf_minus_h = Weibull(shape=shape, loc=loc, scale=scale - self.h).lpdf(x)
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_scale_for_scalar_input(self, shape, loc, scale, x, dtype):
+        """Checks that the gradient for 'scale' for a scalar input returns a scalar."""
+
+        assume(x > loc)
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        analytical_grad = dist._dlog_scale(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_cols, expected_params",
@@ -305,6 +366,18 @@ class TestWeibullGradients:
             np.testing.assert_allclose(gradients[:, sorted_params.index("scale")], dist._dlog_scale(x))
         if "shape" in expected_params:
             np.testing.assert_allclose(gradients[:, sorted_params.index("shape")], dist._dlog_shape(x))
+
+    @given(shape=st_shape, loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_log_gradients_for_scalar_input(self, shape, loc, scale, x, dtype):
+        """Checks that the log_gradients for a scalar input returns a 1D-array."""
+
+        assume(x > loc)
+
+        dist = Weibull(shape=shape, loc=loc, scale=scale, dtype=dtype)
+        gradients = dist.log_gradients(x)
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
+        assert gradients.ndim == 1
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)

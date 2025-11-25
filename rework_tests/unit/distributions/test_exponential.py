@@ -81,8 +81,8 @@ class TestExponentialPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_pdf_properties(self, loc, rate, x, dtype):
-        """Tests that the PDF is non-negative and has the correct return type and shape."""
+    def test_pdf_properties_for_array_input(self, loc, rate, x, dtype):
+        """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
         dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         pdf_values = dist.pdf(x)
@@ -90,6 +90,17 @@ class TestExponentialPDF:
         assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(loc=st_loc, rate=st_rate, x=st.floats(-1e6, 1e6))
+    def test_pdf_properties_for_scalar_input(self, loc, rate, x, dtype):
+        """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
+
+        dist = Exponential(loc, rate, dtype=dtype)
+        pdf_value = dist.pdf(x)
+        assert np.isscalar(pdf_value)
+        assert isinstance(pdf_value, dtype)
+        assert pdf_value >= 0
 
     @given(loc=st_loc, rate=st_rate, x=st.floats(1e-6, 1e6))
     def test_pdf_against_scipy(self, loc, rate, x):
@@ -124,14 +135,24 @@ class TestExponentialLPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape(self, loc, rate, x, dtype):
-        """Tests the return type and shape of the lpdf method."""
+    def test_lpdf_return_type_and_shape_for_array_input(self, loc, rate, x, dtype):
+        """Tests the return type and shape of the lpdf method for array input."""
 
         dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
         assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(loc=st_loc, rate=st_rate, x=st.floats(-1e6, 1e6))
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, loc, rate, x, dtype):
+        """Tests the return type and shape of the lpdf method for scalar input."""
+
+        dist = Exponential(loc, rate, dtype=dtype)
+        lpdf_value = dist.lpdf(x)
+        assert np.isscalar(lpdf_value)
+        assert isinstance(lpdf_value, dtype)
 
     @given(loc=st_loc, rate=st_rate, x=st.floats(1e-6, 1e6))
     def test_lpdf_against_scipy(self, loc, rate, x):
@@ -160,14 +181,24 @@ class TestExponentialPPF:
     @given(
         loc=st_loc, rate=st_rate, p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True))
     )
-    def test_ppf_return_type_and_shape(self, loc, rate, p, dtype):
-        """Tests the return type and shape of the ppf method."""
+    def test_ppf_return_type_and_shape_for_array_input(self, loc, rate, p, dtype):
+        """Tests the return type and shape of the ppf method for array input."""
 
         dist = Exponential(loc=loc, rate=rate, dtype=dtype)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(loc=st_loc, rate=st_rate, p=st.floats(0, 1, exclude_max=True))
+    def test_ppf_return_type_and_shape_for_scalar_input(self, loc, rate, p, dtype):
+        """Tests the return type and shape of the ppf method for scalar input."""
+
+        dist = Exponential(loc=loc, rate=rate, dtype=dtype)
+        ppf_value = dist.ppf(p)
+        assert np.isscalar(ppf_value)
+        assert isinstance(ppf_value, dtype)
 
     @given(loc=st_loc, rate=st_rate, p=st.floats(0, 1, exclude_max=True, exclude_min=True))
     def test_ppf_against_scipy(self, loc, rate, p):
@@ -193,8 +224,8 @@ class TestExponentialGradients:
     h = 1e-6
 
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_loc_numerical(self, loc, rate, x, dtype):
-        """Checks the analytical gradient for 'loc' against a numerical approximation."""
+    def test_dlog_loc_numerical_for_array_input(self, loc, rate, x, dtype):
+        """Checks the analytical gradient for 'loc' against a numerical approximation for array input."""
 
         assume(np.all(x > (loc + self.h)))
 
@@ -212,9 +243,20 @@ class TestExponentialGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
+    @given(loc=st_loc, rate=st_rate, x=st.floats(1e-3, 1e3))
+    def test_dlog_loc_for_scalar_input(self, loc, rate, x, dtype):
+        """Checks that the gradient for 'loc' for a scalar input returns a scalar."""
+
+        assume(x > (loc + self.h))
+
+        dist = Exponential(loc, rate, dtype=dtype)
+        analytical_grad = dist._dlog_loc(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
     @given(loc=st_loc, rate=st_rate, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_rate_numerical(self, loc, rate, x, dtype):
-        """Checks the analytical gradient for 'rate' against a numerical approximation."""
+    def test_dlog_rate_numerical_for_array_input(self, loc, rate, x, dtype):
+        """Checks the analytical gradient for 'rate' against a numerical approximation for array input."""
 
         assume(np.all(x > (loc + self.h)))
 
@@ -231,6 +273,17 @@ class TestExponentialGradients:
 
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+    @given(loc=st_loc, rate=st_rate, x=st.floats(1e-3, 1e3))
+    def test_dlog_rate_for_scalar_input(self, loc, rate, x, dtype):
+        """Checks that the gradient for 'rate' for a scalar input returns a scalar."""
+
+        assume(x > (loc + self.h))
+
+        dist = Exponential(loc, rate, dtype=dtype)
+        analytical_grad = dist._dlog_rate(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -256,6 +309,16 @@ class TestExponentialGradients:
         if "rate" in expected_params:
             idx = sorted(expected_params).index("rate")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_rate(x))
+
+    @given(loc=st_loc, rate=st_rate, x=st.floats(1e-3, 1e3))
+    def test_log_gradients_for_scalar_input(self, loc, rate, x, dtype):
+        """Checks that the log_gradients for a scalar input returns a 1D-array."""
+
+        dist = Exponential(loc, rate, dtype=dtype)
+        gradients = dist.log_gradients(x)
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
+        assert gradients.ndim == 1
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)

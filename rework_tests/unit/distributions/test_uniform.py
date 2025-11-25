@@ -21,6 +21,7 @@ DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 @st.composite
 def st_valid_border(draw):
     """Generates valid borders"""
+
     left_border = draw(st.floats(min_value=-1e3, max_value=1e3 - 1, allow_nan=False, allow_infinity=False))
     right_border = draw(
         st.floats(min_value=left_border + 1e-6, max_value=left_border + 1e3, allow_nan=False, allow_infinity=False)
@@ -56,6 +57,7 @@ class TestUniformInitialization:
 
     def test_invariant_violation(self, dtype):
         """Tests that initializing with a infinite borders or left border bigger right border  raises a ValueError."""
+
         with pytest.raises(ValueError, match="right_border parameter must be strictly greater than left_border"):
             Uniform(0.0, -1.0, dtype=dtype)
         with pytest.raises(ValueError, match="right_border parameter must be strictly greater than left_border"):
@@ -89,8 +91,9 @@ class TestUniformPDF:
         borders=st_valid_border(),
         x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)),
     )
-    def test_pdf_properties(self, borders, x, dtype):
-        """Tests that the PDF is non-negative and has the correct return type and shape."""
+    def test_pdf_properties_for_array_input(self, borders, x, dtype):
+        """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
+
         left_border, right_border = borders
 
         dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
@@ -100,9 +103,22 @@ class TestUniformPDF:
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(x=st.floats(-1e6, 1e6))
+    def test_pdf_properties_for_scalar_input(self, x, dtype):
+        """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
+
+        left_border, right_border = -1.0, 12.0
+        dist = Uniform(left_border, right_border, dtype=dtype)
+        pdf_value = dist.pdf(x)
+        assert np.isscalar(pdf_value)
+        assert isinstance(pdf_value, dtype)
+        assert pdf_value >= 0
+
     @given(borders=st_valid_border(), x=st.floats(1e-6, 1e6))
     def test_pdf_against_scipy(self, borders, x):
         """Compares the custom PDF implementation against scipy's implementation."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border)
         custom_pdf = dist.pdf(x)
@@ -112,6 +128,7 @@ class TestUniformPDF:
     @given(borders=st_valid_border())
     def test_pdf_integral_is_one(self, borders):
         """Tests that the integral of the PDF over its support is equal to 1."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border)
         integral, error = quad(lambda x: dist.pdf(x).item(), left_border, right_border)
@@ -120,6 +137,7 @@ class TestUniformPDF:
     @given(borders=st_valid_border(), x=st.floats(max_value=-1e9, allow_infinity=False))
     def test_pdf_outside_support(self, borders, x):
         """Tests that the PDF is zero for values not in range of parameters."""
+
         left_border, right_border = borders
         x_val = left_border - abs(x)
         dist = Uniform(left_border=left_border, right_border=right_border)
@@ -134,8 +152,9 @@ class TestUniformLPDF:
         borders=st_valid_border(),
         x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)),
     )
-    def test_lpdf_return_type_and_shape(self, borders, x, dtype):
-        """Tests the return type and shape of the lpdf method."""
+    def test_lpdf_return_type_and_shape_for_array_input(self, borders, x, dtype):
+        """Tests the return type and shape of the lpdf method for array input."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
         lpdf_values = dist.lpdf(x)
@@ -143,9 +162,21 @@ class TestUniformLPDF:
         assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(borders=st_valid_border(), x=st.floats(-1e6, 1e6))
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, borders, x, dtype):
+        """Tests the return type and shape of the lpdf method for scalar input."""
+
+        left_border, right_border = borders
+        dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
+        lpdf_value = dist.lpdf(x)
+        assert np.isscalar(lpdf_value)
+        assert isinstance(lpdf_value, dtype)
+
     @given(borders=st_valid_border(), x=st.floats(1e-6, 1e6))
     def test_lpdf_against_scipy(self, borders, x):
         """Compares the custom LPDF implementation against scipy's implementation."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border)
         custom_lpdf = dist.lpdf(x)
@@ -155,6 +186,7 @@ class TestUniformLPDF:
     @given(borders=st_valid_border(), x=st.floats(min_value=1e-6))
     def test_lpdf_outside_support(self, borders, x):
         """Tests that the LPDF is -inf for values outside the support."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border)
         assert dist.lpdf(left_border - x) == -np.inf
@@ -169,8 +201,9 @@ class TestUniformPPF:
         borders=st_valid_border(),
         p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)),
     )
-    def test_ppf_return_type_and_shape(self, borders, p, dtype):
-        """Tests the return type and shape of the ppf method."""
+    def test_ppf_return_type_and_shape_for_array_input(self, borders, p, dtype):
+        """Tests the return type and shape of the ppf method for array input."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
         ppf_values = dist.ppf(p)
@@ -178,9 +211,21 @@ class TestUniformPPF:
         assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(borders=st_valid_border(), p=st.floats(0, 1, exclude_max=True))
+    def test_ppf_return_type_and_shape_for_scalar_input(self, borders, p, dtype):
+        """Tests the return type and shape of the ppf method for scalar input."""
+
+        left_border, right_border = borders
+        dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
+        ppf_value = dist.ppf(p)
+        assert np.isscalar(ppf_value)
+        assert isinstance(ppf_value, dtype)
+
     @given(borders=st_valid_border(), p=st.floats(0, 1))
     def test_ppf_against_scipy(self, borders, p):
         """Compares the custom PPF implementation against scipy's implementation."""
+
         left_border, right_border = borders
         dist = Uniform(left_border=left_border, right_border=right_border)
         custom_ppf = dist.ppf(p)
@@ -196,8 +241,9 @@ class TestUniformPPF:
 
 
 @st.composite
-def st_valid_grad_input(draw):
-    """Generates valid borders to calculate gradient"""
+def st_valid_grad_input_array(draw):
+    """Generates valid borders to calculate gradient for an array of x."""
+
     left_border = draw(st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False))
     right_border = draw(
         st.floats(min_value=left_border + 0.1, max_value=left_border + 20.0, allow_nan=False, allow_infinity=False)
@@ -217,15 +263,35 @@ def st_valid_grad_input(draw):
     return (left_border, right_border), x_values
 
 
+@st.composite
+def st_valid_grad_input_scalar(draw):
+    """Generates valid borders to calculate gradient for a scalar x."""
+
+    left_border = draw(st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False))
+    right_border = draw(
+        st.floats(min_value=left_border + 0.1, max_value=left_border + 20.0, allow_nan=False, allow_infinity=False)
+    )
+
+    margin = 0.01
+    x_value = draw(
+        st.floats(
+            min_value=left_border + margin, max_value=right_border - margin, allow_nan=False, allow_infinity=False
+        )
+    )
+
+    return (left_border, right_border), x_value
+
+
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestUniformGradients:
     """Tests for gradient calculation methods."""
 
     h = 1e-6
 
-    @given(input_data=st_valid_grad_input())
-    def test_dlog_left_border_numerical(self, input_data, dtype):
-        """Checks the analytical gradient for 'left_border' against a numerical approximation."""
+    @given(input_data=st_valid_grad_input_array())
+    def test_dlog_left_border_numerical_for_array_input(self, input_data, dtype):
+        """Checks the analytical gradient for 'left_border' against a numerical approximation for array input."""
+
         borders, x = input_data
         left_border, right_border = borders
 
@@ -242,9 +308,22 @@ class TestUniformGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
-    @given(input_data=st_valid_grad_input())
-    def test_dlog_right_border_numerical(self, input_data, dtype):
-        """Checks the analytical gradient for 'right_border' against a numerical approximation."""
+    @given(input_data=st_valid_grad_input_scalar())
+    def test_dlog_left_border_for_scalar_input(self, input_data, dtype):
+        """Checks that the gradient for 'left_border' for a scalar input returns a scalar."""
+
+        borders, x = input_data
+        left_border, right_border = borders
+
+        dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
+        analytical_grad = dist._dlog_left_border(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
+    @given(input_data=st_valid_grad_input_array())
+    def test_dlog_right_border_numerical_for_array_input(self, input_data, dtype):
+        """Checks the analytical gradient for 'right_border' against a numerical approximation for array input."""
+
         borders, x = input_data
         left_border, right_border = borders
 
@@ -260,6 +339,18 @@ class TestUniformGradients:
             lpdf_minus_h = Uniform(left_border=left_border, right_border=right_border - self.h).lpdf(x)
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+    @given(input_data=st_valid_grad_input_scalar())
+    def test_dlog_right_border_for_scalar_input(self, input_data, dtype):
+        """Checks that the gradient for 'right_border' for a scalar input returns a scalar."""
+
+        borders, x = input_data
+        left_border, right_border = borders
+
+        dist = Uniform(left_border=left_border, right_border=right_border, dtype=dtype)
+        analytical_grad = dist._dlog_right_border(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -290,6 +381,18 @@ class TestUniformGradients:
         if "right_border" in expected_params:
             idx = sorted(expected_params).index("right_border")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_right_border(x))
+
+    @given(input_data=st_valid_grad_input_scalar())
+    def test_log_gradients_for_scalar_input(self, input_data, dtype):
+        """Checks that the log_gradients for a scalar input returns a 1D-array."""
+
+        borders, x = input_data
+        left_border, right_border = borders
+        dist = Uniform(left_border, right_border, dtype=dtype)
+        gradients = dist.log_gradients(x)
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
+        assert gradients.ndim == 1
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)

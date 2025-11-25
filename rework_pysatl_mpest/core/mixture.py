@@ -248,7 +248,7 @@ class MixtureModel(Generic[DType]):
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
-    def pdf(self, X: ArrayLike) -> NDArray[DType]:
+    def pdf(self, X: ArrayLike) -> DType | NDArray[DType]:
         """Probability Density Function of the mixture.
 
         The PDF is computed as the weighted sum of the PDFs of its
@@ -261,15 +261,16 @@ class MixtureModel(Generic[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
         component_pdfs = np.array([comp.pdf(X) for comp in self.components])
-        return np.asarray(np.dot(self.weights, component_pdfs))
+        return np.dot(self.weights, component_pdfs)
 
-    def lpdf(self, X: ArrayLike) -> NDArray[DType]:
+    def lpdf(self, X: ArrayLike) -> DType | NDArray[DType]:
         """Logarithms of the Probability Density Function.
 
         Parameters
@@ -279,15 +280,18 @@ class MixtureModel(Generic[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.atleast_1d(X).astype(self.dtype)
+        X = np.asarray(X, dtype=self.dtype)
         component_lpdfs = np.array([comp.lpdf(X) for comp in self.components])
-        log_weights = self.log_weights
-        log_terms = log_weights[:, np.newaxis] + component_lpdfs
-        return logsumexp(log_terms, axis=0)  # type: ignore
+        broadcast_shape = (self.n_components,) + (1,) * X.ndim
+        log_weights = self.log_weights.reshape(broadcast_shape)
+        log_terms = log_weights + component_lpdfs
+
+        return logsumexp(log_terms, axis=0)
 
     def loglikelihood(self, X: ArrayLike) -> DType:
         """Log-likelihood of the complete data :attr:`X`.

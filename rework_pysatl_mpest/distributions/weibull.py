@@ -91,21 +91,13 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
-
-        z = (X - self.loc) / self.scale
-
-        # PDF is 0 for x < loc, and handle cases where z=0 and shape<1
-        # which would lead to division by zero.
-        with np.errstate(divide="ignore", invalid="ignore"):
-            pdf_vals = (self.shape / self.scale) * np.power(z, self.shape - dtype(1)) * np.exp(-np.power(z, self.shape))
-
-        return np.where(self.loc <= X, np.nan_to_num(pdf_vals, nan=dtype(0.0), posinf=dtype(np.inf)), dtype(0.0))
+        return np.exp(self.lpdf(X))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -124,15 +116,21 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=self.dtype)
         dtype = self.dtype
 
         ppf_vals = self.loc + self.scale * np.power(-np.log(dtype(1) - P), dtype(1.0) / self.shape)
-        return np.where((P >= 0) & (P <= 1), ppf_vals, dtype(np.nan))
+        result = np.where((P >= 0) & (P <= 1), ppf_vals, dtype(np.nan))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -152,34 +150,55 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
-
-        z = (X - self.loc) / self.scale
-        with np.errstate(divide="ignore"):
-            lpdf_vals = (
-                np.log(self.shape) - np.log(self.scale) + (self.shape - dtype(1)) * np.log(z) - np.power(z, self.shape)
-            )
-        return np.where(self.loc < X, lpdf_vals, dtype(-np.inf))
-
-    def _dlog_shape(self, X):
-        """Partial derivative of the lpdf w.r.t. the shape parameter."""
-
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
-            grad = dtype(1.0) / self.shape + np.log(z) - np.power(z, self.shape) * np.log(z)
-        return np.where(self.loc < X, np.nan_to_num(grad), dtype(0.0))
+            # Handle potential NaN from 0 * -inf when shape=1 and z=0
+            # This term's limit is 0, so we replace NaN with 0.
+            lpdf_vals = (
+                np.log(self.shape)
+                - np.log(self.scale)
+                + np.nan_to_num((self.shape - dtype(1)) * np.log(z), nan=dtype(0.0))
+                - np.power(z, self.shape)
+            )
+        result = np.where(self.loc < X, lpdf_vals, dtype(-np.inf))
+
+        if is_scalar:
+            return result[()]
+        return result
+
+    def _dlog_shape(self, X):
+        """Partial derivative of the lpdf w.r.t. the shape parameter."""
+
+        is_scalar = np.isscalar(X)
+        X = np.asarray(X, dtype=self.dtype)
+        dtype = self.dtype
+
+        z = (X - self.loc) / self.scale
+        with np.errstate(divide="ignore", invalid="ignore"):
+            # Handle z^k * ln(z), which -> 0 as z -> 0.
+            # This prevents NaN from 0 * -inf.
+            grad = (
+                dtype(1.0) / self.shape + np.log(z) - np.nan_to_num(np.power(z, self.shape) * np.log(z), nan=dtype(0.0))
+            )
+        result = np.where(self.loc < X, np.nan_to_num(grad), dtype(0.0))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
@@ -188,17 +207,26 @@ class Weibull(ContinuousDistribution[DType]):
             grad = -(self.shape - dtype(1)) / (X - self.loc) + (self.shape / self.scale) * np.power(
                 z, self.shape - dtype(1)
             )
-        return np.where(self.loc < X, np.nan_to_num(grad), dtype(0.0))
+        result = np.where(self.loc < X, np.nan_to_num(grad), dtype(0.0))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         z = (X - self.loc) / self.scale
         grad = -self.shape / self.scale + (self.shape / self.scale) * np.power(z, self.shape)
-        return np.where(self.loc < X, grad, dtype(0.0))
+        result = np.where(self.loc < X, grad, dtype(0.0))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -215,7 +243,10 @@ class Weibull(ContinuousDistribution[DType]):
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
+            Returns a 1D array if X is a scalar.
         """
+
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
@@ -231,6 +262,8 @@ class Weibull(ContinuousDistribution[DType]):
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
+        if is_scalar:
+            return np.array(gradients)
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):

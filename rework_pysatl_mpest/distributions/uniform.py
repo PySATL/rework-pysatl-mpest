@@ -97,17 +97,13 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
 
-        return np.where(
-            (self.left_border <= X) & (self.right_border >= X),
-            dtype(1.0) / (self.right_border - self.left_border),
-            dtype(0.0),
-        )
+        X = np.asarray(X, dtype=self.dtype)
+        return np.exp(self.lpdf(X))
 
     def ppf(self, P):
         """Percent Point Function (PPF) or quantile function.
@@ -128,15 +124,22 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
+
+        is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where(
+        result = np.where(
             (P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), dtype(np.nan)
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -158,15 +161,22 @@ class Uniform(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
+
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
         valid_dist = self.right_border > self.left_border
-        return np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), dtype(-np.inf))
+        result = np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), dtype(-np.inf))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_left_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`left_border` parameter.
@@ -177,13 +187,29 @@ class Uniform(ContinuousDistribution[DType]):
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
         right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
+
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points.
+
+        Returns
+        -------
+        DType | NDArray[DType]
+            The gradient of the lpdf with respect to :attr:`left_border` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        return np.where(in_range, dtype(1.0) / (self.right_border - self.left_border), dtype(0.0))
+        result = np.where(in_range, dtype(1.0) / (self.right_border - self.left_border), dtype(0.0))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_right_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`right_border` parameter.
@@ -194,13 +220,29 @@ class Uniform(ContinuousDistribution[DType]):
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
         right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
+
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points.
+
+        Returns
+        -------
+        DType | NDArray[DType]
+            The gradient of the lpdf with respect to :attr:`right_border` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        return np.where(in_range, dtype(-1.0) / (self.right_border - self.left_border), dtype(0.0))
+        result = np.where(in_range, dtype(-1.0) / (self.right_border - self.left_border), dtype(0.0))
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -219,8 +261,10 @@ class Uniform(ContinuousDistribution[DType]):
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
+            Returns a 1D array if X is a scalar.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
@@ -235,6 +279,8 @@ class Uniform(ContinuousDistribution[DType]):
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
+        if is_scalar:
+            return np.asarray(gradients)
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):

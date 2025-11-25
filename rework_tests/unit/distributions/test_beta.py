@@ -50,8 +50,8 @@ def load_r_test_cases():
 
 
 @st.composite
-def st_params_and_x_for_grad(draw):
-    """Generator of valid params with x for gradient test"""
+def st_params_and_array_x_for_grad(draw):
+    """Generator of valid params with an array x for gradient test"""
     shape1 = draw(st.floats(0.1, 100))
     shape2 = draw(st.floats(0.1, 100))
     left = draw(st.floats(-100, 100))
@@ -61,13 +61,26 @@ def st_params_and_x_for_grad(draw):
     x = draw(
         arrays(
             np.float64,
-            shape=draw(st.integers(1, 5)),
+            shape=draw(st.integers(2, 5)),
             elements=st.floats(
                 min_value=left + margin, max_value=right - margin, allow_nan=False, allow_infinity=False
             ),
         )
     )
     return (shape1, shape2, left, right, x)
+
+
+@st.composite
+def st_params_and_scalar_x_for_grad(draw):
+    """Generator of valid params with a scalar x for gradient test"""
+    shape1 = draw(st.floats(0.1, 100))
+    shape2 = draw(st.floats(0.1, 100))
+    lower = draw(st.floats(-100, 100))
+    upper = draw(st.floats(lower + 0.1, lower + 100))
+
+    margin = 1e-2
+    x = draw(st.floats(min_value=lower + margin, max_value=upper - margin, allow_nan=False, allow_infinity=False))
+    return (shape1, shape2, lower, upper, x)
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
@@ -161,8 +174,8 @@ class TestBetaPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_pdf_properties(self, x, dtype):
-        """Tests that the PDF is non-negative and has the correct return type and shape."""
+    def test_pdf_properties_for_array_input(self, x, dtype):
+        """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
         alpha, beta, left_border, right_border = 1.0, 1.0, 2.9, 10.0
         dist = Beta(alpha, beta, left_border, right_border, dtype=dtype)
@@ -171,6 +184,18 @@ class TestBetaPDF:
         assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(x=st.floats(-1e6, 1e6))
+    def test_pdf_properties_for_scalar_input(self, x, dtype):
+        """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type and shape."""
+
+        alpha, beta, left_border, right_border = 1.0, 1.0, 2.9, 10.0
+        dist = Beta(alpha, beta, left_border, right_border, dtype=dtype)
+        pdf_value = dist.pdf(x)
+        assert np.isscalar(pdf_value)
+        assert isinstance(pdf_value, dtype)
+        assert pdf_value >= 0
 
     @pytest.mark.parametrize("x,shape1,shape2,left_border,right_border,expected_pdf", load_r_test_cases())
     def test_pdf_against_R(self, x, shape1, shape2, left_border, right_border, expected_pdf):
@@ -203,8 +228,8 @@ class TestBetaLPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(params=st_valid_params(), x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape(self, params, x, dtype):
-        """Tests the return type and shape of the lpdf method."""
+    def test_lpdf_return_type_and_shape_for_array_input(self, params, x, dtype):
+        """Tests that for an array input, the LPDF returns an array with the correct type and shape."""
 
         shape1, shape2, left_border, right_border = params
         dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
@@ -212,6 +237,17 @@ class TestBetaLPDF:
         assert isinstance(lpdf_values, np.ndarray)
         assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(params=st_valid_params(), x=st.floats(-1e6, 1e6))
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, params, x, dtype):
+        """Tests that for a scalar input, the LPDF returns a scalar with the correct type and shape."""
+
+        alpha, beta, left_border, right_border = params
+        dist = Beta(alpha, beta, left_border, right_border, dtype=dtype)
+        lpdf_value = dist.lpdf(x)
+        assert np.isscalar(lpdf_value)
+        assert isinstance(lpdf_value, dtype)
 
     @given(params=st_valid_params(), x=st.floats(1e-6, 1e6))
     def test_lpdf_against_scipy(self, params, x):
@@ -244,8 +280,8 @@ class TestBetaPPF:
     @given(
         params=st_valid_params(), p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True))
     )
-    def test_ppf_return_type_and_shape(self, params, p, dtype):
-        """Tests the return type and shape of the ppf method."""
+    def test_ppf_return_type_and_shape_for_array_input(self, params, p, dtype):
+        """Tests that for an array input, the PPDF returns an array with the correct type and shape."""
 
         shape1, shape2, left_border, right_border = params
         dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
@@ -253,6 +289,17 @@ class TestBetaPPF:
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(params=st_valid_params(), p=st.floats(0, 1, exclude_max=True))
+    def test_ppf_return_type_and_shape_for_scalar_input(self, params, p, dtype):
+        """Tests that for a scalar input, the PPDF returns a scalar with the correct type and shape."""
+
+        alpha, beta, left_border, right_border = params
+        dist = Beta(alpha, beta, left_border, right_border, dtype=dtype)
+        ppf_value = dist.ppf(p)
+        assert np.isscalar(ppf_value)
+        assert isinstance(ppf_value, dtype)
 
     @given(params=st_valid_params(), p=st.floats(0, 1))
     def test_ppf_against_scipy(self, params, p):
@@ -278,8 +325,8 @@ class TestBetaGradients:
 
     h = 1e-6
 
-    @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_shape1_numerical(self, params_x, dtype):
+    @given(params_x=st_params_and_array_x_for_grad())
+    def test_dlog_shape1_numerical_for_array_input(self, params_x, dtype):
         """Checks the analytical gradient for 'shape1' against a numerical approximation."""
 
         shape1, shape2, left_border, right_border, x = params_x
@@ -298,9 +345,22 @@ class TestBetaGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
-    @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_shape2_numerical(self, params_x, dtype):
+    @given(params_x=st_params_and_scalar_x_for_grad())
+    def test_dlog_shape1_for_scalar_input(self, params_x, dtype):
+        """Checks that the gradient for 'shape1' for a scalar input returns scalar."""
+
+        shape1, shape2, left_border, right_border, x = params_x
+
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
+        analytical_grad = dist._dlog_alpha(x)
+
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
+    @given(params_x=st_params_and_array_x_for_grad())
+    def test_dlog_shape2_numerical_for_array_input(self, params_x, dtype):
         """Checks the analytical gradient for 'shape2' against a numerical approximation."""
+
         shape1, shape2, left_border, right_border, x = params_x
 
         dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
@@ -317,9 +377,22 @@ class TestBetaGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
-    @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_left_border_numerical(self, params_x, dtype):
+    @given(params_x=st_params_and_scalar_x_for_grad())
+    def test_dlog_shape2_for_scalar_input(self, params_x, dtype):
+        """Checks that the gradient for 'shape2' for a scalar input returns scalar."""
+
+        shape1, shape2, left_border, right_border, x = params_x
+
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
+        analytical_grad = dist._dlog_beta(x)
+
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
+    @given(params_x=st_params_and_array_x_for_grad())
+    def test_dlog_left_border_numerical_for_array_input(self, params_x, dtype):
         """Checks the analytical gradient for 'left_border' against a numerical approximation."""
+
         shape1, shape2, left_border, right_border, x = params_x
 
         dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
@@ -336,8 +409,20 @@ class TestBetaGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
-    @given(params_x=st_params_and_x_for_grad())
-    def test_dlog_right_border_numerical(self, params_x, dtype):
+    @given(params_x=st_params_and_scalar_x_for_grad())
+    def test_dlog_left_border_for_scalar_input(self, params_x, dtype):
+        """Checks that the gradient for 'left_border' for a scalar input returns scalar."""
+
+        shape1, shape2, left_border, right_border, x = params_x
+
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
+        analytical_grad = dist._dlog_left_border(x)
+
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
+    @given(params_x=st_params_and_array_x_for_grad())
+    def test_dlog_right_border_numerical_for_array_input(self, params_x, dtype):
         """Checks the analytical gradient for 'right_border' against a numerical approximation."""
         shape1, shape2, left_border, right_border, x = params_x
 
@@ -354,6 +439,18 @@ class TestBetaGradients:
 
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+
+    @given(params_x=st_params_and_scalar_x_for_grad())
+    def test_dlog_right_border_for_scalar_input(self, params_x, dtype):
+        """Checks that the gradient for 'right_border' for a scalar input returns scalar."""
+
+        shape1, shape2, left_border, right_border, x = params_x
+
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
+        analytical_grad = dist._dlog_right_border(x)
+
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -391,6 +488,19 @@ class TestBetaGradients:
         if "right_border" in expected_params:
             idx = sorted(expected_params).index("right_border")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_right_border(x))
+
+    @given(params_x=st_params_and_scalar_x_for_grad())
+    def test_log_gradients_for_scalar_input(self, params_x, dtype):
+        """Checks that the log_gradients for a scalar input returns 1D-array."""
+
+        shape1, shape2, left_border, right_border, x = params_x
+        dist = Beta(shape1, shape2, left_border, right_border, dtype=dtype)
+
+        gradients = dist.log_gradients(x)
+
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
+        assert gradients.ndim == 1
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
