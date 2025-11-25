@@ -109,10 +109,12 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
 
         """
+
         X = np.asarray(X, dtype=self.dtype)
         return np.exp(self.lpdf(X))
 
@@ -137,13 +139,16 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
+
+        is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=self.dtype)
         dtype = self.dtype
 
-        return np.where(
+        result = np.where(
             (P >= 0) & (P <= 1),
             (
                 self.left_border
@@ -151,6 +156,10 @@ class Beta(ContinuousDistribution):
             ),
             dtype(np.nan),
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -177,8 +186,9 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         X = np.asarray(X, dtype=self.dtype)
@@ -189,7 +199,7 @@ class Beta(ContinuousDistribution):
         log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta).astype(dtype)
         result = log_pdf_standard - np.log(self.right_border - self.left_border)
 
-        return np.atleast_1d(result)
+        return result
 
     def _dlog_alpha(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`alpha` parameter.
@@ -214,21 +224,27 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`alpha` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
-        return np.where(
+        result = np.where(
             in_bounds,
             np.log(X - self.left_border)
             - np.log(self.right_border - self.left_border)
             - (dtype(digamma(self.alpha)) - dtype(digamma(self.alpha + self.beta))),
             dtype(0.0),
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_beta(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`beta` parameter.
@@ -253,21 +269,27 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`beta` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
-        return np.where(
+        result = np.where(
             in_bounds,
             np.log(self.right_border - X)
             - np.log(self.right_border - self.left_border)
             - (dtype(digamma(self.beta)) - dtype(digamma(self.alpha + self.beta))),
             dtype(0.0),
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_left_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`left_border` parameter.
@@ -290,15 +312,17 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`left_border` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
-        return np.where(
+        result = np.where(
             in_bounds,
             (
                 ((self.alpha + self.beta - dtype(1)) / (self.right_border - self.left_border))
@@ -306,6 +330,10 @@ class Beta(ContinuousDistribution):
             ),
             dtype(0.0),
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_right_border(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`right_border` parameter.
@@ -328,14 +356,17 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The gradient of the lpdf with respect to :attr:`right_border` for each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
+
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
-        return np.where(
+        result = np.where(
             in_bounds,
             (
                 ((self.beta - dtype(1)) / (self.right_border - X))
@@ -343,6 +374,10 @@ class Beta(ContinuousDistribution):
             ),
             dtype(0.0),
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -361,7 +396,10 @@ class Beta(ContinuousDistribution):
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
             to the sorted order of :attr:`self.params_to_optimize`.
+            Returns a 1D array if X is a scalar.
         """
+
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
 
         gradient_calculators = {
@@ -378,6 +416,8 @@ class Beta(ContinuousDistribution):
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
+        if is_scalar:
+            return np.array(gradients)
         return np.stack(gradients, axis=1)
 
     def generate(self, size: int):

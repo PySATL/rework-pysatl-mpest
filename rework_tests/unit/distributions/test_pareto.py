@@ -116,8 +116,8 @@ class TestParetoPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e2, 1e2)))
-    def test_pdf_properties(self, x, dtype):
-        """Tests that the PDF is non-negative and has the correct return type and shape."""
+    def test_pdf_properties_for_array_input(self, x, dtype):
+        """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
         dist = Pareto(shape=1.0, scale=2.0, dtype=dtype)
         pdf_values = dist.pdf(x)
@@ -125,6 +125,18 @@ class TestParetoPDF:
         assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(x=st.floats(-1e2, 1e2))
+    def test_pdf_properties_for_scalar_input(self, x, dtype):
+        """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
+
+        shape, scale = 1.0, 2.0
+        dist = Pareto(shape, scale, dtype=dtype)
+        pdf_value = dist.pdf(x)
+        assert np.isscalar(pdf_value)
+        assert isinstance(pdf_value, dtype)
+        assert pdf_value >= 0
 
     @pytest.mark.parametrize("x,shape,scale,expected_pdf", load_r_test_cases())
     def test_pdf_against_R(self, shape, scale, x, expected_pdf):
@@ -171,8 +183,8 @@ class TestParetoLPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape(self, shape, scale, x, dtype):
-        """Tests the return type and shape of the lpdf method."""
+    def test_lpdf_return_type_and_shape_for_array_input(self, shape, scale, x, dtype):
+        """Tests the return type and shape of the lpdf method for array input."""
 
         dist = Pareto(shape=shape, scale=scale, dtype=dtype)
         lpdf_values = dist.lpdf(x)
@@ -180,9 +192,20 @@ class TestParetoLPDF:
         assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
 
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(shape=st_shape, scale=st_scale, x=st.floats(-1e6, 1e6))
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, shape, scale, x, dtype):
+        """Tests the return type and shape of the lpdf method for scalar input."""
+
+        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        lpdf_value = dist.lpdf(x)
+        assert np.isscalar(lpdf_value)
+        assert isinstance(lpdf_value, dtype)
+
     @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3, allow_infinity=False, allow_nan=False))
     def test_lpdf_against_scipy(self, shape, scale, x):
         """Compares the custom LPDF implementation against scipy's implementation."""
+
         assume(np.isfinite(pareto.logpdf(x, scale=scale, b=shape, loc=0.0)))
         dist = Pareto(shape=shape, scale=scale)
         custom_lpdf = dist.lpdf(x)
@@ -207,14 +230,24 @@ class TestParetoPPF:
         scale=st_scale,
         p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)),
     )
-    def test_ppf_return_type_and_shape(self, shape, scale, p, dtype):
-        """Tests the return type and shape of the ppf method."""
+    def test_ppf_return_type_and_shape_for_array_input(self, shape, scale, p, dtype):
+        """Tests the return type and shape of the ppf method for array input."""
 
         dist = Pareto(shape=shape, scale=scale, dtype=dtype)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(shape=st_shape, scale=st_scale, p=st.floats(0, 1, exclude_max=True))
+    def test_ppf_return_type_and_shape_for_scalar_input(self, shape, scale, p, dtype):
+        """Tests the return type and shape of the ppf method for scalar input."""
+
+        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        ppf_value = dist.ppf(p)
+        assert np.isscalar(ppf_value)
+        assert isinstance(ppf_value, dtype)
 
     @given(shape=st_shape, scale=st_scale, p=st.floats(0, 1))
     def test_ppf_against_scipy(self, shape, scale, p):
@@ -241,8 +274,8 @@ class TestParetoGradients:
 
     @settings(suppress_health_check=[HealthCheck.filter_too_much])
     @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_shape_numerical(self, shape, scale, x, dtype):
-        """Checks the analytical gradient for 'shape' against a numerical approximation."""
+    def test_dlog_shape_numerical_for_array_input(self, shape, scale, x, dtype):
+        """Checks the analytical gradient for 'shape' against a numerical approximation for array input."""
 
         assume(np.all(x > scale))
 
@@ -260,10 +293,20 @@ class TestParetoGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
+    @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_shape_for_scalar_input(self, shape, scale, x, dtype):
+        """Checks that the gradient for 'shape' for a scalar input returns a scalar."""
+
+        assume(x > scale)
+        dist = Pareto(shape, scale, dtype=dtype)
+        analytical_grad = dist._dlog_shape(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
     @settings(suppress_health_check=[HealthCheck.filter_too_much])
     @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_scale_numerical(self, shape, scale, x, dtype):
-        """Checks the analytical gradient for 'scale' against a numerical approximation."""
+    def test_dlog_scale_numerical_for_array_input(self, shape, scale, x, dtype):
+        """Checks the analytical gradient for 'scale' against a numerical approximation for array input."""
 
         assume(np.all(x > scale + self.h))
 
@@ -280,6 +323,16 @@ class TestParetoGradients:
 
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+    @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_scale_for_scalar_input(self, shape, scale, x, dtype):
+        """Checks that the gradient for 'scale' for a scalar input returns a scalar."""
+
+        assume(x > scale + self.h)
+        dist = Pareto(shape, scale, dtype=dtype)
+        analytical_grad = dist._dlog_scale(x)
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -310,6 +363,17 @@ class TestParetoGradients:
         if "scale" in expected_params:
             idx = sorted(expected_params).index("scale")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_scale(x))
+
+    @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_log_gradients_for_scalar_input(self, shape, scale, x, dtype):
+        """Checks that the log_gradients for a scalar input returns a 1D-array."""
+
+        assume(x > scale + self.h)
+        dist = Pareto(shape, scale, dtype=dtype)
+        gradients = dist.log_gradients(x)
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
+        assert gradients.ndim == 1
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)

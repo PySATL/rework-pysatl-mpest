@@ -81,16 +81,26 @@ class TestCauchyPDF:
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(loc=st_loc, scale=st_scale, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_pdf_properties(self, loc, scale, x, dtype):
-        """Tests that the PDF is non-negative and has the correct return type and shape."""
+    def test_pdf_properties_for_array_input(self, loc, scale, x, dtype):
+        """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
-        loc, scale = 0.0, 1.0
         dist = Cauchy(loc=loc, scale=scale, dtype=dtype)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
         assert pdf_values.dtype == dtype
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(loc=st_loc, scale=st_scale, x=st.floats(-1e6, 1e6))
+    def test_pdf_properties_for_scalar_input(self, loc, scale, x, dtype):
+        """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
+
+        dist = Cauchy(loc, scale, dtype=dtype)
+        pdf_value = dist.pdf(x)
+        assert np.isscalar(pdf_value)
+        assert isinstance(pdf_value, dtype)
+        assert pdf_value >= 0
 
     @given(loc=st_loc, scale=st_scale, x=st.floats(1e-6, 1e6))
     def test_pdf_against_scipy(self, loc, scale, x):
@@ -111,19 +121,29 @@ class TestCauchyPDF:
         np.testing.assert_allclose(1.0, integral, rtol=1e-5)
 
 
-class TestLogCauchyPDF:
+class TestCauchyLPDF:
     """Tests for the lpdf (log-PDF) method using hypothesis."""
 
     @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(loc=st_loc, scale=st_scale, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape(self, loc, scale, x, dtype):
-        """Tests the return type and shape of the lpdf method."""
+    def test_lpdf_return_type_and_shape_for_array_input(self, loc, scale, x, dtype):
+        """Tests the return type and shape of the lpdf method for array input."""
 
         dist = Cauchy(loc=loc, scale=scale, dtype=dtype)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
         assert lpdf_values.dtype == dtype
         assert lpdf_values.shape == x.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(loc=st_loc, scale=st_scale, x=st.floats(-1e6, 1e6))
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, loc, scale, x, dtype):
+        """Tests the return type and shape of the lpdf method for scalar input."""
+
+        dist = Cauchy(loc=loc, scale=scale, dtype=dtype)
+        lpdf_value = dist.lpdf(x)
+        assert np.isscalar(lpdf_value)
+        assert isinstance(lpdf_value, dtype)
 
     @given(loc=st_loc, scale=st_scale, x=st.floats(1e-6, 1e6))
     def test_lpdf_against_scipy(self, loc, scale, x):
@@ -142,14 +162,24 @@ class TestCauchyPPF:
     @given(
         loc=st_loc, scale=st_scale, p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True))
     )
-    def test_ppf_return_type_and_shape(self, loc, scale, p, dtype):
-        """Tests the return type and shape of the ppf method."""
+    def test_ppf_return_type_and_shape_for_array_input(self, loc, scale, p, dtype):
+        """Tests the return type and shape of the ppf method for array input."""
 
         dist = Cauchy(loc=loc, scale=scale, dtype=dtype)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.dtype == dtype
         assert ppf_values.shape == p.shape
+
+    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
+    @given(loc=st_loc, scale=st_scale, p=st.floats(0, 1, exclude_max=True))
+    def test_ppf_return_type_and_shape_for_scalar_input(self, loc, scale, p, dtype):
+        """Tests the return type and shape of the ppf method for scalar input."""
+
+        dist = Cauchy(loc=loc, scale=scale, dtype=dtype)
+        ppf_value = dist.ppf(p)
+        assert np.isscalar(ppf_value)
+        assert isinstance(ppf_value, dtype)
 
     @given(loc=st_loc, scale=st_scale, p=st.floats(0, 1, exclude_max=True, exclude_min=True))
     def test_ppf_against_scipy(self, loc, scale, p):
@@ -175,8 +205,8 @@ class TestCauchyGradients:
     h = 1e-6
 
     @given(loc=st_loc, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_loc_numerical(self, loc, scale, x, dtype):
-        """Checks the analytical gradient for 'loc' against a numerical approximation."""
+    def test_dlog_loc_numerical_for_array_input(self, loc, scale, x, dtype):
+        """Checks the analytical gradient for 'loc' against a numerical approximation for array input."""
 
         assume(np.all(x > (loc + self.h)))
 
@@ -194,9 +224,21 @@ class TestCauchyGradients:
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
+    @given(loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_loc_for_scalar_input(self, loc, scale, x, dtype):
+        """Checks that the gradient for 'loc' for a scalar input returns a scalar."""
+
+        assume(x > loc + self.h)
+
+        dist = Cauchy(loc, scale, dtype=dtype)
+        analytical_grad = dist._dlog_loc(x)
+
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
+
     @given(loc=st_loc, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_scale_numerical(self, loc, scale, x, dtype):
-        """Checks the analytical gradient for 'scale' against a numerical approximation."""
+    def test_dlog_scale_numerical_for_array_input(self, loc, scale, x, dtype):
+        """Checks the analytical gradient for 'scale' against a numerical approximation for array input."""
 
         assume(np.all(x > (loc + self.h)))
 
@@ -213,6 +255,18 @@ class TestCauchyGradients:
 
             numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
             np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+
+    @given(loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_dlog_scale_for_scalar_input(self, loc, scale, x, dtype):
+        """Checks that the gradient for 'scale' for a scalar input returns a scalar."""
+
+        assume(x > loc + self.h)
+
+        dist = Cauchy(loc, scale, dtype=dtype)
+        analytical_grad = dist._dlog_scale(x)
+
+        assert np.isscalar(analytical_grad)
+        assert isinstance(analytical_grad, dtype)
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -238,6 +292,17 @@ class TestCauchyGradients:
         if "scale" in expected_params:
             idx = sorted(expected_params).index("scale")
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_scale(x))
+
+    @given(loc=st_loc, scale=st_scale, x=st.floats(1e-3, 1e3))
+    def test_log_gradients_for_scalar_input(self, loc, scale, x, dtype):
+        """Checks that the log_gradients for a scalar input returns a 1D-array."""
+
+        dist = Cauchy(loc, scale, dtype=dtype)
+        gradients = dist.log_gradients(x)
+
+        assert isinstance(gradients, np.ndarray)
+        assert gradients.dtype == dtype
+        assert gradients.ndim == 1
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
@@ -270,6 +335,23 @@ class TestCauchyGenerate:
 
         with pytest.raises(ValueError):
             dist.generate(size=size)
+
+    def test_generate_statistical_properties(self, dtype):
+        """Tests if the generated samples have the correct statistical properties (median)."""
+
+        np.random.seed(123)
+        random.seed(123)
+        loc, scale = 5.0, 2.0
+        dist = Cauchy(loc=loc, scale=scale, dtype=dtype)
+        size = 5000
+
+        samples = dist.generate(size=size)
+
+        # The mean and variance of the Cauchy distribution are undefined.
+        # The median is equal to the location parameter 'loc'.
+        theoretical_median = loc
+
+        assert np.median(samples) == pytest.approx(theoretical_median, rel=0.1)
 
     def test_generate_kolmogorov_smirnov(self, dtype):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""

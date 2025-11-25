@@ -202,6 +202,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
     @property
     def dtype(self) -> type[DType]:
         """type[DType]: The numpy data type of the distribution's outputs."""
+
         return self._dtype
 
     @property
@@ -221,7 +222,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
         return self.params - self._fixed_params
 
     @abstractmethod
-    def pdf(self, X: ArrayLike) -> NDArray[DType]:
+    def pdf(self, X: ArrayLike) -> DType | NDArray[DType]:
         """Probability Density Function.
 
         Parameters
@@ -231,8 +232,9 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
@@ -249,8 +251,9 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The PPF values corresponding to each probability in :attr:`P`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
@@ -268,8 +271,9 @@ class ContinuousDistribution(ABC, Generic[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             The log-PDF values corresponding to each point in :attr:`X`.
+            Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
@@ -325,6 +329,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
             specified `new_dtype`, or the original instance if the `dtype` is
             unchanged.
         """
+
         if self._dtype is new_dtype:
             return self
 
@@ -343,6 +348,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
         ContinuousDistribution[DType]
             A new instance of the distribution, identical to the original.
         """
+
         params_dict = {p: getattr(self, p) for p in self.params}
 
         new_instance = self.__class__(**params_dict, dtype=self.dtype)
@@ -366,6 +372,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
         bool
             True if the distributions are equal, False otherwise.
         """
+
         if not isinstance(other, ContinuousDistribution):
             return NotImplemented
 
@@ -392,6 +399,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
         int
             The hash value of the distribution object.
         """
+
         sorted_params = sorted(list(self.params))
         param_values = tuple(self.get_params_vector(sorted_params))
 
