@@ -4,32 +4,36 @@ __author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-import numpy as np
-import pytest
 from unittest.mock import Mock
 
+import numpy as np
+import pytest
 from rework_pysatl_mpest.estimators.iterative import PipelineState
-from rework_pysatl_mpest.estimators.iterative.breakpointers.likelihood_breakpointer import  LikelihoodBreakpointer
+from rework_pysatl_mpest.estimators.iterative.breakpointers.likelihood_breakpointer import LikelihoodBreakpointer
 
 
 @pytest.fixture
 def mock_mixture_with_likelihood():
     """Returns a mock mixture that returns predefined log-likelihoods."""
+
     def make_mixture(ll_values):
         mixture = Mock()
         gen = iter(ll_values)
         mixture.loglikelihood = lambda X: next(gen)
         return mixture
+
     return make_mixture
 
 
 @pytest.fixture
 def dummy_state_factory():
     """Factory to create PipelineState with custom mixture."""
+
     def _make_state(mixture, X=None):
         if X is None:
             X = np.array([1.0, 2.0, 3.0])
         return PipelineState(X, None, None, mixture, None)
+
     return _make_state
 
 
@@ -56,11 +60,12 @@ class TestInitialization:
 
 class TestCheckLogic:
     def test_first_call_never_stops(self, mock_mixture_with_likelihood, dummy_state_factory):
+        FIRST_CALL = 5.0
         mixture = mock_mixture_with_likelihood([5.0])
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.1)
         assert not bp.check(state)
-        assert bp._L_old == 5.0
+        assert bp._L_old == FIRST_CALL
 
     def test_convergence_detected(self, mock_mixture_with_likelihood, dummy_state_factory):
         mixture = mock_mixture_with_likelihood([10.0, 10.05])
@@ -76,7 +81,7 @@ class TestCheckLogic:
         bp = LikelihoodBreakpointer(0.5)
 
         assert not bp.check(state)
-        assert not bp.check(state)  
+        assert not bp.check(state)
 
     def test_reset_after_convergence_enables_reuse(self, mock_mixture_with_likelihood, dummy_state_factory):
         mixture = mock_mixture_with_likelihood([10.0, 10.01, 20.0, 20.005])
@@ -84,12 +89,12 @@ class TestCheckLogic:
         bp = LikelihoodBreakpointer(0.02)
 
         # First cycle
-        assert not bp.check(state)  
+        assert not bp.check(state)
         assert bp.check(state)
 
         # After reset, should behave like new
-        assert not bp.check(state)  
-        assert bp.check(state)     
+        assert not bp.check(state)
+        assert bp.check(state)
 
         # Internal state reset
         assert bp._L_old is None

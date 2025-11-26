@@ -18,7 +18,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from .breakpointer import Breakpointer
-from .breakpointers import StepBreakpointer, LikelihoodBreakpointer
+from .breakpointers import LikelihoodBreakpointer, StepBreakpointer
 from .pipeline import Pipeline
 from .pipeline_state import PipelineState
 from .pipeline_step import PipelineStep
@@ -29,6 +29,7 @@ from .steps import ExpectationStep, MaximizationStep, MaximizationStrategy, Opti
 __all__ = [
     "Breakpointer",
     "ExpectationStep",
+    "LikelihoodBreakpointer",
     "MaximizationStep",
     "MaximizationStrategy",
     "OptimizationBlock",
@@ -38,5 +39,4 @@ __all__ = [
     "PriorThresholdPruner",
     "Pruner",
     "StepBreakpointer",
-    "LikelihoodBreakpointer"
 ]

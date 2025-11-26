@@ -5,6 +5,8 @@ __author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from typing import Optional
+
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
 
@@ -46,8 +48,8 @@ class LikelihoodBreakpointer(Breakpointer):
     def __init__(self, threshold: float):
         self._validate(threshold)
         self.threshold = threshold
-        self._L_old = None  # Start with None to handle first iteration
-        self._L_new = None
+        self._L_old: Optional[float] = None
+        self._L_new: Optional[float] = None
 
     def _validate(self, threshold: float):
         """Validates the threshold parameter."""
