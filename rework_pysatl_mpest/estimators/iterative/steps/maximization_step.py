@@ -23,7 +23,7 @@ import numpy as np
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
 from ....typings import DType
-from .._strategies import q_function_strategy
+from .._strategies import moments_strategy, q_function_strategy
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
@@ -64,7 +64,10 @@ class MaximizationStep(PipelineStep[DType]):
     """
 
     _strategies: ClassVar[Mapping[MaximizationStrategy, Callable]] = MappingProxyType(
-        {MaximizationStrategy.QFUNCTION: q_function_strategy}
+        {
+            MaximizationStrategy.QFUNCTION: q_function_strategy,
+            MaximizationStrategy.MOMENTS: moments_strategy,
+        }
     )
 
     def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer[DType]):
