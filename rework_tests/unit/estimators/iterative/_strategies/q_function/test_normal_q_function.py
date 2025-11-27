@@ -86,6 +86,29 @@ def test_q_function_normal_returns_correct_types(parametrized_normal_setup):
         assert isinstance(value, dtype)
 
 
+def test_q_function_normal_zero_variance_update(parametrized_normal_setup):
+    """
+    Tests the branch where weighted variance is close to 0.
+    """
+    component, state, dtype = parametrized_normal_setup
+
+    # All data points equal to current mean -> variance = 0
+    state.X = np.array([10.0, 10.0], dtype=dtype)
+    state.H = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=dtype)
+
+    component.loc = dtype(10.0)
+    component.scale = dtype(2.5)
+
+    component.fix_param("loc")
+
+    block = OptimizationBlock(0, {"scale"}, MaximizationStrategy.QFUNCTION)
+
+    _, new_params = q_function_strategy(component, state, block, optimizer=None)
+
+    # Should keep original scale
+    assert new_params["scale"] == component.scale
+
+
 @pytest.mark.parametrize(
     "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
     [
@@ -167,6 +190,8 @@ def test_q_function_exponential_handles_numerical_overflow(param_to_optimize_in_
 
     assert state.error is not None
     assert isinstance(state.error, NumericalStabilityError)
+    assert "Overflow detected during Q-function optimization" in str(state.error)
+    assert new_params == {}
 
 
 # Property-Based Test with Hypothesis

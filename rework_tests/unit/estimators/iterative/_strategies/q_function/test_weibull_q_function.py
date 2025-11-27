@@ -208,6 +208,40 @@ def test_q_function_weibull_handles_invalid_loc_for_scale_calculation(parametriz
     assert new_params[Weibull.PARAM_SCALE] == original_scale
 
 
+def test_weibull_scale_fallback_zero_weighted_sum():
+    """
+    Tests the fallback branch for Weibull 'scale' (Line 321).
+    It triggers when the weighted sum is effectively zero, BUT only if
+    X > loc (otherwise the earlier check catches it).
+    """
+    dtype = np.float64
+    # Check `loc >= X` (0.0 >= 1e-10) is False. Goes to `else`.
+
+    # X_minus_loc = 1e-10.
+    # safe_X_minus_loc = max(1e-10, 1e-9) = 1e-9.
+    # shape = 2.0.
+    # weighted_sum = 1.0 * (1e-9)**2 = 1e-18.
+
+    val_close_to_loc = 1e-10
+    X = np.array([val_close_to_loc], dtype=dtype)
+    H = np.array([[1.0, 0.0]], dtype=dtype)
+
+    original_scale = 5.5
+    comp = Weibull(shape=2.0, loc=0.0, scale=original_scale, dtype=dtype)
+
+    state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
+
+    block = OptimizationBlock(
+        component_id=0, params_to_optimize={"scale"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+    )
+
+    _, params = q_function_strategy(comp, state, block, optimizer=None)
+
+    # Should fall back to the original scale
+    assert Weibull.PARAM_SCALE in params
+    assert params[Weibull.PARAM_SCALE] == original_scale
+
+
 def test_q_function_weibull_handles_numerical_overflow():
     """
     Verifies that if a numerical overflow occurs during calculations,
@@ -231,6 +265,8 @@ def test_q_function_weibull_handles_numerical_overflow():
     # --- Assert ---
     assert state.error is not None
     assert isinstance(state.error, NumericalStabilityError)
+    assert "Overflow detected during Q-function optimization" in str(state.error)
+    assert new_params == {}
 
 
 # Property-Based Test with Hypothesis

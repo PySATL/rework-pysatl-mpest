@@ -125,6 +125,84 @@ def test_q_function_pareto_respects_fixed_and_optimizable_params(
     assert set(new_params.keys()) == expected_keys
 
 
+def test_q_function_pareto_handles_negligible_responsibility(parametrized_pareto_setup):
+    """
+    Verifies that if a component's total responsibility (N_j) is near zero,
+    its parameters are not updated.
+    """
+
+    pareto_component, pipeline_state, dtype = parametrized_pareto_setup
+
+    pipeline_state.H.fill(dtype(1e-10))  # Make all responsibilities negligible
+    block = OptimizationBlock(
+        component_id=0,
+        params_to_optimize={"shape", "scale"},
+        maximization_strategy=MaximizationStrategy.QFUNCTION,
+    )
+
+    _, new_params = q_function_strategy(pareto_component, pipeline_state, block, optimizer=None)
+
+    assert new_params == {}
+
+
+def test_pareto_scale_fallback_with_invalid_data():
+    """
+    Tests that Pareto scale optimization falls back to current value if no valid data
+    points are found (mask is empty) (Line 384 else branch).
+    """
+    dtype = np.float64
+    # Responsibilities are high (1.0), so we pass the early N_j check.
+    # However, data X is negative. Pareto requires X > 0 (and X >= scale).
+    # The mask (H > tol) & (X > 0) will be all False.
+
+    X = np.array([-1.0, -2.0], dtype=dtype)
+    H = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=dtype)
+
+    original_scale = 1.5
+    comp = Pareto(shape=2.0, scale=original_scale, dtype=dtype)
+
+    state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
+
+    block = OptimizationBlock(
+        component_id=0, params_to_optimize={"scale"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+    )
+
+    _, params = q_function_strategy(comp, state, block, optimizer=None)
+
+    assert Pareto.PARAM_SCALE in params
+    assert params[Pareto.PARAM_SCALE] == original_scale
+
+
+def test_pareto_shape_fallback_zero_denominator():
+    """
+    Tests the fallback branch for Pareto 'shape' (Line 394).
+    It triggers when the denominator (weighted sum of log(X/scale)) is close to zero.
+    This implies X is very close to scale (log(1) = 0).
+    """
+    dtype = np.float64
+    # log(X/scale) = log(1) = 0
+    # denominator = sum(H * 0) = 0
+
+    X = np.array([2.0], dtype=dtype)
+    H = np.array([[1.0, 0.0]], dtype=dtype)
+
+    original_shape = 3.0
+    original_scale = 2.0
+    comp = Pareto(shape=original_shape, scale=original_scale, dtype=dtype)
+
+    state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
+
+    block = OptimizationBlock(
+        component_id=0, params_to_optimize={"shape"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+    )
+
+    _, params = q_function_strategy(comp, state, block, optimizer=None)
+
+    # Should fall back to the original shape because denominator is 0
+    assert Pareto.PARAM_SHAPE in params
+    assert params[Pareto.PARAM_SHAPE] == original_shape
+
+
 # Property-Based Test with Hypothesis
 # -----------------------------------
 
