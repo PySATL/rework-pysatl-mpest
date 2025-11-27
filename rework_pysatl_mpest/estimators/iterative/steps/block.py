@@ -27,9 +27,13 @@ class MaximizationStrategy(Enum):
     QFUNCTION
         Indicates that the optimization should maximize the Q-function,
         which is the expected value of the complete-data log-likelihood.
+    MOMENTS
+    Indicates that the optimization should use the Method of Moments,
+    matching theoretical moments to empirical weighted moments.
     """
 
     QFUNCTION = auto()
+    MOMENTS = auto()
 
 
 @dataclass
