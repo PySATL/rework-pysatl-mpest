@@ -19,11 +19,11 @@ from functools import singledispatch
 import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential, Normal, Pareto, Weibull
-from ....exceptions import NumericalStabilityError
 from ....optimizers import Optimizer
 from ....typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
+from .utils import handle_numerical_overflow
 
 NUMERICAL_TOLERANCE = 1e-9
 
@@ -31,28 +31,6 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 # Base Q-function strategy
 # ------------------------
-
-
-def _handle_numerical_overflow(state: PipelineState[DType]) -> None:
-    """Creates and registers a numerical stability error in the pipeline state.
-
-    This helper function is called when a numerical instability (e.g., infinity)
-    is detected during the M-step. It creates a `NumericalStabilityError`,
-    places it in `state.error`.
-
-    The presence of this error in the state signals the `Pipeline` class to
-    take corrective action, such as restarting the fitting process with a
-    higher floating-point precision (e.g., `np.float64`).
-
-    Parameters
-    ----------
-    state : PipelineState[DType]
-        The current pipeline state where the error will be recorded.
-    """
-    error = NumericalStabilityError(
-        "Overflow detected during Q-function optimization. The pipeline will attempt to restart with higher precision."
-    )
-    state.error = error
 
 
 @singledispatch
@@ -115,7 +93,7 @@ def q_function_strategy(
         safe_lpdf = np.where(H_j == 0, dtype(0.0), lpdf_values)
         res = -np.dot(H_j, safe_lpdf)
         if np.isinf(res):
-            _handle_numerical_overflow(state)
+            handle_numerical_overflow(state, "Q-function optimization")
         return -np.dot(H_j, safe_lpdf)
 
     new_params = optimizer.minimize(target, temp_comp.get_params_vector(params_to_optimize))
@@ -182,7 +160,8 @@ def _(
 
         weighted_sum_X = np.dot(H_j, X)
         if np.isinf(weighted_sum_X):
-            _handle_numerical_overflow(state)
+            handle_numerical_overflow(state, "Q-function optimization")
+            return block.component_id, {}
 
         denominator = weighted_sum_X / N_j - loc
         if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
@@ -242,7 +221,8 @@ def _(
     if Normal.PARAM_LOC in params_to_optimize:
         weighted_sum_X = np.dot(H_j, X)
         if np.isinf(weighted_sum_X):
-            _handle_numerical_overflow(state)
+            handle_numerical_overflow(state, "Q-function optimization")
+            return block.component_id, {}
 
         new_mu = weighted_sum_X / N_j
         new_params[Normal.PARAM_LOC] = dtype(new_mu)
@@ -255,7 +235,8 @@ def _(
         # Calculate the weighted variance
         weighted_sum_sq_diff = np.dot(H_j, (X - mu) ** 2)
         if np.isinf(weighted_sum_sq_diff):
-            _handle_numerical_overflow(state)
+            handle_numerical_overflow(state, "Q-function optimization")
+            return block.component_id, {}
 
         new_variance = weighted_sum_sq_diff / N_j
 
@@ -333,9 +314,10 @@ def _(
 
             weighted_sum = np.dot(H_j, safe_X_minus_loc**final_shape)
             if np.isinf(weighted_sum):
-                _handle_numerical_overflow(state)
+                handle_numerical_overflow(state, "Q-function optimization")
+                return block.component_id, {}
 
-            if np.isclose(weighted_sum, 0.0, NUMERICAL_TOLERANCE):
+            if np.isclose(weighted_sum, 0.0, atol=NUMERICAL_TOLERANCE):
                 new_params[Weibull.PARAM_SCALE] = component.scale
             else:
                 new_scale = (weighted_sum / N_j) ** (dtype(1.0) / final_shape)
@@ -390,7 +372,7 @@ def _(
     N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if N_j < NUMERICAL_TOLERANCE:
+    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
 
     # Update scale if it's in the optimization block
@@ -406,9 +388,9 @@ def _(
         scale = new_params.get(Pareto.PARAM_SCALE, component.scale)
 
         denominator = np.dot(H_j, np.log(X / scale))
-        if denominator > NUMERICAL_TOLERANCE:
-            new_params[Pareto.PARAM_SHAPE] = dtype(N_j / denominator)
-        else:
+        if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
             new_params[Pareto.PARAM_SHAPE] = component.shape
+        else:
+            new_params[Pareto.PARAM_SHAPE] = dtype(N_j / denominator)
 
     return block.component_id, new_params

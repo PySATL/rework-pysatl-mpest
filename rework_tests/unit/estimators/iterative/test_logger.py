@@ -99,6 +99,17 @@ class TestIndex:
         with pytest.raises(IndexError, match=expected):
             _ = setup_logger_for_index[index]
 
+    @pytest.mark.parametrize(
+        ("once_in_iterations", "expected_msg"),
+        [
+            (0, "once_in_iterations must be a positive integer"),
+        ],
+    )
+    def test_getitem_negative_index_out_of_bounds(self, once_in_iterations, expected_msg):
+        """Tests the specific branch `once_in_iterations < 1` in __init__."""
+        with pytest.raises(ValueError, match=expected_msg):
+            IterationsHistory(once_in_iterations)
+
 
 class TestLoggingAndLen:
     @pytest.mark.parametrize(("once_in_iter", "n", "expected"), [(1, 5, 5), (2, 8, 4), (3, 10, 4)])

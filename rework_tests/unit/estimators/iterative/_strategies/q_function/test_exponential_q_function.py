@@ -83,6 +83,61 @@ def test_q_function_exponential_returns_correct_types(parametrized_exponential_s
         assert isinstance(value, dtype)
 
 
+def test_q_function_exponential_denominator_zero_rate_update(parametrized_exponential_setup):
+    """
+    Tests the branch where weighted average matches location (denominator ~ 0)
+    in rate update logic.
+    """
+    component, state, dtype = parametrized_exponential_setup
+
+    # X = 2.0, loc = 2.0 -> X - loc = 0.
+    state.X = np.array([2.0], dtype=dtype)
+    state.H = np.array([[1.0, 0.0]], dtype=dtype)  # 1 sample
+
+    component.loc = dtype(2.0)
+    component.rate = dtype(5.0)
+
+    component.fix_param("loc")
+
+    block = OptimizationBlock(0, {"rate"}, MaximizationStrategy.QFUNCTION)
+
+    _, new_params = q_function_strategy(component, state, block, optimizer=None)
+
+    # Should keep original rate to avoid division by zero
+    assert Exponential.PARAM_RATE in new_params
+    assert new_params["rate"] == component.rate
+
+
+def test_exponential_loc_fallback_low_individual_weights():
+    """
+    Tests the fallback branch for Exponential 'loc' (Line 155) where
+    individual weights are below tolerance (so relevant_X is empty),
+    but their sum is significant enough to bypass the early exit check.
+    """
+    dtype = np.float64
+    tolerance = 1e-9
+
+    # Create weights slightly below tolerance
+    weight_val = 0.5 * tolerance  # 0.5e-9
+
+    # Create enough samples so their sum is > tolerance
+    # 10 * 0.5e-9 = 5e-9 > 1e-9
+    n_samples = 10
+    X = np.arange(n_samples, dtype=dtype)
+    H = np.full((n_samples, 2), weight_val, dtype=dtype)
+
+    comp = Exponential(loc=5.0, rate=1.0, dtype=dtype)
+    state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
+    block = OptimizationBlock(
+        component_id=0, params_to_optimize={"loc"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+    )
+
+    _, new_params = q_function_strategy(comp, state, block, optimizer=None)
+
+    assert Exponential.PARAM_LOC in new_params
+    assert new_params[Exponential.PARAM_LOC] == comp.loc
+
+
 @pytest.mark.parametrize(
     "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
     [
@@ -125,16 +180,16 @@ def test_q_function_exponential_handles_negligible_responsibility(parametrized_e
     its parameters are not updated.
     """
 
-    normal_component, pipeline_state, dtype = parametrized_exponential_setup
+    exponential_component, pipeline_state, dtype = parametrized_exponential_setup
 
     pipeline_state.H.fill(dtype(1e-10))  # Make all responsibilities negligible
     block = OptimizationBlock(
         component_id=0,
-        params_to_optimize={"shape", "loc", "scale"},
+        params_to_optimize={"loc", "rate"},
         maximization_strategy=MaximizationStrategy.QFUNCTION,
     )
 
-    _, new_params = q_function_strategy(normal_component, pipeline_state, block, optimizer=None)
+    _, new_params = q_function_strategy(exponential_component, pipeline_state, block, optimizer=None)
 
     assert new_params == {}
 
@@ -161,6 +216,8 @@ def test_q_function_exponential_handles_numerical_overflow():
 
     assert state.error is not None
     assert isinstance(state.error, NumericalStabilityError)
+    assert "Overflow detected during Q-function optimization" in str(state.error)
+    assert new_params == {}
 
 
 # Property-Based Test with Hypothesis

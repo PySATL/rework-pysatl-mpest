@@ -337,3 +337,29 @@ class TestMaximizationStep:
 
         assert step.blocks[0].params_to_optimize == {"loc"}
         assert step.blocks[1].params_to_optimize == {"scale"}
+
+    def test_run_aborts_if_error_occurs_in_strategy(self, mock_optimizer, parametrized_state, mocker):
+        """
+        Tests that if a strategy returns an error state, subsequent blocks are ignored.
+        """
+        state = parametrized_state
+        block1 = OptimizationBlock(0, {"loc"}, MaximizationStrategy.QFUNCTION)
+        block2 = OptimizationBlock(1, {"loc"}, MaximizationStrategy.QFUNCTION)
+
+        step = MaximizationStep([block1, block2], mock_optimizer)
+
+        # Strategy that sets error on first call
+        def failing_strategy(*args):
+            state.error = ValueError("Fail")
+            return 0, {}
+
+        mocker.patch.object(MaximizationStep, "_strategies", {MaximizationStrategy.QFUNCTION: failing_strategy})
+        spy = mocker.spy(step, "_update_components_params")
+
+        result = step.run(state)
+
+        # Should return state with error
+        assert isinstance(result, PipelineState)
+        assert str(state.error) == "Fail"
+        # Params update should NOT be called because we returned early
+        spy.assert_not_called()
