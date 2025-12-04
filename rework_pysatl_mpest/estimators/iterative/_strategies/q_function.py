@@ -38,7 +38,7 @@ def q_function_strategy(
     component: ContinuousDistribution[DType],
     state: PipelineState[DType],
     block: OptimizationBlock,
-    optimizer: Optimizer,
+    optimizer: Optimizer[DType],
 ) -> tuple[int, dict[str, DType]]:
     """Generic M-step strategy that maximizes the Q-function numerically.
 
@@ -60,7 +60,7 @@ def q_function_strategy(
     block : OptimizationBlock
         The configuration block defining which component and which of its
         parameters to optimize.
-    optimizer : Optimizer
+    optimizer : Optimizer[DType]
         The numerical optimizer instance used to perform the maximization.
 
     Returns
@@ -107,7 +107,7 @@ def q_function_strategy(
 
 @q_function_strategy.register(Exponential)
 def _(
-    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the Exponential distribution using an analytical solution.
@@ -143,7 +143,7 @@ def _(
     N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
+    if N_j <= NUMERICAL_TOLERANCE:
         return block.component_id, {}
 
     # Update location (loc) if it's in the optimization block
@@ -164,12 +164,13 @@ def _(
             return block.component_id, {}
 
         denominator = weighted_sum_X / N_j - loc
-        if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
+
+        if denominator > NUMERICAL_TOLERANCE:
+            new_params[Exponential.PARAM_RATE] = dtype(1.0 / denominator)
+        else:
             # If the weighted average is too close to loc,
             # leave rate unchanged to avoid infinity.
             new_params[Exponential.PARAM_RATE] = component.rate
-        else:
-            new_params[Exponential.PARAM_RATE] = dtype(1.0 / denominator)
 
     return block.component_id, new_params
 
@@ -181,7 +182,7 @@ def _(
 
 @q_function_strategy.register(Normal)
 def _(
-    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the normal distribution using an analytical solution.
@@ -203,8 +204,6 @@ def _(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
-    dtype = component.dtype
-
     X = state.X
     H_j = state.H[:, block.component_id]
 
@@ -214,7 +213,7 @@ def _(
     N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
+    if N_j <= NUMERICAL_TOLERANCE:
         return block.component_id, {}
 
     # Update mean (loc) if it's in the optimization block
@@ -224,8 +223,7 @@ def _(
             handle_numerical_overflow(state, "Q-function optimization")
             return block.component_id, {}
 
-        new_mu = weighted_sum_X / N_j
-        new_params[Normal.PARAM_LOC] = dtype(new_mu)
+        new_params[Normal.PARAM_LOC] = weighted_sum_X / N_j
 
     # Update std (scale) if it's in the optimization block
     if Normal.PARAM_SCALE in params_to_optimize:
@@ -240,12 +238,12 @@ def _(
 
         new_variance = weighted_sum_sq_diff / N_j
 
-        if np.isclose(new_variance, 0.0, NUMERICAL_TOLERANCE):
+        if new_variance > NUMERICAL_TOLERANCE:
+            new_params[Normal.PARAM_SCALE] = np.sqrt(new_variance)
+        else:
             # If variance is too small, it can lead to instability.
             # Keep the old scale to prevent it from collapsing to zero.
             new_params[Normal.PARAM_SCALE] = component.scale
-        else:
-            new_params[Normal.PARAM_SCALE] = dtype(np.sqrt(new_variance))
 
     return block.component_id, new_params
 
@@ -257,7 +255,7 @@ def _(
 
 @q_function_strategy.register(Weibull)
 def _(
-    component: Weibull[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+    component: Weibull[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the Weibull distribution using an analytical solution.
@@ -277,7 +275,7 @@ def _(
     N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
+    if N_j <= NUMERICAL_TOLERANCE:
         return block.component_id, {}
 
     # ------------------------
@@ -317,11 +315,11 @@ def _(
                 handle_numerical_overflow(state, "Q-function optimization")
                 return block.component_id, {}
 
-            if np.isclose(weighted_sum, 0.0, atol=NUMERICAL_TOLERANCE):
-                new_params[Weibull.PARAM_SCALE] = component.scale
-            else:
+            if weighted_sum > NUMERICAL_TOLERANCE:
                 new_scale = (weighted_sum / N_j) ** (dtype(1.0) / final_shape)
                 new_params[Weibull.PARAM_SCALE] = new_scale
+            else:
+                new_params[Weibull.PARAM_SCALE] = component.scale
 
     return block.component_id, new_params
 
@@ -333,7 +331,7 @@ def _(
 
 @q_function_strategy.register(Pareto)
 def _(
-    component: Pareto, state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+    component: Pareto, state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
     """Specialized Q-function parameter estimation strategy for
     the Pareto type 1 distribution using an analytical solution.
@@ -361,8 +359,6 @@ def _(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
-    dtype = component.dtype
-
     X = state.X
     H_j = state.H[:, block.component_id]
 
@@ -372,14 +368,14 @@ def _(
     N_j = np.sum(H_j)
 
     # If the component has negligible responsibility, do not update its parameters.
-    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
+    if N_j <= NUMERICAL_TOLERANCE:
         return block.component_id, {}
 
     # Update scale if it's in the optimization block
     if Pareto.PARAM_SCALE in params_to_optimize:
         mask = (H_j > NUMERICAL_TOLERANCE) & (X > 0)
         if np.any(mask):
-            new_params[Pareto.PARAM_SCALE] = dtype(np.min(X[mask]))
+            new_params[Pareto.PARAM_SCALE] = np.min(X[mask])
         else:
             new_params[Pareto.PARAM_SCALE] = component.scale
 
@@ -388,9 +384,9 @@ def _(
         scale = new_params.get(Pareto.PARAM_SCALE, component.scale)
 
         denominator = np.dot(H_j, np.log(X / scale))
-        if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
-            new_params[Pareto.PARAM_SHAPE] = component.shape
+        if denominator > NUMERICAL_TOLERANCE:
+            new_params[Pareto.PARAM_SHAPE] = N_j / denominator
         else:
-            new_params[Pareto.PARAM_SHAPE] = dtype(N_j / denominator)
+            new_params[Pareto.PARAM_SHAPE] = component.shape
 
     return block.component_id, new_params
