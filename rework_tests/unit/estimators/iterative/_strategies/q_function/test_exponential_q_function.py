@@ -238,7 +238,7 @@ def exponential_data_and_true_params(draw, dtype_strategy=st.sampled_from([np.fl
 
     # 2. Generate a data sample from this distribution
     sample_size = draw(st.integers(min_value=10000, max_value=10000))
-    X = true_component.generate(size=sample_size).astype(dtype)
+    X = true_component.generate(size=sample_size)
 
     return (X, dtype(true_loc), dtype(true_rate), dtype)
 

@@ -44,7 +44,7 @@ class MaximizationStep(PipelineStep[DType]):
         A sequence of configuration blocks that define the optimization tasks.
         Each block specifies a component, its parameters to optimize, and the
         maximization strategy to use.
-    optimizer : Optimizer
+    optimizer : Optimizer[DType]
         A numerical optimizer instance used to find the optimal parameters
         when an analytical solution is not available for a given strategy.
 
@@ -52,7 +52,7 @@ class MaximizationStep(PipelineStep[DType]):
     ----------
     blocks : list[OptimizationBlock]
         The list of optimization tasks to be performed.
-    optimizer : Optimizer
+    optimizer : Optimizer[DType]
         The numerical optimizer used for parameter estimation.
 
     Methods
@@ -67,7 +67,7 @@ class MaximizationStep(PipelineStep[DType]):
         {MaximizationStrategy.QFUNCTION: q_function_strategy}
     )
 
-    def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer):
+    def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer[DType]):
         self.blocks = list(blocks)
         self.optimizer = optimizer
 

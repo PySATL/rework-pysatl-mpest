@@ -14,7 +14,7 @@ from ..typings import DType
 from .optimizer import Optimizer
 
 
-class ScipyPowell(Optimizer):
+class ScipyPowell(Optimizer[DType]):
     """An optimizer that uses Powell's conjugate direction method from SciPy.
 
     This class serves as a wrapper for the `scipy.optimize.minimize` function,

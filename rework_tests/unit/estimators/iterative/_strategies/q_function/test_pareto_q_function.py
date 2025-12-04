@@ -216,7 +216,7 @@ def pareto_data_and_true_params(draw, dtype_strategy=st.sampled_from([np.float32
     # 1. Generate realistic parameters for the true distribution
     true_shape = draw(st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False))
     true_scale = draw(st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False))
-    true_component = Pareto(shape=true_shape, scale=true_scale)
+    true_component = Pareto(shape=true_shape, scale=true_scale, dtype=dtype)
 
     # 2. Generate a large data sample from this distribution
     X = true_component.generate(size=1000000)
