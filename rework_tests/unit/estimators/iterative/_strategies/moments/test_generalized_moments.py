@@ -69,7 +69,7 @@ def test_moments_strategy_base_implementation_raises_not_implemented():
     mock_block = Mock(spec=OptimizationBlock)
     mock_optimizer = Mock(spec=Optimizer)
 
-    expected_error_msg = "Moments strategy is not implemented for distribution 'DummyDistribution'."
+    expected_error_msg = "Moments strategy is not implemented for distribution 'Dummy'."
 
     # Act & Assert
     with pytest.raises(NotImplementedError, match=expected_error_msg):

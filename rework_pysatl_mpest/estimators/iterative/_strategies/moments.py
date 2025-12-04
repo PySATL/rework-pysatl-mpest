@@ -35,7 +35,7 @@ def moments_strategy(
     component: ContinuousDistribution[DType],
     state: PipelineState[DType],
     block: OptimizationBlock,
-    optimizer: Optimizer,
+    optimizer: Optimizer[DType],
 ) -> tuple[int, dict[str, DType]]:
     """Generic M-step strategy that uses the Method of Moments.
 
@@ -52,7 +52,7 @@ def moments_strategy(
         The current state of the pipeline.
     block : OptimizationBlock
         The configuration block defining which component to optimize.
-    optimizer : Optimizer
+    optimizer : Optimizer[DType]
         The numerical optimizer (unused in this strategy).
 
     Raises
@@ -61,7 +61,7 @@ def moments_strategy(
         If a specialized moments strategy is not registered for the given
         distribution type.
     """
-    raise NotImplementedError(f"Moments strategy is not implemented for distribution '{type(component).__name__}'.")
+    raise NotImplementedError(f"Moments strategy is not implemented for distribution '{component.name}'.")
 
 
 # ---------------------------------
@@ -71,7 +71,7 @@ def moments_strategy(
 
 @moments_strategy.register(Exponential)
 def _(
-    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer
+    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
     """Specialized Moments parameter estimation strategy for the Exponential distribution
     using an analytical solution.
