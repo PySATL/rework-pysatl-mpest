@@ -57,7 +57,7 @@ class ECM(BaseEstimator[DType]):
     pruners : Sequence[Pruner]
         A sequence of strategies for removing (pruning) components from the
         mixture model during fitting.
-    optimizer : Optimizer
+    optimizer : Optimizer[DType]
         A numerical optimizer instance used in the maximization step to find
         the optimal parameters.
 
@@ -69,7 +69,7 @@ class ECM(BaseEstimator[DType]):
     pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    optimizer : Optimizer
+    optimizer : Optimizer[DType]
         The numerical optimizer used for parameter estimation.
     logger : IterationsHistory | None
         An object that collects information about each iteration.
@@ -84,7 +84,9 @@ class ECM(BaseEstimator[DType]):
         fit
     """
 
-    def __init__(self, breakpointers: Sequence[Breakpointer], pruners: Sequence[Pruner], optimizer: Optimizer) -> None:
+    def __init__(
+        self, breakpointers: Sequence[Breakpointer], pruners: Sequence[Pruner], optimizer: Optimizer[DType]
+    ) -> None:
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)
         self.optimizer = optimizer

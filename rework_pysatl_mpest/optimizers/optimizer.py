@@ -16,7 +16,7 @@ from collections.abc import Callable
 from ..typings import DType
 
 
-class Optimizer(ABC):
+class Optimizer(ABC, Generic[DType]):
     """Abstract base class for numerical optimizers.
 
     This class defines the standard interface for all optimizer implementations.

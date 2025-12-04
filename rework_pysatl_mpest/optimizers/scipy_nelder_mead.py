@@ -14,7 +14,7 @@ from ..typings import DType
 from .optimizer import Optimizer
 
 
-class ScipyNelderMead(Optimizer):
+class ScipyNelderMead(Optimizer[DType]):
     """An optimizer that uses the Nelder-Mead simplex algorithm from SciPy.
 
     This class serves as a wrapper for the `scipy.optimize.minimize` function,
