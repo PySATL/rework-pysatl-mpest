@@ -297,18 +297,21 @@ class ContinuousDistribution(ABC, Generic[DType]):
         """
 
     @abstractmethod
-    def generate(self, size: int) -> NDArray[DType]:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> DType | NDArray[DType]:
         """Generates random samples from the distribution.
 
         Parameters
         ----------
-        size : int
-            The number of random samples to generate.
+        size : int | tuple[int, ...] | None, optional
+            Defining number of random variates.
+            - If None (default), returns a single scalar.
+            - If int, returns a 1D array of that length.
+            - If tuple, returns an array of that shape.
 
         Returns
         -------
-        NDArray[DType]
-            A NumPy array containing the generated samples.
+        DType | NDArray[DType]
+            A scalar or NumPy array containing the generated samples.
         """
 
     def astype(self, new_dtype: type[DType]) -> "ContinuousDistribution[DType]":

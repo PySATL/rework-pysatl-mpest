@@ -381,26 +381,31 @@ class TestMixtureModelCalculations:
 class TestMixtureModelGenerate:
     """Statistical tests for the `generate` method."""
 
-    def test_generate_returns_correct_size(self, mixture_model: MixtureModel):
+    @pytest.mark.parametrize(
+        "size, expected_shape, is_scalar",
+        [
+            (None, (), True),
+            (0, (0,), False),
+            (10, (10,), False),
+            ((5,), (5,), False),
+            ((2, 3), (2, 3), False),
+            ((2, 0), (2, 0), False),
+        ],
+    )
+    def test_generate_returns_correct_size(self, mixture_model: MixtureModel, size, expected_shape, is_scalar):
         """Tests that generate returns an array of the requested size."""
-
-        size = 100
-        dtype = mixture_model.dtype
 
         samples = mixture_model.generate(size=size)
 
-        assert len(samples) == size
-        assert isinstance(samples, np.ndarray)
-        assert samples.dtype == dtype
-
-    def test_generate_with_size_zero(self, mixture_model):
-        """Tests that generating with size = 0 returns an empty array."""
-
-        dtype = mixture_model.dtype
-
-        samples = mixture_model.generate(0)
-        assert len(samples) == 0
-        assert samples.dtype == dtype
+        if is_scalar:
+            assert np.isscalar(samples)
+            assert isinstance(samples, mixture_model.dtype)
+        else:
+            assert isinstance(samples, np.ndarray)
+            assert samples.shape == expected_shape
+            assert samples.dtype == mixture_model.dtype
+            if 0 in expected_shape:
+                assert samples.size == 0
 
     @pytest.mark.parametrize("size", [-1, -10])
     def test_generate_with_negative_size(self, mixture_model: MixtureModel, size: int):
