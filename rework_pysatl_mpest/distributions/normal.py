@@ -140,26 +140,41 @@ class Normal(ContinuousDistribution[DType]):
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         z = (X - self.loc) / self.scale
-        return -np.log(self.scale) - dtype(0.5) * np.log(dtype(2.0) * dtype(np.pi)) - dtype(0.5) * z**2
+        result = -np.log(self.scale) - dtype(0.5) * np.log(dtype(2.0) * dtype(np.pi)) - dtype(0.5) * z**2
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
-        return (X - self.loc) / (self.scale**2)
+        result = (X - self.loc) / (self.scale**2)
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_scale(self, X):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
         z_sq = ((X - self.loc) / self.scale) ** 2
-        return (z_sq - dtype(1.0)) / self.scale
+        result = (z_sq - dtype(1.0)) / self.scale
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def log_gradients(self, X):
         """Calculates the gradients of the log-PDF w.r.t. its parameters.
@@ -198,23 +213,30 @@ class Normal(ContinuousDistribution[DType]):
             return np.array(gradients)
         return np.stack(gradients, axis=1)
 
-    def generate(self, size: int):
+    def generate(self, size: int | tuple[int, ...] | None = None):
         """Generates random samples from the distribution.
 
         This implementation relies on `scipy.stats.norm.rvs`.
 
         Parameters
         ----------
-        size : int
-            The number of random samples to generate.
+        size : int | tuple[int, ...] | None, optional
+            Defining number of random variates.
+            - If None (default), returns a single scalar.
+            - If int, returns a 1D array of that length.
+            - If tuple, returns an array of that shape.
 
         Returns
         -------
-        NDArray[DType]
-            A NumPy array containing the generated samples.
+        DType | NDArray[DType]
+            A scalar or NumPy array containing the generated samples.
         """
 
-        return np.asarray(norm.rvs(loc=self.loc, scale=self.scale, size=size), dtype=self.dtype)
+        samples = norm.rvs(loc=self.loc, scale=self.scale, size=size)
+
+        if size is None:
+            return self.dtype(samples)
+        return np.asarray(samples, dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.

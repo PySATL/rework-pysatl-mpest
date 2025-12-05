@@ -325,23 +325,31 @@ class TestExponentialGradients:
 class TestExponentialGenerate:
     """Tests for the generate method."""
 
-    def test_generate_type_and_shape(self, dtype):
+    @pytest.mark.parametrize(
+        "size, expected_shape, is_scalar",
+        [
+            (None, (), True),
+            (0, (0,), False),
+            (10, (10,), False),
+            ((5,), (5,), False),
+            ((2, 3), (2, 3), False),
+        ],
+    )
+    def test_generate_type_and_shape(self, dtype, size, expected_shape, is_scalar):
         """Tests that generated samples have the correct type and shape."""
 
         np.random.seed(42)
         random.seed(42)
         dist = Exponential(loc=0.0, rate=2.0, dtype=dtype)
-        size = 100
         samples = dist.generate(size=size)
-        assert isinstance(samples, np.ndarray)
-        assert samples.dtype == dtype
-        assert samples.shape == (size,)
 
-    def test_generate_zero_size(self, dtype):
-        """Tests if the generating 0 number of samples returns an empty array"""
-
-        dist = Exponential(loc=0.0, rate=1.0, dtype=dtype)
-        assert len(dist.generate(size=0)) == 0
+        if is_scalar:
+            assert np.isscalar(samples)
+            assert isinstance(samples, dtype)
+        else:
+            assert isinstance(samples, np.ndarray)
+            assert samples.shape == expected_shape
+            assert samples.dtype == dtype
 
     @pytest.mark.parametrize("size", [-1, -10])
     def test_generate_negative_size(self, size, dtype):

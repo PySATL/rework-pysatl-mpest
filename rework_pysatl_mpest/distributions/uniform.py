@@ -283,23 +283,28 @@ class Uniform(ContinuousDistribution[DType]):
             return np.asarray(gradients)
         return np.stack(gradients, axis=1)
 
-    def generate(self, size: int):
+    def generate(self, size: int | tuple[int, ...] | None = None):
         """Generates random samples from the distribution.
 
         Parameters
         ----------
-        size : int
-            The number of random samples to generate.
+        size : int | tuple[int, ...] | None, optional
+            Defining number of random variates.
+            - If None (default), returns a single scalar.
+            - If int, returns a 1D array of that length.
+            - If tuple, returns an array of that shape.
 
         Returns
         -------
-        NDArray[DType]
-            A NumPy array containing the generated samples.
+        DType | NDArray[DType]
+            A scalar or NumPy array containing the generated samples.
         """
 
-        return np.asarray(
-            uniform.rvs(loc=self.left_border, scale=self.right_border - self.left_border, size=size), dtype=self.dtype
-        )
+        samples = uniform.rvs(loc=self.left_border, scale=self.right_border - self.left_border, size=size)
+
+        if size is None:
+            return self.dtype(samples)
+        return np.asarray(samples, dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.

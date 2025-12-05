@@ -267,8 +267,7 @@ class MixtureModel(Generic[DType]):
         """
 
         X = np.asarray(X, dtype=self.dtype)
-        component_pdfs = np.array([comp.pdf(X) for comp in self.components])
-        return np.dot(self.weights, component_pdfs)
+        return np.exp(self.lpdf(X))
 
     def lpdf(self, X: ArrayLike) -> DType | NDArray[DType]:
         """Logarithms of the Probability Density Function.
@@ -285,13 +284,17 @@ class MixtureModel(Generic[DType]):
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         component_lpdfs = np.array([comp.lpdf(X) for comp in self.components])
         broadcast_shape = (self.n_components,) + (1,) * X.ndim
         log_weights = self.log_weights.reshape(broadcast_shape)
         log_terms = log_weights + component_lpdfs
 
-        return logsumexp(log_terms, axis=0)
+        result = logsumexp(log_terms, axis=0)
+        if is_scalar:
+            return result[()]
+        return result
 
     def loglikelihood(self, X: ArrayLike) -> DType:
         """Log-likelihood of the complete data :attr:`X`.
@@ -313,7 +316,7 @@ class MixtureModel(Generic[DType]):
         X = np.asarray(X, dtype=self.dtype)
         return np.sum(self.lpdf(X))
 
-    def generate(self, size: int) -> NDArray[DType]:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> DType | NDArray[DType]:
         """Generates random samples from the mixture model.
 
         First, a component is chosen based on the mixture weights. Then, a
@@ -322,28 +325,43 @@ class MixtureModel(Generic[DType]):
 
         Parameters
         ----------
-        size : int
-            The number of random samples to generate.
+        size : int | tuple[int, ...] | None, optional
+            Defining number of random variates.
+            - If None (default), returns a single scalar.
+            - If int, returns a 1D array of that length.
+            - If tuple, returns an array of that shape.
 
         Returns
         -------
-        NDArray[DType]
+        DType | NDArray[DType]
             A NumPy array containing the generated samples. Returns an
             empty array if :attr:`size` is not positive.
         """
 
-        if size == 0:
-            return np.array([], dtype=self.dtype)
+        if size is None:
+            n_samples = 1
+        elif isinstance(size, int):
+            n_samples = size
+            if n_samples == 0:
+                return np.array([], dtype=self.dtype)
+        else:
+            n_samples = int(np.prod(size))
+            if n_samples == 0:
+                return np.empty(size, dtype=self.dtype)
 
-        component_choices = np.random.choice(self.n_components, size=size, p=self.weights)
-
+        component_choices = np.random.choice(self.n_components, size=n_samples, p=self.weights)
         counts = np.bincount(component_choices, minlength=self.n_components)
 
         samples_list = [self.components[i].generate(size=count) for i, count in enumerate(counts) if count > 0]
 
         samples = np.concatenate(samples_list)
         np.random.shuffle(samples)
-        return samples
+
+        if size is None:
+            return samples[0]
+
+        target_shape = (size,) if isinstance(size, int) else size
+        return samples.reshape(target_shape)
 
     def astype(self, new_dtype: type[DType]) -> "MixtureModel[DType]":
         """Creates a copy of the MixtureModel with a new data type.
