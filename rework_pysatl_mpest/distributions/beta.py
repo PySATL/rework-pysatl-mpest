@@ -191,6 +191,7 @@ class Beta(ContinuousDistribution):
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
@@ -199,6 +200,8 @@ class Beta(ContinuousDistribution):
         log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta).astype(dtype)
         result = log_pdf_standard - np.log(self.right_border - self.left_border)
 
+        if is_scalar:
+            return result[()]
         return result
 
     def _dlog_alpha(self, X):
@@ -420,26 +423,30 @@ class Beta(ContinuousDistribution):
             return np.array(gradients)
         return np.stack(gradients, axis=1)
 
-    def generate(self, size: int):
+    def generate(self, size: int | tuple[int, ...] | None = None):
         """Generates random samples from the distribution.
 
         Parameters
         ----------
-        size : int
-            The number of random samples to generate.
+        size : int | tuple[int, ...] | None, optional
+            Defining number of random variates.
+            - If None (default), returns a single scalar.
+            - If int, returns a 1D array of that length.
+            - If tuple, returns an array of that shape.
 
         Returns
         -------
-        NDArray[DType]
-            A NumPy array containing the generated samples.
+        DType | NDArray[DType]
+            A scalar or NumPy array containing the generated samples.
         """
 
-        return np.asarray(
-            beta_dist.rvs(
-                self.alpha, self.beta, loc=self.left_border, scale=self.right_border - self.left_border, size=size
-            ),
-            dtype=self.dtype,
+        samples = beta_dist.rvs(
+            self.alpha, self.beta, loc=self.left_border, scale=self.right_border - self.left_border, size=size
         )
+
+        if size is None:
+            return self.dtype(samples)
+        return np.asarray(samples, dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.

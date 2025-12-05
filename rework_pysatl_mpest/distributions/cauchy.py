@@ -155,15 +155,20 @@ class Cauchy(ContinuousDistribution[DType]):
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=self.dtype)
         dtype = self.dtype
 
-        return (
+        result = (
             np.log(dtype(1.0))
             - np.log(dtype(np.pi))
             - np.log(self.scale)
             - np.log(dtype(1.0) + ((X - self.loc) / self.scale) ** 2)
         )
+
+        if is_scalar:
+            return result[()]
+        return result
 
     def _dlog_loc(self, X):
         """Partial derivative of the lpdf w.r.t. the :attr:`loc` parameter.
@@ -276,21 +281,28 @@ class Cauchy(ContinuousDistribution[DType]):
             return np.array(gradients)
         return np.stack(gradients, axis=1)
 
-    def generate(self, size: int):
+    def generate(self, size: int | tuple[int, ...] | None = None):
         """Generates random samples from the distribution.
 
         Parameters
         ----------
-        size : int
-            The number of random samples to generate.
+        size : int | tuple[int, ...] | None, optional
+            Defining number of random variates.
+            - If None (default), returns a single scalar.
+            - If int, returns a 1D array of that length.
+            - If tuple, returns an array of that shape.
 
         Returns
         -------
-        NDArray[DType]
-            A NumPy array containing the generated samples.
+        DType | NDArray[DType]
+            A scalar or NumPy array containing the generated samples.
         """
 
-        return np.asarray(cauchy.rvs(loc=self.loc, scale=self.scale, size=size), dtype=self.dtype)
+        samples = cauchy.rvs(loc=self.loc, scale=self.scale, size=size)
+
+        if size is None:
+            return self.dtype(samples)
+        return np.asarray(samples, dtype=self.dtype)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
