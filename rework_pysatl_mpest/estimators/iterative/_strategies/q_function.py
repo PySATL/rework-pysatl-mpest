@@ -166,7 +166,7 @@ def _(
         denominator = weighted_sum_X / N_j - loc
 
         if denominator > NUMERICAL_TOLERANCE:
-            new_params[Exponential.PARAM_RATE] = dtype(1.0 / denominator)
+            new_params[Exponential.PARAM_RATE] = dtype(1.0) / denominator
         else:
             # If the weighted average is too close to loc,
             # leave rate unchanged to avoid infinity.
