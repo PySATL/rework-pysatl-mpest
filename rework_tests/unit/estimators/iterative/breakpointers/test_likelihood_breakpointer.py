@@ -45,8 +45,7 @@ class TestInitialization:
     def test_initialization_with_valid_threshold(self, threshold: float):
         bp = LikelihoodBreakpointer(threshold)
         assert bp.threshold == threshold
-        assert bp._L_old is None
-        assert bp._L_new is None
+        assert bp._likelihood_old is None
 
     def test_initialization_rejects_non_positive_threshold(self):
         with pytest.raises(ValueError, match="The threshold must be greater than 0"):
@@ -65,7 +64,7 @@ class TestCheckLogic:
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.1)
         assert not bp.check(state)
-        assert bp._L_old == FIRST_CALL
+        assert bp._likelihood_old == FIRST_CALL
 
     def test_convergence_detected(self, mock_mixture_with_likelihood, dummy_state_factory):
         mixture = mock_mixture_with_likelihood([10.0, 10.05])
@@ -97,5 +96,5 @@ class TestCheckLogic:
         assert bp.check(state)
 
         # Internal state reset
-        assert bp._L_old is None
-        assert bp._L_new is None
+        assert bp._likelihood_old is None
+        assert bp._likelihood_new is None
