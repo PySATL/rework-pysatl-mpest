@@ -11,7 +11,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
-from typing import Generic, Optional
+from typing import Generic
 
 from numpy.typing import NDArray
 
@@ -51,9 +51,9 @@ class IterationRecord(Generic[DType]):
     iteration: int
     mixture: MixtureModel[DType]
     X: NDArray[DType]
-    H: Optional[NDArray[DType]]
-    pruners_used: Optional[list[Pruner[DType]]]
-    error: Optional[Exception]
+    H: NDArray[DType] | None
+    pruners_used: list[Pruner[DType]] | None
+    error: Exception | None
 
 
 class IterationsHistory(Generic[DType]):

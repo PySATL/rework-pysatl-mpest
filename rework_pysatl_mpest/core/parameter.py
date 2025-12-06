@@ -10,7 +10,8 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from typing import TYPE_CHECKING, Callable, Optional, Union, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Optional, Union, overload
 
 import numpy as np
 
