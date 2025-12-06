@@ -11,7 +11,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
-from typing import Optional
 
 from numpy import float64
 from numpy.typing import NDArray
@@ -51,9 +50,9 @@ class IterationRecord:
     iteration: int
     mixture: MixtureModel
     X: NDArray[float64]
-    H: Optional[NDArray[float64]]
-    pruners_used: Optional[list[Pruner]]
-    error: Optional[Exception]
+    H: NDArray[float64] | None
+    pruners_used: list[Pruner] | None
+    error: Exception | None
 
 
 class IterationsHistory:

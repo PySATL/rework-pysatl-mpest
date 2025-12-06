@@ -6,9 +6,9 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from collections.abc import Callable
 from copy import copy
 from itertools import permutations
-from typing import Callable
 
 import numpy as np
 

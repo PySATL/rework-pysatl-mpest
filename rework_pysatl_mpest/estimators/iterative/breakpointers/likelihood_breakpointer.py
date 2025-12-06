@@ -5,7 +5,6 @@ __author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from typing import Optional
 
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
@@ -18,6 +17,7 @@ class LikelihoodBreakpointer(Breakpointer):
     absolute difference between the current and previous log-likelihood values
     falls below a specified threshold:
 
+    .. math::
         |L_{t+1} - L_t| < threshold
 
     It tracks the log-likelihood of the current mixture model on the observed
@@ -41,15 +41,16 @@ class LikelihoodBreakpointer(Breakpointer):
 
     Methods
     -------
-    check(state: PipelineState) -> bool
-        Returns True if convergence is detected, False otherwise.
+    .. autosummary::
+        :toctree: generated/
+
+        check
     """
 
     def __init__(self, threshold: float):
         self._validate(threshold)
         self.threshold = threshold
-        self._L_old: Optional[float] = None
-        self._L_new: Optional[float] = None
+        self._likelihood_old: float | None = None
 
     def _validate(self, threshold: float):
         """Validates the threshold parameter."""
@@ -71,21 +72,23 @@ class LikelihoodBreakpointer(Breakpointer):
         Returns
         -------
         bool
-            True if |L_new - L_old| < threshold (converged), False otherwise.
+            .. math::
+                \text{True if } |L_{\text{new}} - L_{\text{old}}| < \text{threshold, False otherwise}
+
             On the first call (no previous likelihood), returns False and
             initializes internal state.
         """
-        self._L_new = state.curr_mixture.loglikelihood(state.X)
+        self._likelihood_new: float | None = state.curr_mixture.loglikelihood(state.X)
 
         # First iteration: cannot compare, so just store and continue
-        if self._L_old is None:
-            self._L_old = self._L_new
+        if self._likelihood_old is None:
+            self._likelihood_old = self._likelihood_new
             return False
 
-        if abs(self._L_new - self._L_old) < self.threshold:
-            self._L_old = None
-            self._L_new = None
+        if abs(self._likelihood_new - self._likelihood_old) < self.threshold:
+            self._likelihood_old = None
+            self._likelihood_new = None
             return True
         else:
-            self._L_old = self._L_new
+            self._likelihood_old = self._likelihood_new
             return False

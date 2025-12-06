@@ -11,7 +11,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
-from typing import Optional
 
 from numpy import float64
 from numpy.typing import NDArray
@@ -51,7 +50,7 @@ class PipelineState:
     """
 
     X: NDArray[float64]
-    H: Optional[NDArray[float64]]
-    prev_mixture: Optional[MixtureModel]
+    H: NDArray[float64] | None
+    prev_mixture: MixtureModel | None
     curr_mixture: MixtureModel
-    error: Optional[Exception]
+    error: Exception | None

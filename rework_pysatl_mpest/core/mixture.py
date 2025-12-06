@@ -9,7 +9,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy import float64
@@ -72,7 +72,7 @@ class MixtureModel:
         generate
     """
 
-    def __init__(self, components: Sequence["ContinuousDistribution"], weights: Optional[ArrayLike] = None):
+    def __init__(self, components: Sequence["ContinuousDistribution"], weights: ArrayLike | None = None):
         n_components = len(components)
         if n_components == 0:
             raise ValueError("List of components cannot be an empty")
@@ -85,9 +85,9 @@ class MixtureModel:
 
         self._components = list(components)
         self._log_weights = np.log(weights + 1e-30)
-        self._cached_weights: Optional[NDArray[float64]] = None
+        self._cached_weights: NDArray[float64] | None = None
 
-        self._sorted_pairs_cache: Optional[list[tuple[ContinuousDistribution, float]]] = None
+        self._sorted_pairs_cache: list[tuple[ContinuousDistribution, float]] | None = None
 
     def _validate_weights(self, n_components: int, weights: NDArray[float64]):
         """Validates the component weights.

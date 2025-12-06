@@ -11,7 +11,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from abc import ABC, abstractmethod
-from typing import Callable
+from collections.abc import Callable
 
 
 class Optimizer(ABC):

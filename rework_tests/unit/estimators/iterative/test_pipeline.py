@@ -5,8 +5,8 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from collections.abc import Callable
 from copy import copy
-from typing import Callable
 
 import numpy as np
 import pytest
