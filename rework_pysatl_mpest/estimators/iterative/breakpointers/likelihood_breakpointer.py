@@ -6,11 +6,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from ....typings import DType
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
 
 
-class LikelihoodBreakpointer(Breakpointer):
+class LikelihoodBreakpointer(Breakpointer[DType]):
     """Stops the pipeline when the log-likelihood of the mixture converges.
 
     This breakpointer terminates the iterative estimation process when the
@@ -25,13 +26,13 @@ class LikelihoodBreakpointer(Breakpointer):
 
     Parameters
     ----------
-    threshold : float
+    threshold : DType
         The convergence threshold for the log-likelihood difference.
         Must be a positive number.
 
     Attributes
     ----------
-    threshold : float
+    threshold : DType
         The convergence threshold.
 
     Raises
@@ -47,17 +48,17 @@ class LikelihoodBreakpointer(Breakpointer):
         check
     """
 
-    def __init__(self, threshold: float):
+    def __init__(self, threshold: DType):
         self._validate(threshold)
         self.threshold = threshold
-        self._likelihood_old: float | None = None
+        self._likelihood_old: DType | None = None
 
-    def _validate(self, threshold: float):
+    def _validate(self, threshold: DType):
         """Validates the threshold parameter."""
-        if threshold <= 0:
+        if threshold <= 0.0:
             raise ValueError("The threshold must be greater than 0")
 
-    def check(self, state: PipelineState) -> bool:
+    def check(self, state: PipelineState[DType]) -> bool:
         """Checks if the log-likelihood has converged.
 
         Computes the current log-likelihood of the mixture on the data in
@@ -65,7 +66,7 @@ class LikelihoodBreakpointer(Breakpointer):
 
         Parameters
         ----------
-        state : PipelineState
+        state : PipelineState[DType]
             The current state of the pipeline, which must contain a valid
             `curr_mixture` and data `X`.
 
@@ -78,17 +79,16 @@ class LikelihoodBreakpointer(Breakpointer):
             On the first call (no previous likelihood), returns False and
             initializes internal state.
         """
-        self._likelihood_new: float | None = state.curr_mixture.loglikelihood(state.X)
+        _likelihood_new: DType = state.curr_mixture.loglikelihood(state.X)
 
         # First iteration: cannot compare, so just store and continue
         if self._likelihood_old is None:
-            self._likelihood_old = self._likelihood_new
+            self._likelihood_old = _likelihood_new
             return False
 
-        if abs(self._likelihood_new - self._likelihood_old) < self.threshold:
+        if abs(_likelihood_new - self._likelihood_old) < self.threshold:
             self._likelihood_old = None
-            self._likelihood_new = None
             return True
         else:
-            self._likelihood_old = self._likelihood_new
+            self._likelihood_old = _likelihood_new
             return False

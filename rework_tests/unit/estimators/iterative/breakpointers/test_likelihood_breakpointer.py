@@ -11,6 +11,8 @@ import pytest
 from rework_pysatl_mpest.estimators.iterative import PipelineState
 from rework_pysatl_mpest.estimators.iterative.breakpointers.likelihood_breakpointer import LikelihoodBreakpointer
 
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
+
 
 @pytest.fixture
 def mock_mixture_with_likelihood():
@@ -40,52 +42,54 @@ def dummy_state_factory():
 # --- Initialization Tests ---
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestInitialization:
     @pytest.mark.parametrize("threshold", [0.01, 0.5, 10.0])
-    def test_initialization_with_valid_threshold(self, threshold: float):
-        bp = LikelihoodBreakpointer(threshold)
+    def test_initialization_with_valid_threshold(self, dtype, threshold):
+        bp = LikelihoodBreakpointer[dtype](threshold)
         assert bp.threshold == threshold
         assert bp._likelihood_old is None
 
-    def test_initialization_rejects_non_positive_threshold(self):
+    def test_initialization_rejects_non_positive_threshold(self, dtype):
         with pytest.raises(ValueError, match="The threshold must be greater than 0"):
-            LikelihoodBreakpointer(0.0)
+            LikelihoodBreakpointer[dtype](0.0)
         with pytest.raises(ValueError, match="The threshold must be greater than 0"):
-            LikelihoodBreakpointer(-1.0)
+            LikelihoodBreakpointer[dtype](-1.0)
 
 
 # --- Core Logic Tests ---
 
 
+@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestCheckLogic:
-    def test_first_call_never_stops(self, mock_mixture_with_likelihood, dummy_state_factory):
+    def test_first_call_never_stops(self, mock_mixture_with_likelihood, dummy_state_factory, dtype):
         FIRST_CALL = 5.0
         mixture = mock_mixture_with_likelihood([5.0])
         state = dummy_state_factory(mixture)
-        bp = LikelihoodBreakpointer(0.1)
+        bp = LikelihoodBreakpointer[dtype](0.1)
         assert not bp.check(state)
         assert bp._likelihood_old == FIRST_CALL
 
-    def test_convergence_detected(self, mock_mixture_with_likelihood, dummy_state_factory):
+    def test_convergence_detected(self, mock_mixture_with_likelihood, dummy_state_factory, dtype):
         mixture = mock_mixture_with_likelihood([10.0, 10.05])
         state = dummy_state_factory(mixture)
-        bp = LikelihoodBreakpointer(0.1)
+        bp = LikelihoodBreakpointer[dtype](0.1)
 
         assert not bp.check(state)
         assert bp.check(state)
 
-    def test_no_convergence_continues(self, mock_mixture_with_likelihood, dummy_state_factory):
+    def test_no_convergence_continues(self, mock_mixture_with_likelihood, dummy_state_factory, dtype):
         mixture = mock_mixture_with_likelihood([5.0, 6.0])
         state = dummy_state_factory(mixture)
-        bp = LikelihoodBreakpointer(0.5)
+        bp = LikelihoodBreakpointer[dtype](0.5)
 
         assert not bp.check(state)
         assert not bp.check(state)
 
-    def test_reset_after_convergence_enables_reuse(self, mock_mixture_with_likelihood, dummy_state_factory):
+    def test_reset_after_convergence_enables_reuse(self, mock_mixture_with_likelihood, dummy_state_factory, dtype):
         mixture = mock_mixture_with_likelihood([10.0, 10.01, 20.0, 20.005])
         state = dummy_state_factory(mixture)
-        bp = LikelihoodBreakpointer(0.02)
+        bp = LikelihoodBreakpointer[dtype](0.02)
 
         # First cycle
         assert not bp.check(state)
@@ -97,4 +101,3 @@ class TestCheckLogic:
 
         # Internal state reset
         assert bp._likelihood_old is None
-        assert bp._likelihood_new is None
