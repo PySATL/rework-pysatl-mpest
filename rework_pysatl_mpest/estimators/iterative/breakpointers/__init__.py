@@ -7,5 +7,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from .step_breakpointer import StepBreakpointer
+from .likelihood_breakpointer import LikelihoodBreakpointer
 
-__all__ = ["StepBreakpointer"]
+__all__ = ["StepBreakpointer", "LikelihoodBreakpointer"]

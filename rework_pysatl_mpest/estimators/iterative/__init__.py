@@ -18,7 +18,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from .breakpointer import Breakpointer
-from .breakpointers import StepBreakpointer
+from .breakpointers import StepBreakpointer, LikelihoodBreakpointer
 from .pipeline import Pipeline
 from .pipeline_state import PipelineState
 from .pipeline_step import PipelineStep
@@ -38,4 +38,5 @@ __all__ = [
     "PriorThresholdPruner",
     "Pruner",
     "StepBreakpointer",
+    "LikelihoodBreakpointer"
 ]

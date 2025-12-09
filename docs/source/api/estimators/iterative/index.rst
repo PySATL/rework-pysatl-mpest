@@ -47,6 +47,7 @@ Breakpointers (`Breakpointer`):
    :template: class.rst
 
    ~StepBreakpointer
+   ~LikelihoodBreakpointer
 
 Pruners (`Pruner`):
 ~~~~~~~~~~~~~~~~~~~
