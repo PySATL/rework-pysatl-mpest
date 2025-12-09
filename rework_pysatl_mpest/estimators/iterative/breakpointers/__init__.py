@@ -6,7 +6,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from .step_breakpointer import StepBreakpointer
 from .likelihood_breakpointer import LikelihoodBreakpointer
+from .step_breakpointer import StepBreakpointer
 
-__all__ = ["StepBreakpointer", "LikelihoodBreakpointer"]
+__all__ = ["LikelihoodBreakpointer", "StepBreakpointer"]

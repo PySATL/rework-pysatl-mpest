@@ -2,17 +2,16 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from mpest import MixtureDistribution
-from mpest.em.breakpointers import StepCountBreakpointer
-from mpest.em.distribution_checkers import FiniteChecker, PriorProbabilityThresholdChecker
-from mpest.models import ExponentialModel, GaussianModel, WeibullModelExp
-
 from experimental_env.experiment.estimators import LikelihoodEstimator, LMomentsEstimator
 from experimental_env.experiment.experiment_description import StepDescription
 from experimental_env.experiment.experiment_executors.random_executor import RandomExperimentExecutor
 from experimental_env.experiment.experiment_parser import ExperimentParser
 from experimental_env.preparation.dataset_generator import RandomDatasetGenerator
 from experimental_env.preparation.dataset_parser import SamplesDatasetParser
+from mpest import MixtureDistribution
+from mpest.em.breakpointers import StepCountBreakpointer
+from mpest.em.distribution_checkers import FiniteChecker, PriorProbabilityThresholdChecker
+from mpest.models import ExponentialModel, GaussianModel, WeibullModelExp
 
 
 def compare_mixtures(mxt_1: MixtureDistribution, mxt_2: MixtureDistribution):
