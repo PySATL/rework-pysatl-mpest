@@ -11,7 +11,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from abc import ABC, abstractmethod
-from typing import Callable, Generic
+from collections.abc import Callable
+from typing import Generic
 
 from ..typings import DType
 
