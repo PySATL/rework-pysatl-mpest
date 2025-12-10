@@ -27,12 +27,16 @@ class MaximizationStrategy(Enum):
     QFUNCTION
         Indicates that the optimization should maximize the Q-function,
         which is the expected value of the complete-data log-likelihood.
+    OBSERVED_DATA_LIKELIHOOD
+        Indicates that the optimization should maximize the observed-data likelihood
+        of the mixture.
     MOMENTS
-    Indicates that the optimization should use the Method of Moments,
-    matching theoretical moments to empirical weighted moments.
+        Indicates that the optimization should use the Method of Moments,
+        matching theoretical moments to empirical weighted moments.
     """
 
     QFUNCTION = auto()
+    OBSERVED_DATA_LIKELIHOOD = auto()
     MOMENTS = auto()
 
 
