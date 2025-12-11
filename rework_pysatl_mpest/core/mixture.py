@@ -128,7 +128,8 @@ class MixtureModel(Generic[DType]):
         if np.any(weights < 0):
             raise ValueError("Weights must be positive.")
 
-        if not np.isclose(np.sum(weights), self.dtype(1.0)):
+        atol = np.sqrt(np.finfo(self.dtype).eps)
+        if not np.isclose(np.sum(weights), self.dtype(1.0), atol=atol):
             raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
 
     @property
@@ -391,7 +392,8 @@ class MixtureModel(Generic[DType]):
         if self.dtype is new_dtype:
             return self
 
-        new_mixture = MixtureModel(components=self.components, weights=self.weights.copy(), dtype=new_dtype)
+        new_mixture = MixtureModel(components=self.components, dtype=new_dtype)
+        new_mixture.log_weights = self.log_weights.astype(new_dtype)
         return new_mixture
 
     def __getitem__(self, key: int) -> "ContinuousDistribution[DType]":
@@ -434,7 +436,8 @@ class MixtureModel(Generic[DType]):
         """
 
         copied_components = [copy(component) for component in self._components]
-        new_mixture = MixtureModel(components=copied_components, weights=self.weights.copy(), dtype=self.dtype)
+        new_mixture = MixtureModel(components=copied_components, dtype=self.dtype)
+        new_mixture.log_weights = self.log_weights
         return new_mixture
 
     def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ContinuousDistribution[DType]", DType]]:

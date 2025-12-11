@@ -1,0 +1,21 @@
+{
+    "version": 1,
+    "project": "rework_pysatl_mpest",
+    "project_url": "https://github.com/PySATL/rework_pysatl_mpest",
+    "repo": "..",
+    "branches": ["refactor/rework-arch"],
+    "show_commit_url": "https://github.com/PySATL/rework-pysatl-mpest/commits",
+    "environment_type": "virtualenv",
+    "install_command": ["python -m pip install -e ."],
+    "matrix": {
+        "req": {
+            "numpy": [],
+            "scipy": [],
+            "scikit-learn": []
+        }
+    },
+    "benchmark_dir": "benchmarks",
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html"
+}

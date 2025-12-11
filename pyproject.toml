@@ -34,6 +34,7 @@ hypothesis = "^6.131.7"
 types-pyyaml = "^6.0.12.20250516"
 types-tqdm = "^4.67.0.20250516"
 pytest-cov = "^7.0.0"
+asv = "^0.6.5"
 
 [tool.poetry.group.experiments.dependencies]
 tqdm = "^4.67.1"
