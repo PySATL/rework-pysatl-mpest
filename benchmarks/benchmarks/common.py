@@ -6,6 +6,7 @@ __author__ = "Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+import random
 import numpy as np
 from rework_pysatl_mpest.distributions import (
     Beta,
@@ -16,6 +17,13 @@ from rework_pysatl_mpest.distributions import (
     Uniform,
     Weibull,
 )
+
+# Various pre-crafted datasets/variables for testing
+# !!! Must not be changed -- only appended !!!
+RNG_SEED = 42
+random.seed(RNG_SEED)
+np.random.seed(RNG_SEED)
+RNG_GENERATOR = np.random.default_rng(RNG_SEED)
 
 # Mapping string names to numpy dtypes
 DTYPES_MAP = {

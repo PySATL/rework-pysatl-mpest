@@ -7,10 +7,9 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import warnings
-import numpy as np
 from copy import copy
 
-from .common import Benchmark, DISTRIBUTIONS, DTYPES_MAP, GENERATE_SHAPES, SAMPLE_SIZES, get_components
+from .common import Benchmark, DISTRIBUTIONS, DTYPES_MAP, GENERATE_SHAPES, SAMPLE_SIZES, get_components, RNG_GENERATOR
 
 
 
@@ -35,12 +34,10 @@ class DistributionMethods(Benchmark):
         # Initialize distribution
         self.dist = get_components(dist_name, dtype, 1)[0]
 
-        # Generate stable input data
-        rng = np.random.default_rng(42)
         # Generate X via the distribution itself to ensure valid domain support
         self.X = self.dist.generate(n_samples).astype(dtype)
         # Probabilities for PPF
-        self.P = np.linspace(0.01, 0.99, n_samples).astype(dtype)
+        self.P = RNG_GENERATOR.uniform(0.01, 0.99, size=n_samples).astype(dtype)
 
     # --- Time Benchmarks ---
 

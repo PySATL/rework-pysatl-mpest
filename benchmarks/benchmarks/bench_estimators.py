@@ -12,13 +12,12 @@ from copy import copy
 import numpy as np
 
 from rework_pysatl_mpest.core import MixtureModel
-from rework_pysatl_mpest.distributions import Exponential, Normal, Pareto, Weibull
 from rework_pysatl_mpest.estimators import ECM
 from rework_pysatl_mpest.estimators.iterative import ExpectationStep, PipelineState, OptimizationBlock, \
     MaximizationStrategy, MaximizationStep
 from rework_pysatl_mpest.estimators.iterative.breakpointers import StepBreakpointer
 from rework_pysatl_mpest.optimizers import ScipyNelderMead
-from .common import Benchmark, DTYPES_MAP, SAMPLE_SIZES, get_components, DISTRIBUTIONS
+from .common import Benchmark, DTYPES_MAP, SAMPLE_SIZES, get_components, DISTRIBUTIONS, RNG_GENERATOR
 
 
 class StepOverhead(Benchmark):
@@ -111,8 +110,6 @@ class ECMAnalyticalCleanWithStepBreakpointer(Benchmark):
         if dtype_name == "float16":
             warnings.simplefilter("ignore", RuntimeWarning)
 
-        rng = np.random.default_rng(42)
-
         dtype = DTYPES_MAP[dtype_name]
         true_comps = get_components(dist_name, dtype, n_components)
         self.X = MixtureModel(true_comps).generate(n_samples)
@@ -158,12 +155,10 @@ class ECMAnalyticalOverflow(Benchmark):
     def setup(self, dist_name, n_components, n_samples, dtype_name):
         dtype = DTYPES_MAP[dtype_name]
 
-        # 1. Create a scenario that GUARANTEES overflow in float16
-        rng = np.random.default_rng(42)
         overflow_val = 100.0  # Creates gradients/exp values > 65504 for some distributions
 
         # Create data clustered around a value that stresses float16 math
-        X = rng.normal(loc=overflow_val, scale=overflow_val * 0.05, size=n_samples).astype(dtype)
+        X = RNG_GENERATOR.normal(loc=overflow_val, scale=overflow_val * 0.05, size=n_samples).astype(dtype)
         if dist_name in ["Exponential", "Pareto", "Weibull"]:
             X = np.abs(X)
         self.X = X
