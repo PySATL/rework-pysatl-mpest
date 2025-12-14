@@ -13,7 +13,7 @@ import pytest
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.estimators.iterative import Breakpointer, Pipeline, PipelineState, PipelineStep, Pruner
-from rework_pysatl_mpest.estimators.iterative._iteraion_history import IterationRecord, IterationsHistory
+from rework_pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
 from rework_pysatl_mpest.estimators.iterative.steps import MaximizationStep, OptimizationBlock
 from rework_pysatl_mpest.exceptions import NumericalStabilityError
 
