@@ -344,5 +344,5 @@ class ClusterizeInitializer(Initializer):
 
         total_weight = sum(weights)
         normalized_weights: list[float] = [w / total_weight for w in weights]
-        current_mixture = MixtureModel(distributions, normalized_weights)
+        current_mixture: MixtureModel = MixtureModel(distributions, normalized_weights)
         return current_mixture
