@@ -11,6 +11,7 @@ from rework_pysatl_mpest.core import MixtureModel, Parameter
 from rework_pysatl_mpest.distributions import ContinuousDistribution
 from rework_pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
 from rework_pysatl_mpest.estimators.iterative._strategies import observed_data_likelihood_strategy
+from rework_pysatl_mpest.exceptions import NumericalStabilityError
 from rework_pysatl_mpest.optimizers import Optimizer
 
 DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
@@ -255,3 +256,57 @@ def test_odl_strategy_handles_single_component_mixture(mocker):
     expected = -np.log(2.0)
 
     assert np.isclose(res, expected)
+
+
+def test_odl_strategy_calls_overflow_handler_on_inf(parametrized_setup, mocker):
+    """
+    Verifies that handle_numerical_overflow is called when the target function returns infinity.
+    """
+
+    class InfinitePdfDistribution(DummyDistribution):
+        def pdf(self, X):
+            return np.full_like(X, np.inf)
+
+    _, state, block, optimizer, dtype = parametrized_setup
+
+    bad_comp = InfinitePdfDistribution(param1=1.0, param2=1.0, dtype=dtype)
+
+    state.curr_mixture.components[0] = bad_comp
+    state.curr_mixture.weights[0] = 0.5
+
+    class MockOptimizer(Optimizer):
+        def minimize(self, target, initial_vector):
+            target(initial_vector)
+            return initial_vector
+
+    observed_data_likelihood_strategy(bad_comp, state, block, MockOptimizer())
+
+    assert state.error is not None
+    assert isinstance(state.error, NumericalStabilityError)
+
+
+def test_odl_strategy_handles_zero_probability_using_tolerance(parametrized_setup):
+    """
+    Verifies that numerical tolerance is applied prevents log(0).
+    """
+
+    target_comp, state, block, optimizer, dtype = parametrized_setup
+
+    target_comp._pdf_value = 0.0
+    state.curr_mixture.weights = np.array([1.0, 0.0], dtype=dtype)
+
+    observed_data_likelihood_strategy(target_comp, state, block, optimizer)
+
+    args, _ = optimizer.minimize.call_args
+    captured_target = args[0]
+
+    res = captured_target([1.0, 2.0])
+
+    # PDF = 0.
+    # mixture_pdf = max(0, tiny) = tiny
+    # result = -sum(log(tiny))
+    tol = np.finfo(dtype).tiny
+    expected = -1 * len(state.X) * np.log(tol)
+
+    assert np.isclose(res, expected, rtol=1e-5)
+    assert not np.isinf(res)
