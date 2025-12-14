@@ -1,12 +1,12 @@
 {
     "version": 1,
     "project": "rework_pysatl_mpest",
-    "project_url": "https://github.com/PySATL/rework_pysatl_mpest",
+    "project_url": "https://github.com/PySATL/rework-pysatl-mpest",
     "repo": "..",
     "branches": ["refactor/rework-arch"],
     "show_commit_url": "https://github.com/PySATL/rework-pysatl-mpest/commits",
     "environment_type": "virtualenv",
-    "install_command": ["python -m pip install -e ."],
+    "install_command": ["python -m pip install ."],
     "matrix": {
         "req": {
             "numpy": [],

@@ -50,20 +50,32 @@ def get_components(dist_name, dtype=np.float64, n_components=2):
     """
     Factory to create a list of components for a mixture.
     Ensures parameters are distinct enough to form valid clusters.
+
+    Parameters
+    ----------
+    dist_name : str
+        Name of the distribution class.
+    dtype : type, optional
+        Numpy dtype for the components.
+    n_components : int, optional
+        Number of components to generate.
+
+    Returns
+    -------
+    list[ContinuousDistribution]
+        List of instantiated distribution objects.
     """
 
     if dist_name == "Normal":
-        # Locs spread out: 0, 5, 10...
         return [Normal(loc=dtype(i * 5.0), scale=dtype(1.0 + i * 0.2), dtype=dtype)
                 for i in range(n_components)]
 
     elif dist_name == "Exponential":
-        # Rates decreasing: 1.0, 0.5, 0.33... (Means increasing)
         return [Exponential(loc=dtype(i * 2.0), rate=dtype(1.0 / (i + 1)), dtype=dtype)
                 for i in range(n_components)]
 
     elif dist_name == "Pareto":
-        return [Pareto(shape=dtype(3.0 - i * 0.5), scale=dtype(1.0 + i), dtype=dtype)
+        return [Pareto(shape=dtype(max(0.5, 3.0 - i * 0.5)), scale=dtype(1.0 + i), dtype=dtype)
                 for i in range(n_components)]
 
     elif dist_name == "Weibull":
@@ -71,8 +83,7 @@ def get_components(dist_name, dtype=np.float64, n_components=2):
                 for i in range(n_components)]
 
     elif dist_name == "Beta":
-        # Beta is tricky, let's keep it simple [0, 1]
-        return [Beta(alpha=dtype(2.0 + i), beta=dtype(5.0 - i), left_border=dtype(0.0), right_border=dtype(1.0),
+        return [Beta(alpha=dtype(2.0 + i * 0.5), beta=dtype(max(0.1, 5.0 - i * 0.5)), left_border=dtype(0.0), right_border=dtype(1.0),
                      dtype=dtype)
                 for i in range(n_components)]
 

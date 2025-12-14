@@ -212,7 +212,7 @@ class Cauchy(ContinuousDistribution[DType]):
 
         .. math::
 
-             \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\alpha} =
+             \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\beta} =
              \\frac{-\\beta^2 + x^2 - 2 \\cdot \\alpha \\cdot x + \\alpha^2}{\\beta^3 + \\beta \\cdot (x^2)
              - 2 \\cdot \\alpha \\cdot \\beta \\cdot x + \\beta \\cdot \\alpha^2}
 

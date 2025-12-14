@@ -23,17 +23,23 @@ from .common import Benchmark, DTYPES_MAP, SAMPLE_SIZES, get_components, DISTRIB
 class StepOverhead(Benchmark):
     """
     Isolates E-step and M-step to identify bottlenecks.
+
+    Warning: The M-step benchmark operates on a mutable state.
+    Since we only test analytical strategies (Q-Function for Exp/Normal/Pareto/Weibull),
+    the calculation time is largely independent of the parameter values,
+    so the benchmark drift is negligible.
     """
 
     params = (
         DISTRIBUTIONS,  # dist_name
         [2],  # n_components
         SAMPLE_SIZES,  # n_samples
-        list(DTYPES_MAP.keys()) # dtype_name
+        list(DTYPES_MAP.keys()), # dtype_name
+        [True, False]  # is_soft
     )
-    param_names = ["dist_name", "n_components", "n_samples", "dtype_name"]
+    param_names = ["dist_name", "n_components", "n_samples", "dtype_name", "is_soft"]
 
-    def setup(self, dist_name, n_components, n_samples, dtype_name):
+    def setup(self, dist_name, n_components, n_samples, dtype_name, is_soft):
         if dtype_name == "float16":
             warnings.simplefilter("ignore", RuntimeWarning)
 
@@ -50,7 +56,7 @@ class StepOverhead(Benchmark):
         self.X_analytical = self.mix_analytical.generate(n_samples)
 
         # --- Pipeline Components ---
-        self.e_step = ExpectationStep()
+        self.e_step = ExpectationStep(is_soft=is_soft)
 
         # Setup States
         # 1. State ready for E-step
@@ -72,16 +78,18 @@ class StepOverhead(Benchmark):
 
     # --- Benchmarks ---
 
-    def time_expectation_step(self, dist_name, n_components, n_samples, dtype_name):
+    def time_expectation_step(self, dist_name, n_components, n_samples, dtype_name, is_soft):
         """
         Measure calculating responsibilities (logsumexp overhead).
         """
         self.e_step.run(self.state_analytical_for_E)
 
-    def time_maximization_analytical(self, dist_name, n_components, n_samples, dtype_name):
+    def time_maximization_analytical(self, dist_name, n_components, n_samples, dtype_name, is_soft):
         """
-        Measure M-step using closed-form formulas (Normal).
-        Should be very fast.
+        Measure M-step using closed-form formulas.
+        This run twice:
+        1. With Soft H matrix (floats)
+        2. With Hard H matrix (0s and 1s)
         """
         if dist_name not in ["Exponential", "Normal", "Pareto", "Weibull"]:
             return
