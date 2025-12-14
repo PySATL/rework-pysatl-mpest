@@ -78,12 +78,7 @@ def _calculate_component_log_likelihood(model: ContinuousDistribution, X: np.nda
 
 def _calculate_mixture_log_likelihood(model: MixtureModel, X: np.ndarray) -> float:
     """Calculates the total log-likelihood for a mixture model"""
-    X_flattened = np.asarray(X)
-    dim_const = 2
-    if X_flattened.ndim == dim_const and X_flattened.shape[1] == 1:
-        X_flattened = X_flattened.flatten()
-
-    return np.sum(model.loglikelihood(X_flattened))
+    return np.sum(model.loglikelihood(X))
 
 
 def _calculate_component_aic(model: ContinuousDistribution, X: np.ndarray, H_k: np.ndarray) -> float:
@@ -201,27 +196,20 @@ def _match_permutations(context: Context) -> MatchingResult:
     best_weights: list[float] = []
     best_model_order: list[ContinuousDistribution] = []
 
-    for model_perm_indices in permutations(range(n_models)):
-        for cluster_perm_indices in permutations(range(n_valid_clusters), n_models):
-            perm_models = [
-                cached_fits[model_perm_indices[i]][cluster_perm_indices[i]]["model"] for i in range(n_models)
-            ]
-            perm_params = [
-                cached_fits[model_perm_indices[i]][cluster_perm_indices[i]]["params"] for i in range(n_models)
-            ]
-            perm_weights = [
-                float(cached_fits[model_perm_indices[i]][cluster_perm_indices[i]]["weight"]) for i in range(n_models)
-            ]
+    for cluster_perm_indices in permutations(range(n_valid_clusters), n_models):
+        perm_models = [cached_fits[i][cluster_perm_indices[i]]["model"] for i in range(n_models)]
+        perm_params = [cached_fits[i][cluster_perm_indices[i]]["params"] for i in range(n_models)]
+        perm_weights = [float(cached_fits[i][cluster_perm_indices[i]]["weight"]) for i in range(n_models)]
 
-            normalized_weights = [float(w) / sum(perm_weights) for w in perm_weights]
-            temp_mixture = MixtureModel(components=perm_models, weights=normalized_weights)
-            total_score = score_func_mixture(temp_mixture, X)
+        normalized_weights = [float(w) / sum(perm_weights) for w in perm_weights]
+        temp_mixture = MixtureModel(components=perm_models, weights=normalized_weights)
+        total_score = score_func_mixture(temp_mixture, X)
 
-            if total_score < best_total_score:
-                best_total_score = total_score
-                best_params = perm_params
-                best_weights = normalized_weights
-                best_model_order = [models[i] for i in model_perm_indices]
+        if total_score < best_total_score:
+            best_total_score = total_score
+            best_params = perm_params
+            best_weights = normalized_weights
+            best_model_order = [models[i] for i in range(n_models)]
 
     return best_model_order, best_params, best_weights
 

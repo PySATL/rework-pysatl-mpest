@@ -15,7 +15,7 @@ from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribu
 from rework_pysatl_mpest.distributions.exponential import Exponential
 from rework_pysatl_mpest.optimizers import Optimizer
 
-NUMERICAL_TOLERANCE = 0.33
+NUMERICAL_TOLERANCE = 1e-6
 
 
 @singledispatch
@@ -164,7 +164,7 @@ def q_function_strategy_exponential(
     >>> print(f"Estimated loc: {params['loc']:.3f}, rate: {params['rate']:.3f}")
     """
 
-    new_params = {}
+    new_params: dict = {}
     N_j = np.sum(H_j).item()
 
     if np.any(H_j > NUMERICAL_TOLERANCE):
