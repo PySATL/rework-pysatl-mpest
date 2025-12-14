@@ -89,7 +89,7 @@ class ClusterizeInitializer(Initializer):
         {EstimationStrategy.QFUNCTION: q_function_strategy}
     )
 
-    def __init__(self, is_accurate: bool, is_soft: bool, clusterizer: Any):
+    def __init__(self, is_accurate: bool, is_soft: bool, clusterizer: Any = None, optimizer: Optimizer | None = None):
         """Initializes the cluster-based initializer.
 
         Parameters
@@ -107,6 +107,7 @@ class ClusterizeInitializer(Initializer):
         self.is_soft = is_soft
         self.is_accurate = is_accurate
         self.clusterizer = clusterizer
+        self.optimizer = optimizer
         self.n_components: Optional[int] = None
         self.method: MatchingMethod = MatchingMethod.GREEDY
         self.score_func: ScoringMethod = ScoringMethod.LIKELIHOOD
@@ -135,6 +136,10 @@ class ClusterizeInitializer(Initializer):
             If the clusterizer doesn't have the required method for the specified
             clustering type, or if clustering fails.
         """
+
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+
         if self.is_soft and hasattr(clusterizer, "fit_transform"):
             try:
                 H = clusterizer.fit_transform(X)
@@ -285,7 +290,8 @@ class ClusterizeInitializer(Initializer):
         method: MatchingMethod,
         score_func: ScoringMethod,
         estimation_strategies: list[EstimationStrategy],
-        optimizer: Optimizer = ScipyNelderMead(),
+        optimizer: Optimizer | None = None,
+        clusterizer: Any = None,
     ) -> MixtureModel:
         """Performs cluster-based initialization of mixture model parameters.
 
@@ -316,11 +322,17 @@ class ClusterizeInitializer(Initializer):
         5. Returns the initialized mixture model
         """
         X = np.asarray(X, dtype=np.float64)
-        if X.ndim == 1:
-            X = X.reshape(-1, 1)
         self.models = dists
         self.n_components = len(dists)
-        H = self._clusterize(X, self.clusterizer)
+        if clusterizer is None and self.clusterizer is not None:
+            clusterizer = self.clusterizer
+        else:
+            raise TypeError("Clusterizer not found")
+        if optimizer is None and self.optimizer is not None:
+            optimizer = self.optimizer
+        else:
+            raise TypeError("Optimizer not found")
+        H = self._clusterize(X, clusterizer)
         self.method = method
         self.score_func = score_func
         self.estimation_strategies = estimation_strategies

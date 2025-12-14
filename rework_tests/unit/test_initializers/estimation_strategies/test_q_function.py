@@ -40,8 +40,9 @@ class TestQFunctionStrategyExponential:
 
     def test_all_H_j_below_tolerance(self):
         original_loc = self.component.loc
+        original_rate = self.component.rate
         X = np.array([1.5, 2.0, 2.5, 3.0, 3.5])
-        H_j = np.array([0.1, 0.2, 0.1, 0.2, 0.1])
+        H_j = np.array([NUMERICAL_TOLERANCE] * 5) / 10
 
         result = q_function_strategy(self.component, X, H_j, self.mock_optimizer)
 
@@ -49,11 +50,7 @@ class TestQFunctionStrategyExponential:
         assert Exponential.PARAM_RATE in result
 
         assert result[Exponential.PARAM_LOC] == original_loc
-
-        N_j = np.sum(H_j).item()
-        weighted_sum = np.dot(H_j, np.maximum(X - original_loc, NUMERICAL_TOLERANCE)).item()
-        expected_rate = N_j / weighted_sum
-        assert abs(result[Exponential.PARAM_RATE] - expected_rate) < COMPARISON_CONSTANT
+        assert abs(result[Exponential.PARAM_RATE] - original_rate) < COMPARISON_CONSTANT
 
     def test_weighted_sum_below_tolerance(self):
         X = np.array([1.001, 1.002, 1.003])
