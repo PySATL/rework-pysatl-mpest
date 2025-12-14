@@ -79,10 +79,10 @@ class IterationsHistory(Generic[DType]):
     >>> history = IterationsHistory(once_in_iterations=2)
     >>> # Inside pipeline loop:
     >>> record = IterationRecord(iteration=0, mixture=..., X=X, H=H, ...)
-    >>> history.log(record)
+    >>> history.save_record(record)
     >>> # Later:
     >>> print(len(history))  # number of stored records
-    >>> first = history[0]  # access first logged iteration
+    >>> first = history[0]  # access first saved iteration record
 
     Parameters
     ----------
@@ -96,9 +96,9 @@ class IterationsHistory(Generic[DType]):
     once_in_iterations : int
         The configured recording frequency.
     _counter : int
-        Internal counter tracking the total number of `log()` calls
+        Internal counter tracking the total number of `save_record()` calls
         (i.e., total iterations processed, not just recorded ones).
-    _logs : list[IterationRecord[DType]]
+    _history : list[IterationRecord[DType]]
         List of stored iteration records. Only iterations matching the
         recording frequency are appended.
 
@@ -112,22 +112,19 @@ class IterationsHistory(Generic[DType]):
     .. autosummary::
         :toctree: generated/
 
-        log
+        save_record
         reset
     """
 
     def __init__(self, once_in_iterations: int = 1) -> None:
-        """
-        Initialize a new PipelineLogger instance.
-        """
         if once_in_iterations < 1:
-            raise ValueError("once_in_iterations must be a positive integer")
+            raise ValueError("Parameter once_in_iterations must be a positive integer")
 
-        self._logs: list[IterationRecord[DType]] = []
+        self._history: list[IterationRecord[DType]] = []
         self._counter: int = 0
         self.once_in_iterations = once_in_iterations
 
-    def log(self, record: IterationRecord[DType]) -> None:
+    def save_record(self, record: IterationRecord[DType]) -> None:
         """Store an iteration record based on the configured frequency.
 
         The record is stored only if the current internal counter is divisible
@@ -138,11 +135,12 @@ class IterationsHistory(Generic[DType]):
         ----------
         record : IterationRecord[DType]
             The iteration snapshot to potentially store. The `record.iteration`
-            should ideally match the logger's internal state, though this is
+            should ideally match the instance's internal state, though this is
             not enforced.
         """
+
         if self._counter % self.once_in_iterations == 0:
-            self._logs.append(record)
+            self._history.append(record)
         self._counter += 1
 
     def reset(self) -> None:
@@ -151,7 +149,8 @@ class IterationsHistory(Generic[DType]):
         The recording frequency (`once_in_iterations`) is reset to 1
         to ensure a clean state for new runs.
         """
-        self._logs.clear()
+
+        self._history.clear()
         self._counter = 0
         self.once_in_iterations = 1
 
@@ -166,7 +165,8 @@ class IterationsHistory(Generic[DType]):
         int
             Number of `IterationRecord` objects currently stored.
         """
-        return len(self._logs)
+
+        return len(self._history)
 
     def __getitem__(self, index: int) -> IterationRecord[DType]:
         """Access a stored iteration record by index.
@@ -189,6 +189,7 @@ class IterationsHistory(Generic[DType]):
         IndexError
             If the index is out of range for the current number of stored records.
         """
+
         if index >= len(self) or index < -len(self):
             raise IndexError(f"Index {index} out of range for container containing {len(self)} elements")
-        return self._logs[index]
+        return self._history[index]

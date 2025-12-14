@@ -22,7 +22,7 @@ from ...core import MixtureModel
 from ...exceptions import NumericalStabilityError
 from ...typings import DType
 from ..base_estimator import BaseEstimator
-from ._logger import IterationRecord, IterationsHistory
+from ._iteration_history import IterationRecord, IterationsHistory
 from .breakpointer import Breakpointer
 from .pipeline_state import PipelineState
 from .pipeline_step import PipelineStep
@@ -56,8 +56,8 @@ class Pipeline(BaseEstimator[DType]):
         A sequence of strategies for removing components from the mixture model
         during fitting. Defaults to None, meaning no pruning is performed.
     once_in_iterations: int, optional
-        The logging frequency. A value of `n` means logging occurs every
-        `n` iterations. Defaults to 1 (log every iteration).
+        The iteration recording frequency. A value of `n` means recording occurs every
+        `n` iterations. Defaults to 1 (record every iteration).
 
     Attributes
     ----------
@@ -69,7 +69,7 @@ class Pipeline(BaseEstimator[DType]):
     pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    logger : IterationsHistory[DType]
+    history : IterationsHistory[DType]
         object that collects comprehensive information about each
         iteration of a :class:`Pipeline` estimator.
     Raises
@@ -86,8 +86,6 @@ class Pipeline(BaseEstimator[DType]):
 
         fit
     """
-
-    logger: IterationsHistory
 
     def __init__(
         self,
@@ -107,7 +105,7 @@ class Pipeline(BaseEstimator[DType]):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners) if pruners else []  # self.pruners will always be list
         self.steps = list(steps)
-        self.logger = IterationsHistory[DType](once_in_iterations)
+        self.history = IterationsHistory[DType](once_in_iterations)
 
     def _validate_steps(self, steps: list[PipelineStep]):
         """Validates the sequence of pipeline steps.
@@ -182,12 +180,12 @@ class Pipeline(BaseEstimator[DType]):
                 result_state = step.run(state)
                 step.clear_after_prune(removed_indices)
                 if result_state.error:
-                    if len(self.logger) > 0:
-                        self.logger[-1].error = result_state.error
+                    if len(self.history) > 0:
+                        self.history[-1].error = result_state.error
                     else:
-                        self.logger.log(
+                        self.history.save_record(
                             IterationRecord(
-                                self.logger._counter,
+                                self.history._counter,
                                 result_state.curr_mixture,
                                 result_state.X,
                                 result_state.H,
@@ -223,9 +221,9 @@ class Pipeline(BaseEstimator[DType]):
                 state, removed_components_indices = pruner.prune(state)
                 if len(removed_components_indices) != 0:
                     removed_indices.extend(removed_components_indices)
-            # Log
-            self.logger.log(
-                IterationRecord(self.logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
+            # Save iteration record
+            self.history.save_record(
+                IterationRecord(self.history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
             )
 
             # Checking stopping criteria

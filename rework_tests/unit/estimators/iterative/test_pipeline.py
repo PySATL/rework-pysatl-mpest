@@ -13,7 +13,7 @@ import pytest
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import Exponential
 from rework_pysatl_mpest.estimators.iterative import Breakpointer, Pipeline, PipelineState, PipelineStep, Pruner
-from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, IterationsHistory
+from rework_pysatl_mpest.estimators.iterative._iteraion_history import IterationRecord, IterationsHistory
 from rework_pysatl_mpest.estimators.iterative.steps import MaximizationStep, OptimizationBlock
 from rework_pysatl_mpest.exceptions import NumericalStabilityError
 
@@ -224,7 +224,7 @@ class TestPipelineInitialization:
         assert isinstance(pipeline.steps, list)
         assert isinstance(pipeline.breakpointers, list)
         assert isinstance(pipeline.pruners, list)
-        assert isinstance(pipeline.logger, IterationsHistory)
+        assert isinstance(pipeline.history, IterationsHistory)
 
     def test_init_with_none_pruners_creates_empty_list(self):
         """Tests that an empty list is created if pruners=None."""
@@ -244,18 +244,18 @@ class TestPipelineInitialization:
         with pytest.raises(ValueError, match="The 'breakpointers' list cannot be empty"):
             Pipeline(steps, [])
 
-    def test_init_creates_logger_with_correct_frequency(self):
-        """Tests that the logger is created with the correct frequency parameter."""
+    def test_init_creates_history_with_correct_frequency(self):
+        """Tests that the history is created with the correct frequency parameter."""
 
         steps = [MockSingleStep()]
         breakpointers = [MockBreakpointer(stop_at_iteration=2)]
 
         pipeline_default = Pipeline(steps, breakpointers)
-        assert pipeline_default.logger.once_in_iterations == 1
+        assert pipeline_default.history.once_in_iterations == 1
 
         pipeline_custom = Pipeline(steps, breakpointers, once_in_iterations=5)
         FREQUENCY_OF_LOGS = 5
-        assert pipeline_custom.logger.once_in_iterations == FREQUENCY_OF_LOGS
+        assert pipeline_custom.history.once_in_iterations == FREQUENCY_OF_LOGS
 
 
 # --- Step Validation Tests ---
@@ -494,25 +494,25 @@ class TestPipelineFit:
 
         assert call_log == expected_order
 
-    def test_fit_logs_iterations_to_public_logger(self, initial_mixture, sample_data):
-        """Tests that the fit method logs iterations to the public logger attribute."""
+    def test_fit_record_iterations_to_public_history(self, initial_mixture, sample_data):
+        """Tests that the fit method record iterations to the public history attribute."""
 
         steps = [MockSingleStep()]
         breakpointers = [MockBreakpointer(stop_at_iteration=3)]
 
         pipeline = Pipeline(steps, breakpointers)
 
-        assert len(pipeline.logger) == 0
+        assert len(pipeline.history) == 0
 
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
 
-        assert len(pipeline.logger) > 0
-        assert isinstance(pipeline.logger[0], IterationRecord)
-        assert pipeline.logger[0].iteration == 0
-        assert pipeline.logger[0].mixture == fitted_mixture
+        assert len(pipeline.history) > 0
+        assert isinstance(pipeline.history[0], IterationRecord)
+        assert pipeline.history[0].iteration == 0
+        assert pipeline.history[0].mixture == fitted_mixture
 
-    def test_fit_logs_with_custom_frequency(self, initial_mixture, sample_data):
-        """Tests that logging occurs at the specified frequency."""
+    def test_fit_records_with_custom_frequency(self, initial_mixture, sample_data):
+        """Tests that recording occurs at the specified frequency."""
 
         steps = [MockSingleStep()]
 
@@ -522,13 +522,13 @@ class TestPipelineFit:
 
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
 
-        EXPECTED_LEN_OF_LOGGER = 2
+        EXPECTED_LEN_OF_HISTORY = 2
         EXPECTED_ITERATIONS = [0, 2]
 
-        assert len(pipeline.logger) == EXPECTED_LEN_OF_LOGGER
-        assert pipeline.logger[0].iteration == EXPECTED_ITERATIONS[0]
-        assert pipeline.logger[1].iteration == EXPECTED_ITERATIONS[1]
-        assert pipeline.logger[1].mixture == fitted_mixture
+        assert len(pipeline.history) == EXPECTED_LEN_OF_HISTORY
+        assert pipeline.history[0].iteration == EXPECTED_ITERATIONS[0]
+        assert pipeline.history[1].iteration == EXPECTED_ITERATIONS[1]
+        assert pipeline.history[1].mixture == fitted_mixture
 
     def test_clear_after_prune_called_during_fit(self, initial_mixture, sample_data):
         """Tests that clear_after_prune is called for all steps during pipeline execution."""
