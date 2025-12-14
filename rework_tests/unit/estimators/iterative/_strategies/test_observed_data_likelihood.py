@@ -13,7 +13,7 @@ from rework_pysatl_mpest.estimators.iterative import MaximizationStrategy, Optim
 from rework_pysatl_mpest.estimators.iterative._strategies import observed_data_likelihood_strategy
 from rework_pysatl_mpest.optimizers import Optimizer
 
-DTYPES_TO_TEST = [np.float32, np.float64]
+DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
 
 # Helper classes for test isolation
 # ---------------------------------

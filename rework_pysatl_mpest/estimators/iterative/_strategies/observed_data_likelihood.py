@@ -43,7 +43,7 @@ def observed_data_likelihood_strategy(
     ----------
     component : ContinuousDistribution[DType]
         The distribution component type/instance used for dispatch and parameter metadata.
-    state : PipelineState
+    state : PipelineState[DType]
         The current state containing data X and current mixture parameters.
         (Note: Responsibilities H are not used in this strategy).
     block : OptimizationBlock
@@ -60,7 +60,7 @@ def observed_data_likelihood_strategy(
     X = state.X
     n_samples = X.shape[0]
     dtype = component.dtype
-    tol = dtype(NUMERICAL_TOLERANCE)
+    tol = np.finfo(dtype).tiny
 
     component_id = block.component_id
     params_to_optimize = sorted(list(block.params_to_optimize.intersection(component.params_to_optimize)))
@@ -72,8 +72,6 @@ def observed_data_likelihood_strategy(
     for i, comp in enumerate(state.curr_mixture.components):
         if i != component_id:
             background_term += temp_mixture.weights[i] * comp.pdf(X)
-
-    background_term = np.maximum(background_term, tol)
 
     def target(vector_params):
         target_comp.set_params_from_vector(params_to_optimize, vector_params)
