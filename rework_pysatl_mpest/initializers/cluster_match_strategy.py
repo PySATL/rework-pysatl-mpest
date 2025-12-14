@@ -202,7 +202,7 @@ def _match_permutations(context: Context) -> MatchingResult:
         perm_weights = [float(cached_fits[i][cluster_perm_indices[i]]["weight"]) for i in range(n_models)]
 
         normalized_weights = [float(w) / sum(perm_weights) for w in perm_weights]
-        temp_mixture = MixtureModel(components=perm_models, weights=normalized_weights)
+        temp_mixture: MixtureModel = MixtureModel(components=perm_models, weights=normalized_weights)
         total_score = score_func_mixture(temp_mixture, X)
 
         if total_score < best_total_score:
