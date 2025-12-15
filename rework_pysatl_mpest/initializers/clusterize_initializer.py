@@ -33,9 +33,6 @@ class ClusterizeInitializer(Initializer):
 
     Attributes
     ----------
-    MIN_SAMPLES : int
-        Minimum number of samples required for a cluster to be considered valid
-        for parameter estimation.
     n_components : Optional[int]
         Number of mixture components to initialize.
     estimation_strategies : list[EstimationStrategy]
@@ -84,12 +81,13 @@ class ClusterizeInitializer(Initializer):
     - Falls back to fast initialization if accurate initialization fails.
     """
 
-    MIN_SAMPLES = 10
     _estimation_strategies: ClassVar[Mapping[EstimationStrategy, Callable]] = MappingProxyType(
         {EstimationStrategy.QFUNCTION: q_function_strategy}
     )
 
-    def __init__(self, is_accurate: bool, is_soft: bool, clusterizer: Any = None, optimizer: Optimizer | None = None):
+    def __init__(
+        self, is_accurate: bool, is_soft: bool, clusterizer: Any = None, optimizer: Optimizer = ScipyNelderMead()
+    ):
         """Initializes the cluster-based initializer.
 
         Parameters
@@ -220,7 +218,6 @@ class ClusterizeInitializer(Initializer):
             estimation_strategies=estimation_funcs,
             method=self.method,
             score_func=self.score_func,
-            min_samples=self.MIN_SAMPLES,
             optimizer=optimizer,
         )
         if not all(params):
@@ -228,8 +225,7 @@ class ClusterizeInitializer(Initializer):
 
         new_distributions = []
         for i, dist in enumerate(distributions):
-            params_names = params[i].keys()
-            params_values = params[i].values()
+            params_names, params_values = zip(*params[i].items())
             dist.set_params_from_vector(list(params_names), list(params_values))
             new_distributions.append(dist)
 
@@ -273,8 +269,7 @@ class ClusterizeInitializer(Initializer):
             model = self.models[k]
             H_k = H[:, k]
             params = estimation_funcs[k](model, X, H_k, optimizer)
-            params_names = params.keys()
-            params_values = params.values()
+            params_names, params_values = zip(*params.items())
             model.set_params_from_vector(params_names, params_values)
             weight = np.sum(H, axis=0)[k] / len(X)
 
@@ -337,10 +332,8 @@ class ClusterizeInitializer(Initializer):
             clusterizer = self.clusterizer
         else:
             raise TypeError("Clusterizer not found")
-        if optimizer is None and self.optimizer is not None:
+        if optimizer is None:
             optimizer = self.optimizer
-        else:
-            raise TypeError("Optimizer not found")
         H = self._clusterize(X, clusterizer)
         self.method = method
         self.score_func = score_func
@@ -351,7 +344,5 @@ class ClusterizeInitializer(Initializer):
         else:
             distributions, weights = self._fast_init(X, H, optimizer)
 
-        total_weight = sum(weights)
-        normalized_weights: list[float] = [w / total_weight for w in weights]
-        current_mixture: MixtureModel = MixtureModel(distributions, normalized_weights)
+        current_mixture: MixtureModel = MixtureModel(distributions, weights)
         return current_mixture

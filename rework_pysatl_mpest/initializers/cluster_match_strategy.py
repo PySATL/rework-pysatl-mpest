@@ -86,8 +86,9 @@ def _estimate_and_score_component(
     temp_model.set_params_from_vector(list(new_params.keys()), list(new_params.values()))
 
     score = score_func(temp_model, X, H_k)
+    weight = float(np.sum(H_k) / len(X))
 
-    return {"model": temp_model, "params": new_params, "score": score, "weight": -1.0}
+    return {"model": temp_model, "params": new_params, "score": score, "weight": weight}
 
 
 def _calculate_component_log_likelihood(model: ContinuousDistribution, X: np.ndarray, H_k: np.ndarray) -> float:
@@ -142,8 +143,6 @@ def _precompute_fits(context: Context) -> list[list[FitResult]]:
     valid_clusters = context["valid_clusters"]
     score_func_component = context["score_func_component"]
     X, H, optimizer = context["X"], context["H"], context["optimizer"]
-    cluster_weights = context["cluster_weights"]
-    n_samples = len(X)
 
     cached_fits: list[list[FitResult]] = []
     computation_cache: dict[tuple, FitResult] = {}
@@ -155,7 +154,6 @@ def _precompute_fits(context: Context) -> list[list[FitResult]]:
 
             if cache_key not in computation_cache:
                 fit_result = _estimate_and_score_component(model, est_func, score_func_component, X, H[:, k], optimizer)
-                fit_result["weight"] = cluster_weights[k] / n_samples
                 computation_cache[cache_key] = fit_result
 
             row.append(computation_cache[cache_key])
@@ -204,7 +202,7 @@ def _match_greedy(context: Context) -> MatchingResult:
             if score < best_score:
                 best_score = fit_result["score"]
                 best_params = fit_result["params"]
-                best_cluster_weight = context["cluster_weights"][k] / len(context["X"])
+                best_cluster_weight = fit_result["weight"]
                 best_cluster_idx = k
 
         if best_cluster_idx != -1:
@@ -312,7 +310,6 @@ def match_clusters_for_models(
     estimation_strategies: list[Callable],
     method: MatchingMethod,
     score_func: ScoringMethod,
-    min_samples: int = 10,
     optimizer: Optimizer = ScipyNelderMead(),
 ) -> MatchingResult:
     """
@@ -332,8 +329,6 @@ def match_clusters_for_models(
         The cluster matching strategy (Greedy, Hungarian, etc.).
     score_func : ScoringMethod
         The scoring criterion (AIC, Likelihood) used for optimization.
-    min_samples : int, optional
-        Minimum samples for a cluster to be valid. Default is 10.
     optimizer : Optimizer, optional
         Optimizer used in estimation strategies. Default is ScipyNelderMead.
 
@@ -343,6 +338,7 @@ def match_clusters_for_models(
         A tuple containing (ordered models, parameters, weights).
     """
     n_models = len(models)
+    min_samples = int(len(X) * 0.01)
     valid_clusters, cluster_weights = _validate_clusters_distributions(
         H, n_models, len(estimation_strategies), min_samples
     )
