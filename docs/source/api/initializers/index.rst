@@ -40,5 +40,5 @@ Enumeration types that define available strategies for initialization.
    :nosignatures:
    :template: class.rst
 
-   ClusterMatchStrategy
+   MatchingMethod
    EstimationStrategy

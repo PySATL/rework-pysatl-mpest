@@ -13,10 +13,10 @@ from typing import Any, Callable, TypedDict
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from rework_pysatl_mpest.core import MixtureModel
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers.strategies import MatchingMethod, ScoringMethod
-from rework_pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
+from ..core import MixtureModel
+from ..distributions.continuous_dist import ContinuousDistribution
+from ..optimizers import Optimizer, ScipyNelderMead
+from .strategies import MatchingMethod, ScoringMethod
 
 MatchingResult = tuple[list[ContinuousDistribution], list[dict[str, float]], list[float]]
 Context = dict[str, Any]
@@ -24,7 +24,19 @@ ScoreFunc = Callable[[MixtureModel | ContinuousDistribution, np.ndarray, np.ndar
 
 
 class FitResult(TypedDict):
-    """A TypedDict to represent the result of a single model-cluster fit."""
+    """A TypedDict to represent the result of a single model-cluster fit.
+
+    Attributes
+    ----------
+    model : ContinuousDistribution
+        The distribution instance with estimated parameters.
+    params : dict[str, float]
+        The estimated parameters (e.g., {'loc': 0.5, 'scale': 1.0}).
+    score : float
+        The goodness-of-fit score (e.g., AIC or negative log-likelihood).
+    weight : float
+        The calculated weight of this component in the mixture.
+    """
 
     model: ContinuousDistribution
     params: dict[str, float]
@@ -35,7 +47,11 @@ class FitResult(TypedDict):
 def _validate_clusters_distributions(
     H: np.ndarray, models_count: int, estimation_strategies_count: int, min_samples: int
 ) -> tuple[list[int], list[float]]:
-    """Validates clusters and models for further comparison"""
+    """Validates cluster weights and alignment with models.
+
+    Ensures that the responsibility matrix H sums to 1, matches dimensions with
+    provided models, and filters out clusters with insufficient samples.
+    """
     if not np.allclose(np.sum(H, axis=1), 1, atol=1e-10):
         raise ValueError("Sum of H matrix weights must be equal to 1")
 
@@ -60,7 +76,11 @@ def _estimate_and_score_component(
     H_k: np.ndarray,
     optimizer: Optimizer,
 ) -> FitResult:
-    """Estimates parameters for a model-cluster pair and computes its score"""
+    """Estimates parameters for a model-cluster pair and computes its score.
+
+    Creates a copy of the model, estimates parameters using the provided strategy
+    on the weighted data (H_k), and calculates the fit score.
+    """
     temp_model = copy(model)
     new_params: dict[str, float] = estimation_func(temp_model, X, H_k, optimizer)
     temp_model.set_params_from_vector(list(new_params.keys()), list(new_params.values()))
@@ -99,8 +119,23 @@ def _calculate_mixture_aic(model: MixtureModel, X: np.ndarray) -> float:
 
 
 def _precompute_fits(context: Context) -> list[list[FitResult]]:
-    """
-    Pre-computes model fits
+    """Pre-computes and caches parameter estimates and scores for all pairs.
+
+    Iterates through every distribution model and every valid cluster to estimate
+    parameters and calculate the goodness-of-fit score. This results in a cost
+    matrix used by global optimization strategies (Hungarian and Permutations).
+
+    Parameters
+    ----------
+    context : Context
+        The execution context containing models, data (X), weights (H),
+        optimizers, and scoring functions.
+
+    Returns
+    -------
+    list[list[FitResult]]
+        A matrix (list of lists) where entry [i][j] contains the fit result
+        (params, score, weight) for the i-th model and the j-th cluster.
     """
     models = context["models"]
     estimation_strategies = context["estimation_strategies"]
@@ -130,7 +165,19 @@ def _precompute_fits(context: Context) -> list[list[FitResult]]:
 
 
 def _match_greedy(context: Context) -> MatchingResult:
-    """sequentially assign each model to its best available cluster"""
+    """Sequentially assigns each model to its best available cluster.
+
+    Iterates through the models in order. For each model, calculates the score
+    against all currently *unused* clusters and assigns the one with the best
+    (lowest) score.
+
+    Complexity: O(N^2)
+
+    Returns
+    -------
+    MatchingResult
+        Tuple containing the models, their estimated parameters, and weights.
+    """
     updated_params_list: list[dict[str, float]] = []
     model_weights: list[float] = []
     used_clusters = set()
@@ -169,7 +216,20 @@ def _match_greedy(context: Context) -> MatchingResult:
 
 
 def _match_hungarian(context: Context) -> MatchingResult:
-    """find optimal assignment that minimizes the total score"""
+    """Finds the optimal assignment that minimizes the sum of individual scores.
+
+    Uses the Hungarian algorithm (Munkres algorithm) via `linear_sum_assignment`
+    to solve the linear assignment problem. It constructs a cost matrix from
+    precomputed fits and finds the unique assignment of models to clusters that
+    minimizes the total cost.
+
+    Complexity: O(N^3)
+
+    Returns
+    -------
+    MatchingResult
+        Tuple containing the re-ordered models, their estimated parameters, and weights.
+    """
     models = context["models"]
     cached_fits = _precompute_fits(context)
 
@@ -186,7 +246,23 @@ def _match_hungarian(context: Context) -> MatchingResult:
 
 
 def _match_permutations(context: Context) -> MatchingResult:
-    """find assignment that minimizes the total mixture score"""
+    """Finds the assignment that minimizes the total mixture score via brute-force.
+
+    Generates all possible permutations of model-to-cluster assignments. Unlike
+    the Hungarian method, which minimizes the sum of component scores, this method
+    constructs a full `MixtureModel` for every permutation and evaluates the
+    `score_func_mixture` (e.g., total Mixture AIC).
+
+    This provides the most accurate initialization metric but is computationally
+    expensive for large numbers of components.
+
+    Complexity: O(N!)
+
+    Returns
+    -------
+    MatchingResult
+        Tuple containing the re-ordered models, their estimated parameters, and weights.
+    """
     models, X, score_func_mixture = context["models"], context["X"], context["score_func_mixture"]
     cached_fits = _precompute_fits(context)
     n_models, n_valid_clusters = len(models), len(cached_fits[0])
@@ -245,27 +321,26 @@ def match_clusters_for_models(
     Parameters
     ----------
     models : list[ContinuousDistribution]
-        List of distributions
+        List of distributions available for assignment.
     X : np.ndarray
-        Input data points
+        Input data points.
     H : np.ndarray
-        Weight matrix where H[i, k] is the probability of point i in cluster k
+        Weight matrix where H[i, k] is the probability of point i in cluster k.
     estimation_strategies : list[Callable]
-        Estimation functions for each model
-    method : MatchingMethod, optional
-        The cluster matching strategy to use. Default is MatchingMethod.GREEDY
-    score_func : ScoringMethod, optional
-        The scoring criterion to use for optimization. Can be AIC or LIKELIHOOD
-        Default is ScoringMethod.AIC
+        Estimation functions for each model type.
+    method : MatchingMethod
+        The cluster matching strategy (Greedy, Hungarian, etc.).
+    score_func : ScoringMethod
+        The scoring criterion (AIC, Likelihood) used for optimization.
     min_samples : int, optional
-        Minimum samples for a cluster to be valid. Default is 10
+        Minimum samples for a cluster to be valid. Default is 10.
     optimizer : Optimizer, optional
-        Optimizer used in estimation strategies. Default is ScipyNelderMead
+        Optimizer used in estimation strategies. Default is ScipyNelderMead.
 
     Returns
     -------
     MatchingResult
-        A tuple containing (ordered models, parameters, weights)
+        A tuple containing (ordered models, parameters, weights).
     """
     n_models = len(models)
     valid_clusters, cluster_weights = _validate_clusters_distributions(
