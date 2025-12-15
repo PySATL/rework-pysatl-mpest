@@ -13,14 +13,14 @@ from typing import Any, Callable, ClassVar, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers._estimation_strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.initializers.cluster_match_strategy import match_clusters_for_models
-from rework_pysatl_mpest.initializers.initializer import Initializer
-from rework_pysatl_mpest.initializers.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
-from rework_pysatl_mpest.optimizers import Optimizer
-from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
+from ..core.mixture import MixtureModel
+from ..distributions.continuous_dist import ContinuousDistribution
+from ..optimizers import Optimizer
+from ..optimizers.scipy_nelder_mead import ScipyNelderMead
+from ._estimation_strategies.q_function import q_function_strategy
+from .cluster_match_strategy import match_clusters_for_models
+from .initializer import Initializer
+from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 
 
 class ClusterizeInitializer(Initializer):
@@ -34,8 +34,8 @@ class ClusterizeInitializer(Initializer):
     Attributes
     ----------
     MIN_SAMPLES : int
-        Minimum number of samples required for a cluster to be considered valid.
-        Mapping of cluster matching strategies to their implementation functions.
+        Minimum number of samples required for a cluster to be considered valid
+        for parameter estimation.
     n_components : Optional[int]
         Number of mixture components to initialize.
     estimation_strategies : list[EstimationStrategy]
@@ -301,11 +301,20 @@ class ClusterizeInitializer(Initializer):
             Input data points for initialization.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize.
+        method : MatchingMethod
+            The algorithm used to match the clusters identified by the clusterizer
+            to the provided distribution models (e.g., Greedy, Hungarian).
+        score_func : ScoringMethod
+            The metric used to score the fit between a model and a cluster
+            (e.g., AIC, Likelihood) during the matching process.
         estimation_strategies : list[EstimationStrategy]
             List of estimation strategies for each distribution model.
         optimizer : Optimizer
             Optimizer that will be used in estimation strategies.
             By default, ScipyNelderMead.
+        clusterizer : Any
+            The clustering algorithm instance (e.g., KMeans, C-Means).
+            If not provided, the default clusterizer passed to __init__ is used.
 
         Returns
         -------

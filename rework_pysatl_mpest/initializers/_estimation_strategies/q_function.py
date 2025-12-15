@@ -11,9 +11,9 @@ from functools import singledispatch
 
 import numpy as np
 
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.distributions.exponential import Exponential
-from rework_pysatl_mpest.optimizers import Optimizer
+from ...distributions.continuous_dist import ContinuousDistribution
+from ...distributions.exponential import Exponential
+from ...optimizers import Optimizer
 
 NUMERICAL_TOLERANCE = 1e-6
 

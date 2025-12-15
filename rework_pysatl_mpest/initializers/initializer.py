@@ -10,8 +10,8 @@ from abc import ABC, abstractmethod
 
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
+from ..distributions.continuous_dist import ContinuousDistribution
+from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 
 
 class Initializer(ABC):
@@ -52,9 +52,9 @@ class Initializer(ABC):
         self,
         X: ArrayLike,
         dists: list[ContinuousDistribution],
-        cluster_match_info: MatchingMethod,
-        score_function: ScoringMethod,
-        estimation_info: list[EstimationStrategy],
+        method: MatchingMethod,
+        score_func: ScoringMethod,
+        estimation_strategies: list[EstimationStrategy],
     ):
         """Performs initialization of mixture model parameters.
 
@@ -67,11 +67,15 @@ class Initializer(ABC):
             List of distribution models to initialize. Each distribution
             represents one component of the mixture model. The number of
             distributions determines the number of mixture components.
-        cluster_match_info : ClusterMatchStrategy
+        method : MatchingMethod
             Strategy for matching clusters to distribution models. Determines
             how clusters identified in the data are assigned to specific
             distribution components.
-        estimation_info : list[EstimationStrategy]
+        score_func : ScoringMethod
+            The criterion used to evaluate the quality of fit between a distribution
+            and a data cluster (e.g., AIC or Likelihood). Used by the matching
+            strategy to determine optimal assignments.
+        estimation_strategies : list[EstimationStrategy]
             List of estimation strategies for each distribution model. Each
             element specifies the parameter estimation method to use for the
             corresponding distribution in the `dists` list.

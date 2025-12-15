@@ -18,12 +18,14 @@ __license__ = "SPDX-License-Identifier: MIT"
 from ._estimation_strategies.q_function import q_function_strategy, q_function_strategy_exponential
 from .clusterize_initializer import ClusterizeInitializer
 from .initializer import Initializer
-from .strategies import EstimationStrategy
+from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 
 __all__ = [
     "ClusterizeInitializer",
     "EstimationStrategy",
     "Initializer",
+    "MatchingMethod",
+    "ScoringMethod",
     "q_function_strategy",
     "q_function_strategy_exponential",
 ]
