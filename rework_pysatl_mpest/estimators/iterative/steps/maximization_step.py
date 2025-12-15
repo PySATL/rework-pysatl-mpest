@@ -159,8 +159,6 @@ class MaximizationStep(PipelineStep[DType]):
 
         Parameters
         ----------
-        state : PipelineState
-            The current pipeline state containing removed_components_indices
         removed_components_indices : list[int]
             Tracks which component indices were removed during pruning.
         """

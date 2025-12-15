@@ -72,6 +72,7 @@ class MixtureModel(Generic[DType]):
         :toctree: generated/
 
         add_component
+        astype
         remove_component
         pdf
         lpdf
@@ -89,7 +90,7 @@ class MixtureModel(Generic[DType]):
     ):
         n_components = len(components)
         if n_components == 0:
-            raise ValueError("List of components cannot be an empty")
+            raise ValueError("List of components cannot be empty")
 
         self._dtype = dtype
 
@@ -130,7 +131,7 @@ class MixtureModel(Generic[DType]):
 
         atol = np.sqrt(np.finfo(self.dtype).eps)
         if not np.isclose(np.sum(weights), self.dtype(1.0), atol=atol):
-            raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
+            raise ValueError(f"Sum of the weights must be equal 1, but it equals {np.sum(weights)}.")
 
     @property
     def dtype(self) -> type[DType]:

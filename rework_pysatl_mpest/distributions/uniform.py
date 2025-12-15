@@ -85,7 +85,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         .. math::
 
-            f(x | \\alpha, \\beta) = frac{1}{\\beta - \\alpha}
+            f(x | \\alpha, \\beta) = \\frac{1}{\\beta - \\alpha}
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
         right_border parameter. The function is zero for :math:`x < \\alpha` or :math:`x > \\beta`.

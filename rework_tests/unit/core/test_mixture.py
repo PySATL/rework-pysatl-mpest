@@ -92,7 +92,7 @@ class TestMixtureModelInitialization:
     @pytest.mark.parametrize(
         "invalid_weights, error_msg",
         [
-            ([0.4, 0.4], "Sum of the weights must be equal 1, but it equal "),
+            ([0.4, 0.4], "Sum of the weights must be equal 1, but it equals "),
         ],
     )
     def test_init_with_invalid_sum_of_weights_raises_value_error(
@@ -108,7 +108,7 @@ class TestMixtureModelInitialization:
     def test_init_with_empty_components_raises_value_error(self, dtype):
         """Tests that initialization with an empty component list raises a ValueError."""
 
-        with pytest.raises(ValueError, match="List of components cannot be an empty"):
+        with pytest.raises(ValueError, match="List of components cannot be empty"):
             MixtureModel(components=[], dtype=dtype)
 
     def test_init_casts_component_dtypes(self, dtype):

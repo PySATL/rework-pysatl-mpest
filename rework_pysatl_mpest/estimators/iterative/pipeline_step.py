@@ -90,6 +90,7 @@ class PipelineStep(ABC, Generic[DType]):
         components.
 
         Common use cases include:
+
         - Deleting cached values or buffers associated with pruned components
         - Re-indexing remaining component-specific data to maintain contiguous
           indexing
