@@ -54,8 +54,8 @@ class ClusterizeInitializer(Initializer):
 
     Methods
     -------
-    perform(X, dists, cluster_match_strategy, estimation_strategies, optimizer)
-        Performs cluster-based initialization of mixture model parameters.
+    perform(X, dists, method, score_func, estimation_strategies, optimizer, clusterizer)
+            Performs cluster-based initialization of mixture model parameters.
 
     Notes
     -----
@@ -160,14 +160,13 @@ class ClusterizeInitializer(Initializer):
                     outlier_mask = labels == -1
                     non_outlier_mask = ~outlier_mask
                     H[outlier_mask, :] = 1.0 / n_clusters
-                    for idx in np.where(non_outlier_mask)[0]:
-                        label = labels[idx]
-                        cluster_idx = np.where(valid_labels == label)[0][0]
-                        H[idx, cluster_idx] = 1.0
+                    valid_indices = np.where(non_outlier_mask)[0]
+                    valid_data_labels = labels[non_outlier_mask]
+                    col_indices = np.searchsorted(valid_labels, valid_data_labels)
+                    H[valid_indices, col_indices] = 1.0
                 else:
-                    for i, label in enumerate(labels):
-                        cluster_idx = np.where(valid_labels == label)[0][0]
-                        H[i, cluster_idx] = 1.0
+                    col_indices = np.searchsorted(valid_labels, labels)
+                    H[np.arange(len(X)), col_indices] = 1.0
                 return H
 
             except Exception as e:
@@ -265,6 +264,12 @@ class ClusterizeInitializer(Initializer):
         weights: list[float] = []
         estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
+        n_found_clusters = H.shape[1]
+        if n_found_clusters < self.n_components:
+            raise IndexError(
+                f"Clusterizer haven't found enough clusters. {n_found_clusters} found when {self.n_components} needed."
+            )
+
         for k in range(self.n_components):
             model = self.models[k]
             H_k = H[:, k]
@@ -328,10 +333,11 @@ class ClusterizeInitializer(Initializer):
         X = np.asarray(X, dtype=np.float64)
         self.models = dists
         self.n_components = len(dists)
-        if clusterizer is None and self.clusterizer is not None:
-            clusterizer = self.clusterizer
-        else:
+        clusterizer = clusterizer or self.clusterizer
+
+        if clusterizer is None:
             raise TypeError("Clusterizer not found")
+
         if optimizer is None:
             optimizer = self.optimizer
         H = self._clusterize(X, clusterizer)

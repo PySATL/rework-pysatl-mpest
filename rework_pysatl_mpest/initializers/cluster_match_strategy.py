@@ -145,18 +145,12 @@ def _precompute_fits(context: Context) -> list[list[FitResult]]:
     X, H, optimizer = context["X"], context["H"], context["optimizer"]
 
     cached_fits: list[list[FitResult]] = []
-    computation_cache: dict[tuple, FitResult] = {}
 
     for model, est_func in zip(models, estimation_strategies):
         row: list[FitResult] = []
         for k in valid_clusters:
-            cache_key = (model.__class__, est_func, k)
-
-            if cache_key not in computation_cache:
-                fit_result = _estimate_and_score_component(model, est_func, score_func_component, X, H[:, k], optimizer)
-                computation_cache[cache_key] = fit_result
-
-            row.append(computation_cache[cache_key])
+            fit_result = _estimate_and_score_component(model, est_func, score_func_component, X, H[:, k], optimizer)
+            row.append(fit_result)
         cached_fits.append(row)
 
     return cached_fits
@@ -338,7 +332,7 @@ def match_clusters_for_models(
         A tuple containing (ordered models, parameters, weights).
     """
     n_models = len(models)
-    min_samples = int(len(X) * 0.01)
+    min_samples = int(np.ceil(len(X) * 0.01))
     valid_clusters, cluster_weights = _validate_clusters_distributions(
         H, n_models, len(estimation_strategies), min_samples
     )
