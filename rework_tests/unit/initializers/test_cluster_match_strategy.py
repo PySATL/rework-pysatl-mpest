@@ -8,19 +8,20 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
 from rework_pysatl_mpest.initializers.cluster_match_strategy import (
     _calculate_component_aic,
     _calculate_component_log_likelihood,
+    _calculate_mixture_aic,
+    _calculate_mixture_log_likelihood,
     _estimate_and_score_component,
     _match_greedy,
     _match_hungarian,
     _match_permutations,
+    _precompute_fits,
     _validate_clusters_distributions,
     match_clusters_for_models,
-    _precompute_fits, _calculate_mixture_log_likelihood, _calculate_mixture_aic,
 )
 from rework_pysatl_mpest.initializers.strategies import MatchingMethod, ScoringMethod
 from rework_pysatl_mpest.optimizers import Optimizer
@@ -62,7 +63,6 @@ class TestClusterMatchStrategy:
         assert valid_clusters == []
         assert weights == []
 
-
     def test_calculate_component_log_likelihood(self):
         model = self.mock_models[0]
         model.lpdf.return_value = np.array([-1.0, -2.0, -3.0])
@@ -100,11 +100,13 @@ class TestClusterMatchStrategy:
         X = np.array([1, 2])
 
         ll = _calculate_mixture_log_likelihood(mock_mixture, X)
-        assert ll == -5.0
+        ll_const = -5.0
+        assert ll == ll_const
 
         # AIC = 2k - 2LL = 2(3) - 2(-5) = 6 + 10 = 16.0
         aic = _calculate_mixture_aic(mock_mixture, X)
-        assert aic == 16.0
+        aic_const = 16.0
+        assert aic == aic_const
 
     def test_estimate_and_score_component(self):
         model = self.mock_models[0]
@@ -118,10 +120,10 @@ class TestClusterMatchStrategy:
         est_func.assert_called_once()
         score_func.assert_called_once()
         assert result["params"] == {"loc": 5.0}
-        assert result["score"] == 123.45
+        score_const = 123.45
+        assert result["score"] == score_const
         assert result["weight"] == 1.0
         result["model"].set_params_from_vector.assert_called()
-
 
     @pytest.fixture
     def strategy_context(self):
@@ -156,9 +158,7 @@ class TestClusterMatchStrategy:
         # 1. Model 0 takes Cluster 0 (best available).
         # 2. Model 1 checks Cluster 0 (used), takes Cluster 1.
 
-        with patch(
-                "rework_pysatl_mpest.initializers.cluster_match_strategy._estimate_and_score_component"
-        ) as mock_est:
+        with patch("rework_pysatl_mpest.initializers.cluster_match_strategy._estimate_and_score_component") as mock_est:
             # Calls are made: M0-C0, M0-C1 -> M0 picks. Then M1-C0 (skip), M1-C1.
             # Actually greedy implementation calculates score for ALL unused clusters.
 
@@ -172,11 +172,12 @@ class TestClusterMatchStrategy:
             ]
 
             models, params, weights = _match_greedy(strategy_context)
-
-            assert len(params) == 2
+            params_len = 2
+            assert len(params) == params_len
             assert params[0] == {"m": 0, "c": 0}
             assert params[1] == {"m": 1, "c": 1}
-            assert mock_est.call_count == 3
+            call_const = 3
+            assert mock_est.call_count == call_const
 
     def test_match_hungarian(self, strategy_context):
         # Scenario where Greedy fails but Hungarian succeeds.
@@ -215,8 +216,8 @@ class TestClusterMatchStrategy:
 
             models, params, weights = _match_permutations(strategy_context)
 
-            assert strategy_context["score_func_mixture"].call_count == 2
-
+            call_const = 2
+            assert strategy_context["score_func_mixture"].call_count == call_const
 
     def test_match_clusters_for_models_entry_point(self):
         """
@@ -232,7 +233,7 @@ class TestClusterMatchStrategy:
 
         with patch.dict(
             "rework_pysatl_mpest.initializers.cluster_match_strategy._MATCHING_METHOD",
-            {MatchingMethod.GREEDY: mock_greedy_func}
+            {MatchingMethod.GREEDY: mock_greedy_func},
         ):
             res_models, res_params, res_weights = match_clusters_for_models(
                 models,
@@ -262,15 +263,14 @@ class TestClusterMatchStrategy:
         assert res_weights == [0.5, 0.5]
 
     def test_precompute_fits_caching(self, strategy_context):
-        with patch(
-                "rework_pysatl_mpest.initializers.cluster_match_strategy._estimate_and_score_component"
-        ) as mock_est:
+        with patch("rework_pysatl_mpest.initializers.cluster_match_strategy._estimate_and_score_component") as mock_est:
             mock_est.return_value = {"params": {}, "score": 0, "weight": 0, "model": Mock()}
-
+            fits_len_const = 2
             fits = _precompute_fits(strategy_context)
-            assert len(fits) == 2
-            assert len(fits[0]) == 2
-            assert mock_est.call_count == 4
+            assert len(fits) == fits_len_const
+            assert len(fits[0]) == fits_len_const
+            call_const = 4
+            assert mock_est.call_count == call_const
 
 
 class TestThreeClustersMatching:
@@ -315,23 +315,17 @@ class TestThreeClustersMatching:
         for row_idx, row_scores in enumerate(cost_matrix):
             model_fits = []
             for col_idx, score in enumerate(row_scores):
-                model_fits.append({
-                    "params": {"m": row_idx, "c": col_idx},
-                    "score": float(score),
-                    "weight": 0.33,
-                    "model": Mock()
-                })
+                model_fits.append(
+                    {"params": {"m": row_idx, "c": col_idx}, "score": float(score), "weight": 0.33, "model": Mock()}
+                )
             fits.append(model_fits)
         return fits
 
     def test_greedy_vs_hungarian_3x3_scenario(self, context_3x3):
-        cost_matrix = [
-            [10.0, 15.0, 100.0],
-            [11.0, 50.0, 100.0],
-            [100.0, 100.0, 10.0]
-        ]
+        cost_matrix = [[10.0, 15.0, 100.0], [11.0, 50.0, 100.0], [100.0, 100.0, 10.0]]
 
         with patch("rework_pysatl_mpest.initializers.cluster_match_strategy._estimate_and_score_component") as mock_est:
+
             def side_effect(model, est_func, score_func, X, H_k, opt):
                 cluster_idx = -1
                 if H_k[0] == 1.0:
@@ -340,13 +334,9 @@ class TestThreeClustersMatching:
                     cluster_idx = 1
                 elif H_k[20] == 1.0:
                     cluster_idx = 2
-                model_idx = int(model.name.split('_')[1])
+                model_idx = int(model.name.split("_")[1])
                 score = cost_matrix[model_idx][cluster_idx]
-                return {
-                    "params": {"m": model_idx, "c": cluster_idx},
-                    "score": score,
-                    "weight": 0.33
-                }
+                return {"params": {"m": model_idx, "c": cluster_idx}, "score": score, "weight": 0.33}
 
             mock_est.side_effect = side_effect
             _, greedy_params, _ = _match_greedy(context_3x3)
@@ -368,10 +358,14 @@ class TestThreeClustersMatching:
             mock_precompute.return_value = self._create_mock_fits(cost_matrix_dummy)
             context_3x3["score_func_mixture"].side_effect = mock_mixture_scores
             _, best_params, _ = _match_permutations(context_3x3)
-            assert context_3x3["score_func_mixture"].call_count == 6
-            assert best_params[0]["c"] == 2
-            assert best_params[1]["c"] == 0
-            assert best_params[2]["c"] == 1
+            call_const = 6
+            assert context_3x3["score_func_mixture"].call_count == call_const
+            param1_const = 2
+            param2_const = 0
+            param3_const = 1
+            assert best_params[0]["c"] == param1_const
+            assert best_params[1]["c"] == param2_const
+            assert best_params[2]["c"] == param3_const
 
     def test_integration_3x3_with_main_function(self, context_3x3):
         """
@@ -383,7 +377,7 @@ class TestThreeClustersMatching:
 
         with patch.dict(
             "rework_pysatl_mpest.initializers.cluster_match_strategy._MATCHING_METHOD",
-            {MatchingMethod.HUNGARIAN: mock_hungarian_func}
+            {MatchingMethod.HUNGARIAN: mock_hungarian_func},
         ):
             match_clusters_for_models(
                 models=context_3x3["models"],
@@ -391,7 +385,7 @@ class TestThreeClustersMatching:
                 H=context_3x3["H"],
                 estimation_strategies=context_3x3["estimation_strategies"],
                 method=MatchingMethod.HUNGARIAN,
-                score_func=ScoringMethod.AIC
+                score_func=ScoringMethod.AIC,
             )
 
             mock_hungarian_func.assert_called_once()
