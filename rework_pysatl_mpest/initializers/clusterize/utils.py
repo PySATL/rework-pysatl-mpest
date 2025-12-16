@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Callable, Any, TypedDict
+from typing import Any, Callable, TypedDict
 
 import numpy as np
 
