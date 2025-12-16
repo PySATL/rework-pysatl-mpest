@@ -8,9 +8,9 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers import Initializer
-from rework_pysatl_mpest.initializers.clusterize_initializer import ClusterizeInitializer
-from rework_pysatl_mpest.initializers.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
+from rework_pysatl_mpest.initializers.clusterize.clusterize_initializer import ClusterizeInitializer
+from rework_pysatl_mpest.initializers.clusterize.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
+from rework_pysatl_mpest.initializers.initializer import Initializer
 from rework_pysatl_mpest.optimizers import Optimizer
 
 
@@ -174,7 +174,9 @@ class TestClusterizeInitializer:
         X = np.zeros(10)
         H = np.zeros((10, 2))
 
-        with patch("rework_pysatl_mpest.initializers.clusterize_initializer.match_clusters_for_models") as mock_match:
+        with patch(
+            "rework_pysatl_mpest.initializers.clusterize.clusterize_initializer.match_clusters_for_models"
+        ) as mock_match:
             mock_match.return_value = (self.dists, [{"loc": 100.0}, {"loc": 200.0}], [0.1, 0.9])
 
             res_dists, res_weights = initializer._accurate_init(X, H, self.mock_optimizer)
@@ -200,7 +202,9 @@ class TestClusterizeInitializer:
         H = np.zeros((10, 2))
 
         with (
-            patch("rework_pysatl_mpest.initializers.clusterize_initializer.match_clusters_for_models") as mock_match,
+            patch(
+                "rework_pysatl_mpest.initializers.clusterize.clusterize_initializer.match_clusters_for_models"
+            ) as mock_match,
             patch.object(initializer, "_fast_init") as mock_fast,
         ):
             mock_match.return_value = (self.dists, [{}, {}], [0.5, 0.5])
@@ -238,7 +242,7 @@ class TestClusterizeInitializer:
         with (
             patch.object(initializer, "_clusterize", return_value=np.zeros((1, 2))),
             patch.object(initializer, "_accurate_init", return_value=(dists, [0.5, 0.5])),
-            patch("rework_pysatl_mpest.initializers.clusterize_initializer.MixtureModel"),
+            patch("rework_pysatl_mpest.initializers.clusterize.clusterize_initializer.MixtureModel"),
         ):
             initializer.perform(
                 X,
@@ -268,7 +272,9 @@ class TestClusterizeInitializer:
         with (
             patch.object(initializer, "_clusterize") as mock_clust,
             patch.object(initializer, "_fast_init") as mock_fast,
-            patch("rework_pysatl_mpest.initializers.clusterize_initializer.MixtureModel") as MockMixtureClass,
+            patch(
+                "rework_pysatl_mpest.initializers.clusterize.clusterize_initializer.MixtureModel"
+            ) as MockMixtureClass,
         ):
             mock_clust.return_value = "H_Matrix"
             mock_fast.return_value = (dists, [0.2, 0.8])
@@ -333,7 +339,9 @@ class TestClusterizeInitializer:
         init.estimation_strategies = [EstimationStrategy.QFUNCTION] * 2
 
         with (
-            patch("rework_pysatl_mpest.initializers.clusterize_initializer.match_clusters_for_models") as mock_match,
+            patch(
+                "rework_pysatl_mpest.initializers.clusterize.clusterize_initializer.match_clusters_for_models"
+            ) as mock_match,
             patch.object(init, "_fast_init") as mock_fast,
         ):
             mock_match.return_value = (init.models, [{"loc": 1}, {}], [0.5, 0.5])

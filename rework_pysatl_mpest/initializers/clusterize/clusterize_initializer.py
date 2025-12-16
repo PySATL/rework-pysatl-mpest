@@ -13,13 +13,13 @@ from typing import Any, Callable, ClassVar, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ..core.mixture import MixtureModel
-from ..distributions.continuous_dist import ContinuousDistribution
-from ..optimizers import Optimizer
-from ..optimizers.scipy_nelder_mead import ScipyNelderMead
-from ._estimation_strategies.q_function import q_function_strategy
-from .cluster_match_strategy import match_clusters_for_models
-from .initializer import Initializer
+from ...core.mixture import MixtureModel
+from ...distributions.continuous_dist import ContinuousDistribution
+from ...optimizers import Optimizer
+from ...optimizers.scipy_nelder_mead import ScipyNelderMead
+from .._estimation_strategies.q_function import q_function_strategy
+from ..initializer import Initializer
+from .cluster_match_algorithms import match_clusters_for_models
 from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 
 

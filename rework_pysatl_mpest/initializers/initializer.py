@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from numpy.typing import ArrayLike
 
 from ..distributions.continuous_dist import ContinuousDistribution
-from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
+from .clusterize.strategies import EstimationStrategy, MatchingMethod, ScoringMethod
 
 
 class Initializer(ABC):
