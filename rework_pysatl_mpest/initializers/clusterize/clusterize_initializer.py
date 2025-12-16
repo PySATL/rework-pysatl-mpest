@@ -13,12 +13,11 @@ from typing import Any, Callable, ClassVar, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ...core.mixture import MixtureModel
-from ...distributions.continuous_dist import ContinuousDistribution
-from ...optimizers import Optimizer
-from ...optimizers.scipy_nelder_mead import ScipyNelderMead
+from ...core import MixtureModel
+from ...distributions import ContinuousDistribution
+from ...optimizers import Optimizer, ScipyNelderMead
 from ...typings import Clusterizer
-from .._estimation_strategies.q_function import q_function_strategy
+from .._estimation_strategies import q_function_strategy
 from ..initializer import Initializer
 from .cluster_match_algorithms import match_clusters_for_models
 from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
@@ -49,9 +48,9 @@ class ClusterizeInitializer(Initializer):
     is_soft : bool
         If True, uses soft clustering (fuzzy assignments).
         If False, uses hard clustering (crisp assignments).
-    clusterizer : Any
-        The clustering algorithm instance. Must have `fit_transform` method for soft
-        clustering or `fit_predict` method for hard clustering.
+    clusterizer : Clusterizer
+        The clustering algorithm instance. Must comply with either HardClusterizer
+        (fit_predict) or SoftClusterizer (fit_transform) protocols.
 
     Methods
     -------
@@ -99,9 +98,10 @@ class ClusterizeInitializer(Initializer):
         is_soft : bool
             If True, uses soft clustering (fuzzy assignments).
             If False, uses hard clustering (crisp assignments).
-        clusterizer : Any
-            The clustering algorithm instance. Must have appropriate methods for
-            the specified clustering type.
+        clusterizer : Clusterizer
+            The clustering algorithm instance.
+        optimizer : Optimizer, optional
+            Optimizer for parameter estimation. Default is ScipyNelderMead.
         """
         self.is_soft = is_soft
         self.is_accurate = is_accurate
@@ -113,14 +113,14 @@ class ClusterizeInitializer(Initializer):
         self.estimation_strategies: list[EstimationStrategy] = []
         self.models: list[ContinuousDistribution] = []
 
-    def _clusterize(self, X: np.ndarray, clusterizer: Any) -> np.ndarray:
+    def _clusterize(self, X: np.ndarray, clusterizer: Clusterizer) -> np.ndarray:
         """Performs clustering on the input data and returns weight matrix.
 
         Parameters
         ----------
         X : np.ndarray
             Input data points to cluster.
-        clusterizer : Any
+        clusterizer : Clusterizer
             The clustering algorithm instance.
 
         Returns
@@ -256,7 +256,7 @@ class ClusterizeInitializer(Initializer):
         Raises
         ------
         ValueError
-            If n_components is not set.
+            If n_components is not set or if clusterizer failed.
         """
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _fast_init")
@@ -303,25 +303,23 @@ class ClusterizeInitializer(Initializer):
             Input data points for initialization.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize.
-        method : MatchingMethod
-            The algorithm used to match the clusters identified by the clusterizer
-            to the provided distribution models (e.g., Greedy, Hungarian).
-        score_func : ScoringMethod
-            The metric used to score the fit between a model and a cluster
-            (e.g., AIC, Likelihood) during the matching process.
-        estimation_strategies : list[EstimationStrategy]
-            List of estimation strategies for each distribution model.
-        optimizer : Optimizer
-            Optimizer that will be used in estimation strategies.
-            By default, ScipyNelderMead.
-        clusterizer : Any
-            The clustering algorithm instance (e.g., KMeans, C-Means).
-            If not provided, the default clusterizer passed to __init__ is used.
+        method : MatchingMethod, optional
+            The algorithm used to match the clusters. Default is GREEDY.
+        score_func : ScoringMethod, optional
+            The metric used to score the fit. Default is LIKELIHOOD.
+        estimation_strategies : list[EstimationStrategy], optional
+            List of estimation strategies. If None, uses QFUNCTION for all models.
+        optimizer : Optimizer, optional
+            Optimizer for parameter estimation.
+        clusterizer : Clusterizer, optional
+            The clustering algorithm instance. If None, uses the one from __init__.
+        **kwargs : Any
+            Additional arguments for compatibility.
 
         Returns
         -------
         MixtureModel
-            Initialized mixture model with estimated parameters and weights.
+            Initialized mixture model with estimated parameters and weights
 
         Notes
         -----

@@ -41,4 +41,5 @@ Enumeration types that define available strategies for initialization.
    :template: class.rst
 
    MatchingMethod
+   ScoringMethod
    EstimationStrategy

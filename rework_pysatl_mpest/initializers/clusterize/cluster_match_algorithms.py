@@ -13,7 +13,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from ...core import MixtureModel
-from ...distributions.continuous_dist import ContinuousDistribution
+from ...distributions import ContinuousDistribution
 from ...optimizers import Optimizer, ScipyNelderMead
 from .score_functions import (
     _calculate_component_aic,
@@ -38,12 +38,36 @@ def _match_greedy(context: Context) -> MatchingResult:
     against all currently *unused* clusters and assigns the one with the best
     (lowest) score.
 
-    Complexity: O(N^2)
+    Parameters
+    ----------
+    context : Context
+        The execution context dictionary containing:
+        - "models": List of distributions.
+        - "X": Input data.
+        - "H": Responsibility matrix.
+        - "estimation_strategies": List of estimation functions.
+        - "optimizer": The optimizer instance.
+        - "valid_clusters": List of valid cluster indices.
+        - "cluster_weights": List of float.
+        - "score_func_component": Function to score individual components.
+        - "score_func_mixture": Function to score mixture.
 
     Returns
     -------
     MatchingResult
-        Tuple containing the models, their estimated parameters, and weights.
+        A tuple containing:
+        - The list of models (unchanged order).
+        - List of estimated parameter dictionaries.
+        - List of component weights.
+
+    Notes
+    -----
+    **Complexity**
+    O(N^2), where N is the number of models/clusters.
+
+    **Behavior**
+    This is a locally optimal strategy. Once a cluster is assigned to a model,
+    it cannot be reassigned, even if it would be a better fit for a subsequent model.
     """
     updated_params_list: list[dict[str, float]] = []
     model_weights: list[float] = []
@@ -90,12 +114,36 @@ def _match_hungarian(context: Context) -> MatchingResult:
     precomputed fits and finds the unique assignment of models to clusters that
     minimizes the total cost.
 
-    Complexity: O(N^3)
+    Parameters
+    ----------
+    context : Context
+        The execution context dictionary containing:
+        - "models": List of distributions.
+        - "X": Input data.
+        - "H": Responsibility matrix.
+        - "estimation_strategies": List of estimation functions.
+        - "optimizer": The optimizer instance.
+        - "valid_clusters": List of valid cluster indices.
+        - "cluster_weights": List of float.
+        - "score_func_component": Function to score individual components.
+        - "score_func_mixture": Function to score mixture.
 
     Returns
     -------
     MatchingResult
-        Tuple containing the re-ordered models, their estimated parameters, and weights.
+        A tuple containing:
+        - The re-ordered list of models matching the assignment.
+        - List of estimated parameter dictionaries.
+        - List of component weights.
+
+    Notes
+    -----
+    **Complexity**
+    O(N^3), where N is the number of models/clusters.
+
+    **Behavior**
+    Unlike the greedy approach, this finds the global optimum for the sum of
+    individual component scores (e.g., sum of AICs of individual distributions).
     """
     models = context["models"]
     cached_fits = _precompute_fits(context)
@@ -120,15 +168,37 @@ def _match_permutations(context: Context) -> MatchingResult:
     constructs a full `MixtureModel` for every permutation and evaluates the
     `score_func_mixture` (e.g., total Mixture AIC).
 
-    This provides the most accurate initialization metric but is computationally
-    expensive for large numbers of components.
-
-    Complexity: O(N!)
+    Parameters
+    ----------
+    context : Context
+        The execution context dictionary containing:
+        - "models": List of distributions.
+        - "X": Input data.
+        - "H": Responsibility matrix.
+        - "estimation_strategies": List of estimation functions.
+        - "optimizer": The optimizer instance.
+        - "valid_clusters": List of valid cluster indices.
+        - "cluster_weights": List of float.
+        - "score_func_component": Function to score individual components.
+        - "score_func_mixture": Function to score mixture.
 
     Returns
     -------
     MatchingResult
-        Tuple containing the re-ordered models, their estimated parameters, and weights.
+        A tuple containing:
+        - The best ordered list of models.
+        - List of estimated parameter dictionaries.
+        - List of component weights.
+
+    Notes
+    -----
+    **Complexity**
+    O(N!), where N is the number of models.
+
+    **Performance**
+    This provides the most accurate initialization metric but is computationally
+    expensive. Recommended only for a small number of components (e.g., < 6)
+    or if you need guaranty best models-clusters match.
     """
     models, X, score_func_mixture = context["models"], context["X"], context["score_func_mixture"]
     cached_fits = _precompute_fits(context)
@@ -181,8 +251,7 @@ def match_clusters_for_models(
     score_func: ScoringMethod,
     optimizer: Optimizer = ScipyNelderMead(),
 ) -> MatchingResult:
-    """
-    Matches clusters to models using a specified strategy and scoring function.
+    """Matches clusters to models using a specified strategy and scoring function.
 
     Parameters
     ----------
@@ -193,7 +262,7 @@ def match_clusters_for_models(
     H : np.ndarray
         Weight matrix where H[i, k] is the probability of point i in cluster k.
     estimation_strategies : list[Callable]
-        Estimation functions for each model type.
+        Estimation functions for each model.
     method : MatchingMethod
         The cluster matching strategy (Greedy, Hungarian, etc.).
     score_func : ScoringMethod
@@ -204,7 +273,18 @@ def match_clusters_for_models(
     Returns
     -------
     MatchingResult
-        A tuple containing (ordered models, parameters, weights).
+        A tuple containing:
+        - Ordered list of distribution models.
+        - List of parameter dictionaries.
+        - List of component weights.
+
+    Notes
+    -----
+    The function follows these steps:
+    1. Calculates minimum sample threshold (1% of data size).
+    2. Validates clusters and filters out those with insufficient samples.
+    3. Prepares the execution context.
+    4. Dispatches to the specific matching algorithm defined by `method`.
     """
     n_models = len(models)
     min_samples = int(np.ceil(len(X) * 0.01))

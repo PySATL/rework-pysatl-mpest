@@ -11,8 +11,7 @@ from functools import singledispatch
 
 import numpy as np
 
-from ...distributions.continuous_dist import ContinuousDistribution
-from ...distributions.exponential import Exponential
+from ...distributions import ContinuousDistribution, Exponential
 from ...optimizers import Optimizer
 
 NUMERICAL_TOLERANCE = 1e-6

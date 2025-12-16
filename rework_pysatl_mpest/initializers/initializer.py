@@ -12,13 +12,13 @@ from typing import Any
 from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
-from ..distributions.continuous_dist import ContinuousDistribution
+from ..distributions import ContinuousDistribution
 
 
 class Initializer(ABC):
     """Abstract base class for mixture model initializers.
 
-    This class defines the interface for all initialization strategies that
+    This class defines the interface for all initializers that
     estimate initial parameters for mixture models. Subclasses must implement
     the `perform` method to provide specific initialization logic.
 
@@ -60,6 +60,8 @@ class Initializer(ABC):
             List of distribution models to initialize. Each distribution
             represents one component of the mixture model. The number of
             distributions determines the number of mixture components.
+        **kwargs : Any
+            Additional arguments allowed for subclass implementations.
 
         Returns
         -------
