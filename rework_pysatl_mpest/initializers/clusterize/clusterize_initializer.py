@@ -17,6 +17,7 @@ from ...core.mixture import MixtureModel
 from ...distributions.continuous_dist import ContinuousDistribution
 from ...optimizers import Optimizer
 from ...optimizers.scipy_nelder_mead import ScipyNelderMead
+from ...typings import Clusterizer
 from .._estimation_strategies.q_function import q_function_strategy
 from ..initializer import Initializer
 from .cluster_match_algorithms import match_clusters_for_models
@@ -86,7 +87,7 @@ class ClusterizeInitializer(Initializer):
     )
 
     def __init__(
-        self, is_accurate: bool, is_soft: bool, clusterizer: Any = None, optimizer: Optimizer = ScipyNelderMead()
+        self, is_accurate: bool, is_soft: bool, clusterizer: Clusterizer, optimizer: Optimizer = ScipyNelderMead()
     ):
         """Initializes the cluster-based initializer.
 
@@ -287,11 +288,12 @@ class ClusterizeInitializer(Initializer):
         self,
         X: ArrayLike,
         dists: list[ContinuousDistribution],
-        method: MatchingMethod,
-        score_func: ScoringMethod,
-        estimation_strategies: list[EstimationStrategy],
+        method: MatchingMethod = MatchingMethod.GREEDY,
+        score_func: ScoringMethod = ScoringMethod.LIKELIHOOD,
+        estimation_strategies: list[EstimationStrategy] | None = None,
         optimizer: Optimizer | None = None,
-        clusterizer: Any = None,
+        clusterizer: Clusterizer | None = None,
+        **kwargs: Any,
     ) -> MixtureModel:
         """Performs cluster-based initialization of mixture model parameters.
 
@@ -334,16 +336,11 @@ class ClusterizeInitializer(Initializer):
         self.models = dists
         self.n_components = len(dists)
         clusterizer = clusterizer or self.clusterizer
-
-        if clusterizer is None:
-            raise TypeError("Clusterizer not found")
-
-        if optimizer is None:
-            optimizer = self.optimizer
+        optimizer = optimizer or self.optimizer
         H = self._clusterize(X, clusterizer)
         self.method = method
         self.score_func = score_func
-        self.estimation_strategies = estimation_strategies
+        self.estimation_strategies = estimation_strategies or [EstimationStrategy.QFUNCTION] * self.n_components
 
         if self.is_accurate:
             distributions, weights = self._accurate_init(X, H, optimizer)

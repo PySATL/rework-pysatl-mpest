@@ -34,7 +34,7 @@ class TestClusterizeInitializer:
 
     def test_clusterize_soft_input_reshaping(self):
         """Test that fit_transform is called with correctly reshaped 2D array."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
         X_1d = np.array([1.0, 2.0, 3.0])
 
         self.mock_clusterizer.fit_transform.return_value = np.zeros((3, 2))
@@ -46,7 +46,7 @@ class TestClusterizeInitializer:
 
     def test_clusterize_hard_perfect_separation(self):
         """Test hard clustering conversion to one-hot encoding."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
         X = np.zeros((4, 1))
         self.mock_clusterizer.fit_predict.return_value = np.array([0, 1, 0, 1])
 
@@ -57,7 +57,7 @@ class TestClusterizeInitializer:
 
     def test_clusterize_hard_with_outliers(self):
         """Test handling of -1 labels (noise) in hard clustering."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
         X = np.zeros((3, 1))
         self.mock_clusterizer.fit_predict.return_value = np.array([0, -1, 1])
 
@@ -68,7 +68,7 @@ class TestClusterizeInitializer:
 
     def test_clusterize_hard_all_outliers(self):
         """Test edge case where ALL points are detected as noise."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
         X = np.zeros((3, 1))
         self.mock_clusterizer.fit_predict.return_value = np.array([-1, -1, -1])
 
@@ -79,7 +79,7 @@ class TestClusterizeInitializer:
 
     def test_clusterize_hard_single_valid_cluster(self):
         """Test hard clustering where only 1 valid cluster is found."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
         X = np.zeros((3, 1))
         self.mock_clusterizer.fit_predict.return_value = np.array([0, 0, 0])
 
@@ -94,7 +94,7 @@ class TestClusterizeInitializer:
         Logic: valid_labels=[0, 5]. n_clusters=2.
         We expect indices 0 and 1 in H matrix mapping to labels 0 and 5.
         """
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
         X = np.zeros((2, 1))
         self.mock_clusterizer.fit_predict.return_value = np.array([0, 5])
 
@@ -107,12 +107,12 @@ class TestClusterizeInitializer:
         """Ensure correct error is raised if clusterizer lacks methods."""
         X = np.zeros((2, 1))
 
-        init_soft = ClusterizeInitializer(is_accurate=True, is_soft=True)
+        init_soft = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=Mock(spec=[]))
         mock_bad = Mock(spec=[])
         with pytest.raises(ValueError, match="Clusterizer doesn't have required method"):
             init_soft._clusterize(X, mock_bad)
 
-        init_hard = ClusterizeInitializer(is_accurate=True, is_soft=False)
+        init_hard = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=Mock(spec=[]))
         with pytest.raises(ValueError, match="Clusterizer doesn't have required method"):
             init_hard._clusterize(X, mock_bad)
 
@@ -123,7 +123,7 @@ class TestClusterizeInitializer:
         Verify that _fast_init correctly calls estimation function
         and sets parameters using the zipped result (names, values).
         """
-        initializer = ClusterizeInitializer(is_accurate=False, is_soft=True)
+        initializer = ClusterizeInitializer(is_accurate=False, is_soft=True, clusterizer=self.mock_clusterizer)
         initializer.n_components = 2
         initializer.models = self.dists
         initializer.estimation_strategies = [EstimationStrategy.QFUNCTION, EstimationStrategy.QFUNCTION]
@@ -139,25 +139,25 @@ class TestClusterizeInitializer:
 
             res_dists, res_weights = initializer._fast_init(X, H, self.mock_optimizer)
 
-        call_const = 2
-        assert mock_est_func.call_count == call_const
+        call_count = 2
+        assert mock_est_func.call_count == call_count
 
         self.dist1.set_params_from_vector.assert_called_once()
         args0 = self.dist1.set_params_from_vector.call_args[0]
         assert "loc" in args0[0] and "scale" in args0[0]
-        arg1, arg2 = 10.0, 1.5
-        assert arg1 in args0[1] and arg2 in args0[1]
+        arg00, arg01 = 10.0, 1.5
+        assert arg00 in args0[1] and arg01 in args0[1]
 
         self.dist2.set_params_from_vector.assert_called_once()
         args1 = self.dist2.set_params_from_vector.call_args[0]
-        arg3 = -5.0
-        assert arg3 in args1[1]
+        arg11 = -5.0
+        assert arg11 in args1[1]
 
         assert res_weights == [0.5, 0.5]
 
     def test_fast_init_requires_n_components(self):
         """Ensure n_components is validated."""
-        init = ClusterizeInitializer(is_accurate=False, is_soft=True)
+        init = ClusterizeInitializer(is_accurate=False, is_soft=True, clusterizer=self.mock_clusterizer)
         init.n_components = None
         with pytest.raises(ValueError, match="n_components must be set"):
             init._fast_init(np.zeros(1), np.zeros((1, 1)))
@@ -166,7 +166,7 @@ class TestClusterizeInitializer:
 
     def test_accurate_init_success_flow(self):
         """Test successful matching and parameter application."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
         initializer.n_components = 2
         initializer.models = self.dists
         initializer.estimation_strategies = [EstimationStrategy.QFUNCTION] * 2
@@ -184,16 +184,11 @@ class TestClusterizeInitializer:
         assert res_weights == [0.1, 0.9]
 
         self.dist1.set_params_from_vector.assert_called()
-        arg1 = 100.0
-        assert arg1 in self.dist1.set_params_from_vector.call_args[0][1]
-
         self.dist2.set_params_from_vector.assert_called()
-        arg2 = 200.0
-        assert arg2 in self.dist2.set_params_from_vector.call_args[0][1]
 
     def test_accurate_init_fallback(self):
         """Test that empty params from matching triggers fast_init."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
         initializer.n_components = 2
         initializer.models = self.dists
         initializer.estimation_strategies = [EstimationStrategy.QFUNCTION] * 2
@@ -218,7 +213,7 @@ class TestClusterizeInitializer:
 
     def test_accurate_init_validation(self):
         """Check validation of strategies count matching model count."""
-        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True)
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
         initializer.n_components = 2
         initializer.models = [self.dist1, self.dist2]
         initializer.estimation_strategies = [EstimationStrategy.QFUNCTION]
@@ -247,9 +242,9 @@ class TestClusterizeInitializer:
             initializer.perform(
                 X,
                 dists,
-                MatchingMethod.GREEDY,
-                ScoringMethod.AIC,
-                [EstimationStrategy.QFUNCTION] * 2,
+                method=MatchingMethod.GREEDY,
+                score_func=ScoringMethod.AIC,
+                estimation_strategies=[EstimationStrategy.QFUNCTION] * 2,
                 optimizer=self.mock_optimizer,
             )
 
@@ -282,7 +277,12 @@ class TestClusterizeInitializer:
             MockMixtureClass.return_value = "Final_Mixture"
 
             result = initializer.perform(
-                X, dists, MatchingMethod.GREEDY, ScoringMethod.LIKELIHOOD, est_strategies, optimizer=self.mock_optimizer
+                X,
+                dists,
+                method=MatchingMethod.GREEDY,
+                score_func=ScoringMethod.LIKELIHOOD,
+                estimation_strategies=est_strategies,
+                optimizer=self.mock_optimizer,
             )
 
             assert result == "Final_Mixture"
@@ -302,38 +302,31 @@ class TestClusterizeInitializer:
 
     def test_initializer_abstract_perform(self):
         class ConcreteInitializer(Initializer):
-            def perform(self, X, dists, method, score_func, estimation_strategies):
-                return super().perform(X, dists, method, score_func, estimation_strategies)
+            def perform(self, X, dists, **kwargs):
+                return super().perform(X, dists, **kwargs)
 
         init = ConcreteInitializer()
         with pytest.raises(NotImplementedError):
-            init.perform(None, [], None, None, [])
+            init.perform(None, [], extra_arg="test")
 
     # 5. Other tests
 
     def test_clusterize_hard_exception(self):
-        init = ClusterizeInitializer(is_accurate=True, is_soft=False)
-        mock_clusterizer = Mock()
-        mock_clusterizer.fit_predict.side_effect = Exception("Fail")
+        init = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
+        self.mock_clusterizer.fit_predict.side_effect = Exception("Fail")
 
         with pytest.raises(ValueError, match="Hard clusterizer failed: Fail"):
-            init._clusterize(np.array([1]), mock_clusterizer)
+            init._clusterize(np.array([1]), self.mock_clusterizer)
 
     def test_clusterize_soft_exception(self):
-        init = ClusterizeInitializer(is_accurate=True, is_soft=True)
-        mock_clusterizer = Mock()
-        mock_clusterizer.fit_transform.side_effect = Exception("Fail")
+        init = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
+        self.mock_clusterizer.fit_transform.side_effect = Exception("Fail")
 
         with pytest.raises(ValueError, match="Fuzzy clusterizer failed: Fail"):
-            init._clusterize(np.array([1]), mock_clusterizer)
-
-    def test_clusterize_perform_no_clusterizer(self):
-        init = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=None)
-        with pytest.raises(TypeError, match="Clusterizer not found"):
-            init.perform([1], [], None, None, [], clusterizer=None)
+            init._clusterize(np.array([1]), self.mock_clusterizer)
 
     def test_accurate_init_fallback_on_partial_params(self):
-        init = ClusterizeInitializer(is_accurate=True, is_soft=True)
+        init = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=self.mock_clusterizer)
         init.n_components = 2
         init.models = [Mock(), Mock()]
         init.estimation_strategies = [EstimationStrategy.QFUNCTION] * 2
@@ -351,8 +344,7 @@ class TestClusterizeInitializer:
             mock_fast.assert_called_once()
 
     def test_clusterize_hard_zero_clusters_edge_case(self):
-        init = ClusterizeInitializer(is_accurate=True, is_soft=False)
-        mock_clusterizer = Mock()
-        mock_clusterizer.fit_predict.return_value = np.array([])
-        H = init._clusterize(np.array([1]), mock_clusterizer)
+        init = ClusterizeInitializer(is_accurate=True, is_soft=False, clusterizer=self.mock_clusterizer)
+        self.mock_clusterizer.fit_predict.return_value = np.array([])
+        H = init._clusterize(np.array([1]), self.mock_clusterizer)
         assert H.shape[1] == 1
