@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers.clusterize.score_functions import (
+from rework_pysatl_mpest.initializers.clusterize._score_functions import (
     _calculate_component_aic,
     _calculate_component_log_likelihood,
     _calculate_mixture_aic,
@@ -44,7 +44,6 @@ class TestScoreFunctions:
         ],
     )
     def test_calculate_component_aic(self, log_prob, n_params, expected_aic):
-        # Настраиваем модель
         self.mock_model.params = {"p" + str(i) for i in range(n_params)}
         self.mock_model.lpdf.return_value = log_prob
 
@@ -61,7 +60,7 @@ class TestScoreFunctions:
         expected_ll = -5.0
         expected_aic = 16.0
 
-        mock_mixture.loglikelihood.return_value = np.array([-2.0, -3.0])
+        mock_mixture.loglikelihood.return_value = -5.0
 
         c1 = Mock()
         c1.params = {"a": 1}

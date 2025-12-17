@@ -35,7 +35,7 @@ def _calculate_component_log_likelihood(model: ContinuousDistribution, X: np.nda
     float
         The weighted sum of log-probabilities.
     """
-    log_probs = np.clip(model.lpdf(X), -1e9, -1e-9)
+    log_probs = np.clip(model.lpdf(X), a_min=-1e9, a_max=1e9)
     return np.sum(H_k * log_probs)
 
 
@@ -54,7 +54,7 @@ def _calculate_mixture_log_likelihood(model: MixtureModel, X: np.ndarray) -> flo
     float
         The sum of log-likelihoods of all data points under the mixture model.
     """
-    return np.sum(model.loglikelihood(X))
+    return model.loglikelihood(X)
 
 
 def _calculate_component_aic(model: ContinuousDistribution, X: np.ndarray, H_k: np.ndarray) -> float:

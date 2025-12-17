@@ -7,27 +7,17 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from itertools import permutations
-from typing import Callable
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from ...core import MixtureModel
 from ...distributions import ContinuousDistribution
-from ...optimizers import Optimizer, ScipyNelderMead
-from .score_functions import (
-    _calculate_component_aic,
-    _calculate_component_log_likelihood,
-    _calculate_mixture_aic,
-    _calculate_mixture_log_likelihood,
-)
-from .strategies import MatchingMethod, ScoringMethod
 from .utils import (
     Context,
     MatchingResult,
     _estimate_and_score_component,
     _precompute_fits,
-    _validate_clusters_distributions,
 )
 
 
@@ -225,90 +215,3 @@ def _match_permutations(context: Context) -> MatchingResult:
             best_model_order = [models[i] for i in range(n_models)]
 
     return best_model_order, best_params, best_weights
-
-
-_MATCHING_METHOD: dict[MatchingMethod, Callable] = {
-    MatchingMethod.GREEDY: _match_greedy,
-    MatchingMethod.HUNGARIAN: _match_hungarian,
-    MatchingMethod.PERMUTATIONS: _match_permutations,
-}
-
-_SCORING_METHOD: dict[ScoringMethod, tuple[Callable, Callable]] = {
-    ScoringMethod.AIC: (_calculate_component_aic, _calculate_mixture_aic),
-    ScoringMethod.LIKELIHOOD: (
-        lambda m, X, H_k: -_calculate_component_log_likelihood(m, X, H_k),
-        _calculate_mixture_log_likelihood,
-    ),
-}
-
-
-def match_clusters_for_models(
-    models: list[ContinuousDistribution],
-    X: np.ndarray,
-    H: np.ndarray,
-    estimation_strategies: list[Callable],
-    method: MatchingMethod,
-    score_func: ScoringMethod,
-    optimizer: Optimizer = ScipyNelderMead(),
-) -> MatchingResult:
-    """Matches clusters to models using a specified strategy and scoring function.
-
-    Parameters
-    ----------
-    models : list[ContinuousDistribution]
-        List of distributions available for assignment.
-    X : np.ndarray
-        Input data points.
-    H : np.ndarray
-        Weight matrix where H[i, k] is the probability of point i in cluster k.
-    estimation_strategies : list[Callable]
-        Estimation functions for each model.
-    method : MatchingMethod
-        The cluster matching strategy (Greedy, Hungarian, etc.).
-    score_func : ScoringMethod
-        The scoring criterion (AIC, Likelihood) used for optimization.
-    optimizer : Optimizer, optional
-        Optimizer used in estimation strategies. Default is ScipyNelderMead.
-
-    Returns
-    -------
-    MatchingResult
-        A tuple containing:
-        - Ordered list of distribution models.
-        - List of parameter dictionaries.
-        - List of component weights.
-
-    Notes
-    -----
-    The function follows these steps:
-    1. Calculates minimum sample threshold (1% of data size).
-    2. Validates clusters and filters out those with insufficient samples.
-    3. Prepares the execution context.
-    4. Dispatches to the specific matching algorithm defined by `method`.
-    """
-    n_models = len(models)
-    min_samples = int(np.ceil(len(X) * 0.01))
-    valid_clusters, cluster_weights = _validate_clusters_distributions(
-        H, n_models, len(estimation_strategies), min_samples
-    )
-
-    if not valid_clusters:
-        default_params: list[dict[str, float]] = [{} for _ in range(n_models)]
-        return models, default_params, [1.0 / n_models] * n_models
-
-    method_func = _MATCHING_METHOD[method]
-    score_component_func, score_mixture_func = _SCORING_METHOD[score_func]
-
-    context: Context = {
-        "models": models,
-        "X": X,
-        "H": H,
-        "estimation_strategies": estimation_strategies,
-        "optimizer": optimizer,
-        "valid_clusters": valid_clusters,
-        "cluster_weights": cluster_weights,
-        "score_func_component": score_component_func,
-        "score_func_mixture": score_mixture_func,
-    }
-
-    return method_func(context=context)

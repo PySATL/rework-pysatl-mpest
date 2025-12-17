@@ -15,7 +15,6 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from ._estimation_strategies import q_function_strategy, q_function_strategy_exponential
 from .clusterize import (
     ClusterizeInitializer,
     EstimationStrategy,
@@ -30,6 +29,4 @@ __all__ = [
     "Initializer",
     "MatchingMethod",
     "ScoringMethod",
-    "q_function_strategy",
-    "q_function_strategy_exponential",
 ]

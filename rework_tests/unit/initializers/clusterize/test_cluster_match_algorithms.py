@@ -9,13 +9,12 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pytest
 from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms import (
+from rework_pysatl_mpest.initializers import ClusterizeInitializer, MatchingMethod, ScoringMethod
+from rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms import (
     _match_greedy,
     _match_hungarian,
     _match_permutations,
-    match_clusters_for_models,
 )
-from rework_pysatl_mpest.initializers.clusterize.strategies import MatchingMethod, ScoringMethod
 
 
 class TestClusterMatchAlgorithms:
@@ -53,7 +52,7 @@ class TestClusterMatchAlgorithms:
         weight_half = 0.5
 
         with patch(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._estimate_and_score_component"
+            "rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms._estimate_and_score_component"
         ) as mock_est:
             # Calls are made: M0-C0, M0-C1 -> M0 picks. Then M1-C0 (skip), M1-C1.
             # Actually greedy implementation calculates score for ALL unused clusters.
@@ -87,7 +86,7 @@ class TestClusterMatchAlgorithms:
         weight_half = 0.5
 
         with patch(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._precompute_fits"
+            "rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms._precompute_fits"
         ) as mock_precompute:
             fit_m0_c0 = {"params": {"p": "m0c0"}, "score": 10.0, "weight": weight_half}
             fit_m0_c1 = {"params": {"p": "m0c1"}, "score": 15.0, "weight": weight_half}
@@ -111,7 +110,7 @@ class TestClusterMatchAlgorithms:
         expected_calls = 2
 
         with patch(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._precompute_fits"
+            "rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms._precompute_fits"
         ) as mock_precompute:
             fit_dummy = {"params": {}, "score": 0, "weight": weight_half, "model": Mock()}
             mock_precompute.return_value = [[fit_dummy, fit_dummy], [fit_dummy, fit_dummy]]
@@ -136,11 +135,13 @@ class TestClusterMatchAlgorithms:
         mock_greedy_func = Mock()
         mock_greedy_func.return_value = (models, [{"p": 1}, {"p": 2}], expected_weights)
 
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=Mock())
+
         with patch.dict(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._MATCHING_METHOD",
+            ClusterizeInitializer._MATCHING_METHOD,
             {MatchingMethod.GREEDY: mock_greedy_func},
         ):
-            res_models, res_params, res_weights = match_clusters_for_models(
+            res_models, res_params, res_weights = initializer._match_clusters_for_models(
                 models,
                 X,
                 H,
@@ -163,7 +164,9 @@ class TestClusterMatchAlgorithms:
         models = [Mock(spec=ContinuousDistribution), Mock(spec=ContinuousDistribution)]
         est_strategies = [Mock(), Mock()]
 
-        res_models, res_params, res_weights = match_clusters_for_models(
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=Mock())
+
+        res_models, res_params, res_weights = initializer._match_clusters_for_models(
             models, X, H, est_strategies, method=MatchingMethod.GREEDY, score_func=ScoringMethod.LIKELIHOOD
         )
 
@@ -228,7 +231,7 @@ class TestThreeClustersMatching:
         weight_default = 0.33
 
         with patch(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._estimate_and_score_component"
+            "rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms._estimate_and_score_component"
         ) as mock_est:
 
             def side_effect(model, est_func, score_func, X, H_k, opt):
@@ -250,7 +253,7 @@ class TestThreeClustersMatching:
             assert greedy_params[2] == {"m": 2, "c": 2}
 
         with patch(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._precompute_fits"
+            "rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms._precompute_fits"
         ) as mock_precompute:
             mock_precompute.return_value = self._create_mock_fits(cost_matrix)
             _, hungarian_params, _ = _match_hungarian(context_3x3)
@@ -263,7 +266,7 @@ class TestThreeClustersMatching:
         expected_calls = 6
 
         with patch(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._precompute_fits"
+            "rework_pysatl_mpest.initializers.clusterize._cluster_match_algorithms._precompute_fits"
         ) as mock_precompute:
             cost_matrix_dummy = np.zeros((3, 3))
             mock_precompute.return_value = self._create_mock_fits(cost_matrix_dummy)
@@ -285,11 +288,13 @@ class TestThreeClustersMatching:
         dummy_params = [{"p": 1}, {"p": 2}, {"p": 3}]
         mock_hungarian_func.return_value = (context_3x3["models"], dummy_params, [weight_default] * 3)
 
+        initializer = ClusterizeInitializer(is_accurate=True, is_soft=True, clusterizer=Mock())
+
         with patch.dict(
-            "rework_pysatl_mpest.initializers.clusterize.cluster_match_algorithms._MATCHING_METHOD",
+            ClusterizeInitializer._MATCHING_METHOD,
             {MatchingMethod.HUNGARIAN: mock_hungarian_func},
         ):
-            match_clusters_for_models(
+            initializer._match_clusters_for_models(
                 models=context_3x3["models"],
                 X=context_3x3["X"],
                 H=context_3x3["H"],
