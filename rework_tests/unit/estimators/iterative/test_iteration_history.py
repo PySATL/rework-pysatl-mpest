@@ -1,4 +1,4 @@
-"""Tests for PipelineLogger class"""
+"""Tests for IterationHistory class"""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -9,14 +9,14 @@ import numpy as np
 import pytest
 from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.distributions import Exponential
-from rework_pysatl_mpest.estimators.iterative._logger import IterationRecord, IterationsHistory
+from rework_pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
 
 # objects - 2-3  init(once_in =_iteration) (1,2,3)
-# record = IterationRecord(logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
-# log(record) - 3 cases +
+# record = IterationRecord(history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
+# save_record(record) - 3 cases +
 # clear() - 1 case +
-# clear_logs() - 1 case +
-# logger[index] - 4-6 cases +
+# clear_records() - 1 case +
+# history[index] - 4-6 cases +
 # len() - 2-3 cases +
 
 
@@ -46,29 +46,29 @@ def sample_record_1(exponential_components, responsibility_matrix) -> IterationR
 
 
 @pytest.fixture
-def setup_logger_for_index(sample_record_0, sample_record_1) -> IterationsHistory:
-    logger = IterationsHistory()
-    logger.log(sample_record_0)
-    logger.log(sample_record_1)
-    return logger
+def setup_history_for_index(sample_record_0, sample_record_1) -> IterationsHistory:
+    history = IterationsHistory()
+    history.save_record(sample_record_0)
+    history.save_record(sample_record_1)
+    return history
 
 
 @pytest.fixture(params=[(1, 5), (2, 8), (3, 10)])
-def setup_for_logs(request, exponential_components, responsibility_matrix):
+def setup_for_records(request, exponential_components, responsibility_matrix):
     once_in_iter, n = request.param
-    logger = IterationsHistory(once_in_iter)
+    history = IterationsHistory(once_in_iter)
 
     for i in range(n):
         record = IterationRecord(
-            logger._counter,
+            history._counter,
             MixtureModel(exponential_components, np.array([0.5, 0.5])),
             np.array([1, i]),
             responsibility_matrix,
             None,
             None,
         )
-        logger.log(record)
-    return logger, once_in_iter, n
+        history.save_record(record)
+    return history, once_in_iter, n
 
 
 # tests
@@ -82,9 +82,9 @@ class TestIndex:
             (1, "sample_record_1"),
         ],
     )
-    def test_valid_index(self, setup_logger_for_index, index: int, expected, request):
+    def test_valid_index(self, setup_history_for_index, index: int, expected, request):
         expected_record = request.getfixturevalue(expected)
-        actual = setup_logger_for_index[index]
+        actual = setup_history_for_index[index]
 
         assert actual == expected_record
 
@@ -95,9 +95,9 @@ class TestIndex:
             (-4, "Index -4 out of range for container containing 2 elements"),
         ],
     )
-    def test_invalid_index(self, setup_logger_for_index, index, expected):
+    def test_invalid_index(self, setup_history_for_index, index, expected):
         with pytest.raises(IndexError, match=expected):
-            _ = setup_logger_for_index[index]
+            _ = setup_history_for_index[index]
 
     @pytest.mark.parametrize(
         ("once_in_iterations", "expected_msg"),
@@ -111,10 +111,10 @@ class TestIndex:
             IterationsHistory(once_in_iterations)
 
 
-class TestLoggingAndLen:
+class TestRecordingAndLen:
     @pytest.mark.parametrize(("once_in_iter", "n", "expected"), [(1, 5, 5), (2, 8, 4), (3, 10, 4)])
     def test_len(self, once_in_iter: int, n: int, expected: int, exponential_components, responsibility_matrix):
-        logger = IterationsHistory(once_in_iter)
+        history = IterationsHistory(once_in_iter)
 
         for i in range(n):
             record = IterationRecord(
@@ -125,16 +125,16 @@ class TestLoggingAndLen:
                 None,
                 None,
             )
-            logger.log(record)
+            history.save_record(record)
 
-        assert len(logger) == expected
+        assert len(history) == expected
 
-    def test_logging_content(self, setup_for_logs, exponential_components, responsibility_matrix):
-        logger, once_in_iter, n = setup_for_logs
+    def test_recording_content(self, setup_for_records, exponential_components, responsibility_matrix):
+        history, once_in_iter, n = setup_for_records
         iteration_numbers = [i for i in range(0, n, once_in_iter)]
 
-        for i in range(0, len(logger)):
-            expected_logs = IterationRecord(
+        for i in range(0, len(history)):
+            expected_records = IterationRecord(
                 iteration_numbers[i],
                 MixtureModel(exponential_components, np.array([0.5, 0.5])),
                 np.array([1, iteration_numbers[i]]),
@@ -142,27 +142,27 @@ class TestLoggingAndLen:
                 None,
                 None,
             )
-            assert logger[i].iteration == expected_logs.iteration
-            assert np.array_equal(logger[i].X, expected_logs.X)
+            assert history[i].iteration == expected_records.iteration
+            assert np.array_equal(history[i].X, expected_records.X)
 
 
 class TestClear:
     @pytest.fixture
-    def populated_logger(self, sample_record_0, sample_record_1):
-        logger = IterationsHistory()
-        logger.log(sample_record_0)
-        logger.log(sample_record_1)
-        logger.log(sample_record_0)
-        return logger
+    def populated_history(self, sample_record_0, sample_record_1):
+        history = IterationsHistory()
+        history.save_record(sample_record_0)
+        history.save_record(sample_record_1)
+        history.save_record(sample_record_0)
+        return history
 
-    def test_reset(self, populated_logger):
-        logger = populated_logger
-        EXPECTED_LEN_OF_LOGGER = 3
+    def test_reset(self, populated_history):
+        history = populated_history
+        EXPECTED_LEN_OF_HISTORY = 3
 
-        assert len(logger) == EXPECTED_LEN_OF_LOGGER
-        assert logger._counter == EXPECTED_LEN_OF_LOGGER
+        assert len(history) == EXPECTED_LEN_OF_HISTORY
+        assert history._counter == EXPECTED_LEN_OF_HISTORY
 
-        logger.reset()
-        assert len(logger) == 0
-        assert logger._counter == 0
-        assert logger.once_in_iterations == 1
+        history.reset()
+        assert len(history) == 0
+        assert history._counter == 0
+        assert history.once_in_iterations == 1

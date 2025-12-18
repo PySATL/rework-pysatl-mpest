@@ -99,7 +99,7 @@ class TestECMInitialization:
         assert ecm.pruners is not mock_pruners
         assert ecm.pruners == mock_pruners
         assert ecm.optimizer is mock_optimizer
-        assert ecm._logger is None
+        assert ecm._history is None
 
 
 class TestECMFit:
@@ -157,15 +157,15 @@ class TestECMFit:
         # Arrange
         MockPipeline = mocker.patch("rework_pysatl_mpest.estimators.ecm.Pipeline")
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
-        log_frequency = 5
+        record_frequency = 5
         num_of_steps = 2
 
         # Act
-        ecm.fit(sample_data, sample_mixture, once_in_iterations=log_frequency)
+        ecm.fit(sample_data, sample_mixture, once_in_iterations=record_frequency)
 
         # Assert
         args, _ = MockPipeline.call_args
-        pipeline_steps, pipeline_breakpointers, pipeline_pruners, pipeline_log_freq = (
+        pipeline_steps, pipeline_breakpointers, pipeline_pruners, pipeline_record_freq = (
             args[0],
             args[1],
             args[2],
@@ -174,7 +174,7 @@ class TestECMFit:
 
         assert pipeline_breakpointers == mock_breakpointers
         assert pipeline_pruners == mock_pruners
-        assert pipeline_log_freq == log_frequency
+        assert pipeline_record_freq == record_frequency
 
         assert len(pipeline_steps) == num_of_steps
         assert isinstance(pipeline_steps[0], ExpectationStep)
@@ -192,7 +192,7 @@ class TestECMFit:
         assert "rate" not in m_step.blocks[1].params_to_optimize
         assert "loc" in m_step.blocks[1].params_to_optimize
 
-    def test_logger_access_lifecycle(
+    def test_history_access_lifecycle(
         self,
         mocker: MockerFixture,
         mock_optimizer: Optimizer,
@@ -201,7 +201,7 @@ class TestECMFit:
         sample_data: np.ndarray,
     ):
         """
-        Tests the full lifecycle of the logger property:
+        Tests the full lifecycle of the history property:
         1. Raises AttributeError before `fit` is called.
         2. Becomes accessible after the first `fit` call.
         3. Is overwritten with a new object on a subsequent `fit` call.
@@ -213,26 +213,26 @@ class TestECMFit:
         breakpointers = [StopAfterOneIteration()]
         ecm = ECM(breakpointers=breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
-        # 1. Assert initial state: logger access raises a specific error
-        with pytest.raises(AttributeError, match="Logger is not available. Call the 'fit' method first."):
-            _ = ecm.logger
+        # 1. Assert initial state: history access raises a specific error
+        with pytest.raises(AttributeError, match="History is not available. Call the 'fit' method first."):
+            _ = ecm.history
 
         # 2. Act & Assert after first call
         mock_pipeline_instance_1 = MockPipeline.return_value
-        mock_pipeline_instance_1.logger = "first_logger_object"
+        mock_pipeline_instance_1.history = "first_history_object"
 
         ecm.fit(sample_data, sample_mixture)
 
-        assert ecm.logger == "first_logger_object"
-        first_logger_id = id(ecm.logger)
+        assert ecm.history == "first_history_object"
+        first_history_id = id(ecm.history)
 
         # 3. Act & Assert after second call
         mock_pipeline_instance_2 = MockPipeline.return_value
-        mock_pipeline_instance_2.logger = "second_logger_object"
+        mock_pipeline_instance_2.history = "second_history_object"
 
         ecm.fit(sample_data, sample_mixture)
 
-        assert ecm.logger == "second_logger_object"
-        second_logger_id = id(ecm.logger)
+        assert ecm.history == "second_history_object"
+        second_history_id = id(ecm.history)
 
-        assert first_logger_id != second_logger_id
+        assert first_history_id != second_history_id
