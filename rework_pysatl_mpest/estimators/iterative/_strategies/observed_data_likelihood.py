@@ -13,15 +13,12 @@ from copy import copy
 
 import numpy as np
 
-from rework_pysatl_mpest.estimators.iterative._strategies.utils import handle_numerical_overflow
-
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
 from ....typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
-
-NUMERICAL_TOLERANCE = 1e-9
+from .utils import handle_numerical_overflow
 
 
 def observed_data_likelihood_strategy(
