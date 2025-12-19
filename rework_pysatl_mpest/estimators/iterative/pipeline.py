@@ -224,9 +224,9 @@ class Pipeline(BaseEstimator[DType]):
                     if state.H is not None:
                         state.H = np.delete(state.H, removed_components_indices, axis=1)
 
-            # Log
-            self.logger.log(
-                IterationRecord(self.logger._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
+            # Save iteration record
+            self.history.save_record(
+                IterationRecord(self.history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
             )
 
             # Checking stopping criteria
