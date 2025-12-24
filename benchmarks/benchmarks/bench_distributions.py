@@ -9,8 +9,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 import warnings
 from copy import copy
 
-from .common import Benchmark, DISTRIBUTIONS, DTYPES_MAP, GENERATE_SHAPES, SAMPLE_SIZES, get_components, RNG_GENERATOR
-
+from .common import DISTRIBUTIONS, DTYPES_MAP, GENERATE_SHAPES, RNG_GENERATOR, SAMPLE_SIZES, Benchmark, get_components
 
 
 class DistributionMethods(Benchmark):
@@ -22,7 +21,7 @@ class DistributionMethods(Benchmark):
     params = (
         DISTRIBUTIONS,  # dist_name
         SAMPLE_SIZES,  # n_samples
-        list(DTYPES_MAP.keys())  # dtype_name
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["dist_name", "n_samples", "dtype_name"]
 
@@ -71,7 +70,7 @@ class DistributionGenerate(Benchmark):
     params = (
         DISTRIBUTIONS,  # dist_name
         list(GENERATE_SHAPES.keys()),  # shape_name
-        list(DTYPES_MAP.keys())  # dtype_name
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["dist_name", "shape_name", "dtype_name"]
 
@@ -102,7 +101,7 @@ class DistributionAstype(Benchmark):
     params = (
         DISTRIBUTIONS,  # dist_name
         list(DTYPES_MAP.keys()),  # dtype_name
-        list(DTYPES_MAP.keys())  # conv_dtype_name
+        list(DTYPES_MAP.keys()),  # conv_dtype_name
     )
     param_names = ["dist_name", "dtype_name", "conv_dtype_name"]
 
@@ -110,6 +109,9 @@ class DistributionAstype(Benchmark):
         dtype = DTYPES_MAP[dtype_name]
         self.dist = get_components(dist_name, dtype, 1)[0]
         self.conv_dtype = DTYPES_MAP[conv_dtype_name]
+
+        if not callable(getattr(self.dist, "astype", None)):
+            raise NotImplementedError(f"Old version {dist_name} does not support .astype")
 
     # --- Time Benchmarks ---
 
@@ -130,7 +132,7 @@ class DistributionCopy(Benchmark):
 
     params = (
         DISTRIBUTIONS,  # dist_name
-        list(DTYPES_MAP.keys())  # dtype_name
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["dist_name", "dtype_name"]
 

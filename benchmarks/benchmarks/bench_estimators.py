@@ -10,14 +10,18 @@ import warnings
 from copy import copy
 
 import numpy as np
-
-from rework_pysatl_mpest.core import MixtureModel
 from rework_pysatl_mpest.estimators import ECM
-from rework_pysatl_mpest.estimators.iterative import ExpectationStep, PipelineState, OptimizationBlock, \
-    MaximizationStrategy, MaximizationStep
+from rework_pysatl_mpest.estimators.iterative import (
+    ExpectationStep,
+    MaximizationStep,
+    MaximizationStrategy,
+    OptimizationBlock,
+    PipelineState,
+)
 from rework_pysatl_mpest.estimators.iterative.breakpointers import StepBreakpointer
 from rework_pysatl_mpest.optimizers import ScipyNelderMead
-from .common import Benchmark, DTYPES_MAP, SAMPLE_SIZES, get_components, DISTRIBUTIONS, RNG_GENERATOR
+
+from .common import DISTRIBUTIONS, DTYPES_MAP, RNG_GENERATOR, SAMPLE_SIZES, Benchmark, LibAdapter, get_components
 
 
 class StepOverhead(Benchmark):
@@ -34,8 +38,8 @@ class StepOverhead(Benchmark):
         DISTRIBUTIONS,  # dist_name
         [2],  # n_components
         SAMPLE_SIZES,  # n_samples
-        list(DTYPES_MAP.keys()), # dtype_name
-        [True, False]  # is_soft
+        list(DTYPES_MAP.keys()),  # dtype_name
+        [True, False],  # is_soft
     )
     param_names = ["dist_name", "n_components", "n_samples", "dtype_name", "is_soft"]
 
@@ -52,7 +56,7 @@ class StepOverhead(Benchmark):
                 comp.fix_param("shape")
                 comp.fix_param("loc")
 
-        self.mix_analytical = MixtureModel(self.comps_analytical, dtype=dtype)
+        self.mix_analytical = LibAdapter.create_mixture(components=self.comps_analytical, dtype=dtype)
         self.X_analytical = self.mix_analytical.generate(n_samples)
 
         # --- Pipeline Components ---
@@ -60,9 +64,7 @@ class StepOverhead(Benchmark):
 
         # Setup States
         # 1. State ready for E-step
-        self.state_analytical_for_E = PipelineState(
-            self.X_analytical, None, None, copy(self.mix_analytical), None
-        )
+        self.state_analytical_for_E = PipelineState(self.X_analytical, None, None, copy(self.mix_analytical), None)
 
         # 2. State ready for M-step (Pre-calculate H)
         self.state_analytical_for_M = self.e_step.run(
@@ -103,11 +105,11 @@ class ECMAnalyticalCleanWithStepBreakpointer(Benchmark):
     """
 
     params = (
-        ["Normal", "Exponential", "Pareto", "Weibull"], # dist_name
-        [2], # n_components
-        [5], # max_steps
-        SAMPLE_SIZES, # n_samples
-        list(DTYPES_MAP.keys()) # dtype_name
+        ["Normal", "Exponential", "Pareto", "Weibull"],  # dist_name
+        [2],  # n_components
+        [5],  # max_steps
+        SAMPLE_SIZES,  # n_samples
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["dist_name", "n_components", "max_steps", "n_samples", "dtype_name"]
 
@@ -120,24 +122,22 @@ class ECMAnalyticalCleanWithStepBreakpointer(Benchmark):
 
         dtype = DTYPES_MAP[dtype_name]
         true_comps = get_components(dist_name, dtype, n_components)
-        self.X = MixtureModel(true_comps).generate(n_samples)
+        self.X = LibAdapter.create_mixture(components=true_comps).generate(n_samples)
 
         start_comps = copy(true_comps)
         for comp in start_comps:
-            new_params = np.asarray(comp.get_params_vector(comp.params), dtype=dtype) + np.ones(len(comp.params), dtype=dtype)
+            new_params = np.asarray(comp.get_params_vector(comp.params), dtype=dtype) + np.ones(
+                len(comp.params), dtype=dtype
+            )
             comp.set_params_from_vector(comp.params, new_params)
             if dist_name == "Weibull":
                 comp.fix_param("shape")
                 comp.fix_param("loc")
 
-        self.start_mixture = MixtureModel(start_comps, dtype=dtype)
+        self.start_mixture = LibAdapter.create_mixture(components=start_comps, dtype=dtype)
 
         # Configure ECM to run for a fixed small number of steps to measure throughput
-        self.ecm = ECM(
-            breakpointers=[StepBreakpointer(max_steps=max_steps)],
-            pruners=[],
-            optimizer=ScipyNelderMead()
-        )
+        self.ecm = ECM(breakpointers=[StepBreakpointer(max_steps=max_steps)], pruners=[], optimizer=ScipyNelderMead())
 
     def time_fit(self, dist_name, n_components, max_steps, n_samples, dtype_name):
         self.ecm.fit(self.X, self.start_mixture)
@@ -152,10 +152,10 @@ class ECMAnalyticalOverflow(Benchmark):
     """
 
     params = (
-        ["Normal", "Exponential", "Pareto", "Weibull"], # dist_name
+        ["Normal", "Exponential", "Pareto", "Weibull"],  # dist_name
         [2],  # n_components
-        SAMPLE_SIZES, # n_samples
-        ["float16"] # dtype_name
+        SAMPLE_SIZES,  # n_samples
+        ["float16"],  # dtype_name
     )
     param_names = ["dist_name", "n_components", "n_samples", "dtype_name"]
     timeout = 300.0
@@ -177,14 +177,10 @@ class ECMAnalyticalOverflow(Benchmark):
                 comp.fix_param("shape")
                 comp.fix_param("loc")
 
-        self.start_mix = MixtureModel(start_comps, dtype=dtype)
+        self.start_mix = LibAdapter.create_mixture(components=start_comps, dtype=dtype)
 
         # Run only 1 step to trigger the error immediately and measure recovery overhead
-        self.ecm = ECM(
-            breakpointers=[StepBreakpointer(max_steps=1)],
-            pruners=[],
-            optimizer=ScipyNelderMead()
-        )
+        self.ecm = ECM(breakpointers=[StepBreakpointer(max_steps=1)], pruners=[], optimizer=ScipyNelderMead())
 
     def time_fit_restart(self, dist_name, n_components, n_samples, dtype_name):
         with warnings.catch_warnings():

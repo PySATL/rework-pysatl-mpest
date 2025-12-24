@@ -9,8 +9,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 import warnings
 from copy import copy
 
-from rework_pysatl_mpest.core import MixtureModel
-from .common import Benchmark, DTYPES_MAP, GENERATE_SHAPES, SAMPLE_SIZES, get_components
+from .common import DTYPES_MAP, GENERATE_SHAPES, SAMPLE_SIZES, Benchmark, LibAdapter, get_components
+
 
 class MixtureMethods(Benchmark):
     """
@@ -18,9 +18,9 @@ class MixtureMethods(Benchmark):
     """
 
     params = (
-        [10], # n_components
+        [10],  # n_components
         SAMPLE_SIZES,  # n_samples
-        list(DTYPES_MAP.keys())  # dtype_name
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["n_components", "n_samples", "dtype_name"]
 
@@ -31,7 +31,7 @@ class MixtureMethods(Benchmark):
         dtype = DTYPES_MAP[dtype_name]
         components = get_components("Normal", dtype, n_components)
 
-        self.mixture = MixtureModel(components=components, dtype=dtype)
+        self.mixture = LibAdapter.create_mixture(components=components, dtype=dtype)
         # Pre-generate data to avoid measuring generation time
         self.X = self.mixture.generate(n_samples)
 
@@ -63,6 +63,7 @@ class MixtureScalability(Benchmark):
     Tests how MixtureModel scales with the number of components (K).
     Critical for identifying O(K) vs O(K^2) bottlenecks.
     """
+
     params = (
         [2, 5, 20, 100],  # n_components
         [10000],  # n_samples
@@ -73,7 +74,7 @@ class MixtureScalability(Benchmark):
         # Create K distinct components
         components = get_components("Normal", n_components=n_components)
 
-        self.mixture = MixtureModel(components)
+        self.mixture = LibAdapter.create_mixture(components=components)
         self.X = self.mixture.generate(n_samples)
 
     # --- Time Benchmarks ---
@@ -107,7 +108,7 @@ class MixtureGenerate(Benchmark):
     params = (
         [2, 5, 20, 100],  # n_components
         list(GENERATE_SHAPES.keys()),  # shape_name
-        list(DTYPES_MAP.keys())  # dtype_name
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["n_components", "shape_name", "dtype_name"]
 
@@ -118,7 +119,7 @@ class MixtureGenerate(Benchmark):
         dtype = DTYPES_MAP[dtype_name]
         components = get_components("Normal", n_components=n_components)
 
-        self.mixture = MixtureModel(components=components, dtype=dtype)
+        self.mixture = LibAdapter.create_mixture(components=components, dtype=dtype)
         self.shape = GENERATE_SHAPES[shape_name]
 
     # --- Time Benchmarks ---
@@ -140,7 +141,7 @@ class MixtureAstype(Benchmark):
     params = (
         [2, 5, 20, 100],  # n_components
         list(DTYPES_MAP.keys()),  # dtype_name
-        list(DTYPES_MAP.keys())  # conv_dtype_name
+        list(DTYPES_MAP.keys()),  # conv_dtype_name
     )
     param_names = ["n_components", "dtype_name", "conv_dtype_name"]
 
@@ -148,8 +149,11 @@ class MixtureAstype(Benchmark):
         dtype = DTYPES_MAP[dtype_name]
         components = get_components("Normal", dtype, n_components)
 
-        self.mixture = MixtureModel(components=components, dtype=dtype)
+        self.mixture = LibAdapter.create_mixture(components=components, dtype=dtype)
         self.conv_dtype = DTYPES_MAP[conv_dtype_name]
+
+        if not callable(getattr(self.mixture, "astype", None)):
+            raise NotImplementedError("Old version MixtureModel does not support .astype")
 
     # --- Time Benchmarks ---
 
@@ -161,6 +165,7 @@ class MixtureAstype(Benchmark):
     def peakmem_astype(self, n_components, dtype_name, conv_dtype_name):
         self.mixture.astype(self.conv_dtype)
 
+
 class MixtureCopy(Benchmark):
     """
     Benchmarks for object copying overhead.
@@ -169,14 +174,14 @@ class MixtureCopy(Benchmark):
 
     params = (
         [2, 5, 20, 100],  # n_components
-        list(DTYPES_MAP.keys())  # dtype_name
+        list(DTYPES_MAP.keys()),  # dtype_name
     )
     param_names = ["n_components", "dtype_name"]
 
     def setup(self, n_components, dtype_name):
         dtype = DTYPES_MAP[dtype_name]
         components = get_components("Normal", dtype, n_components)
-        self.mixture = MixtureModel(components=components, dtype=dtype)
+        self.mixture = LibAdapter.create_mixture(components=components, dtype=dtype)
 
     # --- Time Benchmarks ---
 
