@@ -6,10 +6,17 @@ __author__ = "Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-import warnings
 from copy import copy
 
-from .common import DTYPES_MAP, GENERATE_SHAPES, SAMPLE_SIZES, Benchmark, LibAdapter, get_components
+from .common import (
+    DTYPES_MAP,
+    GENERATE_SHAPES,
+    SAMPLE_SIZES,
+    Benchmark,
+    LibAdapter,
+    get_components,
+    measure_peak_memory,
+)
 
 
 class MixtureMethods(Benchmark):
@@ -25,9 +32,6 @@ class MixtureMethods(Benchmark):
     param_names = ["n_components", "n_samples", "dtype_name"]
 
     def setup(self, n_components, n_samples, dtype_name):
-        if dtype_name == "float16":
-            warnings.simplefilter("ignore", RuntimeWarning)
-
         dtype = DTYPES_MAP[dtype_name]
         components = get_components("Normal", dtype, n_components)
 
@@ -48,13 +52,16 @@ class MixtureMethods(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_pdf(self, n_components, n_samples, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_pdf(self, n_components, n_samples, dtype_name):
         self.mixture.pdf(self.X)
 
-    def peakmem_lpdf(self, n_components, n_samples, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_lpdf(self, n_components, n_samples, dtype_name):
         self.mixture.lpdf(self.X)
 
-    def peakmem_loglikelihood(self, n_components, n_samples, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_loglikelihood(self, n_components, n_samples, dtype_name):
         self.mixture.loglikelihood(self.X)
 
 
@@ -90,13 +97,16 @@ class MixtureScalability(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_pdf_scaling(self, n_components, n_samples):
+    @measure_peak_memory
+    def track_peakmem_pdf_scaling(self, n_components, n_samples):
         self.mixture.pdf(self.X)
 
-    def peakmem_lpdf_scaling(self, n_components, n_samples):
+    @measure_peak_memory
+    def track_peakmem_lpdf_scaling(self, n_components, n_samples):
         self.mixture.lpdf(self.X)
 
-    def peakmem_loglikelihood_scaling(self, n_components, n_samples):
+    @measure_peak_memory
+    def track_peakmem_loglikelihood_scaling(self, n_components, n_samples):
         self.mixture.loglikelihood(self.X)
 
 
@@ -113,9 +123,6 @@ class MixtureGenerate(Benchmark):
     param_names = ["n_components", "shape_name", "dtype_name"]
 
     def setup(self, n_components, shape_name, dtype_name):
-        if dtype_name == "float16":
-            warnings.simplefilter("ignore", RuntimeWarning)
-
         dtype = DTYPES_MAP[dtype_name]
         components = get_components("Normal", n_components=n_components)
 
@@ -129,7 +136,8 @@ class MixtureGenerate(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_generate(self, n_components, shape_name, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_generate(self, n_components, shape_name, dtype_name):
         self.mixture.generate(self.shape)
 
 
@@ -153,7 +161,7 @@ class MixtureAstype(Benchmark):
         self.conv_dtype = DTYPES_MAP[conv_dtype_name]
 
         if not callable(getattr(self.mixture, "astype", None)):
-            raise NotImplementedError("Old version MixtureModel does not support .astype")
+            raise NotImplementedError("Version does not support .astype")
 
     # --- Time Benchmarks ---
 
@@ -162,7 +170,8 @@ class MixtureAstype(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_astype(self, n_components, dtype_name, conv_dtype_name):
+    @measure_peak_memory
+    def track_peakmem_astype(self, n_components, dtype_name, conv_dtype_name):
         self.mixture.astype(self.conv_dtype)
 
 
@@ -189,6 +198,6 @@ class MixtureCopy(Benchmark):
         copy(self.mixture)
 
     # --- Memory Benchmarks (Peak) ---
-
-    def peakmem_copy(self, n_components, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_copy(self, n_components, dtype_name):
         copy(self.mixture)

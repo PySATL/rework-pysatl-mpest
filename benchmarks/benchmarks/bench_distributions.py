@@ -6,10 +6,18 @@ __author__ = "Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-import warnings
 from copy import copy
 
-from .common import DISTRIBUTIONS, DTYPES_MAP, GENERATE_SHAPES, RNG_GENERATOR, SAMPLE_SIZES, Benchmark, get_components
+from .common import (
+    DISTRIBUTIONS,
+    DTYPES_MAP,
+    GENERATE_SHAPES,
+    RNG_GENERATOR,
+    SAMPLE_SIZES,
+    Benchmark,
+    get_components,
+    measure_peak_memory,
+)
 
 
 class DistributionMethods(Benchmark):
@@ -26,9 +34,6 @@ class DistributionMethods(Benchmark):
     param_names = ["dist_name", "n_samples", "dtype_name"]
 
     def setup(self, dist_name, n_samples, dtype_name):
-        if dtype_name == "float16":
-            warnings.simplefilter("ignore", RuntimeWarning)
-
         dtype = DTYPES_MAP[dtype_name]
         # Initialize distribution
         self.dist = get_components(dist_name, dtype, 1)[0]
@@ -54,10 +59,20 @@ class DistributionMethods(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_pdf(self, dist_name, n_samples, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_pdf(self, dist_name, n_samples, dtype_name):
         self.dist.pdf(self.X)
 
-    def peakmem_log_gradients(self, dist_name, n_samples, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_lpdf(self, dist_name, n_samples, dtype_name):
+        self.dist.lpdf(self.X)
+
+    @measure_peak_memory
+    def track_peakmem_ppf(self, dist_name, n_samples, dtype_name):
+        self.dist.ppf(self.P)
+
+    @measure_peak_memory
+    def track_peakmem_log_gradients(self, dist_name, n_samples, dtype_name):
         self.dist.log_gradients(self.X)
 
 
@@ -75,9 +90,6 @@ class DistributionGenerate(Benchmark):
     param_names = ["dist_name", "shape_name", "dtype_name"]
 
     def setup(self, dist_name, shape_name, dtype_name):
-        if dtype_name == "float16":
-            warnings.simplefilter("ignore", RuntimeWarning)
-
         dtype = DTYPES_MAP[dtype_name]
         self.dist = get_components(dist_name, dtype, 1)[0]
         self.shape = GENERATE_SHAPES[shape_name]
@@ -89,7 +101,8 @@ class DistributionGenerate(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_generate(self, dist_name, shape_name, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_generate(self, dist_name, shape_name, dtype_name):
         self.dist.generate(self.shape)
 
 
@@ -120,7 +133,8 @@ class DistributionAstype(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_astype(self, dist_name, dtype_name, conv_dtype_name):
+    @measure_peak_memory
+    def track_peakmem_astype(self, dist_name, dtype_name, conv_dtype_name):
         self.dist.astype(self.conv_dtype)
 
 
@@ -147,7 +161,8 @@ class DistributionCopy(Benchmark):
 
     # --- Memory Benchmarks (Peak) ---
 
-    def peakmem_copy(self, dist_name, dtype_name):
+    @measure_peak_memory
+    def track_peakmem_copy(self, dist_name, dtype_name):
         copy(self.dist)
 
 

@@ -6,7 +6,6 @@ __author__ = "Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-import warnings
 from copy import copy
 
 import numpy as np
@@ -19,19 +18,25 @@ from rework_pysatl_mpest.estimators.iterative import (
     PipelineState,
 )
 from rework_pysatl_mpest.estimators.iterative.breakpointers import StepBreakpointer
+from rework_pysatl_mpest.estimators.iterative._strategies.q_function import q_function_strategy
 from rework_pysatl_mpest.optimizers import ScipyNelderMead
 
-from .common import DISTRIBUTIONS, DTYPES_MAP, RNG_GENERATOR, SAMPLE_SIZES, Benchmark, LibAdapter, get_components
+from .common import (
+    DISTRIBUTIONS,
+    DTYPES_MAP,
+    RNG_GENERATOR,
+    SAMPLE_SIZES,
+    Benchmark,
+    LibAdapter,
+    get_components,
+    measure_peak_memory,
+    MutableBenchmark,
+)
 
 
-class StepOverhead(Benchmark):
+class EStep(Benchmark):
     """
-    Isolates E-step and M-step to identify bottlenecks.
-
-    Warning: The M-step benchmark operates on a mutable state.
-    Since we only test analytical strategies (Q-Function for Exp/Normal/Pareto/Weibull),
-    the calculation time is largely independent of the parameter values,
-    so the benchmark drift is negligible.
+    Isolates E-step.
     """
 
     params = (
@@ -44,81 +49,106 @@ class StepOverhead(Benchmark):
     param_names = ["dist_name", "n_components", "n_samples", "dtype_name", "is_soft"]
 
     def setup(self, dist_name, n_components, n_samples, dtype_name, is_soft):
-        if dtype_name == "float16":
-            warnings.simplefilter("ignore", RuntimeWarning)
+        dtype = DTYPES_MAP[dtype_name]
+
+        components = get_components(dist_name, dtype, n_components)
+        mixture = LibAdapter.create_mixture(components=components, dtype=dtype)
+        X = mixture.generate(n_samples)
+        self.state = PipelineState(X, None, None, mixture, None)
+
+        self.e_step = ExpectationStep(is_soft=is_soft)
+
+    # --- Time Benchmarks ---
+
+    def time_expectation_step(self, dist_name, n_components, n_samples, dtype_name, is_soft):
+        self.e_step.run(self.state)
+
+    # --- Memory Benchmarks (Peak) ---
+
+    @measure_peak_memory
+    def track_peakmem_expectation_step(self, dist_name, n_components, n_samples, dtype_name, is_soft):
+        self.e_step.run(self.state)
+
+
+class MStepAnalytical(MutableBenchmark):
+    """
+    Isolates M-step with analitical solution for strategy.
+    Involve mutable state or in-place operations.
+    """
+
+    params = (
+        ["Exponential", "Normal", "Pareto", "Weibull"],  # dist_name
+        [2],  # n_components
+        SAMPLE_SIZES,  # n_samples
+        list(DTYPES_MAP.keys()),  # dtype_name
+    )
+    param_names = ["dist_name", "n_components", "n_samples", "dtype_name"]
+
+    def setup(self, dist_name, n_components, n_samples, dtype_name):
+        registered_names = {cls.__name__ for cls in q_function_strategy.registry.keys()}
+        if dist_name not in registered_names:
+            raise NotImplementedError(f"Version does not support analytical q-function for {dist_name}")
 
         dtype = DTYPES_MAP[dtype_name]
 
         # --- Setup ---
-        self.comps_analytical = get_components(dist_name, dtype, n_components)
+        components = get_components(dist_name, dtype, n_components)
         if dist_name == "Weibull":
-            for comp in self.comps_analytical:
+            for comp in components:
                 comp.fix_param("shape")
                 comp.fix_param("loc")
 
-        self.mix_analytical = LibAdapter.create_mixture(components=self.comps_analytical, dtype=dtype)
-        self.X_analytical = self.mix_analytical.generate(n_samples)
+        mixture = LibAdapter.create_mixture(components=components, dtype=dtype)
+        X = mixture.generate(n_samples)
 
-        # --- Pipeline Components ---
-        self.e_step = ExpectationStep(is_soft=is_soft)
-
-        # Setup States
-        # 1. State ready for E-step
-        self.state_analytical_for_E = PipelineState(self.X_analytical, None, None, copy(self.mix_analytical), None)
-
-        # 2. State ready for M-step (Pre-calculate H)
-        self.state_analytical_for_M = self.e_step.run(
-            PipelineState(self.X_analytical, None, None, copy(self.mix_analytical), None)
-        )
+        # State ready for M-step (Pre-calculate H)
+        self.state = ExpectationStep(is_soft=False).run(PipelineState(X, None, None, mixture, None))
 
         # Optimization Blocks
-        self.blocks_analytical = [
-            OptimizationBlock(i, c.params_to_optimize, MaximizationStrategy.QFUNCTION)
-            for i, c in enumerate(self.mix_analytical)
+        blocks = [
+            OptimizationBlock(i, component.params_to_optimize, MaximizationStrategy.QFUNCTION)
+            for i, component in enumerate(mixture)
         ]
-        self.m_step_analytical = MaximizationStep(self.blocks_analytical, ScipyNelderMead())
+        self.m_step = MaximizationStep(blocks, ScipyNelderMead())
 
-    # --- Benchmarks ---
+    # --- Time Benchmarks ---
 
-    def time_expectation_step(self, dist_name, n_components, n_samples, dtype_name, is_soft):
-        """
-        Measure calculating responsibilities (logsumexp overhead).
-        """
-        self.e_step.run(self.state_analytical_for_E)
+    def time_maximization_step_analytical(self, dist_name, n_components, n_samples, dtype_name):
+        self.m_step.run(self.state)
 
-    def time_maximization_analytical(self, dist_name, n_components, n_samples, dtype_name, is_soft):
-        """
-        Measure M-step using closed-form formulas.
-        This run twice:
-        1. With Soft H matrix (floats)
-        2. With Hard H matrix (0s and 1s)
-        """
-        if dist_name not in ["Exponential", "Normal", "Pareto", "Weibull"]:
-            return
-        self.m_step_analytical.run(self.state_analytical_for_M)
+    # --- Memory Benchmarks (Peak) ---
+
+    @measure_peak_memory
+    def track_peakmem_maximization_step_analytical(self, dist_name, n_components, n_samples, dtype_name):
+        self.m_step.run(self.state)
 
 
-class ECMAnalyticalCleanWithStepBreakpointer(Benchmark):
+# TODO: Add Breakpointer, Pruners in params or in common
+
+
+class ECMAnalyticalClean(MutableBenchmark):
     """
-    Benchmarks the ECM estimator with StepBreakpointer and no overflow or errors.
-    Measures the speed of vectorized NumPy updates.
+    Benchmarks the ECM estimator and no overflow.
+    Involve mutable state or in-place operations.
     """
 
     params = (
         ["Normal", "Exponential", "Pareto", "Weibull"],  # dist_name
         [2],  # n_components
-        [5],  # max_steps
         SAMPLE_SIZES,  # n_samples
         list(DTYPES_MAP.keys()),  # dtype_name
+        [[StepBreakpointer(max_steps=5)]],  # breakpointers
+        [[]],  # pruners
     )
-    param_names = ["dist_name", "n_components", "max_steps", "n_samples", "dtype_name"]
+    param_names = ["dist_name", "n_components", "n_samples", "dtype_name", "breakpointers", "pruners"]
 
     # Increase timeout as fitting can be slow
     timeout = 300.0
 
-    def setup(self, dist_name, n_components, max_steps, n_samples, dtype_name):
-        if dtype_name == "float16":
-            warnings.simplefilter("ignore", RuntimeWarning)
+    def setup(self, dist_name, n_components, n_samples, dtype_name, breakpointers, pruners):
+        registered_names = {cls.__name__ for cls in q_function_strategy.registry.keys()}
+        if dist_name not in registered_names:
+            raise NotImplementedError(f"Version does not support analytical q-function for {dist_name}")
 
         dtype = DTYPES_MAP[dtype_name]
         true_comps = get_components(dist_name, dtype, n_components)
@@ -136,18 +166,29 @@ class ECMAnalyticalCleanWithStepBreakpointer(Benchmark):
 
         self.start_mixture = LibAdapter.create_mixture(components=start_comps, dtype=dtype)
 
-        # Configure ECM to run for a fixed small number of steps to measure throughput
-        self.ecm = ECM(breakpointers=[StepBreakpointer(max_steps=max_steps)], pruners=[], optimizer=ScipyNelderMead())
+        # This implementation ignores the optimizer as it does not require numerical optimization.
+        self.ecm = ECM(breakpointers=breakpointers, pruners=pruners, optimizer=None)
 
-    def time_fit(self, dist_name, n_components, max_steps, n_samples, dtype_name):
+    # --- Time Benchmarks ---
+
+    def time_fit(self, dist_name, n_components, n_samples, dtype_name, breakpointers, pruners):
+        self.ecm.fit(self.X, self.start_mixture)
+
+    # --- Memory Benchmarks (Peak) ---
+
+    @measure_peak_memory
+    def track_peakmem_fit(self, dist_name, n_components, n_samples, dtype_name, breakpointers, pruners):
         self.ecm.fit(self.X, self.start_mixture)
 
 
-class ECMAnalyticalOverflow(Benchmark):
+class ECMAnalyticalOverflow(MutableBenchmark):
     """
     Benchmarks the 'Error Recovery' path.
+    Involving mutable state or in-place operations.
+
     Specifically tests the overhead of catching NumericalStabilityError and
     restarting the pipeline with higher precision.
+
     Only relevant for float16 where overflow is easy to trigger.
     """
 
@@ -155,13 +196,24 @@ class ECMAnalyticalOverflow(Benchmark):
         ["Normal", "Exponential", "Pareto", "Weibull"],  # dist_name
         [2],  # n_components
         SAMPLE_SIZES,  # n_samples
-        ["float16"],  # dtype_name
     )
-    param_names = ["dist_name", "n_components", "n_samples", "dtype_name"]
+    param_names = ["dist_name", "n_components", "n_samples"]
+
+    # Increase timeout as fitting can be slow
     timeout = 300.0
 
-    def setup(self, dist_name, n_components, n_samples, dtype_name):
-        dtype = DTYPES_MAP[dtype_name]
+    def setup(self, dist_name, n_components, n_samples):
+        try:
+            from rework_pysatl_mpest.estimators.iterative._strategies.utils import handle_numerical_overflow
+        except ImportError:
+            raise NotImplementedError(f"Version does not support analytical overflow")
+
+        dtype = np.float16
+        from rework_pysatl_mpest.estimators.iterative._strategies.q_function import q_function_strategy
+
+        registered_names = {cls.__name__ for cls in q_function_strategy.registry.keys()}
+        if dist_name not in registered_names:
+            raise NotImplementedError(f"Skipping {dist_name}: no analytical Q-function")
 
         overflow_val = 100.0  # Creates gradients/exp values > 65504 for some distributions
 
@@ -177,13 +229,21 @@ class ECMAnalyticalOverflow(Benchmark):
                 comp.fix_param("shape")
                 comp.fix_param("loc")
 
-        self.start_mix = LibAdapter.create_mixture(components=start_comps, dtype=dtype)
+        self.start_mixture = LibAdapter.create_mixture(components=start_comps, dtype=dtype)
 
+        # This implementation ignores the optimizer as it does not require numerical optimization
         # Run only 1 step to trigger the error immediately and measure recovery overhead
         self.ecm = ECM(breakpointers=[StepBreakpointer(max_steps=1)], pruners=[], optimizer=ScipyNelderMead())
 
-    def time_fit_restart(self, dist_name, n_components, n_samples, dtype_name):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
-            # This call should fail internally, catch the error, promote types, and finish 1 step.
-            self.ecm.fit(self.X, self.start_mix)
+    # --- Time Benchmarks ---
+
+    def time_fit_restart(self, dist_name, n_components, n_samples):
+        # This call should fail internally, catch the error, promote types, and finish 1 step.
+        self.ecm.fit(self.X, self.start_mixture)
+
+    # --- Memory Benchmarks (Peak) ---
+
+    @measure_peak_memory
+    def track_peakmem_fit_restart(self, dist_name, n_components, n_samples):
+        # This call should fail internally, catch the error, promote types, and finish 1 step.
+        self.ecm.fit(self.X, self.start_mixture)

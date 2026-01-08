@@ -4,7 +4,7 @@
     "project_url": "https://github.com/PySATL/rework-pysatl-mpest",
     "repo": "..",
     "branches": ["refactor/rework-arch"],
-    "show_commit_url": "https://github.com/PySATL/rework-pysatl-mpest/commits/refactor/rework-arch/",
+    "show_commit_url": "https://github.com/PySATL/rework-pysatl-mpest/commit/",
     "environment_type": "virtualenv",
     "install_command": ["python -m pip install -e ."],
     "matrix": {
