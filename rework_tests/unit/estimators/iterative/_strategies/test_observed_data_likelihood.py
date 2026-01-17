@@ -115,8 +115,12 @@ def test_odl_strategy_does_not_modify_original_component(parametrized_setup):
     target_comp, state, block, optimizer, _ = parametrized_setup
     original_param1 = target_comp.param1
 
-    observed_data_likelihood_strategy(target_comp, state, block, optimizer)
+    def run_optimization_target(func, x0):
+        func(x0)
+        return [x + 1.0 for x in x0]
 
+    optimizer.side_effect = run_optimization_target
+    observed_data_likelihood_strategy(target_comp, state, block, optimizer)
     assert target_comp.param1 == original_param1
 
 
