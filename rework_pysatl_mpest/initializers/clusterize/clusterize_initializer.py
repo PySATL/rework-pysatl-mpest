@@ -13,17 +13,21 @@ from typing import Any, Callable, ClassVar, Optional
 import numpy as np
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers._estimation_strategies.q_function import q_function_strategy
-from rework_pysatl_mpest.initializers.cluster_match_strategy import (
-    match_clusters_for_models_akaike,
-    match_clusters_for_models_log_likelihood,
+from ...core import MixtureModel
+from ...distributions import ContinuousDistribution
+from ...optimizers import Optimizer, ScipyNelderMead
+from ...typings import Clusterizer
+from .._estimation_strategies import q_function_strategy
+from ..initializer import Initializer
+from ._cluster_match_algorithms import _match_greedy, _match_hungarian, _match_permutations
+from ._score_functions import (
+    _calculate_component_aic,
+    _calculate_component_log_likelihood,
+    _calculate_mixture_aic,
+    _calculate_mixture_log_likelihood,
 )
-from rework_pysatl_mpest.initializers.initializer import Initializer
-from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
-from rework_pysatl_mpest.optimizers import Optimizer
-from rework_pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
+from .strategies import EstimationStrategy, MatchingMethod, ScoringMethod
+from .utils import Context, MatchingResult, _validate_clusters_distributions
 
 
 class ClusterizeInitializer(Initializer):
@@ -36,17 +40,15 @@ class ClusterizeInitializer(Initializer):
 
     Attributes
     ----------
-    MIN_SAMPLES : int
-        Minimum number of samples required for a cluster to be considered valid.
-        Mapping of cluster matching strategies to their implementation functions.
-    n_components : Optional[int]
-        Number of mixture components to initialize.
-    cluster_match_strategy : ClusterMatchStrategy
-        Strategy for matching clusters to distribution models.
-    estimation_strategies : list[EstimationStrategy]
-        List of estimation strategies for each distribution model.
-    models : list[ContinuousDistribution]
-        List of distribution models to initialize.
+    _estimation_strategies : ClassVar[Mapping[EstimationStrategy, Callable]]
+        Internal mapping linking `EstimationStrategy` enums to their corresponding
+        parameter estimation functions (e.g., Q-function strategy).
+    _MATCHING_METHOD : ClassVar[dict[MatchingMethod, Callable]]
+        Internal mapping linking `MatchingMethod` enums to specific cluster matching
+        algorithms (Greedy, Hungarian, Permutations).
+    _SCORING_METHOD : ClassVar[dict[ScoringMethod, tuple[Callable, Callable]]]
+        Internal mapping linking `ScoringMethod` enums to tuples of scoring functions.
+        Each tuple contains `(component_score_func, mixture_score_func)`.
 
     Parameters
     ----------
@@ -56,14 +58,16 @@ class ClusterizeInitializer(Initializer):
     is_soft : bool
         If True, uses soft clustering (fuzzy assignments).
         If False, uses hard clustering (crisp assignments).
-    clusterizer : Any
-        The clustering algorithm instance. Must have `fit_transform` method for soft
-        clustering or `fit_predict` method for hard clustering.
+    clusterizer : Clusterizer
+        The clustering algorithm instance. Must comply with either HardClusterizer
+        (fit_predict) or SoftClusterizer (fit_transform) protocols.
+    optimizer : Optimizer, optional
+        Optimizer for parameter estimation. Default is ScipyNelderMead.
 
     Methods
     -------
-    perform(X, dists, cluster_match_strategy, estimation_strategies, optimizer)
-        Performs cluster-based initialization of mixture model parameters.
+    perform(X, dists, method, score_func, estimation_strategies, optimizer, clusterizer)
+            Performs cluster-based initialization of mixture model parameters.
 
     Notes
     -----
@@ -89,18 +93,25 @@ class ClusterizeInitializer(Initializer):
     - Falls back to fast initialization if accurate initialization fails.
     """
 
-    MIN_SAMPLES = 10
     _estimation_strategies: ClassVar[Mapping[EstimationStrategy, Callable]] = MappingProxyType(
         {EstimationStrategy.QFUNCTION: q_function_strategy}
     )
-    _cluster_match_strategies: ClassVar[Mapping[ClusterMatchStrategy, Callable]] = MappingProxyType(
-        {
-            ClusterMatchStrategy.LIKELIHOOD: match_clusters_for_models_log_likelihood,
-            ClusterMatchStrategy.AKAIKE: match_clusters_for_models_akaike,
-        }
-    )
+    _MATCHING_METHOD: ClassVar[dict[MatchingMethod, Callable]] = {
+        MatchingMethod.GREEDY: _match_greedy,
+        MatchingMethod.HUNGARIAN: _match_hungarian,
+        MatchingMethod.PERMUTATIONS: _match_permutations,
+    }
+    _SCORING_METHOD: ClassVar[dict[ScoringMethod, tuple[Callable, Callable]]] = {
+        ScoringMethod.AIC: (_calculate_component_aic, _calculate_mixture_aic),
+        ScoringMethod.LIKELIHOOD: (
+            lambda m, X, H_k: -_calculate_component_log_likelihood(m, X, H_k),
+            lambda m, X: -_calculate_mixture_log_likelihood(m, X),
+        ),
+    }
 
-    def __init__(self, is_accurate: bool, is_soft: bool, clusterizer: Any):
+    def __init__(
+        self, is_accurate: bool, is_soft: bool, clusterizer: Clusterizer, optimizer: Optimizer = ScipyNelderMead()
+    ):
         """Initializes the cluster-based initializer.
 
         Parameters
@@ -111,26 +122,29 @@ class ClusterizeInitializer(Initializer):
         is_soft : bool
             If True, uses soft clustering (fuzzy assignments).
             If False, uses hard clustering (crisp assignments).
-        clusterizer : Any
-            The clustering algorithm instance. Must have appropriate methods for
-            the specified clustering type.
+        clusterizer : Clusterizer
+            The clustering algorithm instance.
+        optimizer : Optimizer, optional
+            Optimizer for parameter estimation. Default is ScipyNelderMead.
         """
         self.is_soft = is_soft
         self.is_accurate = is_accurate
         self.clusterizer = clusterizer
+        self.optimizer = optimizer
         self.n_components: Optional[int] = None
-        self.cluster_match_strategy: ClusterMatchStrategy = ClusterMatchStrategy.LIKELIHOOD
+        self.method: MatchingMethod = MatchingMethod.GREEDY
+        self.score_func: ScoringMethod = ScoringMethod.LIKELIHOOD
         self.estimation_strategies: list[EstimationStrategy] = []
         self.models: list[ContinuousDistribution] = []
 
-    def _clusterize(self, X: np.ndarray, clusterizer: Any) -> np.ndarray:
+    def _clusterize(self, X: np.ndarray, clusterizer: Clusterizer) -> np.ndarray:
         """Performs clustering on the input data and returns weight matrix.
 
         Parameters
         ----------
         X : np.ndarray
             Input data points to cluster.
-        clusterizer : Any
+        clusterizer : Clusterizer
             The clustering algorithm instance.
 
         Returns
@@ -145,6 +159,10 @@ class ClusterizeInitializer(Initializer):
             If the clusterizer doesn't have the required method for the specified
             clustering type, or if clustering fails.
         """
+
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+
         if self.is_soft and hasattr(clusterizer, "fit_transform"):
             try:
                 H = clusterizer.fit_transform(X)
@@ -167,20 +185,91 @@ class ClusterizeInitializer(Initializer):
                     outlier_mask = labels == -1
                     non_outlier_mask = ~outlier_mask
                     H[outlier_mask, :] = 1.0 / n_clusters
-                    for idx in np.where(non_outlier_mask)[0]:
-                        label = labels[idx]
-                        cluster_idx = np.where(valid_labels == label)[0][0]
-                        H[idx, cluster_idx] = 1.0
+                    valid_indices = np.where(non_outlier_mask)[0]
+                    valid_data_labels = labels[non_outlier_mask]
+                    col_indices = np.searchsorted(valid_labels, valid_data_labels)
+                    H[valid_indices, col_indices] = 1.0
                 else:
-                    for i, label in enumerate(labels):
-                        cluster_idx = np.where(valid_labels == label)[0][0]
-                        H[i, cluster_idx] = 1.0
+                    col_indices = np.searchsorted(valid_labels, labels)
+                    H[np.arange(len(X)), col_indices] = 1.0
                 return H
 
             except Exception as e:
                 raise ValueError(f"Hard clusterizer failed: {e}")
         else:
             raise ValueError("Clusterizer doesn't have required method")
+
+    def _match_clusters_for_models(
+        self,
+        models: list[ContinuousDistribution],
+        X: np.ndarray,
+        H: np.ndarray,
+        estimation_strategies: list[Callable],
+        method: MatchingMethod,
+        score_func: ScoringMethod,
+        optimizer: Optimizer = ScipyNelderMead(),
+    ) -> MatchingResult:
+        """Matches clusters to models using a specified strategy and scoring function.
+
+        Parameters
+        ----------
+        models : list[ContinuousDistribution]
+            List of distributions available for assignment.
+        X : np.ndarray
+            Input data points.
+        H : np.ndarray
+            Weight matrix where H[i, k] is the probability of point i in cluster k.
+        estimation_strategies : list[Callable]
+            Estimation functions for each model.
+        method : MatchingMethod
+            The cluster matching strategy (Greedy, Hungarian, etc.).
+        score_func : ScoringMethod
+            The scoring criterion (AIC, Likelihood) used for optimization.
+        optimizer : Optimizer, optional
+            Optimizer used in estimation strategies. Default is ScipyNelderMead.
+
+        Returns
+        -------
+        MatchingResult
+            A tuple containing:
+            - Ordered list of distribution models.
+            - List of parameter dictionaries.
+            - List of component weights.
+
+        Notes
+        -----
+        The function follows these steps:
+        1. Calculates minimum sample threshold (1% of data size).
+        2. Validates clusters and filters out those with insufficient samples.
+        3. Prepares the execution context.
+        4. Dispatches to the specific matching algorithm defined by `method`.
+        """
+        n_models = len(models)
+        min_samples = int(np.ceil(len(X) * 0.01))
+        valid_clusters, cluster_weights = _validate_clusters_distributions(
+            H, n_models, len(estimation_strategies), min_samples
+        )
+
+        if not valid_clusters:
+            default_params: list[dict[str, float]] = [{} for _ in range(n_models)]
+            return models, default_params, [1.0 / n_models] * n_models
+
+        method_func = self._MATCHING_METHOD[method]
+        score_component_func, score_mixture_func = self._SCORING_METHOD[score_func]
+
+        context: Context = {
+            "models": models,
+            "X": X,
+            "H": H,
+            "estimation_strategies": estimation_strategies,
+            "optimizer": optimizer,
+            "valid_clusters": valid_clusters,
+            "cluster_weights": cluster_weights,
+            "score_func_component": score_component_func,
+            "score_func_mixture": score_mixture_func,
+        }
+
+        return method_func(context=context)
 
     def _accurate_init(
         self, X: np.ndarray, H: np.ndarray, optimizer: Optimizer = ScipyNelderMead()
@@ -216,19 +305,24 @@ class ClusterizeInitializer(Initializer):
         if len(self.estimation_strategies) != len(self.models):
             raise ValueError("Count of models must match count of estimation strategies")
 
-        cluster_match_func = self._cluster_match_strategies[self.cluster_match_strategy]
-
         estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
-        distributions, params, weights = cluster_match_func(self.models, X, H, estimation_funcs)
-        if not np.all(params):
+        distributions, params, weights = self._match_clusters_for_models(
+            models=self.models,
+            X=X,
+            H=H,
+            estimation_strategies=estimation_funcs,
+            method=self.method,
+            score_func=self.score_func,
+            optimizer=optimizer,
+        )
+        if not all(params):
             return self._fast_init(X, H, optimizer)
 
         new_distributions = []
         for i, dist in enumerate(distributions):
-            params_names = params[i].keys()
-            params_values = params[i].values()
-            dist.set_params_from_vector(params_names, params_values)
+            params_names, params_values = zip(*params[i].items())
+            dist.set_params_from_vector(list(params_names), list(params_values))
             new_distributions.append(dist)
 
         return new_distributions, weights
@@ -258,7 +352,7 @@ class ClusterizeInitializer(Initializer):
         Raises
         ------
         ValueError
-            If n_components is not set.
+            If n_components is not set or if clusterizer failed.
         """
         if self.n_components is None:
             raise ValueError("n_components must be set before calling _fast_init")
@@ -267,12 +361,17 @@ class ClusterizeInitializer(Initializer):
         weights: list[float] = []
         estimation_funcs = [self._estimation_strategies[strategy] for strategy in self.estimation_strategies]
 
+        n_found_clusters = H.shape[1]
+        if n_found_clusters < self.n_components:
+            raise IndexError(
+                f"Clusterizer haven't found enough clusters. {n_found_clusters} found when {self.n_components} needed."
+            )
+
         for k in range(self.n_components):
             model = self.models[k]
             H_k = H[:, k]
             params = estimation_funcs[k](model, X, H_k, optimizer)
-            params_names = params.keys()
-            params_values = params.values()
+            params_names, params_values = zip(*params.items())
             model.set_params_from_vector(params_names, params_values)
             weight = np.sum(H, axis=0)[k] / len(X)
 
@@ -285,9 +384,12 @@ class ClusterizeInitializer(Initializer):
         self,
         X: ArrayLike,
         dists: list[ContinuousDistribution],
-        cluster_match_strategy: ClusterMatchStrategy,
-        estimation_strategies: list[EstimationStrategy],
-        optimizer: Optimizer = ScipyNelderMead(),
+        method: MatchingMethod = MatchingMethod.GREEDY,
+        score_func: ScoringMethod = ScoringMethod.LIKELIHOOD,
+        estimation_strategies: list[EstimationStrategy] | None = None,
+        optimizer: Optimizer | None = None,
+        clusterizer: Clusterizer | None = None,
+        **kwargs: Any,
     ) -> MixtureModel:
         """Performs cluster-based initialization of mixture model parameters.
 
@@ -297,18 +399,23 @@ class ClusterizeInitializer(Initializer):
             Input data points for initialization.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize.
-        cluster_match_strategy : ClusterMatchStrategy
-            Strategy for matching clusters to distribution models.
-        estimation_strategies : list[EstimationStrategy]
-            List of estimation strategies for each distribution model.
-        optimizer : Optimizer
-            Optimizer that will be used in estimation strategies.
-            By default, ScipyNelderMead.
+        method : MatchingMethod, optional
+            The algorithm used to match the clusters. Default is GREEDY.
+        score_func : ScoringMethod, optional
+            The metric used to score the fit. Default is LIKELIHOOD.
+        estimation_strategies : list[EstimationStrategy], optional
+            List of estimation strategies. If None, uses QFUNCTION for all models.
+        optimizer : Optimizer, optional
+            Optimizer for parameter estimation. If None, uses the one from __init__.
+        clusterizer : Clusterizer, optional
+            The clustering algorithm instance. If None, uses the one from __init__.
+        **kwargs : Any
+            Additional arguments for compatibility.
 
         Returns
         -------
         MixtureModel
-            Initialized mixture model with estimated parameters and weights.
+            Initialized mixture model with estimated parameters and weights
 
         Notes
         -----
@@ -322,16 +429,17 @@ class ClusterizeInitializer(Initializer):
         X = np.asarray(X, dtype=np.float64)
         self.models = dists
         self.n_components = len(dists)
-        H = self._clusterize(X, self.clusterizer)
-        self.cluster_match_strategy = cluster_match_strategy
-        self.estimation_strategies = estimation_strategies
+        clusterizer = clusterizer or self.clusterizer
+        optimizer = optimizer or self.optimizer
+        H = self._clusterize(X, clusterizer)
+        self.method = method
+        self.score_func = score_func
+        self.estimation_strategies = estimation_strategies or [EstimationStrategy.QFUNCTION] * self.n_components
 
         if self.is_accurate:
             distributions, weights = self._accurate_init(X, H, optimizer)
         else:
             distributions, weights = self._fast_init(X, H, optimizer)
 
-        total_weight = sum(weights)
-        normalized_weights: list[float] = [w / total_weight for w in weights]
-        current_mixture = MixtureModel(distributions, normalized_weights)  # type: ignore[var-annotated]
+        current_mixture: MixtureModel = MixtureModel(distributions, weights)
         return current_mixture

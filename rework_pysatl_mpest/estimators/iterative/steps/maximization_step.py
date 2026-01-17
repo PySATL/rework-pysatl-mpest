@@ -14,9 +14,9 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from types import MappingProxyType
-from typing import Callable, ClassVar
+from typing import ClassVar
 
 import numpy as np
 

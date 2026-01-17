@@ -7,23 +7,24 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.distributions.continuous_dist import ContinuousDistribution
-from rework_pysatl_mpest.initializers.strategies import ClusterMatchStrategy, EstimationStrategy
+from ..core import MixtureModel
+from ..distributions import ContinuousDistribution
 
 
 class Initializer(ABC):
     """Abstract base class for mixture model initializers.
 
-    This class defines the interface for all initialization strategies that
+    This class defines the interface for all initializers that
     estimate initial parameters for mixture models. Subclasses must implement
     the `perform` method to provide specific initialization logic.
 
     Methods
     -------
-    perform(X, dists, cluster_match_strategy, estimation_strategies)
+    perform(X, dists)
         Performs initialization of mixture model parameters.
 
     Notes
@@ -48,32 +49,19 @@ class Initializer(ABC):
     """
 
     @abstractmethod
-    def perform(
-        self,
-        X: ArrayLike,
-        dists: list[ContinuousDistribution],
-        cluster_match_info: ClusterMatchStrategy,
-        estimation_info: list[EstimationStrategy],
-    ):
+    def perform(self, X: ArrayLike, dists: list[ContinuousDistribution], **kwargs: Any) -> MixtureModel:
         """Performs initialization of mixture model parameters.
 
         Parameters
         ----------
         X : ArrayLike
-            Input data points used for parameter estimation. Should be a 1D array
-            of sample values from the mixture distribution.
+            Input data points used for parameter estimation.
         dists : list[ContinuousDistribution]
             List of distribution models to initialize. Each distribution
             represents one component of the mixture model. The number of
             distributions determines the number of mixture components.
-        cluster_match_info : ClusterMatchStrategy
-            Strategy for matching clusters to distribution models. Determines
-            how clusters identified in the data are assigned to specific
-            distribution components.
-        estimation_info : list[EstimationStrategy]
-            List of estimation strategies for each distribution model. Each
-            element specifies the parameter estimation method to use for the
-            corresponding distribution in the `dists` list.
+        **kwargs : Any
+            Additional arguments allowed for subclass implementations.
 
         Returns
         -------

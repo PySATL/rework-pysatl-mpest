@@ -9,7 +9,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import TYPE_CHECKING, Generic, Optional
+from typing import TYPE_CHECKING, Generic
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -84,7 +84,7 @@ class MixtureModel(Generic[DType]):
     def __init__(
         self,
         components: Sequence["ContinuousDistribution"],
-        weights: Optional[ArrayLike] = None,
+        weights: ArrayLike | None = None,
         dtype: type[DType] = np.float64,  # type: ignore[assignment]
     ):
         n_components = len(components)
@@ -101,9 +101,9 @@ class MixtureModel(Generic[DType]):
 
         self._components = [comp.astype(self.dtype) for comp in components]
         self._log_weights = np.log(weights + np.finfo(self.dtype).tiny)
-        self._cached_weights: Optional[NDArray[DType]] = None
+        self._cached_weights: NDArray[DType] | None = None
 
-        self._sorted_pairs_cache: Optional[list[tuple[ContinuousDistribution[DType], DType]]] = None
+        self._sorted_pairs_cache: list[tuple[ContinuousDistribution[DType], DType]] | None = None
 
     def _validate_weights(self, n_components: int, weights: NDArray[DType]):
         """Validates the component weights.

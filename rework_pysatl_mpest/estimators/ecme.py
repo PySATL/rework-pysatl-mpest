@@ -259,5 +259,5 @@ class ECME(BaseEstimator[DType]):
         )
 
         result = pipeline.fit(X, mixture)
-        self._history = pipeline.logger
+        self._history = pipeline.history
         return result

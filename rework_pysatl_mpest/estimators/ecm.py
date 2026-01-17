@@ -28,7 +28,7 @@ from .iterative import (
     Pipeline,
     Pruner,
 )
-from .iterative._logger import IterationsHistory
+from .iterative._iteration_history import IterationsHistory
 
 
 class ECM(BaseEstimator[DType]):
@@ -71,7 +71,7 @@ class ECM(BaseEstimator[DType]):
         the fitting process.
     optimizer : Optimizer[DType]
         The numerical optimizer used for parameter estimation.
-    logger : IterationsHistory | None
+    history: IterationsHistory | None
         An object that collects information about each iteration.
         This attribute is only available after the :meth:`fit` method has been called.
         Accessing it beforehand will raise an :class:`AttributeError`.
@@ -93,10 +93,10 @@ class ECM(BaseEstimator[DType]):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)
         self.optimizer = optimizer
-        self._logger: IterationsHistory[DType] | None = None
+        self._history: IterationsHistory[DType] | None = None
 
     @property
-    def logger(self) -> IterationsHistory[DType]:
+    def history(self) -> IterationsHistory[DType]:
         """An object that collects information about each iteration.
 
         Raises
@@ -105,9 +105,9 @@ class ECM(BaseEstimator[DType]):
             If accessed before the `fit` method has been called at least once.
         """
 
-        if self._logger is None:
-            raise AttributeError("Logger is not available. Call the 'fit' method first.")
-        return self._logger
+        if self._history is None:
+            raise AttributeError("History is not available. Call the 'fit' method first.")
+        return self._history
 
     def fit(self, X: ArrayLike, mixture: MixtureModel[DType], once_in_iterations: int = 1) -> MixtureModel[DType]:
         """Fits the mixture model to the data using the ECM algorithm.
@@ -124,7 +124,7 @@ class ECM(BaseEstimator[DType]):
         mixture : MixtureModel[DType]
             The initial mixture model to be fitted.
         once_in_iterations : int, optional
-            The logging frequency. A value of `n` means logging occurs every
+            The iteration recording frequency. A value of `n` means recording occurs every
             `n` iterations. Defaults to 1.
 
         Returns
@@ -145,5 +145,5 @@ class ECM(BaseEstimator[DType]):
             once_in_iterations,
         )
         result = pipeline.fit(X, mixture)
-        self._logger = pipeline.logger
+        self._history = pipeline.history
         return result
