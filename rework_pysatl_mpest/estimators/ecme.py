@@ -17,20 +17,20 @@ from typing import Literal
 
 from numpy.typing import ArrayLike
 
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.estimators.iterative._logger import IterationsHistory
-from rework_pysatl_mpest.estimators.iterative.pipeline import Pipeline
-from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy, OptimizationBlock
-from rework_pysatl_mpest.estimators.iterative.steps.expectation_step import ExpectationStep
-from rework_pysatl_mpest.estimators.iterative.steps.maximization_step import MaximizationStep
-from rework_pysatl_mpest.optimizers.optimizer import Optimizer
-
+from ..core import MixtureModel
+from ..optimizers import Optimizer
 from ..typings import DType
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
+    ExpectationStep,
+    MaximizationStep,
+    MaximizationStrategy,
+    OptimizationBlock,
+    Pipeline,
     Pruner,
 )
+from .iterative._iteration_history import IterationsHistory
 
 
 class ECME(BaseEstimator[DType]):
