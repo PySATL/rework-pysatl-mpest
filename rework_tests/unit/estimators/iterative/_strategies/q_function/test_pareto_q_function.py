@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 from rework_pysatl_mpest.distributions import Pareto
 from rework_pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
 from rework_pysatl_mpest.estimators.iterative._strategies import q_function_strategy
+from rework_pysatl_mpest.exceptions import NumericalStabilityError
 
 DTYPES_TO_TEST: list[np.floating] = [np.float16, np.float32, np.float64]
 
@@ -203,6 +204,33 @@ def test_pareto_shape_fallback_zero_denominator():
     assert params[Pareto.PARAM_SHAPE] == original_shape
 
 
+def test_q_function_pareto_handles_numerical_overflow():
+    """
+    Verifies that if a numerical overflow occurs during calculations,
+    a `NumericalStabilityError` is correctly registered in the pipeline state.
+    """
+    # --- Arrange ---
+    # Use float16, which has a small range, and large values to force an overflow.
+    # The max value for float16 is ~65504. The sum of X will exceed this.
+    dtype = np.float16
+    component = Pareto(shape=1.0, scale=1.0, dtype=dtype)
+    X = np.full(1000000, 600, dtype=dtype)
+    H_j = np.full(1000000, 1.0, dtype=dtype)
+    H = np.vstack([H_j, np.zeros_like(H_j)]).T
+    state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
+
+    block = OptimizationBlock(0, {"shape"}, MaximizationStrategy.QFUNCTION)
+
+    # --- Act ---
+    _, new_params = q_function_strategy(component, state, block, optimizer=None)
+
+    # --- Assert ---
+    assert state.error is not None
+    assert isinstance(state.error, NumericalStabilityError)
+    assert "Overflow detected during Q-function optimization" in str(state.error)
+    assert new_params == {}
+
+
 # Property-Based Test with Hypothesis
 # -----------------------------------
 
@@ -219,7 +247,7 @@ def pareto_data_and_true_params(draw, dtype_strategy=st.sampled_from([np.float32
     true_component = Pareto(shape=true_shape, scale=true_scale, dtype=dtype)
 
     # 2. Generate a large data sample from this distribution
-    X = true_component.generate(size=1000000)
+    X = true_component.generate(size=1000)
 
     return (X, dtype(true_shape), dtype(true_scale), dtype)
 

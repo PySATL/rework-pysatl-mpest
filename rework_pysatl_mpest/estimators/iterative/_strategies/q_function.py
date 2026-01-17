@@ -384,6 +384,10 @@ def _(
         scale = new_params.get(Pareto.PARAM_SCALE, component.scale)
 
         denominator = np.dot(H_j, np.log(X / scale))
+        if np.isinf(denominator):
+            handle_numerical_overflow(state, "Q-function optimization")
+            return block.component_id, {}
+
         if denominator > NUMERICAL_TOLERANCE:
             new_params[Pareto.PARAM_SHAPE] = N_j / denominator
         else:

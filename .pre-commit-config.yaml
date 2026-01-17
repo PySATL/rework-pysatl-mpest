@@ -24,7 +24,7 @@ repos:
         entry: poetry run ruff format
         language: system
         types: [python]
-        files: ^(mpest/|rework_pysatl_mpest/|experimental_env/|tests/|rework_tests/).*
+        files: ^(mpest/|rework_pysatl_mpest/|experimental_env/|tests/|rework_tests/|benchmarks/).*
 
     -   id: mypy
         name: mypy check

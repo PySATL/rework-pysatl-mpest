@@ -50,6 +50,17 @@ class Parameter:
         The name of the attribute used to store the value within an instance
         of the owner class.
 
+    Notes
+    -----
+    **Initialization Order**
+
+    This descriptor casts the assigned value to the owner instance's ``dtype``.
+    Therefore, the instance must have its ``dtype`` attribute initialized
+    **before** any value is assigned to this parameter.
+
+    In subclasses, ensure ``super().__init__(dtype=...)`` is called before
+    assigning parameter values to avoid defaulting to ``np.float64``.
+
     Examples
     --------
 
@@ -61,6 +72,11 @@ class Parameter:
             # Scale parameter must be a positive number
             scale = Parameter(invariant=lambda s: s > 0, error_message="Standard deviation (scale) must be positive.")
 
+            def __init__(self, loc, scale, dtype=np.float64):
+                # Correct order: initialize dtype first
+                super().__init__(dtype=dtype)
+                self.loc = loc
+                self.scale = scale
     """
 
     def __init__(

@@ -85,7 +85,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         .. math::
 
-            f(x | \\alpha, \\beta) = frac{1}{\\beta - \\alpha}
+            f(x | \\alpha, \\beta) = \\frac{1}{\\beta - \\alpha}
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
         right_border parameter. The function is zero for :math:`x < \\alpha` or :math:`x > \\beta`.
@@ -183,7 +183,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         .. math::
 
-            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\alpha} = frac{1.0}{(\\beta - \\alpha)}
+            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\alpha} = \\frac{1.0}{(\\beta - \\alpha)}
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
         right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.
@@ -216,7 +216,7 @@ class Uniform(ContinuousDistribution[DType]):
 
         .. math::
 
-            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\beta} = frac{-1.0}{(\\beta - \\alpha)}
+            \\frac{\\partial \\ln f(x | \\alpha, \\beta)}{\\partial \\beta} = \\frac{-1.0}{(\\beta - \\alpha)}
 
         where :math:`\\alpha` is the left_border parameter and :math:`\\beta` is the
         right_border parameter. The derivative is non-zero only for `left_border <= X <= right_border`.

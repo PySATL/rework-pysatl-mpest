@@ -32,7 +32,7 @@ class ContinuousDistribution(ABC, Generic[DType]):
     name: str
         The name of the distribution (e.g., 'Normal', 'Gamma').
     params: set[str]
-        The names of all parameters of the distribution
+        The names of all parameters of the distribution.
     params_to_optimize: set[str]
         Parameters names that are not fixed and can be optimized.
     fixed_params : set[str]

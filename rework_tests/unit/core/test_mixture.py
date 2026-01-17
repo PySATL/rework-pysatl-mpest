@@ -92,7 +92,7 @@ class TestMixtureModelInitialization:
     @pytest.mark.parametrize(
         "invalid_weights, error_msg",
         [
-            ([0.4, 0.4], "Sum of the weights must be equal 1, but it equal "),
+            ([0.4, 0.4], "Sum of the weights must be equal 1, but it equals "),
         ],
     )
     def test_init_with_invalid_sum_of_weights_raises_value_error(
@@ -108,7 +108,7 @@ class TestMixtureModelInitialization:
     def test_init_with_empty_components_raises_value_error(self, dtype):
         """Tests that initialization with an empty component list raises a ValueError."""
 
-        with pytest.raises(ValueError, match="List of components cannot be an empty"):
+        with pytest.raises(ValueError, match="List of components cannot be empty"):
             MixtureModel(components=[], dtype=dtype)
 
     def test_init_casts_component_dtypes(self, dtype):
@@ -144,6 +144,22 @@ class TestMixtureModelInitialization:
 
         assert id(mixture.components[0]) == original_id
 
+    def test_init_accepts_relaxed_tolerance(self, exp_components: tuple[Exponential, Exponential], dtype):
+        """Tests that __init__ accepts weights summing to ~1.0 within sqrt(eps) tolerance."""
+
+        eps = np.finfo(dtype).eps
+        # Generate a deviation larger than standard machine epsilon but within
+        # the new relaxed tolerance (sqrt(eps)).
+        drift = np.sqrt(eps) / 2.0
+
+        # Create weights that sum to 1.0 + drift.
+        imprecise_weights = [0.5, 0.5 + drift]
+
+        model = MixtureModel(components=exp_components, weights=imprecise_weights, dtype=dtype)
+
+        # Verify that internally the weights are still normalized (handled by softmax property).
+        assert np.isclose(np.sum(model.weights), 1.0, atol=eps)
+
 
 class TestMixtureModelProperties:
     """Tests for the properties of the MixtureModel class."""
@@ -175,6 +191,22 @@ class TestMixtureModelProperties:
 
         second_access_weights = model.weights
         assert id(first_access_weights) == id(second_access_weights)
+
+    def test_weights_property_ensures_exact_normalization(self, mixture_model: MixtureModel):
+        """
+        Tests that the weights property enforces strict normalization sum=1.0,
+        compensating for potential drift in softmax calculation.
+        """
+        dtype = mixture_model.dtype
+
+        # Set log_weights with values that might introduce slight precision errors
+        # during the softmax calculation.
+        mixture_model.log_weights = np.array([10.0, -10.0], dtype=dtype)
+
+        weights = mixture_model.weights
+
+        # Verify that the sum is strictly 1.0 within the machine precision.
+        assert np.isclose(np.sum(weights), 1.0, atol=np.sqrt(np.finfo(dtype).eps))
 
     def test_log_weights_setter_and_cache_invalidation(self, mixture_model: MixtureModel):
         """Tests setting log_weights and verifies that it invalidates the weights cache."""
@@ -449,34 +481,47 @@ class TestMixtureModelGenerate:
 class TestMixtureModelAstype:
     """Tests for astype method of MixtureModel"""
 
-    def test_astype_successful_conversion(self, exp_components: tuple[Exponential, Exponential]):
+    @pytest.mark.parametrize("from_dtype", DTYPES_TO_TEST)
+    @pytest.mark.parametrize("to_dtype", DTYPES_TO_TEST)
+    def test_astype_successful_conversion(self, exp_components: tuple[Exponential, Exponential], from_dtype, to_dtype):
         """
         Tests that astype creates a new instance with the correct new dtype
         and that the original instance remains unchanged.
         """
-        mixture_model = MixtureModel(components=exp_components, weights=[0.5, 0.5], dtype=np.float64)
 
-        assert mixture_model.dtype == np.float64
-        assert mixture_model.log_weights.dtype == np.float64
+        if from_dtype == to_dtype:
+            return
+
+        # Use repeating decimals to induce floating-point rounding errors
+        # and verify that weights are correctly renormalized to sum to 1.0.
+        weights = [1.0 / 3.0, 2.0 / 3.0]
+        mixture_model = MixtureModel(components=exp_components, weights=weights, dtype=from_dtype)
+
+        assert mixture_model.dtype == from_dtype
+        assert mixture_model.log_weights.dtype == from_dtype
         for component in mixture_model.components:
-            assert component.dtype == np.float64
+            assert component.dtype == from_dtype
 
-        target_dtype = np.float32
-        new_mixture = mixture_model.astype(target_dtype)
+        new_mixture = mixture_model.astype(to_dtype)
 
         assert new_mixture is not mixture_model
         assert new_mixture != mixture_model
 
-        assert new_mixture.dtype == np.float32
-        assert new_mixture.log_weights.dtype == np.float32
+        assert new_mixture.dtype == to_dtype
+        assert new_mixture.log_weights.dtype == to_dtype
         for component in new_mixture.components:
-            assert component.dtype == np.float32
+            assert component.dtype == to_dtype
+
+        # Ensure weights remain normalized after type conversion (especially for downcasting).
+        target_sum = np.sum(new_mixture.weights)
+        target_eps = np.sqrt(np.finfo(to_dtype).eps)
+        assert np.isclose(target_sum, 1.0, atol=target_eps)
 
         # original instance remains unchanged
-        assert mixture_model.dtype == np.float64
-        assert mixture_model.log_weights.dtype == np.float64
+        assert mixture_model.dtype == from_dtype
+        assert mixture_model.log_weights.dtype == from_dtype
         for component in mixture_model.components:
-            assert component.dtype == np.float64
+            assert component.dtype == from_dtype
 
     def test_astype_returns_self_if_same_dtype(self, exp_components: tuple[Exponential, Exponential]):
         """
@@ -588,6 +633,23 @@ class TestMixtureModelCopying:
 
         # Verify the original model's component is unchanged
         assert mixture_model.components[0].rate != copied_model.components[0].rate
+
+    def test_copy_renormalizes_drifting_weights(self, mixture_model: MixtureModel):
+        """
+        Tests that creating a copy uses the rigorous renormalization logic,
+        ensuring the new instance is perfectly valid even if the source had slight drift.
+        """
+        dtype = mixture_model.dtype
+
+        # Manually inject precision drift into private attributes to simulate
+        # accumulated calculation errors that haven't triggered a cache refresh yet.
+        mixture_model._log_weights = np.log([0.5, 0.5000001]).astype(dtype)
+        mixture_model._cached_weights = None
+
+        copied_model = copy(mixture_model)
+
+        # Verify that the new model's weights are strictly normalized.
+        assert np.isclose(np.sum(copied_model.weights), 1.0, atol=np.finfo(dtype).eps)
 
 
 @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)

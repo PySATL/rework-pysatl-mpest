@@ -15,31 +15,33 @@ from .continuous_dist import ContinuousDistribution
 
 
 class Beta(ContinuousDistribution):
-    """Class for the four-parameteric beta distribution.
-       Parameters
-       ----------
-       alpha : float
-           The first shape parameter. Must be positive or zero.
-       beta : float
-           The second shape parameter. Must be positive or zero.
-       left_border : float
-           Left border of section [a, b]. Can be any real number.
-       right_border : float
-           Right border of section [a, b]. Can be any real number.
+    """Class for the four-parametric beta distribution.
 
-       Attributes
-       ----------
-       loc : float
-           Location parameter.
-       scale : float
-           Scale parameter.
-       scale : float
-           Scale parameter (gamma). Must be positive.
-       scale : float
-           Scale parameter (gamma). Must be positive.
+    Parameters
+    ----------
+    alpha : float
+        The first shape parameter. Must be positive or zero.
+    beta : float
+        The second shape parameter. Must be positive or zero.
+    left_border : float
+        Left border of section [a, b]. Can be any real number.
+    right_border : float
+        Right border of section [a, b]. Can be any real number.
 
-       Methods
-       -------
+    Attributes
+    ----------
+    alpha : float
+        The first shape parameter.
+    beta : float
+        The second shape parameter.
+    left_border : float
+        Left border of the distribution support [a, b].
+    right_border : float
+        Right border of the distribution support [a, b].
+
+
+    Methods
+    -------
 
     .. autosummary::
         :toctree: generated/
@@ -99,7 +101,7 @@ class Beta(ContinuousDistribution):
         where :math:`a` is the left_border parameter, :math:`b` is the
         right_border parameter, :math:`\\alpha` is the first shape parameter and
         :math:`\\beta` is the second shape parameter,:math:`B(\\alpha, \\beta) =
-        \frac{\\Gamma(\\alpha)\\Gamma(\\beta)}{\\Gamma(\\alpha + \\beta)}`
+        \\frac{\\Gamma(\\alpha)\\Gamma(\\beta)}{\\Gamma(\\alpha + \\beta)}`
         is the Beta function.
 
         Parameters
@@ -112,7 +114,6 @@ class Beta(ContinuousDistribution):
         DType | NDArray[DType]
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
-
         """
 
         X = np.asarray(X, dtype=self.dtype)
@@ -177,7 +178,7 @@ class Beta(ContinuousDistribution):
         where :math:`a` is the left_border parameter, :math:`b` is the
         right_border parameter, :math:`\\alpha` is the first shape parameter and
         :math:`\\beta` is the second shape parameter, :math:`B(\\alpha, \\beta) =
-        \frac{\\Gamma(\\alpha)\\Gamma(\\beta)}{\\Gamma(\\alpha + \\beta)}`
+        \\frac{\\Gamma(\\alpha)\\Gamma(\\beta)}{\\Gamma(\\alpha + \\beta)}`
 
         Parameters
         ----------
@@ -211,7 +212,7 @@ class Beta(ContinuousDistribution):
 
         .. math::
 
-            \frac{\\partial \\ln f(x | \\alpha, \\beta, a, b)}{\\partial \\alpha} =
+            \\frac{\\partial \\ln f(x | \\alpha, \\beta, a, b)}{\\partial \\alpha} =
             \\ln(x - a) - \\ln(b - a)
             - \\psi(\\alpha) + \\psi(\\alpha + \\beta)
 

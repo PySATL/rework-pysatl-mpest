@@ -147,7 +147,7 @@ class MaximizationStep(PipelineStep[DType]):
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]
-        curr_mixture.log_weights = np.log(new_weights + dtype(1e-30))
+        curr_mixture.log_weights = np.log(new_weights + np.finfo(dtype).tiny)
 
         return state
 
@@ -159,8 +159,6 @@ class MaximizationStep(PipelineStep[DType]):
 
         Parameters
         ----------
-        state : PipelineState
-            The current pipeline state containing removed_components_indices
         removed_components_indices : list[int]
             Tracks which component indices were removed during pruning.
         """

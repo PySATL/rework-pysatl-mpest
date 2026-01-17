@@ -87,9 +87,12 @@ class ExpectationStep(PipelineStep[DType]):
 
         log_weighted_likelihoods = log_p_xij_matrix + mixture.log_weights
         log_denominator = logsumexp(log_weighted_likelihoods, axis=1, keepdims=True)
-        log_H = log_weighted_likelihoods - log_denominator
 
-        H_soft = np.exp(log_H)
+        valid_mask = log_denominator != dtype(-np.inf)
+        H_soft = np.zeros_like(log_weighted_likelihoods, dtype=dtype)
+        log_H = log_weighted_likelihoods[valid_mask.flatten(), :] - log_denominator[valid_mask.flatten(), :]
+
+        H_soft[valid_mask.flatten(), :] = np.exp(log_H)
         H_soft[np.isnan(H_soft)] = dtype(0.0)
 
         if not self.is_soft:
