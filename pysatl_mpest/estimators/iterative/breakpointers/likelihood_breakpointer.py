@@ -1,0 +1,94 @@
+"""Module that provides a :class:`pysatl_mpest.estimators.iterative.Pipeline`
+stopping strategy based on when log-likelihood of the mixture converges"""
+
+__author__ = "Maksim Pastukhov"
+__copyright__ = "Copyright (c) 2025 PySATL project"
+__license__ = "SPDX-License-Identifier: MIT"
+
+
+from ....typings import DType
+from ..breakpointer import Breakpointer
+from ..pipeline_state import PipelineState
+
+
+class LikelihoodBreakpointer(Breakpointer[DType]):
+    """Stops the pipeline when the log-likelihood of the mixture converges.
+
+    This breakpointer terminates the iterative estimation process when the
+    absolute difference between the current and previous log-likelihood values
+    falls below a specified threshold:
+
+    .. math::
+        |L_{t+1} - L_t| < threshold
+
+    It tracks the log-likelihood of the current mixture model on the observed
+    data at each iteration and compares it to the previous value.
+
+    Parameters
+    ----------
+    threshold : DType
+        The convergence threshold for the log-likelihood difference.
+        Must be a positive number.
+
+    Attributes
+    ----------
+    threshold : DType
+        The convergence threshold.
+
+    Raises
+    ------
+    ValueError
+        If `threshold` is not greater than 0.
+
+    Methods
+    -------
+    .. autosummary::
+        :toctree: generated/
+
+        check
+    """
+
+    def __init__(self, threshold: DType):
+        self._validate(threshold)
+        self.threshold = threshold
+        self._likelihood_old: DType | None = None
+
+    def _validate(self, threshold: DType):
+        """Validates the threshold parameter."""
+        if threshold <= 0.0:
+            raise ValueError("The threshold must be greater than 0")
+
+    def check(self, state: PipelineState[DType]) -> bool:
+        """Checks if the log-likelihood has converged.
+
+        Computes the current log-likelihood of the mixture on the data in
+        the pipeline state and compares it with the previous value.
+
+        Parameters
+        ----------
+        state : PipelineState[DType]
+            The current state of the pipeline, which must contain a valid
+            `curr_mixture` and data `X`.
+
+        Returns
+        -------
+        bool
+            .. math::
+                \text{True if } |L_{\text{new}} - L_{\text{old}}| < \text{threshold, False otherwise}
+
+            On the first call (no previous likelihood), returns False and
+            initializes internal state.
+        """
+        _likelihood_new: DType = state.curr_mixture.loglikelihood(state.X)
+
+        # First iteration: cannot compare, so just store and continue
+        if self._likelihood_old is None:
+            self._likelihood_old = _likelihood_new
+            return False
+
+        if abs(_likelihood_new - self._likelihood_old) < self.threshold:
+            self._likelihood_old = None
+            return True
+        else:
+            self._likelihood_old = _likelihood_new
+            return False

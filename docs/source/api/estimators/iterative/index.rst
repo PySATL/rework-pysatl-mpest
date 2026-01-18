@@ -4,7 +4,7 @@
 mpest.estimators.iterative
 ###############
 
-.. automodule:: rework_pysatl_mpest.estimators.iterative
+.. automodule:: pysatl_mpest.estimators.iterative
    :no-members:
 
 Abstract Classes

@@ -52,7 +52,7 @@ omit = ["*/experiments/*"]
 [tool.ruff]
 line-length = 120
 output-format = "grouped"
-src = ["rework_pysatl_mpest", "mpest", "experimental_env", "rework_tests", "tests"]
+src = ["pysatl_mpest", "tests"]
 exclude = ["*.ipynb"]
 
 [tool.ruff.format]
@@ -69,16 +69,16 @@ ignore = ["PLR0913"]
 
 
 [tool.mypy]
-files = ["rework_pysatl_mpest", "mpest", "experimental_env"]
+files = ["pysatl_mpest"]
 ignore_missing_imports = true
 exclude = ["^mpest/utils.py"]
 
 
 [tool.pytest.ini_options]
-testpaths = ["rework_tests"]
+testpaths = ["tests"]
 
 addopts = [
-    "--cov=rework_pysatl_mpest",          # Укажите здесь имя вашего основного пакета/папки с кодом
+    "--cov=pysatl_mpest",          # Укажите здесь имя вашего основного пакета/папки с кодом
     "--cov-report=term-missing", # Выводить отчет в консоль с указанием пропущенных строк
     "--cov-report=html",         # Генерировать детальный HTML-отчет
     "--cov-fail-under=80",       # Считать запуск тестов проваленным, если покрытие ниже 80%

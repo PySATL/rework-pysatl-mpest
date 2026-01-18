@@ -126,7 +126,7 @@ We use the **NumPy docstring standard** as our base format. All public modules, 
    - Use ``:meth:`method_name` `` to reference a method.
    - Use ``:attr:`attribute_name` `` to reference an attribute or property.
    - Use ``:func:`function_name` `` to reference a function.
-   - To shorten a long path, use a tilde (~). For example, ``:class:~rework_pysatl_mpest.core.mixture.MixtureModel` `` will be rendered simply as `MixtureModel`.
+   - To shorten a long path, use a tilde (~). For example, ``:class:~pysatl_mpest.core.mixture.MixtureModel` `` will be rendered simply as `MixtureModel`.
 2. **Include autosummary for Public APIs:**
    For classes, the docstring should include an `.. autosummary::` block. This directive instructs Sphinx to automatically generate a summary table of the class's public methods and attributes.
    - List all public methods that should be included in the documentation.
@@ -211,7 +211,7 @@ To maintain code quality and prevent regressions, all contributions must be acco
 #### Writing Tests
 
 - All new functionality (`feat`) must be accompanied by tests that cover its behavior.
-- Tests should be placed in the `rework_tests/` directories, mirroring the project's source code structure.
+- Tests should be placed in the `tests/` directories, mirroring the project's source code structure.
 
 #### Running Tests and Checking Coverage
 
