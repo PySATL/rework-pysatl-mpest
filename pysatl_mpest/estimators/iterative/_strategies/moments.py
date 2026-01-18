@@ -15,7 +15,7 @@ from functools import singledispatch
 
 import numpy as np
 
-from ....distributions import ContinuousDistribution, Exponential
+from ....distributions import ContinuousDistribution, Exponential, Normal
 from ....optimizers import Optimizer
 from ....typings import DType
 from ..pipeline_state import PipelineState
@@ -152,5 +152,48 @@ def _(
     elif Exponential.PARAM_LOC in params_to_optimize:
         new_loc = m1 - (dtype(1.0) / component.rate)
         new_params[Exponential.PARAM_LOC] = dtype(new_loc)
+
+    return block.component_id, new_params
+
+
+# ---------------------------------
+# Normal distribution strategy
+# ---------------------------------
+
+
+@moments_strategy.register(Normal)
+def _(
+    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
+) -> tuple[int, dict[str, DType]]:
+    """ """
+
+    if state.H is None:
+        raise ValueError("Responsibility matrix H is not computed.")
+
+    dtype = component.dtype
+    MIN_SCALE = np.finfo(dtype).eps
+    X = state.X
+    H_j = state.H[:, block.component_id]
+
+    params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
+    new_params = {}
+
+    N_j = np.sum(H_j)
+
+    # If the component has negligible responsibility, do not update its parameters.
+    if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
+        return block.component_id, {}
+
+    if component.PARAM_LOC in params_to_optimize:
+        new_loc = np.average(X, weights=H_j)
+        new_params[component.PARAM_LOC] = new_loc
+    else:
+        new_loc = component.loc
+
+    if component.PARAM_SCALE in params_to_optimize:
+        new_scale = np.sqrt(np.average((X - new_loc) ** 2, weights=H_j))
+        new_params[component.PARAM_SCALE] = new_scale
+
+        new_scale = max(new_scale, MIN_SCALE)
 
     return block.component_id, new_params
