@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mpest"
+name = "pysatl_mpest"
 version = "0.1.0"
 description = "Parameter estimation of mixture distribution problem solver, based on EM algorithm"
 authors = ["ToxaKaz <anton.a.kazancev@gmail.com>", "iraedeus <dtotjmyanin@mail.ru>"]
@@ -46,9 +46,6 @@ myst-parser = "^4.0.1"
 sphinxcontrib-mermaid = "^1.0.0"
 pydata-sphinx-theme = "^0.16.1"
 
-[tool.coverage.run]
-omit = ["*/experiments/*"]
-
 [tool.ruff]
 line-length = 120
 output-format = "grouped"
@@ -71,7 +68,6 @@ ignore = ["PLR0913"]
 [tool.mypy]
 files = ["pysatl_mpest"]
 ignore_missing_imports = true
-exclude = ["^mpest/utils.py"]
 
 
 [tool.pytest.ini_options]
