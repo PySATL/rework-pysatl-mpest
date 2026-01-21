@@ -45,7 +45,7 @@ class CHistFlat(AHistClassifierCriterion):
 
     def score(self, hist: np.ndarray) -> float:
         hist = hist / np.sum(hist)
-        return np.mean(np.abs(np.diff(hist)) < self.rate)
+        return np.mean(np.abs(np.diff(hist)) < self.rate) # type: ignore
 
 
 class CHistLength(AHistClassifierCriterion):
