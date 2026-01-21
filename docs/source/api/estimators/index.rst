@@ -12,7 +12,7 @@ mpest.estimators
    direct/index
    iterative/index
 
-.. automodule:: rework_pysatl_mpest.estimators
+.. automodule:: pysatl_mpest.estimators
    :no-members:
 
 ------------------

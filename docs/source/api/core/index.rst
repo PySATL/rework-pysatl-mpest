@@ -4,7 +4,7 @@
 mpest.core
 ########
 
-.. automodule:: rework_pysatl_mpest.core
+.. automodule:: pysatl_mpest.core
     :no-members:
 
 

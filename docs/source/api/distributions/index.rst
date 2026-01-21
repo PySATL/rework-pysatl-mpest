@@ -4,7 +4,7 @@
 mpest.distributions
 ###############
 
-.. automodule:: rework_pysatl_mpest.distributions
+.. automodule:: pysatl_mpest.distributions
    :no-members:
 
 ------------------
