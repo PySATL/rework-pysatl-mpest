@@ -165,7 +165,92 @@ def _(
 def _(
     component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
-    """ """
+    """
+    Update parameters of a univariate Normal component using weighted moments.
+
+    This strategy performs a moment-based (closed-form) update of the Normal
+    distribution parameters from the current responsibility matrix produced by
+    the mixture/pipeline state. The update is performed for the component
+    associated with ``block.component_id`` and is limited to the intersection of
+    parameters requested by both the component and the optimization block.
+
+    The location is updated as the responsibility-weighted mean of the observed
+    data. The scale is updated as the square root of the responsibility-weighted
+    second central moment (i.e., the weighted standard deviation) around the
+    updated (or fixed) location.
+
+    If the total responsibility of the component is numerically negligible, the
+    function returns without updating any parameters.
+
+    Parameters
+    ----------
+    component : Normal[DType]
+        Normal distribution component to be updated. The method may update
+        ``component.loc`` and/or ``component.scale`` depending on
+        ``component.params_to_optimize`` and the block configuration.
+    state : PipelineState[DType]
+        Current pipeline state containing:
+
+        - ``X`` : array-like
+          Observations used to compute moment estimates.
+        - ``H`` : array-like, shape (n_samples, n_components)
+          Responsibility matrix. Column ``block.component_id`` is used as
+          weights for this component.
+    block : OptimizationBlock
+        Optimization block describing which component is being optimized and
+        which parameters are allowed to change. The component index is taken
+        from ``block.component_id``.
+    optimizer : Optimizer[DType]
+        Optimizer instance provided by the pipeline. It is not used directly by
+        this moments-based strategy but is included for API consistency.
+
+    Returns
+    -------
+    component_id : int
+        The identifier of the optimized component, equal to
+        ``block.component_id``.
+    new_params : dict[str, DType]
+        Dictionary of updated parameters for the component. Keys correspond to
+        Normal parameter names (e.g., ``component.PARAM_LOC``,
+        ``component.PARAM_SCALE``). If no update is performed (e.g., negligible
+        responsibility), an empty dict is returned.
+
+    Raises
+    ------
+    ValueError
+        If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
+        computed).
+
+    Notes
+    -----
+    - Let ``w_i = H[i, j]`` be responsibilities for component ``j`` and ``x_i``
+      the observations.
+
+      The updates are:
+
+      .. math::
+
+         N_j = \\sum_i w_i
+
+         \\mu_j = \\frac{\\sum_i w_i x_i}{N_j}
+
+         \\sigma_j = \\sqrt{\\frac{\\sum_i w_i (x_i - \\mu_j)^2}{N_j}}
+
+    - The scale is lower-bounded by machine epsilon for the component dtype to
+      avoid degeneracy:
+
+      ``scale = max(scale, np.finfo(dtype).eps)``.
+
+    - If ``N_j`` is close to zero (within ``NUMERICAL_TOLERANCE``), the
+      parameters are not updated.
+
+    Examples
+    --------
+    Update both location and scale for component ``j`` using responsibilities::
+
+        component_id, new_params = moments_strategy(normal_component, state, block, optimizer)
+        # new_params may contain {"loc": ..., "scale": ...} depending on configuration.
+    """
 
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
