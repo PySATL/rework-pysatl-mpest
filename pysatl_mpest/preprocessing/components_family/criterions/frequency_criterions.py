@@ -5,10 +5,10 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
-from pywt import wavedec
 from pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
     AHistClassifierCriterion,
 )
+from pywt import wavedec
 from scipy.fft import rfft
 from scipy.fftpack import dct
 from scipy.signal import periodogram
