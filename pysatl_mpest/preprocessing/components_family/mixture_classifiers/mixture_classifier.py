@@ -9,11 +9,11 @@ import os
 import gdown
 import numpy as np
 import pandas as pd
-from rework_pysatl_mpest.distributions import ContinuousDistribution
-from rework_pysatl_mpest.preprocessing.components_family.classifier_criterions import (
+from pysatl_mpest.distributions import ContinuousDistribution
+from pysatl_mpest.preprocessing.components_family.classifier_criterions import (
     MixtureClassifierCriterions,
 )
-from rework_pysatl_mpest.preprocessing.components_family.classifier_models import (
+from pysatl_mpest.preprocessing.components_family.classifier_models import (
     IClassifier,
 )
 from sklearn.preprocessing import LabelEncoder

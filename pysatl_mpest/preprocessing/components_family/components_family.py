@@ -5,11 +5,11 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
-from rework_pysatl_mpest.distributions import ContinuousDistribution
-from rework_pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
+from pysatl_mpest.distributions import ContinuousDistribution
+from pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
     MixtureClassifierModel,
 )
-from rework_pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
+from pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
 
 
 class ComponentsFamily:

@@ -5,7 +5,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
-from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
+from pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
     ASampleClassifierCriterion,
 )
 from scipy.stats import iqr, kurtosis, skew, zscore

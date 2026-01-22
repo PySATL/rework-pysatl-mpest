@@ -4,9 +4,9 @@ __author__ = "Mark Dubrovchenko"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from rework_pysatl_mpest.preprocessing.components_family.mixture_classifiers.base_xgb.base_xgb import (
+from pysatl_mpest.preprocessing.components_family.mixture_classifiers.base_xgb.base_xgb import (
     XGBBaseModel,
 )
-from rework_pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
+from pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
     MixtureClassifierModel,
 )

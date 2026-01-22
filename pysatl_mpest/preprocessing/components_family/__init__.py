@@ -13,8 +13,8 @@ by narrowing down the search to a few options
 
 .. code-block:: python
     >>> import numpy as np
-    >>> from rework_pysatl_mpest.preprocessing.components_family import ComponentsFamily
-    >>> from rework_pysatl_mpest.preprocessing.components_family import XGBBaseModel
+    >>> from pysatl_mpest.preprocessing.components_family import ComponentsFamily
+    >>> from pysatl_mpest.preprocessing.components_family import XGBBaseModel
 
     >>> # Create random sample
     >>> X = np.linspace(-10, 10, 200)
@@ -31,7 +31,7 @@ __author__ = "Mark Dubrovchenko"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from rework_pysatl_mpest.preprocessing.components_family.components_family import ComponentsFamily
-from rework_pysatl_mpest.preprocessing.components_family.mixture_classifiers import XGBBaseModel
+from pysatl_mpest.preprocessing.components_family.components_family import ComponentsFamily
+from pysatl_mpest.preprocessing.components_family.mixture_classifiers import XGBBaseModel
 
 __all__ = ["ComponentsFamily", "XGBBaseModel"]

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from rework_pysatl_mpest.preprocessing.components_family.criterions.sample_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.sample_criterions import (
     CBootKurt,
     CHillAbs,
     CIqr,

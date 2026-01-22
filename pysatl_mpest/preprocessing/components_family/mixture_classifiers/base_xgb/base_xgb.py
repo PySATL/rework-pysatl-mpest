@@ -6,14 +6,14 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from pathlib import Path
 
-from rework_pysatl_mpest.distributions import Beta, Cauchy, Exponential, Normal, Uniform, Weibull
-from rework_pysatl_mpest.preprocessing.components_family.classifier_criterions import (
+from pysatl_mpest.distributions import Beta, Cauchy, Exponential, Normal, Uniform, Weibull
+from pysatl_mpest.preprocessing.components_family.classifier_criterions import (
     MixtureClassifierCriterions,
 )
-from rework_pysatl_mpest.preprocessing.components_family.classifier_models.classifier_models import (
+from pysatl_mpest.preprocessing.components_family.classifier_models.classifier_models import (
     XGBClassifier,
 )
-from rework_pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
+from pysatl_mpest.preprocessing.components_family.mixture_classifiers.mixture_classifier import (
     MixtureClassifierModel,
 )
 

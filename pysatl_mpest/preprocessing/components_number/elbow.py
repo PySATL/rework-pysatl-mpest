@@ -6,7 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from kneed import KneeLocator
-from rework_pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
+from pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
 from sklearn.cluster import KMeans
 
 

@@ -4,12 +4,12 @@ __author__ = "Mark Dubrovchenko"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
+from pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
     AHistClassifierCriterion,
     APeaksClassifierCriterion,
     ASampleClassifierCriterion,
 )
-from rework_pysatl_mpest.preprocessing.components_family.criterions.frequency_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.frequency_criterions import (
     CDct,
     CDctEnergy,
     CSpecBandwidth,
@@ -26,7 +26,7 @@ from rework_pysatl_mpest.preprocessing.components_family.criterions.frequency_cr
     CWaveletMean,
     CWaveletStd,
 )
-from rework_pysatl_mpest.preprocessing.components_family.criterions.hist_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.hist_criterions import (
     CHistEnergy,
     CHistEntropy,
     CHistFlat,
@@ -37,7 +37,7 @@ from rework_pysatl_mpest.preprocessing.components_family.criterions.hist_criteri
     CSobelMean,
     CSobelMin,
 )
-from rework_pysatl_mpest.preprocessing.components_family.criterions.peaks_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.peaks_criterions import (
     CPeaksCount,
     CPeaksDistMax,
     CPeaksDistMean,
@@ -60,7 +60,7 @@ from rework_pysatl_mpest.preprocessing.components_family.criterions.peaks_criter
     CValleysWidthMean,
     CValleysWidthMin,
 )
-from rework_pysatl_mpest.preprocessing.components_family.criterions.sample_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.sample_criterions import (
     CBootKurt,
     CHillAbs,
     CIqr,

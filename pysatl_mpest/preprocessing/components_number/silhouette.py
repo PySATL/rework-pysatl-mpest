@@ -5,7 +5,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
-from rework_pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
+from pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 

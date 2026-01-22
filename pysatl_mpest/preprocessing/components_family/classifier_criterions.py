@@ -8,8 +8,8 @@ import warnings
 from math import ceil
 
 import numpy as np
-from rework_pysatl_mpest.preprocessing.components_family.criterions import base_criterions
-from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
+from pysatl_mpest.preprocessing.components_family.criterions import base_criterions
+from pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
     AHistClassifierCriterion,
     APeaksClassifierCriterion,
     ASampleClassifierCriterion,

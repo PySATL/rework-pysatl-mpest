@@ -7,7 +7,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 from math import ceil
 
 import numpy as np
-from rework_pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
+from pysatl_mpest.preprocessing.components_number.abstract_estimator import AComponentsNumber
 from scipy.signal import find_peaks
 
 

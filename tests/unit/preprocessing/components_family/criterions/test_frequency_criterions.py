@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from rework_pysatl_mpest.preprocessing.components_family.criterions.frequency_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.frequency_criterions import (
     CDct,
     CDctEnergy,
     CSpecBandwidth,

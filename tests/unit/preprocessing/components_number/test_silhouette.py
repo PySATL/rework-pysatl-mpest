@@ -1,9 +1,9 @@
 """Unit test module which test the Silhouette method"""
 
 import pytest
-from rework_pysatl_mpest.distributions import Exponential, Normal, Weibull
-from rework_pysatl_mpest.preprocessing.components_number import Silhouette
-from rework_tests.unit.preprocessing.components_number.components_num_utils import run_test
+from pysatl_mpest.distributions import Exponential, Normal, Weibull
+from pysatl_mpest.preprocessing.components_number import Silhouette
+from tests.unit.preprocessing.components_number.components_num_utils import run_test
 
 
 @pytest.mark.parametrize(

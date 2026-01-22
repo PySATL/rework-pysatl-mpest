@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from rework_pysatl_mpest.preprocessing.components_family.criterions.peaks_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.peaks_criterions import (
     CPeaksCount,
     CPeaksDistMax,
     CPeaksDistMean,

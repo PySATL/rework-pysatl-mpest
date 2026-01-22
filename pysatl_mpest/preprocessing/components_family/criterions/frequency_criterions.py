@@ -6,7 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from pywt import wavedec
-from rework_pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
+from pysatl_mpest.preprocessing.components_family.criterions.abstract_criterion import (
     AHistClassifierCriterion,
 )
 from scipy.fft import rfft

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from rework_pysatl_mpest.preprocessing.components_family.criterions.hist_criterions import (
+from pysatl_mpest.preprocessing.components_family.criterions.hist_criterions import (
     CHistEnergy,
     CHistEntropy,
     CHistFlat,
