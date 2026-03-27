@@ -173,41 +173,28 @@ def test_lmoments_exponential_rate_fallback_when_mean_equals_loc(parametrized_ex
     ],
     ids=["overflow_first_lmoment", "overflow_second_lmoment"],
 )
-def test_lmoments_exponential_overflow_handling(parametrized_exponential_setup, x_val, n_samples):
+def test_lmoments_exponential_overflow_handling(parametrized_exponential_setup, x_val, n_samples, request):
     """
     Verifies that NumericalStabilityError is correctly set in state
     upon overflow in either the first moment or the second moment calculation.
     """
     # --- Arrange ---
-    dtype = np.float16  # Используем float16 для контролируемого переполнения
-    
+    dtype = np.float16
+
     component = Exponential(loc=0.0, rate=1.0, dtype=dtype)
-    
-    if n_samples == 2:
-        # Case 1: Просто большие значения. Сумма 65504 + 65504 > 65504 -> inf
+
+    if request.node.callspec.id == "overflow_first_lmoment":
         X_data = np.full(n_samples, x_val, dtype=dtype)
     else:
-        # Case 2: Значения растут с индексом.
-        # l1 = mean(X) ~ 300 * 110 = 33000 (OK для float16)
-        # b1 содержит члены вида (i * X[i]). Для i=219: 219 * (300*220) ≈ 1.4e7 -> inf
         X_data = np.array([x_val * (i + 1) for i in range(n_samples)], dtype=dtype)
-    
-    # H должен соответствовать размеру X (N, 1) или (N,) в зависимости от реализации
+
     H = np.ones((n_samples, 1), dtype=dtype)
-    
+
     block = OptimizationBlock(
-        component_id=0, 
-        params_to_optimize={"loc", "rate"}, 
-        maximization_strategy=MaximizationStrategy.LMOMENTS
+        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.LMOMENTS
     )
-    
-    state = PipelineState(
-        X=X_data, 
-        H=H, 
-        curr_mixture=None, 
-        prev_mixture=None, 
-        error=None
-    )
+
+    state = PipelineState(X=X_data, H=H, curr_mixture=None, prev_mixture=None, error=None)
 
     # --- Act ---
     _, new_params = lmoments_strategy(component, state, block, optimizer=None)

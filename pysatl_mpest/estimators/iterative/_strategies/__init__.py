@@ -12,10 +12,10 @@ from ....optimizers import Optimizer
 from ....typings import DType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
+from .l_moments import lmoments_strategy as _lmoments_strategy
 from .moments import moments_strategy as _moments_strategy
 from .observed_data_likelihood import observed_data_likelihood_strategy as _observed_data_likelihood_strategy
 from .q_function import q_function_strategy as _q_function_strategy
-from .l_moments import lmoments_strategy as _lmoments_strategy
 
 q_function_strategy: Callable[
     [ContinuousDistribution, PipelineState, OptimizationBlock, Optimizer], tuple[int, dict[str, DType]]
@@ -29,9 +29,9 @@ moments_strategy: Callable[
     [ContinuousDistribution, PipelineState, OptimizationBlock, Optimizer], tuple[int, dict[str, DType]]
 ] = _moments_strategy
 
-lmoments_strategy : Callable[
+lmoments_strategy: Callable[
     [ContinuousDistribution, PipelineState, OptimizationBlock, Optimizer], tuple[int, dict[str, DType]]
 ] = _lmoments_strategy
 
 
-__all__ = ["moments_strategy", "observed_data_likelihood_strategy", "q_function_strategy", "lmoments_strategy"]
+__all__ = ["lmoments_strategy", "moments_strategy", "observed_data_likelihood_strategy", "q_function_strategy"]

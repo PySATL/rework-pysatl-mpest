@@ -27,6 +27,7 @@ NUMERICAL_TOLERANCE = 1e-9
 # Base L-moments strategy
 # ------------------------
 
+
 @singledispatch
 def lmoments_strategy(
     component: ContinuousDistribution[DType],
@@ -36,13 +37,13 @@ def lmoments_strategy(
 ) -> tuple[int, dict[str, DType]]:
     """Generic M-step strategy based on L-moments.
 
-    Unlike the Q-function strategy, L-moments do not have a universal numerical 
-    fallback because the relationship between L-moments and distribution 
+    Unlike the Q-function strategy, L-moments do not have a universal numerical
+    fallback because the relationship between L-moments and distribution
     parameters is distribution-specific.
 
-    This function serves as a dispatcher. Specific implementations must be 
+    This function serves as a dispatcher. Specific implementations must be
     registered for each distribution type.
-    
+
     Raises
     ------
     NotImplementedError
@@ -53,24 +54,20 @@ def lmoments_strategy(
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
-    raise NotImplementedError(
-        f"L-moments strategy for the {component.name} "
-        f"distribution is not implemented."
-    )
+    raise NotImplementedError(f"L-moments strategy for the {component.name} distribution is not implemented.")
 
 
 @lmoments_strategy.register(Exponential)
 def _(
-    component: Exponential[DType], state: PipelineState[DType], 
-    block: OptimizationBlock, optimizer: Optimizer[DType]
+    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
     """Specialized L-moments parameter estimation strategy for
     the Exponential distribution using an analytical solution.
 
     This function provides a closed-form update for the parameters of an
     `Exponential` distribution based on the first two sample L-moments (l1, l2).
-    L-moments are often more robust to outliers and more efficient in small 
-    samples compared to traditional moments or numerical MLE in certain 
+    L-moments are often more robust to outliers and more efficient in small
+    samples compared to traditional moments or numerical MLE in certain
     mixture contexts.
 
     The implementation calculates the sample L-moments using the responsibility
@@ -99,12 +96,12 @@ def _(
     ValueError
         If the responsibility matrix `H` has not been computed.
     """
-    
+
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
     dtype = component.dtype
-   
+
     X = state.X
     H_j = state.H[:, block.component_id]
     N_j = np.sum(H_j)
@@ -112,10 +109,10 @@ def _(
     # If the component has negligible responsibility, do not update its parameters.
     if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
-    
+
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
     new_params = {}
-    
+
     idx = np.argsort(X)
 
     X_sorted, H_sorted = X[idx], H_j[idx]
@@ -140,7 +137,7 @@ def _(
         # l1 = loc + 1 / rate => loc = l1 - 1 / rate
         new_rate = 1.0 / (2.0 * l2) if l2 > 1e-9 else 1e-6
         new_loc = l1 - (1.0 / new_rate)
-        
+
         new_params[component.PARAM_RATE] = dtype(new_rate)
         new_params[component.PARAM_LOC] = dtype(new_loc)
 
@@ -154,7 +151,7 @@ def _(
             new_rate = component.rate
         else:
             new_rate = 1.0 / diff
-        
+
         new_params[component.PARAM_RATE] = dtype(new_rate)
 
     # Сценарий 3: Фиксированный rate, свободный loc
@@ -166,7 +163,7 @@ def _(
 
         if np.isinf(new_loc):
             handle_numerical_overflow(state=state, context="Lmoments optimization")
-        
+
         new_params[component.PARAM_LOC] = dtype(new_loc)
 
     return block.component_id, new_params
