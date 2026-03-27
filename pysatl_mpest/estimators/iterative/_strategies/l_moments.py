@@ -135,7 +135,7 @@ def _(
     if component.PARAM_RATE in params_to_optimize and component.PARAM_LOC in params_to_optimize:
         # l2 = 1 / (2 * rate) => rate = 1 / (2 * l2)
         # l1 = loc + 1 / rate => loc = l1 - 1 / rate
-        new_rate = 1.0 / (2.0 * l2) if l2 > 1e-9 else 1e-6
+        new_rate = 1.0 / (2.0 * l2) if l2 > NUMERICAL_TOLERANCE else 1e-6
         new_loc = l1 - (1.0 / new_rate)
 
         new_params[component.PARAM_RATE] = dtype(new_rate)
@@ -146,11 +146,9 @@ def _(
         # loc фиксирован. Используем l1 для оценки rate (более эффективно, чем l2)
         # l1 = loc_fixed + 1 / rate => rate = 1 / (l1 - loc_fixed)
         diff = l1 - component.loc
+        
+        new_rate = component.rate if np.isclose(diff, 0.0, atol=1e-12) else 1.0 / diff
 
-        if np.isclose(diff, 0.0, atol=1e-12):
-            new_rate = component.rate
-        else:
-            new_rate = 1.0 / diff
 
         new_params[component.PARAM_RATE] = dtype(new_rate)
 
