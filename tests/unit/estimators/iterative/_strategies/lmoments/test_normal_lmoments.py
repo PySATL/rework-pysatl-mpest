@@ -30,8 +30,8 @@ def parametrized_normal_setup(request):
     return component, state, dtype
 
 
-# --- Basic interface tests ---
 
+# --- Basic interface tests ---
 
 def test_lmoments_normal_raises_value_error_if_h_is_none(parametrized_normal_setup):
     normal_component, state, _ = parametrized_normal_setup
@@ -53,8 +53,8 @@ def test_lmoments_normal_respects_fixed_params(parametrized_normal_setup):
     assert "scale" in new_params
 
 
-# --- Mathematical Correctness Test (L-moments vs Normal) ---
 
+# --- Mathematical Correctness Test (L-moments vs Normal) ---
 
 def test_lmoments_normal_calculation_correctness(parametrized_normal_setup):
     """
@@ -82,8 +82,8 @@ def test_lmoments_normal_calculation_correctness(parametrized_normal_setup):
     assert new_params[Normal.PARAM_SCALE] == pytest.approx(expected_sigma, rel=1e-4)
 
 
-# --- Stability tests ---
 
+# --- Stability tests ---
 
 def test_lmoments_normal_handles_zero_variance(parametrized_normal_setup):
     """If all points are the same, L2 will be 0, sigma should be clamped by eps."""
@@ -98,8 +98,8 @@ def test_lmoments_normal_handles_zero_variance(parametrized_normal_setup):
     assert new_params[Normal.PARAM_SCALE] >= np.finfo(dtype).eps
 
 
-# --- Hypothesis: Restoring parameters from a selection ---
 
+# --- Hypothesis: Restoring parameters from a selection ---
 
 @settings(max_examples=20, deadline=None)
 @given(mu=st.floats(min_value=-10, max_value=10), sigma=st.floats(min_value=1.0, max_value=5.0))
