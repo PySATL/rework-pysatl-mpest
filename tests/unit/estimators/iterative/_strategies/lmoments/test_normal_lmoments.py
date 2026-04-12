@@ -15,6 +15,10 @@ from pysatl_mpest.exceptions import NumericalStabilityError
 
 DTYPES_TO_TEST = [np.float32, np.float64]
 
+# Constants for overflow testing (float16 limits)
+_FLOAT16_OVERFLOW_L1 = 65504.0  # Value causing overflow in first L-moment calculation
+_FLOAT16_OVERFLOW_L2 = 300.0  # Value causing overflow in second L-moment calculation
+
 
 @pytest.fixture(params=DTYPES_TO_TEST)
 def parametrized_normal_setup(request) -> tuple[Normal, PipelineState, np.floating]:
@@ -124,8 +128,8 @@ def test_lmoments_normal_handles_negligible_responsibility(parametrized_normal_s
 @pytest.mark.parametrize(
     "x_val, n_samples",
     [
-        pytest.param(65504.0, 2, id="overflow_first_lmoment"),
-        pytest.param(300.0, 220, id="overflow_second_lmoment"),
+        pytest.param(_FLOAT16_OVERFLOW_L1, 2, id="overflow_first_lmoment"),
+        pytest.param(_FLOAT16_OVERFLOW_L2, 220, id="overflow_second_lmoment"),
     ],
 )
 def test_lmoments_normal_overflow_handling(parametrized_normal_setup, x_val, n_samples):
@@ -133,7 +137,7 @@ def test_lmoments_normal_overflow_handling(parametrized_normal_setup, x_val, n_s
     dtype = np.float16
     component = Normal(loc=0.0, scale=1.0, dtype=dtype)
 
-    if x_val == 65504.0:
+    if x_val == _FLOAT16_OVERFLOW_L1:
         X_data = np.full(n_samples, x_val, dtype=dtype)
     else:
         X_data = np.array([x_val * (i + 1) for i in range(n_samples)], dtype=dtype)
@@ -154,14 +158,14 @@ def test_lmoments_normal_handles_inf_lmoments_directly(parametrized_normal_setup
     """Directly tests the branch where computed l1 or l2 is infinite."""
     component, state, dtype = parametrized_normal_setup
 
-    # Создаём искусственные данные, которые приведут к inf в l1 или l2
+    # Create artificial data that leads to inf in l1 or l2
     state.X = np.array([np.inf, 1.0, 2.0], dtype=dtype)
-    state.H = np.array([[1.0], [0.0], [0.0]], dtype=dtype)  # Только первая точка имеет вес
+    state.H = np.array([[1.0], [0.0], [0.0]], dtype=dtype)  # Only first point has weight
 
     block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
     _, new_params = lmoments_strategy(component, state, block, optimizer=None)
 
-    # Должна быть установлена ошибка и возвращён пустой словарь
+    # Error should be set and empty dict returned
     assert state.error is not None
     assert isinstance(state.error, NumericalStabilityError)
     assert new_params == {}
@@ -171,7 +175,7 @@ def test_lmoments_normal_scale_clipping_to_epsilon(parametrized_normal_setup):
     """Verifies that scale parameter is clipped to machine epsilon when L2 is near zero."""
     component, state, dtype = parametrized_normal_setup
 
-    # Все точки одинаковые → L2 ≈ 0 → scale должен быть зажат снизу
+    # All points identical -> L2 ~ 0 -> scale should be clipped to epsilon
     val = dtype(5.0)
     state.X = np.array([val, val, val, val], dtype=dtype)
     state.H = np.ones((4, 1), dtype=dtype)
@@ -188,10 +192,10 @@ def test_lmoments_normal_scale_clipping_to_epsilon(parametrized_normal_setup):
 def normal_data_and_true_params(draw, dtype_strategy=st.sampled_from([np.float64])):
     """Generates true Normal parameters and a synthetic dataset with full responsibility."""
     dtype = draw(dtype_strategy)
-    # Более консервативные диапазоны для стабильной оценки
+    # Conservative ranges for stable estimation
     true_loc = draw(st.floats(min_value=-20, max_value=20, allow_nan=False, allow_infinity=False))
     true_scale = draw(st.floats(min_value=0.5, max_value=20.0, allow_nan=False, allow_infinity=False))
-    sample_size = draw(st.integers(min_value=8000, max_value=15000))  # Увеличил размер выборки
+    sample_size = draw(st.integers(min_value=8000, max_value=15000))
 
     rng = np.random.default_rng(42)
     X = rng.normal(loc=true_loc, scale=true_scale, size=sample_size).astype(dtype)
@@ -218,9 +222,9 @@ def test_lmoments_normal_recovers_true_params_on_ideal_data(data):
 
     _, new_params = lmoments_strategy(start_component, state, block, optimizer=None)
 
-    # Адаптивные допуски: абсолютная погрешность растёт с true_scale
-    loc_atol = 0.3 + 0.02 * float(true_scale)  # ~0.3 базовая + 2% от scale
-    scale_rtol = 0.12 + 0.003 * float(true_scale)  # ~12% базовая + 0.3% от scale
+    # Adaptive tolerances: absolute error grows with true_scale
+    loc_atol = 0.3 + 0.02 * float(true_scale)  # ~0.3 base + 2% of scale
+    scale_rtol = 0.12 + 0.003 * float(true_scale)  # ~12% base + 0.3% of scale
 
     assert new_params[Normal.PARAM_LOC] == pytest.approx(true_loc, abs=loc_atol)
     assert new_params[Normal.PARAM_SCALE] == pytest.approx(true_scale, rel=scale_rtol)
