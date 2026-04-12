@@ -250,7 +250,7 @@ def test_lmoments_exponential_recovers_true_params_on_ideal_data(data):
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.LMOMENTS
     )
 
     _, new_params = lmoments_strategy(start_component, state, block, optimizer=None)
