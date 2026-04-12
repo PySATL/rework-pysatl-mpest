@@ -23,6 +23,26 @@ from .utils import handle_numerical_overflow
 
 NUMERICAL_TOLERANCE = 1e-9
 
+
+# ------------------------
+# function to compute 1-st and 2-nd l-moments
+# ------------------------
+def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType) -> tuple[float, float]:
+    idx = np.argsort(X)
+    X_sorted = X[idx]
+    H_sorted = H[idx]
+
+    l1 = np.sum(H_sorted * X_sorted) / N_j
+
+    W_sum = np.cumsum(H_sorted)
+    rank_weights = (W_sum - 0.5 * H_sorted) / N_j
+
+    b1 = np.sum(H_sorted * X_sorted * rank_weights) / N_j
+    l2 = 2 * b1 - l1
+
+    return float(l1), float(l2)
+
+
 # ------------------------
 # Base L-moments strategy
 # ------------------------
@@ -113,20 +133,11 @@ def _(
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
     new_params = {}
 
-    idx = np.argsort(X)
-
-    X_sorted, H_sorted = X[idx], H_j[idx]
-    W_sum = np.cumsum(H_sorted)
-
-    l1 = np.sum(H_sorted * X_sorted) / N_j
+    l1, l2 = compute_sample_lmoments(X, H_j, N_j)
 
     if np.isinf(l1):
         handle_numerical_overflow(state=state, context="Lmoments optimization")
         return block.component_id, {}
-
-    rank_weights = (W_sum - 0.5 * H_sorted) / N_j
-    b1 = np.sum(H_sorted * X_sorted * rank_weights) / N_j
-    l2 = 2 * b1 - l1
 
     if np.isinf(l2):
         handle_numerical_overflow(state=state, context="Lmoments optimization")
