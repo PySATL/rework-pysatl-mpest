@@ -14,7 +14,7 @@ from functools import singledispatch
 
 import numpy as np
 
-from ....distributions import ContinuousDistribution, Exponential, Normal
+from ....distributions import ContinuousDistribution, Normal
 from ....optimizers import Optimizer
 from ....typings import DType
 from ..pipeline_state import PipelineState
@@ -22,6 +22,7 @@ from ..steps import OptimizationBlock
 from .utils import handle_numerical_overflow
 
 NUMERICAL_TOLERANCE = 1e-9
+
 
 # ------------------------
 # function to compute 1-st and 2-nd l-moments
@@ -40,6 +41,7 @@ def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType) -> tuple[f
     l2 = 2 * b1 - l1
 
     return float(l1), float(l2)
+
 
 # ------------------------
 # Base L-moments strategy
@@ -114,7 +116,7 @@ def _(
     ValueError
         If the responsibility matrix `H` has not been computed.
     """
-    
+
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
@@ -141,7 +143,7 @@ def _(
     if np.isinf(l2):
         handle_numerical_overflow(state=state, context="Lmoments optimization")
         return block.component_id, {}
-    
+
     if component.PARAM_LOC in params_to_optimize:
         new_loc = l1
         new_params[component.PARAM_LOC] = dtype(new_loc)
@@ -149,5 +151,5 @@ def _(
     if component.PARAM_SCALE in params_to_optimize:
         new_scale = np.sqrt(np.pi) * l2
         new_params[component.PARAM_SCALE] = dtype(max(new_scale, MIN_SCALE))
-    
+
     return block.component_id, new_params
