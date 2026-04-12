@@ -52,8 +52,8 @@ def test_lmoments_normal_respects_fixed_params(parametrized_normal_setup):
 
 def test_lmoments_normal_calculation_correctness(parametrized_normal_setup):
     """
-    Проверка конкретного примера.
-    Для данных [10, 20] с весами [0.5, 0.5]:
+    Test case verification with a concrete example.
+    Given data [10, 20] and weights [0.5, 0.5]:
     L1 = (10*0.5 + 20*0.5) / 1.0 = 15.0
     rank_weights:
       w1 = (0.5 - 0.5*0.5)/1 = 0.25
