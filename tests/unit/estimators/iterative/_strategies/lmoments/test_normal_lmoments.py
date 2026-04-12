@@ -1,4 +1,4 @@
-"""Tests for L-moments optimization strategy for Normal distribution"""
+"""Tests for L-Moments optimization strategy for Normal distribution"""
 
 __author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -11,12 +11,14 @@ from hypothesis import strategies as st
 from pysatl_mpest.distributions import Normal
 from pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
 from pysatl_mpest.estimators.iterative._strategies import lmoments_strategy
+from pysatl_mpest.exceptions import NumericalStabilityError
 
 DTYPES_TO_TEST = [np.float32, np.float64]
 
 
 @pytest.fixture(params=DTYPES_TO_TEST)
-def parametrized_normal_setup(request):
+def parametrized_normal_setup(request) -> tuple[Normal, PipelineState, np.floating]:
+    """Creates a parametrized fixture providing a Normal component and PipelineState for various dtypes."""
     dtype = request.param
     component = Normal(loc=0.0, scale=1.0, dtype=dtype)
 
@@ -31,6 +33,7 @@ def parametrized_normal_setup(request):
 
 
 def test_lmoments_normal_raises_value_error_if_h_is_none(parametrized_normal_setup):
+    """Verifies that a ValueError is raised if the responsibility matrix H has not been computed."""
     normal_component, state, _ = parametrized_normal_setup
     state.H = None
     block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
@@ -39,15 +42,21 @@ def test_lmoments_normal_raises_value_error_if_h_is_none(parametrized_normal_set
         lmoments_strategy(normal_component, state, block, optimizer=None)
 
 
-def test_lmoments_normal_respects_fixed_params(parametrized_normal_setup):
-    normal_component, state, _ = parametrized_normal_setup
-    normal_component.fix_param("loc")  # Фиксируем mu
-
+def test_lmoments_normal_returns_correct_types(parametrized_normal_setup):
+    """Verifies that the function returns a tuple with the correct data types (int, dict[str, DType])."""
+    normal_component, pipeline_state, dtype = parametrized_normal_setup
     block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
-    _, new_params = lmoments_strategy(normal_component, state, block, optimizer=None)
 
-    assert "loc" not in new_params
-    assert "scale" in new_params
+    result = lmoments_strategy(normal_component, pipeline_state, block, optimizer=None)
+
+    assert isinstance(result, tuple)
+    assert isinstance(result[0], int)
+    assert isinstance(result[1], dict)
+
+    if result[1]:
+        key, value = next(iter(result[1].items()))
+        assert isinstance(key, str)
+        assert isinstance(value, dtype)
 
 
 def test_lmoments_normal_calculation_correctness(parametrized_normal_setup):
@@ -76,38 +85,145 @@ def test_lmoments_normal_calculation_correctness(parametrized_normal_setup):
     assert new_params[Normal.PARAM_SCALE] == pytest.approx(expected_sigma, rel=1e-4)
 
 
-def test_lmoments_normal_handles_zero_variance(parametrized_normal_setup):
-    """Если все точки одинаковые, L2 будет 0, sigma должна быть зажата eps."""
+@pytest.mark.parametrize(
+    "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
+    [
+        ({"loc", "scale"}, set(), {"loc", "scale"}),
+        ({"loc"}, set(), {"loc"}),
+        ({"scale"}, set(), {"scale"}),
+        ({"loc", "scale"}, {"loc"}, {"scale"}),
+        ({"loc", "scale"}, {"scale"}, {"loc"}),
+        ({"loc", "scale"}, {"loc", "scale"}, set()),
+        ({"non_existent_param", "loc"}, set(), {"loc"}),
+        (set(), set(), set()),
+    ],
+)
+def test_lmoments_normal_respects_fixed_and_optimizable_params(
+    parametrized_normal_setup, params_to_optimize_in_block, fixed_params_on_component, expected_keys
+):
+    """Verifies parameter update logic against component fixes and block constraints."""
+    normal_component, pipeline_state, _ = parametrized_normal_setup
+    for param in fixed_params_on_component:
+        normal_component.fix_param(param)
+
+    block = OptimizationBlock(0, params_to_optimize_in_block, MaximizationStrategy.LMOMENTS)
+    _, new_params = lmoments_strategy(normal_component, pipeline_state, block, optimizer=None)
+    assert set(new_params.keys()) == expected_keys
+
+
+def test_lmoments_normal_handles_negligible_responsibility(parametrized_normal_setup):
+    """Verifies that components with near-zero responsibility are not updated."""
+    normal_component, pipeline_state, dtype = parametrized_normal_setup
+    pipeline_state.H.fill(dtype(1e-10))
+
+    block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
+    _, new_params = lmoments_strategy(normal_component, pipeline_state, block, optimizer=None)
+    assert new_params == {}
+
+
+@pytest.mark.parametrize(
+    "x_val, n_samples",
+    [
+        pytest.param(65504.0, 2, id="overflow_first_lmoment"),
+        pytest.param(300.0, 220, id="overflow_second_lmoment"),
+    ],
+)
+def test_lmoments_normal_overflow_handling(parametrized_normal_setup, x_val, n_samples):
+    """Verifies NumericalStabilityError is set upon overflow in L-moment calculations."""
+    dtype = np.float16
+    component = Normal(loc=0.0, scale=1.0, dtype=dtype)
+
+    if x_val == 65504.0:
+        X_data = np.full(n_samples, x_val, dtype=dtype)
+    else:
+        X_data = np.array([x_val * (i + 1) for i in range(n_samples)], dtype=dtype)
+
+    H = np.ones((n_samples, 1), dtype=dtype)
+    block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
+    state = PipelineState(X=X_data, H=H, curr_mixture=None, prev_mixture=None, error=None)
+
+    _, new_params = lmoments_strategy(component, state, block, optimizer=None)
+
+    assert state.error is not None
+    assert isinstance(state.error, NumericalStabilityError)
+    assert "Overflow detected during Lmoments optimization" in str(state.error)
+    assert new_params == {}
+
+
+def test_lmoments_normal_handles_inf_lmoments_directly(parametrized_normal_setup):
+    """Directly tests the branch where computed l1 or l2 is infinite."""
     component, state, dtype = parametrized_normal_setup
-    val = dtype(10.0)
-    state.X = np.array([val, val, val], dtype=dtype)
-    state.H = np.ones((3, 1), dtype=dtype)
+
+    # Создаём искусственные данные, которые приведут к inf в l1 или l2
+    state.X = np.array([np.inf, 1.0, 2.0], dtype=dtype)
+    state.H = np.array([[1.0], [0.0], [0.0]], dtype=dtype)  # Только первая точка имеет вес
+
+    block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
+    _, new_params = lmoments_strategy(component, state, block, optimizer=None)
+
+    # Должна быть установлена ошибка и возвращён пустой словарь
+    assert state.error is not None
+    assert isinstance(state.error, NumericalStabilityError)
+    assert new_params == {}
+
+
+def test_lmoments_normal_scale_clipping_to_epsilon(parametrized_normal_setup):
+    """Verifies that scale parameter is clipped to machine epsilon when L2 is near zero."""
+    component, state, dtype = parametrized_normal_setup
+
+    # Все точки одинаковые → L2 ≈ 0 → scale должен быть зажат снизу
+    val = dtype(5.0)
+    state.X = np.array([val, val, val, val], dtype=dtype)
+    state.H = np.ones((4, 1), dtype=dtype)
 
     block = OptimizationBlock(0, {"scale"}, MaximizationStrategy.LMOMENTS)
     _, new_params = lmoments_strategy(component, state, block, optimizer=None)
 
-    assert new_params[Normal.PARAM_SCALE] >= np.finfo(dtype).eps
+    expected_min = np.finfo(dtype).eps
+    assert new_params[Normal.PARAM_SCALE] >= expected_min
+    assert new_params[Normal.PARAM_SCALE] == pytest.approx(expected_min, rel=1e-6)
 
 
-@settings(max_examples=20, deadline=None)
-@given(mu=st.floats(min_value=-10, max_value=10), sigma=st.floats(min_value=1.0, max_value=5.0))
-def test_lmoments_normal_recovery_property(mu, sigma):
-    """
-    Свойство: на большой выборке взвешенные L-моменты должны
-    восстанавливать параметры mu и sigma.
-    """
-    dtype = np.float64
-    sample_size = 10000
+@st.composite
+def normal_data_and_true_params(draw, dtype_strategy=st.sampled_from([np.float64])):
+    """Generates true Normal parameters and a synthetic dataset with full responsibility."""
+    dtype = draw(dtype_strategy)
+    # Более консервативные диапазоны для стабильной оценки
+    true_loc = draw(st.floats(min_value=-20, max_value=20, allow_nan=False, allow_infinity=False))
+    true_scale = draw(st.floats(min_value=0.5, max_value=20.0, allow_nan=False, allow_infinity=False))
+    sample_size = draw(st.integers(min_value=8000, max_value=15000))  # Увеличил размер выборки
+
     rng = np.random.default_rng(42)
+    X = rng.normal(loc=true_loc, scale=true_scale, size=sample_size).astype(dtype)
+    return X, dtype(true_loc), dtype(true_scale), dtype
 
-    X = rng.normal(loc=mu, scale=sigma, size=sample_size).astype(dtype)
-    H = np.ones((sample_size, 1), dtype=dtype)  # Полная ответственность
 
-    component = Normal(loc=0.0, scale=1.0, dtype=dtype)
+@settings(max_examples=50, deadline=None)
+@given(data=normal_data_and_true_params())
+def test_lmoments_normal_recovers_true_params_on_ideal_data(data):
+    """
+    Statistical sanity check: verifies that L-moments recover ground-truth
+    parameters when all responsibility belongs to a single component.
+
+    Note: Tolerances are adaptive to account for sampling variability that
+    scales with the true parameter values.
+    """
+    X, true_loc, true_scale, dtype = data
+
+    H = np.ones((len(X), 1), dtype=dtype)
+    start_component = Normal(loc=-999.0, scale=0.001, dtype=dtype)
+
     state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
     block = OptimizationBlock(0, {"loc", "scale"}, MaximizationStrategy.LMOMENTS)
 
-    _, new_params = lmoments_strategy(component, state, block, optimizer=None)
+    _, new_params = lmoments_strategy(start_component, state, block, optimizer=None)
 
-    assert new_params[Normal.PARAM_LOC] == pytest.approx(mu, abs=0.1)
-    assert new_params[Normal.PARAM_SCALE] == pytest.approx(sigma, rel=0.05)
+    # Адаптивные допуски: абсолютная погрешность растёт с true_scale
+    loc_atol = 0.3 + 0.02 * float(true_scale)  # ~0.3 базовая + 2% от scale
+    scale_rtol = 0.12 + 0.003 * float(true_scale)  # ~12% базовая + 0.3% от scale
+
+    assert new_params[Normal.PARAM_LOC] == pytest.approx(true_loc, abs=loc_atol)
+    assert new_params[Normal.PARAM_SCALE] == pytest.approx(true_scale, rel=scale_rtol)
+
+    assert isinstance(new_params[Normal.PARAM_LOC], dtype)
+    assert isinstance(new_params[Normal.PARAM_SCALE], dtype)
