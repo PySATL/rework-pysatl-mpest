@@ -146,8 +146,8 @@ def _(
     if component.PARAM_RATE in params_to_optimize and component.PARAM_LOC in params_to_optimize:
         # l2 = 1 / (2 * rate) => rate = 1 / (2 * l2)
         # l1 = loc + 1 / rate => loc = l1 - 1 / rate
-        new_rate = 1.0 / (2.0 * l2) if l2 > NUMERICAL_TOLERANCE else 1e-6
-        new_loc = l1 - (1.0 / new_rate)
+        new_rate: DType | float = 1.0 / (2.0 * l2) if l2 > NUMERICAL_TOLERANCE else 1e-6
+        new_loc: DType | float = l1 - (1.0 / new_rate)
 
         new_params[component.PARAM_RATE] = dtype(new_rate)
         new_params[component.PARAM_LOC] = dtype(new_loc)
