@@ -8,13 +8,13 @@ import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from scipy.special import gamma
 from pysatl_mpest.distributions import Weibull
 from pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
 from pysatl_mpest.estimators.iterative._strategies import lmoments_strategy
 from pysatl_mpest.exceptions import NumericalStabilityError
 
 DTYPES_TO_TEST = [np.float32, np.float64]
+
 
 @pytest.fixture(params=DTYPES_TO_TEST)
 def parametrized_weibull_setup(request) -> tuple[Weibull, PipelineState, np.floating]:
@@ -42,7 +42,7 @@ def test_lmoments_weibull_returns_correct_types(parametrized_weibull_setup):
     weibull_component, pipeline_state, dtype = parametrized_weibull_setup
     block = OptimizationBlock(0, {"loc", "scale", "shape"}, MaximizationStrategy.LMOMENTS)
     result = lmoments_strategy(weibull_component, pipeline_state, block, optimizer=None)
-    
+
     assert isinstance(result, tuple)
     assert isinstance(result[1], dict)
     for value in result[1].values():
@@ -75,7 +75,7 @@ def test_lmoments_weibull_t3_clipping(parametrized_weibull_setup):
     # Create extreme data to force t3 > 0.5 or t3 < 0
     state.X = np.array([1.0, 1.1, 100.0], dtype=dtype)
     state.H = np.array([[0.45], [0.45], [0.1]], dtype=dtype)
-    
+
     block = OptimizationBlock(0, {"loc", "scale", "shape"}, MaximizationStrategy.LMOMENTS)
     # Should not raise ValueError because of np.clip(t3, 0.001, 0.499)
     _, new_params = lmoments_strategy(component, state, block, optimizer=None)
@@ -86,7 +86,7 @@ def test_lmoments_weibull_t3_clipping(parametrized_weibull_setup):
 def test_lmoments_weibull_inf_handling(parametrized_weibull_setup, inf_moment):
     """Verifies NumericalStabilityError is set when any relevant L-moment is infinite."""
     component, state, dtype = parametrized_weibull_setup
-    
+
     # Use a large enough value to ensure overflow across float32 and float64
 
     if inf_moment == "l1":
@@ -97,7 +97,7 @@ def test_lmoments_weibull_inf_handling(parametrized_weibull_setup, inf_moment):
         state.X = np.array([-np.inf, np.inf], dtype=dtype)
         state.H = np.array([[0.5], [0.5]], dtype=dtype)
     elif inf_moment == "l3":
-        # Force l3 to inf while keeping l2 finite if possible, 
+        # Force l3 to inf while keeping l2 finite if possible,
         # or simply trigger the non-finite check.
         state.X = np.array([0.0, 1.0, np.inf], dtype=dtype)
         state.H = np.array([[0.33], [0.33], [0.34]], dtype=dtype)
@@ -109,6 +109,7 @@ def test_lmoments_weibull_inf_handling(parametrized_weibull_setup, inf_moment):
     assert state.error is not None
     assert isinstance(state.error, NumericalStabilityError)
     assert new_params == {}
+
 
 def test_lmoments_weibull_handles_negligible_responsibility(parametrized_weibull_setup):
     component, state, dtype = parametrized_weibull_setup
@@ -124,7 +125,7 @@ def stable_weibull_data(draw):
     # Ranges where L-moments are numerically stable
     true_loc = draw(st.floats(min_value=0.1, max_value=5.0))
     true_scale = draw(st.floats(min_value=1.0, max_value=3.0))
-    true_shape = draw(st.floats(min_value=1.2, max_value=3.5)) 
+    true_shape = draw(st.floats(min_value=1.2, max_value=3.5))
     size = 8000
     rng = np.random.default_rng(42)
     X = (rng.weibull(true_shape, size) * true_scale + true_loc).astype(dtype)
