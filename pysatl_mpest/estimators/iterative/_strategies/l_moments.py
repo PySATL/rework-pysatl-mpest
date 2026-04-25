@@ -81,40 +81,100 @@ def lmoments_strategy(
 def _(
     component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
-    """Specialized L-moments parameter estimation strategy for
-    the Exponential distribution using an analytical solution.
+    """
+    Update parameters of a univariate Exponential component using L-moments.
 
-    This function provides a closed-form update for the parameters of an
-    `Exponential` distribution based on the first two sample L-moments (l1, l2).
-    L-moments are often more robust to outliers and more efficient in small
-    samples compared to traditional moments or numerical MLE in certain
-    mixture contexts.
+    This strategy performs a closed-form (analytical) update of the Exponential
+    distribution parameters (location and rate) by equating weighted sample 
+    L-moments to their theoretical definitions. The update is performed for 
+    the component associated with ``block.component_id`` and adapts based on 
+    which parameters are flagged for optimization.
 
-    The implementation calculates the sample L-moments using the responsibility
-    matrix `H` from the E-step and maps them to the `loc` and `rate` parameters.
+    L-moments provide a robust alternative to maximum likelihood estimation (MLE), 
+    especially in mixture models where components may have small effective 
+    sample sizes or contain outliers.
 
-    Notes
-    -----
-    The analytical updates depend on which parameters are being optimized:
-    - If both `loc` and `rate` are optimized:
-        - `rate = 1 / (2 * l2)`
-        - `loc = l1 - l2 * 2` (equivalent to `l1 - 1 / rate`)
-    - If only `rate` is optimized (`loc` is fixed):
-        - `rate = 1 / (l1 - loc_fixed)`
-    - If only `loc` is optimized (`rate` is fixed):
-        - `loc = l1 - 1 / rate_fixed`
+    If the total responsibility of the component is numerically negligible, or 
+    if the L-moments results in non-finite values, the function returns without 
+    updating any parameters.
 
-    Where:
-    - `l1` is the weighted mean (first L-moment).
-    - `l2` is the weighted L-scale (second L-moment).
+    Parameters
+    ----------
+    component : Exponential[DType]
+        Exponential distribution component to be updated. The method may update
+        ``component.loc`` and/or ``component.rate`` depending on
+        ``component.params_to_optimize`` and the block configuration.
+    state : PipelineState[DType]
+        Current pipeline state containing:
 
-    This implementation ignores the `optimizer` parameter as it relies on
-    direct analytical mapping.
+        - ``X`` : array-like
+        Observations used to compute L-moment estimates.
+        - ``H`` : array-like, shape (n_samples, n_components)
+        Responsibility matrix. Column ``block.component_id`` is used as
+        weights for this component.
+    block : OptimizationBlock
+        Optimization block describing which component is being optimized and
+        which parameters are allowed to change. The component index is taken
+        from ``block.component_id``.
+    optimizer : Optimizer[DType]
+        Optimizer instance provided by the pipeline. It is not used directly by
+        this analytical strategy but is included for API consistency.
+
+    Returns
+    -------
+    component_id : int
+        The identifier of the optimized component, equal to
+        ``block.component_id``.
+    new_params : dict[str, DType]
+        Dictionary of updated parameters for the component. Keys correspond to
+        Exponential parameter names (e.g., ``component.PARAM_LOC``,
+        ``component.PARAM_RATE``). If no update is performed, an empty dict 
+        is returned.
 
     Raises
     ------
     ValueError
-        If the responsibility matrix `H` has not been computed.
+        If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
+        computed).
+
+    Notes
+    -----
+    - Let :math:`l_1` be the first weighted sample L-moment (mean) and :math:`l_2` 
+    be the second weighted sample L-moment (L-scale). The theoretical 
+    L-moments for an Exponential distribution with location :math:`\\gamma` 
+    and rate :math:`\\lambda` are:
+    
+    .. math::
+        L_1 = \\gamma + \\frac{1}{\\lambda}, \\quad L_2 = \\frac{1}{2\\lambda}
+
+    - **Case 1: Both Location and Rate are optimized**
+    The parameters are recovered using both :math:`l_1` and :math:`l_2`:
+
+    .. math::
+        \\lambda = \\frac{1}{2l_2}, \\quad \\gamma = l_1 - \\frac{1}{\\lambda}
+
+    - **Case 2: Rate is optimized, Location is fixed**
+    The rate is estimated using the first L-moment and the fixed location:
+
+    .. math::
+        \\lambda = \\frac{1}{l_1 - \\gamma_{fixed}}
+
+    - **Case 3: Location is optimized, Rate is fixed**
+    The location is adjusted based on the first L-moment and the fixed rate:
+
+    .. math::
+        \\gamma = l_1 - \\frac{1}{\\lambda_{fixed}}
+
+    - If the sum of responsibilities :math:`N_j` is close to zero (within 
+    ``NUMERICAL_TOLERANCE``), the parameters are not updated.
+    - Rates are checked against ``NUMERICAL_TOLERANCE`` to prevent division by zero.
+
+    Examples
+    --------
+    Update location and rate for an Exponential component using L-moments::
+
+        component_id, new_params = lmoments_strategy(exponential_component, state, block, optimizer)
+        # new_params may contain {"loc": ..., "rate": ...}
     """
 
     if state.H is None:
