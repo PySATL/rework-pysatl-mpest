@@ -28,7 +28,9 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 # function to compute 1-st and 2-nd l-moments
 # ------------------------
-def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType, need_l3: bool = False) -> tuple[float, float, float]:
+def compute_sample_lmoments(
+    X: np.ndarray, H: np.ndarray, N_j: DType, need_l3: bool = False
+) -> tuple[float, float, float]:
     idx = np.argsort(X)
     X_sorted = X[idx]
     H_sorted = H[idx]
@@ -43,9 +45,9 @@ def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType, need_l3: b
 
     if not need_l3:
         return float(l1), float(l2), 0.0
-    
+
     b2 = np.sum(H_sorted * X_sorted * (rank_weights**2)) / N_j
-    
+
     l3 = 6 * b2 - 6 * b1 + l1
 
     return float(l1), float(l2), float(l3)
@@ -201,9 +203,9 @@ def _(
 
         component_id, new_params = lmoments_strategy(weibull_component, state, block, optimizer)
         # new_params may contain {"loc": ..., "scale": ..., "shape": ...}
-        
+
     """
-   
+
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
@@ -238,25 +240,24 @@ def _(
     new_params = {}
 
     if opt_shape:
-
-        if opt_loc: 
+        if opt_loc:
             t3 = l3 / l2
             t3 = np.clip(t3, 0.001, 0.499)
 
-            if not (0 < t3 < 0.5): raise ValueError("t3 must be in (0, 0.5)")
+            if not (0 < t3 < 0.5):
+                raise ValueError("t3 must be in (0, 0.5)")
 
-            new_shape = ((3.5208453 - 2.0905222 * t3 + 1.1370309 * t3**2 - 1.4688549 * t3**3) /
-                                (1.0 + 5.6836423*t3))
+            new_shape = (3.5208453 - 2.0905222 * t3 + 1.1370309 * t3**2 - 1.4688549 * t3**3) / (1.0 + 5.6836423 * t3)
             new_params[component.PARAM_SHAPE] = dtype(new_shape)
 
             gamma_part = gamma(1 + (1 / new_shape))
 
             new_scale = component.scale
             if opt_scale:
-                new_scale = l2 / (gamma_part * (1 - 2**(-1 / new_shape)))
+                new_scale = l2 / (gamma_part * (1 - 2 ** (-1 / new_shape)))
 
                 new_params[component.PARAM_SCALE] = dtype(new_scale)
-            
+
             new_params[component.PARAM_LOC] = dtype(l1 - new_scale * gamma_part)
 
         else:
@@ -268,25 +269,22 @@ def _(
 
             if opt_scale:
                 new_scale = (l1 - component.loc) / gamma(1 + 1 / new_shape)
-                new_params[component.PARAM_SCALE] = dtype(new_scale) 
+                new_params[component.PARAM_SCALE] = dtype(new_scale)
 
     else:
-        gamma_part = gamma(1 + 1/component.shape)
-        
+        gamma_part = gamma(1 + 1 / component.shape)
+
         if opt_loc and opt_scale:
-        
-            new_scale = l2 / (gamma_part * (1 - 2**(-1 / component.shape)))
+            new_scale = l2 / (gamma_part * (1 - 2 ** (-1 / component.shape)))
             new_params[component.PARAM_SCALE] = dtype(new_scale)
             new_params[component.PARAM_LOC] = dtype(l1 - new_scale * gamma_part)
-        
+
         elif opt_scale:
-            
             new_params[component.PARAM_SCALE] = dtype((l1 - component.loc) / gamma_part)
-            
+
         elif opt_loc:
-    
             new_params[component.PARAM_LOC] = dtype(l1 - component.scale * gamma_part)
-    
+
     for key, val in new_params.items():
         if not np.isfinite(val):
             handle_numerical_overflow(state=state, context=f"Lmoments optimization (result {key} overflow)")
