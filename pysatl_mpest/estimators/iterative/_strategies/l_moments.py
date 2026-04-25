@@ -23,6 +23,7 @@ from ..steps import OptimizationBlock
 from .utils import handle_numerical_overflow
 
 NUMERICAL_TOLERANCE = 1e-9
+L_SKEWNESS_THRESHOLD = 0.5
 
 
 # ------------------------
@@ -210,7 +211,6 @@ def _(
         raise ValueError("Responsibility matrix H is not computed.")
 
     dtype = component.dtype
-    MIN_SCALE = np.finfo(dtype).eps
 
     X = state.X
     H_j = state.H[:, block.component_id]
@@ -228,13 +228,10 @@ def _(
 
     l1, l2, l3 = compute_sample_lmoments(X, H_j, N_j, need_l3=(opt_shape and opt_loc))
 
-    for val, name in [(l1, "l1"), (l2, "l2"), (l3, "l3")]:
-        if not np.isfinite(val):
-            handle_numerical_overflow(state=state, context=f"Lmoments optimization ({name})")
-            return block.component_id, {}
-
-    if l2 <= NUMERICAL_TOLERANCE:
-        handle_numerical_overflow(state=state, context="Lmoments optimization (degenerate L-scale)")
+    invalid_lmom = next((n for n, v in [("l1", l1), ("l2", l2), ("l3", l3)] if not np.isfinite(v)), None)
+    if invalid_lmom or l2 <= NUMERICAL_TOLERANCE:
+        ctx = f"Lmoments optimization ({invalid_lmom if invalid_lmom else 'degenerate L-scale'})"
+        handle_numerical_overflow(state=state, context=ctx)
         return block.component_id, {}
 
     new_params = {}
@@ -243,9 +240,6 @@ def _(
         if opt_loc:
             t3 = l3 / l2
             t3 = np.clip(t3, 0.001, 0.499)
-
-            if not (0 < t3 < 0.5):
-                raise ValueError("t3 must be in (0, 0.5)")
 
             new_shape = (3.5208453 - 2.0905222 * t3 + 1.1370309 * t3**2 - 1.4688549 * t3**3) / (1.0 + 5.6836423 * t3)
             new_params[component.PARAM_SHAPE] = dtype(new_shape)
@@ -284,10 +278,5 @@ def _(
 
         elif opt_loc:
             new_params[component.PARAM_LOC] = dtype(l1 - component.scale * gamma_part)
-
-    for key, val in new_params.items():
-        if not np.isfinite(val):
-            handle_numerical_overflow(state=state, context=f"Lmoments optimization (result {key} overflow)")
-            return block.component_id, {}
 
     return block.component_id, new_params
