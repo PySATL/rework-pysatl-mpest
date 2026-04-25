@@ -38,6 +38,7 @@ class MaximizationStrategy(Enum):
     QFUNCTION = auto()
     OBSERVED_DATA_LIKELIHOOD = auto()
     MOMENTS = auto()
+    LMOMENTS = auto()
 
 
 @dataclass
