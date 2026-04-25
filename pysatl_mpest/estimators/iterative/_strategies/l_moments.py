@@ -81,40 +81,97 @@ def lmoments_strategy(
 def _(
     component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
 ) -> tuple[int, dict[str, DType]]:
-    """Specialized L-moments parameter estimation strategy for
-    the Normal distribution using an analytical solution.
+    """
+    Update parameters of a univariate Normal component using L-moments.
 
-    This function provides a closed-form update for the parameters of a
-    `Normal` distribution based on the first two sample L-moments (l1, l2).
+    This strategy performs a closed-form (analytical) update of the Normal
+    distribution parameters by equating weighted sample L-moments to their
+    theoretical definitions. The update is performed for the component
+    associated with ``block.component_id`` and is limited to the intersection
+    of parameters requested by the component and the optimization block.
+
     L-moments are often more robust to outliers and more efficient in small
-    samples compared to traditional moments or numerical MLE in certain
-    mixture contexts.
+    samples compared to traditional moments or numerical Maximum Likelihood
+    Estimation (MLE) in certain mixture contexts.
 
-    The implementation calculates the sample L-moments using the responsibility
-    matrix `H` from the E-step and maps them to the `loc` and `scale` parameters.
+    If the total responsibility of the component is numerically negligible,
+    the function returns without updating any parameters.
 
-    Notes
-    -----
-    The analytical updates depend on which parameters are being optimized:
-    - If both `loc` and `scale` are optimized:
-        - `loc = l1`
-        - `scale = sqrt(pi) * l2` (clipped to machine epsilon for numerical stability)
-    - If only `loc` is optimized (`scale` is fixed):
-        - `loc = l1`
-    - If only `scale` is optimized (`loc` is fixed):
-        - `scale = sqrt(pi) * l2` (clipped to machine epsilon)
+    Parameters
+    ----------
+    component : Normal[DType]
+        Normal distribution component to be updated. The method may update
+        ``component.loc`` and/or ``component.scale`` depending on
+        ``component.params_to_optimize`` and the block configuration.
+    state : PipelineState[DType]
+        Current pipeline state containing:
 
-    Where:
-        - `l1` is the weighted mean (first L-moment).
-        - `l2` is the weighted L-scale (second L-moment).
+        - ``X`` : array-like
+        Observations used to compute L-moment estimates.
+        - ``H`` : array-like, shape (n_samples, n_components)
+        Responsibility matrix. Column ``block.component_id`` is used as
+        weights for this component.
+    block : OptimizationBlock
+        Optimization block describing which component is being optimized and
+        which parameters are allowed to change. The component index is taken
+        from ``block.component_id``.
+    optimizer : Optimizer[DType]
+        Optimizer instance provided by the pipeline. It is not used directly by
+        this analytical strategy but is included for API consistency.
 
-    This implementation ignores the `optimizer` parameter as it relies on
-    direct analytical mapping.
+    Returns
+    -------
+    component_id : int
+        The identifier of the optimized component, equal to
+        ``block.component_id``.
+    new_params : dict[str, DType]
+        Dictionary of updated parameters for the component. Keys correspond to
+        Normal parameter names (e.g., ``component.PARAM_LOC``,
+        ``component.PARAM_SCALE``). If no update is performed, an empty dict
+        is returned.
 
     Raises
     ------
     ValueError
-        If the responsibility matrix `H` has not been computed.
+        If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
+        computed).
+
+    Notes
+    -----
+    - Let :math:`l_1` be the weighted mean (first L-moment) and :math:`l_2`
+    be the weighted L-scale (second L-moment).
+
+    - **Location Update (:math:`\\mu$):**
+    The location is directly equal to the first L-moment:
+
+    .. math::
+
+        \\mu = l_1
+
+    - **Scale Update (:math:`\\sigma$):**
+    The relationship between the standard deviation and the second L-moment
+    for a Normal distribution is given by:
+
+    .. math::
+
+        \\sigma = l_2 \\sqrt{\\pi}
+
+    - The scale is lower-bounded by machine epsilon for the component dtype to
+    avoid degeneracy:
+
+    .. math::
+
+        \\sigma = \\max(\\sigma, \\text{np.finfo(dtype).eps})
+
+    - If the sum of responsibilities :math:`N_j` is close to zero (within
+    ``NUMERICAL_TOLERANCE``), the parameters are not updated.
+
+    Examples
+    --------
+    Update both location and scale for a Normal component using L-moments::
+
+        component_id, new_params = lmoments_strategy(normal_component, state, block, optimizer)
+        # new_params may contain {"loc": ..., "scale": ...}
     """
 
     if state.H is None:
