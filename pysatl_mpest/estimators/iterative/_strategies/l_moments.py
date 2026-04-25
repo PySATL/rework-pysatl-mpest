@@ -85,17 +85,17 @@ def _(
     Update parameters of a univariate Exponential component using L-moments.
 
     This strategy performs a closed-form (analytical) update of the Exponential
-    distribution parameters (location and rate) by equating weighted sample 
-    L-moments to their theoretical definitions. The update is performed for 
-    the component associated with ``block.component_id`` and adapts based on 
+    distribution parameters (location and rate) by equating weighted sample
+    L-moments to their theoretical definitions. The update is performed for
+    the component associated with ``block.component_id`` and adapts based on
     which parameters are flagged for optimization.
 
-    L-moments provide a robust alternative to maximum likelihood estimation (MLE), 
-    especially in mixture models where components may have small effective 
+    L-moments provide a robust alternative to maximum likelihood estimation (MLE),
+    especially in mixture models where components may have small effective
     sample sizes or contain outliers.
 
-    If the total responsibility of the component is numerically negligible, or 
-    if the L-moments results in non-finite values, the function returns without 
+    If the total responsibility of the component is numerically negligible, or
+    if the L-moments results in non-finite values, the function returns without
     updating any parameters.
 
     Parameters
@@ -128,7 +128,7 @@ def _(
     new_params : dict[str, DType]
         Dictionary of updated parameters for the component. Keys correspond to
         Exponential parameter names (e.g., ``component.PARAM_LOC``,
-        ``component.PARAM_RATE``). If no update is performed, an empty dict 
+        ``component.PARAM_RATE``). If no update is performed, an empty dict
         is returned.
 
     Raises
@@ -139,11 +139,11 @@ def _(
 
     Notes
     -----
-    - Let :math:`l_1` be the first weighted sample L-moment (mean) and :math:`l_2` 
-    be the second weighted sample L-moment (L-scale). The theoretical 
-    L-moments for an Exponential distribution with location :math:`\\gamma` 
+    - Let :math:`l_1` be the first weighted sample L-moment (mean) and :math:`l_2`
+    be the second weighted sample L-moment (L-scale). The theoretical
+    L-moments for an Exponential distribution with location :math:`\\gamma`
     and rate :math:`\\lambda` are:
-    
+
     .. math::
         L_1 = \\gamma + \\frac{1}{\\lambda}, \\quad L_2 = \\frac{1}{2\\lambda}
 
@@ -165,7 +165,7 @@ def _(
     .. math::
         \\gamma = l_1 - \\frac{1}{\\lambda_{fixed}}
 
-    - If the sum of responsibilities :math:`N_j` is close to zero (within 
+    - If the sum of responsibilities :math:`N_j` is close to zero (within
     ``NUMERICAL_TOLERANCE``), the parameters are not updated.
     - Rates are checked against ``NUMERICAL_TOLERANCE`` to prevent division by zero.
 
