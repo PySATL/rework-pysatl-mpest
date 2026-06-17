@@ -10,11 +10,11 @@ from collections.abc import Callable
 import numpy as np
 from scipy.optimize import minimize
 
-from ..typings import DType
+from ..typings import FloatingType
 from .optimizer import Optimizer
 
 
-class ScipyNelderMead(Optimizer[DType]):
+class ScipyNelderMead[FloatT: FloatingType](Optimizer[FloatT]):
     """An optimizer that uses the Nelder-Mead simplex algorithm from SciPy.
 
     This class serves as a wrapper for the `scipy.optimize.minimize` function,
@@ -31,7 +31,7 @@ class ScipyNelderMead(Optimizer[DType]):
         minimize
     """
 
-    def minimize(self, target: Callable, params: list[DType]) -> list[DType]:
+    def minimize(self, target: Callable, params: list[FloatT]) -> list[FloatT]:
         """Minimizes a target function using the Nelder-Mead algorithm.
 
         This method leverages the `scipy.optimize.minimize` function to find
@@ -43,13 +43,13 @@ class ScipyNelderMead(Optimizer[DType]):
             The objective function to minimize. It must be a callable that
             accepts a list or NumPy array of parameters and returns a single
             scalar value.
-        params : list[DType]
+        params : list[FloatT]
             A list of initial values for the parameters that serves as the
             starting point for the optimization.
 
         Returns
         -------
-        list[DType]
+        list[FloatT]
             A list containing the set of parameters that minimizes the target
             function, as found by the Nelder-Mead algorithm.
         """
