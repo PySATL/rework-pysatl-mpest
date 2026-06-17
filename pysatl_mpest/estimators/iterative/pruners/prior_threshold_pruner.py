@@ -14,12 +14,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from copy import copy
 
-from ....typings import DType
+from ....typings import FloatingType, Scalar
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
 
 
-class PriorThresholdPruner(Pruner[DType]):
+class PriorThresholdPruner[FloatT: FloatingType](Pruner[FloatT]):
     """A pruner that removes mixture components based on a weight threshold.
 
     This pruner iterates through the components of a :class:`pysatl_mpest.core.MixtureModel`
@@ -30,7 +30,7 @@ class PriorThresholdPruner(Pruner[DType]):
 
     Parameters
     ----------
-    threshold : float
+    threshold : Scalar
         The minimum weight a component must have to be retained. This value
         must be in the exclusive range (0, 1).
 
@@ -53,12 +53,12 @@ class PriorThresholdPruner(Pruner[DType]):
         prune
     """
 
-    def __init__(self, threshold: float) -> None:
-        if not (0 < threshold < 1):
+    def __init__(self, threshold: Scalar) -> None:
+        self.threshold = float(threshold)
+        if not (0 < self.threshold < 1):
             raise ValueError("Threshold must be between 0 and 1.")
-        self.threshold = threshold
 
-    def prune(self, state: PipelineState[DType]) -> tuple[PipelineState[DType], list[int]]:
+    def prune(self, state: PipelineState[FloatT]) -> tuple[PipelineState[FloatT], list[int]]:
         """Removes components from the mixture whose weights are below the threshold.
 
         This method inspects :attr:`state.curr_mixture` and removes any component
@@ -69,13 +69,13 @@ class PriorThresholdPruner(Pruner[DType]):
 
         Parameters
         ----------
-        state : PipelineState[DType]
+        state : PipelineState[FloatT]
             The current state of the pipeline, containing the mixture model
             to be pruned.
 
         Returns
         -------
-        tuple[PipelineState[DType], list[int]]
+        tuple[PipelineState[FloatT], list[int]]
         A tuple containing:
         - The updated pipeline state. If components were removed,
           :attr:`state.curr_mixture` will be a new,

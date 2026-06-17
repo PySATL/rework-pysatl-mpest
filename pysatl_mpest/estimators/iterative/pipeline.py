@@ -20,7 +20,7 @@ from numpy.typing import ArrayLike
 
 from ...core import MixtureModel
 from ...exceptions import NumericalStabilityError
-from ...typings import DType
+from ...typings import FloatingType
 from ..base_estimator import BaseEstimator
 from ._iteration_history import IterationRecord, IterationsHistory
 from .breakpointer import Breakpointer
@@ -29,7 +29,7 @@ from .pipeline_step import PipelineStep
 from .pruner import Pruner
 
 
-class Pipeline(BaseEstimator[DType]):
+class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
     """An estimator that fits a mixture model via a configurable iterative process.
 
     The pipeline executes a sequence of defined steps in a loop. After each full
@@ -46,13 +46,13 @@ class Pipeline(BaseEstimator[DType]):
 
     Parameters
     ----------
-    steps : Sequence[PipelineStep[DType]]
+    steps : Sequence[PipelineStep[FloatT]]
         An ordered sequence of steps to be executed in each iteration of the
         pipeline.
-    breakpointers : Sequence[Breakpointer[DType]]
+    breakpointers : Sequence[Breakpointer[FloatT]]
         A sequence of strategies that define the stopping conditions for the
         iterative process. This list cannot be empty.
-    pruners : Sequence[Pruner[DType]] | None, optional
+    pruners : Sequence[Pruner[FloatT]] | None, optional
         A sequence of strategies for removing components from the mixture model
         during fitting. Defaults to None, meaning no pruning is performed.
     once_in_iterations: int, optional
@@ -61,15 +61,15 @@ class Pipeline(BaseEstimator[DType]):
 
     Attributes
     ----------
-    steps : list[PipelineStep[DType]]
+    steps : list[PipelineStep[FloatT]]
         The ordered list of operations to be performed in each iteration.
-    breakpointers : list[Breakpointer[DType]]
+    breakpointers : list[Breakpointer[FloatT]]
         The list of objects that determine when the fitting process should
         terminate.
-    pruners : list[Pruner[DType]]
+    pruners : list[Pruner[FloatT]]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    history : IterationsHistory[DType]
+    history : IterationsHistory[FloatT]
         object that collects comprehensive information about each
         iteration of a :class:`Pipeline` estimator.
     Raises
@@ -89,9 +89,9 @@ class Pipeline(BaseEstimator[DType]):
 
     def __init__(
         self,
-        steps: Sequence[PipelineStep[DType]],
-        breakpointers: Sequence[Breakpointer[DType]],
-        pruners: Sequence[Pruner[DType]] | None = None,
+        steps: Sequence[PipelineStep[FloatT]],
+        breakpointers: Sequence[Breakpointer[FloatT]],
+        pruners: Sequence[Pruner[FloatT]] | None = None,
         once_in_iterations: int = 1,
     ):
         self._validate_steps(list(steps))
@@ -105,9 +105,9 @@ class Pipeline(BaseEstimator[DType]):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners) if pruners else []  # self.pruners will always be list
         self.steps = list(steps)
-        self.history = IterationsHistory[DType](once_in_iterations)
+        self.history = IterationsHistory[FloatT](once_in_iterations)
 
-    def _validate_steps(self, steps: list[PipelineStep[DType]]):
+    def _validate_steps(self, steps: list[PipelineStep[FloatT]]):
         """Validates the sequence of pipeline steps.
 
         Checks if each step in the pipeline can legally be followed by the next
@@ -140,7 +140,7 @@ class Pipeline(BaseEstimator[DType]):
                     f"available next steps:'{curr_step.available_next_steps}', but got '{next_step}'"
                 )
 
-    def fit(self, X: ArrayLike, mixture: MixtureModel[DType]) -> MixtureModel[DType]:
+    def fit(self, X: ArrayLike, mixture: MixtureModel[FloatT]) -> MixtureModel[FloatT]:
         """Fits the mixture model to the data using the configured pipeline.
 
         This method initializes the pipeline's state and runs the main loop.
@@ -152,13 +152,13 @@ class Pipeline(BaseEstimator[DType]):
         ----------
         X : ArrayLike
             The input data sample.
-        mixture : MixtureModel[DType]
+        mixture : MixtureModel[FloatT]
             The initial mixture model to be fitted. An internal copy of this
             model will be modified throughout the process.
 
         Returns
         -------
-        MixtureModel[DType]
+        MixtureModel[FloatT]
             The fitted mixture model after the pipeline has converged or been
             stopped.
         """

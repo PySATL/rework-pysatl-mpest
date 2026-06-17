@@ -17,7 +17,7 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential, Normal
 from ....optimizers import Optimizer
-from ....typings import DType
+from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 from .utils import handle_numerical_overflow
@@ -31,12 +31,12 @@ NUMERICAL_TOLERANCE = 1e-9
 
 
 @singledispatch
-def moments_strategy(
-    component: ContinuousDistribution[DType],
-    state: PipelineState[DType],
+def moments_strategy[FloatT: FloatingType](
+    component: ContinuousDistribution[FloatT],
+    state: PipelineState[FloatT],
     block: OptimizationBlock,
-    optimizer: Optimizer[DType],
-) -> tuple[int, dict[str, DType]]:
+    optimizer: Optimizer[FloatT],
+) -> tuple[int, dict[str, FloatT]]:
     """Generic M-step strategy that uses the Method of Moments.
 
     This function serves as the base dispatcher. Since the Method of Moments
@@ -46,13 +46,13 @@ def moments_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution[DType]
+    component : ContinuousDistribution[FloatT]
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline.
     block : OptimizationBlock
         The configuration block defining which component to optimize.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         The numerical optimizer (unused in this strategy).
 
     Raises
@@ -70,9 +70,9 @@ def moments_strategy(
 
 
 @moments_strategy.register(Exponential)
-def _(
-    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Exponential[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """Specialized Moments parameter estimation strategy for the Exponential distribution
     using an analytical solution.
 
@@ -162,9 +162,9 @@ def _(
 
 
 @moments_strategy.register(Normal)
-def _(
-    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Normal[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """
     Update parameters of a univariate Normal component using weighted moments.
 
@@ -184,11 +184,11 @@ def _(
 
     Parameters
     ----------
-    component : Normal[DType]
+    component : Normal[FloatT]
         Normal distribution component to be updated. The method may update
         ``component.loc`` and/or ``component.scale`` depending on
         ``component.params_to_optimize`` and the block configuration.
-    state : PipelineState[DType]
+    state : PipelineState[FloatT]
         Current pipeline state containing:
 
         - ``X`` : array-like
@@ -200,7 +200,7 @@ def _(
         Optimization block describing which component is being optimized and
         which parameters are allowed to change. The component index is taken
         from ``block.component_id``.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         Optimizer instance provided by the pipeline. It is not used directly by
         this moments-based strategy but is included for API consistency.
 
@@ -209,7 +209,7 @@ def _(
     component_id : int
         The identifier of the optimized component, equal to
         ``block.component_id``.
-    new_params : dict[str, DType]
+    new_params : dict[str, FloatT]
         Dictionary of updated parameters for the component. Keys correspond to
         Normal parameter names (e.g., ``component.PARAM_LOC``,
         ``component.PARAM_SCALE``). If no update is performed (e.g., negligible

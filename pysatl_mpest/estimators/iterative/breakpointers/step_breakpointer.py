@@ -6,12 +6,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from ....typings import DType
+from ....typings import FloatingType
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
 
 
-class StepBreakpointer(Breakpointer[DType]):
+class StepBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
     """Stops the pipeline after a fixed number of iterations.
 
     This breakpointer terminates the iterative process once a specified
@@ -58,7 +58,7 @@ class StepBreakpointer(Breakpointer[DType]):
         if max_steps <= 0:
             raise ValueError("The maximum number of steps must be greater than or equal to 1")
 
-    def check(self, state: PipelineState[DType]) -> bool:
+    def check(self, state: PipelineState[FloatT]) -> bool:
         """Checks if the maximum number of iterations has been reached.
 
         This method increments the internal step counter and compares it with
@@ -67,7 +67,7 @@ class StepBreakpointer(Breakpointer[DType]):
 
         Parameters
         ----------
-        state : PipelineState[DType]
+        state : PipelineState[FloatT]
             The current state of the pipeline. This parameter is unused in
             this specific breakpointer but required by the base class interface.
 

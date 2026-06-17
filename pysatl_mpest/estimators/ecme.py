@@ -19,7 +19,7 @@ from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
-from ..typings import DType
+from ..typings import FloatingType
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
@@ -33,7 +33,7 @@ from .iterative import (
 from .iterative._iteration_history import IterationsHistory
 
 
-class ECME(BaseEstimator[DType]):
+class ECME[FloatT: FloatingType](BaseEstimator[FloatT]):
     """An estimator that implements the Expectation-Conditional Maximization Either (ECME) algorithm.
 
     ECME is a generalized iterative algorithm for maximum likelihood estimation.
@@ -49,13 +49,13 @@ class ECME(BaseEstimator[DType]):
 
     Parameters
     ----------
-    breakpointers : Sequence[Breakpointer[DType]]
+    breakpointers : Sequence[Breakpointer[FloatT]]
         A sequence of strategies that define the stopping conditions for the
         iterative fitting process.
-    pruners : Sequence[Pruner[DType]]
+    pruners : Sequence[Pruner[FloatT]]
         A sequence of strategies for removing (pruning) components from the
         mixture model during fitting.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         The numerical optimizer used to solve the maximization problems in the
         M-step (or CM-steps).
     default_strategy : Literal["q-func", "odl"], optional
@@ -65,15 +65,15 @@ class ECME(BaseEstimator[DType]):
 
     Attributes
     ----------
-    breakpointers : list[Breakpointer[DType]]
+    breakpointers : list[Breakpointer[FloatT]]
         The list of stopping criteria used by the estimator.
-    pruners : list[Pruner[DType]]
+    pruners : list[Pruner[FloatT]]
         The list of pruning strategies used by the estimator.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         The numerical optimizer instance.
     default_strategy_name : str
         The name of the default strategy ("q-func" or "odl").
-    history : IterationsHistory[DType]
+    history : IterationsHistory[FloatT]
         The history of the fitting process, containing snapshots of the model
         and metrics for each iteration. Only available after :meth:`fit` is called.
 
@@ -87,9 +87,9 @@ class ECME(BaseEstimator[DType]):
 
     def __init__(
         self,
-        breakpointers: Sequence[Breakpointer[DType]],
-        pruners: Sequence[Pruner[DType]],
-        optimizer: Optimizer[DType],
+        breakpointers: Sequence[Breakpointer[FloatT]],
+        pruners: Sequence[Pruner[FloatT]],
+        optimizer: Optimizer[FloatT],
         default_strategy: Literal["q-func", "odl"] = "odl",
     ):
         self.breakpointers = list(breakpointers)
@@ -101,11 +101,11 @@ class ECME(BaseEstimator[DType]):
 
         self.default_strategy_name = default_strategy
 
-        self._history: IterationsHistory[DType] | None = None
+        self._history: IterationsHistory[FloatT] | None = None
 
     @property
-    def history(self) -> IterationsHistory[DType]:
-        """IterationsHistory[DType]: The history of the last fitting process.
+    def history(self) -> IterationsHistory[FloatT]:
+        """IterationsHistory[FloatT]: The history of the last fitting process.
 
         Returns the history of iterations recorded during the last call to :meth:`fit`.
 
@@ -172,11 +172,11 @@ class ECME(BaseEstimator[DType]):
     def fit(
         self,
         X: ArrayLike,
-        mixture: MixtureModel[DType],
+        mixture: MixtureModel[FloatT],
         q_indices_raw: Sequence[int] | int | None = None,
         odl_indices_raw: Sequence[int] | int | None = None,
         once_in_iterations: int = 1,
-    ) -> MixtureModel[DType]:
+    ) -> MixtureModel[FloatT]:
         """Fits the mixture model to the data using the ECME algorithm.
 
         This method configures and executes an iterative pipeline. It assigns
@@ -189,7 +189,7 @@ class ECME(BaseEstimator[DType]):
         ----------
         X : ArrayLike
             The input data sample to fit.
-        mixture : MixtureModel[DType]
+        mixture : MixtureModel[FloatT]
             The initial mixture model configuration.
         q_indices_raw : Sequence[int] | int | None, optional
             Indices of components that should be optimized by maximizing the
@@ -205,7 +205,7 @@ class ECME(BaseEstimator[DType]):
 
         Returns
         -------
-        MixtureModel[DType]
+        MixtureModel[FloatT]
             The fitted mixture model with estimated parameters.
 
         Raises
@@ -251,7 +251,7 @@ class ECME(BaseEstimator[DType]):
                 )
             )
 
-        pipeline: Pipeline[DType] = Pipeline(
+        pipeline: Pipeline[FloatT] = Pipeline(
             [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,

@@ -11,16 +11,13 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
-from typing import Generic
-
-from numpy.typing import NDArray
 
 from ...core import MixtureModel
-from ...typings import DType
+from ...typings import FloatingType, MultivariateFloatArray, UnivariateFloatArray
 
 
 @dataclass
-class PipelineState(Generic[DType]):
+class PipelineState[FloatT: FloatingType]:
     """Represents the state of a pipeline at a specific point in its execution.
 
     This dataclass is a mutable container that centralizes all information
@@ -30,18 +27,18 @@ class PipelineState(Generic[DType]):
 
     Args
     ----------
-    X : NDArray[DType]
+    X : UnivariateFloatArray[FloatT]
         The input data sample. This data is typically treated as read-only
         throughout the pipeline's execution.
-    H : NDArray[DType] | None
+    H : MultivariateFloatArray[FloatT] | None
         The responsibility matrix (posterior probabilities). `H[i, j]`
         represents the probability that data point `i` belongs to component
         `j`. It may not be computed at every step.
-    prev_mixture : MixtureModel[DType] | None
+    prev_mixture : MixtureModel[FloatT] | None
         A snapshot of the mixture model from the previous iteration. This is
         useful for convergence checks, such as comparing log-likelihood values.
         It is `None` at the start of the pipeline.
-    curr_mixture : MixtureModel[DType]
+    curr_mixture : MixtureModel[FloatT]
         The current state of the mixture model that is being actively
         optimized by the pipeline steps.
     error : Exception | None
@@ -50,8 +47,8 @@ class PipelineState(Generic[DType]):
         here to signal the pipeline to terminate gracefully.
     """
 
-    X: NDArray[DType]
-    H: NDArray[DType] | None
-    prev_mixture: MixtureModel[DType] | None
-    curr_mixture: MixtureModel[DType]
+    X: UnivariateFloatArray[FloatT]
+    H: MultivariateFloatArray[FloatT] | None
+    prev_mixture: MixtureModel[FloatT] | None
+    curr_mixture: MixtureModel[FloatT]
     error: Exception | None
