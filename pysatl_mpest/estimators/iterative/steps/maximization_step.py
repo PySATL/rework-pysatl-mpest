@@ -23,7 +23,7 @@ import numpy as np
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
 from ....typings import DType
-from .._strategies import moments_strategy, observed_data_likelihood_strategy, q_function_strategy
+from .._strategies import lmoments_strategy, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
@@ -68,6 +68,7 @@ class MaximizationStep(PipelineStep[DType]):
             MaximizationStrategy.QFUNCTION: q_function_strategy,
             MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD: observed_data_likelihood_strategy,
             MaximizationStrategy.MOMENTS: moments_strategy,
+            MaximizationStrategy.LMOMENTS: lmoments_strategy,
         }
     )
 
