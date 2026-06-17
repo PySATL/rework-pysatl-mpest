@@ -12,12 +12,11 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Generic
 
-from ..typings import DType
+from ..typings import FloatingType
 
 
-class Optimizer(ABC, Generic[DType]):
+class Optimizer[FloatT: FloatingType](ABC):
     """Abstract base class for numerical optimizers.
 
     This class defines the standard interface for all optimizer implementations.
@@ -36,7 +35,7 @@ class Optimizer(ABC, Generic[DType]):
     """
 
     @abstractmethod
-    def minimize(self, target: Callable, params: list[DType]) -> list[DType]:
+    def minimize(self, target: Callable, params: list[FloatT]) -> list[FloatT]:
         """Finds the parameters that minimize a target function.
 
         This abstract method must be implemented by subclasses to perform the
@@ -48,7 +47,7 @@ class Optimizer(ABC, Generic[DType]):
             The objective function to minimize. It must be a callable that
             accepts a list or NumPy array of parameters and returns a single
             scalar value.
-        params : list[DType]
+        params : list[FloatT]
             A list of initial values for the parameters to be optimized. This
             serves as the starting point for the optimization algorithm.
 
