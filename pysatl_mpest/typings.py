@@ -9,7 +9,18 @@ from typing import Any, Protocol, TypeVar, runtime_checkable
 import numpy as np
 from numpy._typing import ArrayLike
 
-DType = TypeVar("DType", bound=np.floating)
+FloatingType = np.floating
+
+type UnivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int], np.dtype[T]]
+type MultivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int, int], np.dtype[T]]
+type FloatArray[T: FloatingType] = np.ndarray[tuple[int, ...], np.dtype[T]]
+
+type UnivariateIntArray = np.ndarray[tuple[int], np.dtype[np.integer]]
+type IntArray = np.ndarray[tuple[int, ...], np.dtype[np.integer]]
+
+type BoolArray = np.ndarray[tuple[int, ...], np.dtype[np.bool_]]
+
+DType = TypeVar("DType", bound=FloatingType)
 
 
 @runtime_checkable
