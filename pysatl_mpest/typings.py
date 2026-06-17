@@ -9,6 +9,7 @@ from typing import Any, Protocol, TypeVar, runtime_checkable
 import numpy as np
 from numpy._typing import ArrayLike
 
+Scalar = int | float | np.floating | np.integer
 FloatingType = np.floating
 
 type UnivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int], np.dtype[T]]
