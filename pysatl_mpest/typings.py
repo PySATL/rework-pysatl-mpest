@@ -4,7 +4,7 @@ __author__ = "Aleksandra Ri, Viktor Khanukaev, Totmyanin Danil"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 import numpy as np
 from numpy._typing import ArrayLike
@@ -21,8 +21,6 @@ type UnivariateIntArray = np.ndarray[tuple[int], np.dtype[np.integer]]
 type IntArray = np.ndarray[tuple[int, ...], np.dtype[np.integer]]
 
 type BoolArray = np.ndarray[tuple[int, ...], np.dtype[np.bool_]]
-
-DType = TypeVar("DType", bound=FloatingType)
 
 
 @runtime_checkable
