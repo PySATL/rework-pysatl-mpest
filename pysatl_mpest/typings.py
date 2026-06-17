@@ -1,6 +1,6 @@
 """A module that provides custom types for the project."""
 
-__author__ = "Aleksandra Ri, Viktor Khanukaev"
+__author__ = "Aleksandra Ri, Viktor Khanukaev, Totmyanin Danil"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
