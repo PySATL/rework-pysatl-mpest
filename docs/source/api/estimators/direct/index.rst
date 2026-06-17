@@ -4,7 +4,7 @@
 mpest.estimators.direct
 ###############
 
-.. automodule:: rework_pysatl_mpest.estimators.direct
+.. automodule:: pysatl_mpest.estimators.direct
    :no-members:
 
 Implementations

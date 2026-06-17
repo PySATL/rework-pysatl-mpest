@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "mpest"
+name = "pysatl_mpest"
 version = "0.1.0"
 description = "Parameter estimation of mixture distribution problem solver, based on EM algorithm"
 authors = ["ToxaKaz <anton.a.kazancev@gmail.com>", "iraedeus <dtotjmyanin@mail.ru>"]
@@ -16,13 +16,17 @@ classifiers = [
 
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.12"
 matplotlib = ">=3.10.0,<4.0.0"
 numpy = ">=2.2.3,<3.0.0"
 scikit-learn = ">=1.6.1,<2.0.0"
 scipy = ">=1.15.2,<2.0.0"
 seaborn = ">=0.13.2,<0.14.0"
 scikit-fuzzy = "^0.5.0"
+kneed = "^0.8.5"
+pywavelets = "^1.9.0"
+gdown = "^5.2.0"
+xgboost = "^3.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
@@ -46,13 +50,10 @@ myst-parser = "^4.0.1"
 sphinxcontrib-mermaid = "^1.0.0"
 pydata-sphinx-theme = "^0.16.1"
 
-[tool.coverage.run]
-omit = ["*/experiments/*"]
-
 [tool.ruff]
 line-length = 120
 output-format = "grouped"
-src = ["rework_pysatl_mpest", "mpest", "experimental_env", "rework_tests", "tests"]
+src = ["pysatl_mpest", "tests"]
 exclude = ["*.ipynb"]
 
 [tool.ruff.format]
@@ -69,16 +70,15 @@ ignore = ["PLR0913"]
 
 
 [tool.mypy]
-files = ["rework_pysatl_mpest", "mpest", "experimental_env"]
+files = ["pysatl_mpest"]
 ignore_missing_imports = true
-exclude = ["^mpest/utils.py"]
 
 
 [tool.pytest.ini_options]
-testpaths = ["rework_tests"]
+testpaths = ["tests"]
 
 addopts = [
-    "--cov=rework_pysatl_mpest",          # Укажите здесь имя вашего основного пакета/папки с кодом
+    "--cov=pysatl_mpest",          # Укажите здесь имя вашего основного пакета/папки с кодом
     "--cov-report=term-missing", # Выводить отчет в консоль с указанием пропущенных строк
     "--cov-report=html",         # Генерировать детальный HTML-отчет
     "--cov-fail-under=80",       # Считать запуск тестов проваленным, если покрытие ниже 80%

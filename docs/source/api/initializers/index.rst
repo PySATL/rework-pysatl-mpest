@@ -4,7 +4,7 @@
 mpest.initializers
 ##################
 
-.. automodule:: rework_pysatl_mpest.initializers
+.. automodule:: pysatl_mpest.initializers
    :no-members:
 
 Initialization Strategies
