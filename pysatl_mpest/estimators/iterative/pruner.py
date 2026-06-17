@@ -10,13 +10,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
-from typing import Generic
 
-from ...typings import DType
+from ...typings import FloatingType
 from .pipeline_state import PipelineState
 
 
-class Pruner(ABC, Generic[DType]):
+class Pruner[FloatT: FloatingType](ABC):
     """Abstract base class for component pruning strategies.
 
     Pruner subclasses implement the logic for identifying and removing
@@ -41,7 +40,7 @@ class Pruner(ABC, Generic[DType]):
     """
 
     @abstractmethod
-    def prune(self, state: PipelineState[DType]) -> tuple[PipelineState[DType], list[int]]:
+    def prune(self, state: PipelineState[FloatT]) -> tuple[PipelineState[FloatT], list[int]]:
         """Analyzes the pipeline state and prunes components from the mixture.
 
         This method is called by the :class:`Pipeline` to inspect the current mixture
@@ -51,13 +50,13 @@ class Pruner(ABC, Generic[DType]):
 
         Parameters
         ----------
-        state : PipelineState[DType]
+        state : PipelineState[FloatT]
             The current state of the pipeline, containing the data, mixture
             model, and other relevant information.
 
         Returns
         -------
-        PipelineState[DType]
+        PipelineState[FloatT]
             The new pipeline state. If components were removed, this state
             contains the updated mixture model. Otherwise, it returns the
             original state.

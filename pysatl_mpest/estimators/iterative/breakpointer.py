@@ -10,13 +10,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
-from typing import Generic
 
-from ...typings import DType
+from ...typings import FloatingType
 from .pipeline_state import PipelineState
 
 
-class Breakpointer(ABC, Generic[DType]):
+class Breakpointer[FloatT: FloatingType](ABC):
     """Abstract base class for a pipeline stopping condition.
 
     A Breakpointer is responsible for inspecting the :class:`PipelineState` after each
@@ -42,12 +41,12 @@ class Breakpointer(ABC, Generic[DType]):
     """
 
     @abstractmethod
-    def check(self, state: PipelineState[DType]) -> bool:
+    def check(self, state: PipelineState[FloatT]) -> bool:
         """Evaluates the pipeline state to determine if it should stop.
 
         Parameters
         ----------
-        state : PipelineState[DType]
+        state : PipelineState[FloatT]
             The current state of the pipeline after a full iteration,
             containing the current and previous mixture models.
 

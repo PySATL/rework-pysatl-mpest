@@ -11,13 +11,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
-from typing import Generic
 
-from ...typings import DType
+from ...typings import FloatingType
 from .pipeline_state import PipelineState
 
 
-class PipelineStep(ABC, Generic[DType]):
+class PipelineStep[FloatT: FloatingType](ABC):
     """Abstract base class for a single step in a processing pipeline.
 
     This class defines the interface for an operation that can be executed as
@@ -54,7 +53,7 @@ class PipelineStep(ABC, Generic[DType]):
         """
 
     @abstractmethod
-    def run(self, state: PipelineState[DType]) -> PipelineState[DType]:
+    def run(self, state: PipelineState[FloatT]) -> PipelineState[FloatT]:
         """Executes the logic of the pipeline step.
 
         This method processes the given pipeline state. Implementations can
@@ -67,13 +66,13 @@ class PipelineStep(ABC, Generic[DType]):
 
         Parameters
         ----------
-        state : PipelineState[DType]
+        state : PipelineState[FloatT]
             The current state of the pipeline to be processed. Note that this
             object can be mutated by the method.
 
         Returns
         -------
-        PipelineState[DType]
+        PipelineState[FloatT]
             The updated state of the pipeline. This can be the mutated input
             `state` object or a completely new instance.
         """
