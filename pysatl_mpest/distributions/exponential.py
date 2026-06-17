@@ -9,11 +9,11 @@ import numpy as np
 from scipy.stats import expon
 
 from ..core import Parameter
-from ..typings import DType
+from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Exponential(ContinuousDistribution[DType]):
+class Exponential[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     """Class for the two-parameter exponential distribution.
 
     Parameters
@@ -50,7 +50,7 @@ class Exponential(ContinuousDistribution[DType]):
     loc = Parameter()
     rate = Parameter(lambda x: x > 0, "Rate parameter must be a positive")
 
-    def __init__(self, loc: float, rate: float, dtype: type[DType] = np.float64):  # type: ignore[assignment]
+    def __init__(self, loc: float, rate: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
         super().__init__(dtype=dtype)
         self.loc = loc
         self.rate = rate
@@ -82,7 +82,7 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PDF values corresponding to each point in :attr:`X`.
         """
 
@@ -105,7 +105,7 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -135,7 +135,7 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -167,8 +167,8 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
-            The gradient of the lpdf with respect to :attr:`loc` for each point in ::attr`X`.
+        FloatT | FloatArray[FloatT]
+            The gradient of the lpdf with respect to :attr:`loc` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
@@ -199,7 +199,7 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`rate` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -225,7 +225,7 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        FloatArray[FloatT]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -265,7 +265,7 @@ class Exponential(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             A scalar or NumPy array containing the generated samples.
         """
 
