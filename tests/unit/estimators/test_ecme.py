@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
-from rework_pysatl_mpest.core.mixture import MixtureModel
-from rework_pysatl_mpest.estimators.ecme import ECME
-from rework_pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy
+from pysatl_mpest.core.mixture import MixtureModel
+from pysatl_mpest.estimators.ecme import ECME
+from pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy
 
 
 class TestECME:
@@ -41,7 +41,7 @@ class TestECME:
         """Verifies that the history property returns the pipeline history after fit."""
 
         # Mock Pipeline
-        mock_pipeline_cls = mocker.patch("rework_pysatl_mpest.estimators.ecme.Pipeline")
+        mock_pipeline_cls = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         mock_pipeline_instance = mock_pipeline_cls.return_value
 
         # Set expected history in the pipeline mock
@@ -129,9 +129,9 @@ class TestECME:
         """
 
         # --- Prepare Mocks ---
-        mock_pipeline_cls = mocker.patch("rework_pysatl_mpest.estimators.ecme.Pipeline")
-        mock_max_step_cls = mocker.patch("rework_pysatl_mpest.estimators.ecme.MaximizationStep")
-        mock_exp_step_cls = mocker.patch("rework_pysatl_mpest.estimators.ecme.ExpectationStep")
+        mock_pipeline_cls = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
+        mock_max_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.MaximizationStep")
+        mock_exp_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.ExpectationStep")
 
         mock_pipeline_inst = mock_pipeline_cls.return_value
         expected_result = mocker.Mock(spec=MixtureModel)
@@ -229,9 +229,9 @@ class TestECME:
         ecme = ECME(**deps, default_strategy="q-func")
 
         # Mock classes
-        mocker.patch("rework_pysatl_mpest.estimators.ecme.Pipeline")
-        mock_max_step_cls = mocker.patch("rework_pysatl_mpest.estimators.ecme.MaximizationStep")
-        mocker.patch("rework_pysatl_mpest.estimators.ecme.ExpectationStep")
+        mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
+        mock_max_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.MaximizationStep")
+        mocker.patch("pysatl_mpest.estimators.ecme.ExpectationStep")
 
         # Mixture with 1 component
         comp0 = mocker.Mock()
