@@ -51,10 +51,10 @@ class ECM(BaseEstimator[DType]):
 
     Parameters
     ----------
-    breakpointers : Sequence[Breakpointer]
+    breakpointers : Sequence[Breakpointer[DType]]
         A sequence of strategies that define the stopping conditions for the
         iterative process.
-    pruners : Sequence[Pruner]
+    pruners : Sequence[Pruner[DType]]
         A sequence of strategies for removing (pruning) components from the
         mixture model during fitting.
     optimizer : Optimizer[DType]
@@ -63,10 +63,10 @@ class ECM(BaseEstimator[DType]):
 
     Attributes
     ----------
-    breakpointers : list[Breakpointer]
+    breakpointers : list[Breakpointer[DType]]
         The list of objects that determine when the fitting process should
         terminate.
-    pruners : list[Pruner]
+    pruners : list[Pruner[DType]]
         The list of objects that may remove components from the mixture during
         the fitting process.
     optimizer : Optimizer[DType]
@@ -85,7 +85,10 @@ class ECM(BaseEstimator[DType]):
     """
 
     def __init__(
-        self, breakpointers: Sequence[Breakpointer], pruners: Sequence[Pruner], optimizer: Optimizer[DType]
+        self,
+        breakpointers: Sequence[Breakpointer[DType]],
+        pruners: Sequence[Pruner[DType]],
+        optimizer: Optimizer[DType],
     ) -> None:
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)

@@ -46,13 +46,13 @@ class Pipeline(BaseEstimator[DType]):
 
     Parameters
     ----------
-    steps : Sequence[PipelineStep]
+    steps : Sequence[PipelineStep[DType]]
         An ordered sequence of steps to be executed in each iteration of the
         pipeline.
-    breakpointers : Sequence[Breakpointer]
+    breakpointers : Sequence[Breakpointer[DType]]
         A sequence of strategies that define the stopping conditions for the
         iterative process. This list cannot be empty.
-    pruners : Sequence[Pruner] | None, optional
+    pruners : Sequence[Pruner[DType]] | None, optional
         A sequence of strategies for removing components from the mixture model
         during fitting. Defaults to None, meaning no pruning is performed.
     once_in_iterations: int, optional
@@ -61,12 +61,12 @@ class Pipeline(BaseEstimator[DType]):
 
     Attributes
     ----------
-    steps : list[PipelineStep]
+    steps : list[PipelineStep[DType]]
         The ordered list of operations to be performed in each iteration.
-    breakpointers : list[Breakpointer]
+    breakpointers : list[Breakpointer[DType]]
         The list of objects that determine when the fitting process should
         terminate.
-    pruners : list[Pruner]
+    pruners : list[Pruner[DType]]
         The list of objects that may remove components from the mixture during
         the fitting process.
     history : IterationsHistory[DType]
@@ -89,9 +89,9 @@ class Pipeline(BaseEstimator[DType]):
 
     def __init__(
         self,
-        steps: Sequence[PipelineStep],
-        breakpointers: Sequence[Breakpointer],
-        pruners: Sequence[Pruner] | None = None,
+        steps: Sequence[PipelineStep[DType]],
+        breakpointers: Sequence[Breakpointer[DType]],
+        pruners: Sequence[Pruner[DType]] | None = None,
         once_in_iterations: int = 1,
     ):
         self._validate_steps(list(steps))
@@ -107,7 +107,7 @@ class Pipeline(BaseEstimator[DType]):
         self.steps = list(steps)
         self.history = IterationsHistory[DType](once_in_iterations)
 
-    def _validate_steps(self, steps: list[PipelineStep]):
+    def _validate_steps(self, steps: list[PipelineStep[DType]]):
         """Validates the sequence of pipeline steps.
 
         Checks if each step in the pipeline can legally be followed by the next
