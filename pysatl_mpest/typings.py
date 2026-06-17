@@ -11,6 +11,7 @@ from numpy._typing import ArrayLike
 
 Scalar = int | float | np.floating | np.integer
 FloatingType = np.floating
+BoolScalar = bool | np.bool_
 
 type UnivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int], np.dtype[T]]
 type MultivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int, int], np.dtype[T]]
