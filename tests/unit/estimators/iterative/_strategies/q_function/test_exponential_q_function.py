@@ -63,7 +63,7 @@ def test_q_function_exponential_raises_value_error_if_h_is_none(parametrized_exp
 def test_q_function_exponential_returns_correct_types(parametrized_exponential_setup):
     """
     Verifies that the function returns a tuple with the correct
-    data types (int, dict[str, DType]).
+    data types (int, dict[str, FloatT]).
     """
     exponential_component, pipeline_state, dtype = parametrized_exponential_setup
 

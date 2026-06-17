@@ -138,7 +138,7 @@ def test_odl_strategy_calls_optimizer_minimize_once(parametrized_setup):
 def test_odl_strategy_returns_correct_types(parametrized_setup):
     """
     Verifies that the function returns a tuple with the correct
-    data types (int, dict[str, DType]).
+    data types (int, dict[str, FloatT]).
     """
 
     target_comp, state, block, optimizer, dtype = parametrized_setup

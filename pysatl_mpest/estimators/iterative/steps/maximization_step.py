@@ -14,16 +14,16 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from types import MappingProxyType
-from typing import ClassVar
+from typing import Any, ClassVar, cast
 
 import numpy as np
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
 from ....typings import FloatingType
-from .._strategies import moments_strategy, observed_data_likelihood_strategy, q_function_strategy
+from .._strategies import StrategyFunction, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
@@ -63,7 +63,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
         run
     """
 
-    _strategies: ClassVar[Mapping[MaximizationStrategy, Callable]] = MappingProxyType(
+    _strategies: ClassVar[Mapping[MaximizationStrategy, StrategyFunction[Any]]] = MappingProxyType(
         {
             MaximizationStrategy.QFUNCTION: q_function_strategy,
             MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD: observed_data_likelihood_strategy,
@@ -130,13 +130,13 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
             state.error = error
             return state
 
-        results = []
+        results: list[tuple[int, dict[str, FloatT]]] = []
         curr_mixture = state.curr_mixture
 
         dtype = curr_mixture.dtype
 
         for block in self.blocks:
-            strategy = self._strategies[block.maximization_strategy]
+            strategy = cast(StrategyFunction[FloatT], self._strategies[block.maximization_strategy])
             component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
             if state.error:
                 return state
