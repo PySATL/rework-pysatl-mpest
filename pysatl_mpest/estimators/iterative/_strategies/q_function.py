@@ -20,7 +20,7 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential, Normal, Pareto, Weibull
 from ....optimizers import Optimizer
-from ....typings import DType
+from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 from .utils import handle_numerical_overflow
@@ -34,12 +34,12 @@ NUMERICAL_TOLERANCE = 1e-9
 
 
 @singledispatch
-def q_function_strategy(
-    component: ContinuousDistribution[DType],
-    state: PipelineState[DType],
+def q_function_strategy[FloatT: FloatingType](
+    component: ContinuousDistribution[FloatT],
+    state: PipelineState[FloatT],
     block: OptimizationBlock,
-    optimizer: Optimizer[DType],
-) -> tuple[int, dict[str, DType]]:
+    optimizer: Optimizer[FloatT],
+) -> tuple[int, dict[str, FloatT]]:
     """Generic M-step strategy that maximizes the Q-function numerically.
 
     This function serves as the default implementation for updating a
@@ -52,7 +52,7 @@ def q_function_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution[DType]
+    component : ContinuousDistribution[FloatT]
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline, containing the data :attr:`X` and the
@@ -60,12 +60,12 @@ def q_function_strategy(
     block : OptimizationBlock
         The configuration block defining which component and which of its
         parameters to optimize.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         The numerical optimizer instance used to perform the maximization.
 
     Returns
     -------
-    tuple[int, dict[str, DType]]
+    tuple[int, dict[str, FloatT]]
         A tuple containing the component's ID and a dictionary of the
         optimized parameter names and their new values.
 
@@ -106,9 +106,9 @@ def q_function_strategy(
 
 
 @q_function_strategy.register(Exponential)
-def _(
-    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Exponential[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """Specialized Q-function parameter estimation strategy for
     the Exponential distribution using an analytical solution.
 
@@ -181,9 +181,9 @@ def _(
 
 
 @q_function_strategy.register(Normal)
-def _(
-    component: Normal[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Normal[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """Specialized Q-function parameter estimation strategy for
     the normal distribution using an analytical solution.
 
@@ -254,9 +254,9 @@ def _(
 
 
 @q_function_strategy.register(Weibull)
-def _(
-    component: Weibull[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Weibull[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """Specialized Q-function parameter estimation strategy for
     the Weibull distribution using an analytical solution.
     """
@@ -330,9 +330,9 @@ def _(
 
 
 @q_function_strategy.register(Pareto)
-def _(
-    component: Pareto, state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Pareto, state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """Specialized Q-function parameter estimation strategy for
     the Pareto type 1 distribution using an analytical solution.
 

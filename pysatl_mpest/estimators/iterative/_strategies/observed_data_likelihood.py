@@ -15,18 +15,18 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
-from ....typings import DType
+from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 from .utils import handle_numerical_overflow
 
 
-def observed_data_likelihood_strategy(
-    component: ContinuousDistribution[DType],
-    state: PipelineState[DType],
+def observed_data_likelihood_strategy[FloatT: FloatingType](
+    component: ContinuousDistribution[FloatT],
+    state: PipelineState[FloatT],
     block: OptimizationBlock,
-    optimizer: Optimizer[DType],
-) -> tuple[int, dict[str, DType]]:
+    optimizer: Optimizer[FloatT],
+) -> tuple[int, dict[str, FloatT]]:
     """Generic strategy that calculates optimized parameters by maximizing observed data log-likelihood.
 
     This function calculates the new parameters for a component by directly
@@ -38,19 +38,19 @@ def observed_data_likelihood_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution[DType]
+    component : ContinuousDistribution[FloatT]
         The distribution component type/instance used for dispatch and parameter metadata.
-    state : PipelineState[DType]
+    state : PipelineState[FloatT]
         The current state containing data X and current mixture parameters.
         (Note: Responsibilities H are not used in this strategy).
     block : OptimizationBlock
         Configuration defining which parameters to optimize (component_id and param names).
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         Numerical optimizer instance.
 
     Returns
     -------
-    tuple[int, dict[str, DType]]
+    tuple[int, dict[str, FloatT]]
         Component ID and a dictionary of the optimized parameters.
     """
 
