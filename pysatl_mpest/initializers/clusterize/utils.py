@@ -86,7 +86,7 @@ def _validate_clusters_distributions(
     if estimation_strategies_count != models_count:
         raise ValueError("Number of estimation functions must match number of models")
 
-    cluster_weights: list[float] = np.sum(H, axis=0)
+    cluster_weights: list[float] = np.sum(H, axis=0)  # type: ignore
 
     valid_clusters = [k for k in range(n_clusters) if cluster_weights[k] >= min_samples]
     if len(valid_clusters) != models_count:
