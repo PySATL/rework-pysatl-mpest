@@ -159,6 +159,9 @@ class Parameter:
         owner_dtype = getattr(instance, "dtype", np.float64)
         d_value = owner_dtype(value)
 
+        if np.ndim(d_value) > 0:
+            raise TypeError(f"Parameter '{self.public_name}' must be a scalar, got array of shape {np.shape(d_value)}.")
+
         if not self.invariant(d_value):
             raise ValueError(f"Invalid value for '{self.public_name}': {self.error_message}")
 
