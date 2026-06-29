@@ -352,6 +352,6 @@ class TestNormalGenerate:
         size = 1000
 
         samples = dist.generate(size=size)
-        ks_statistic, p_value = kstest(samples, "norm", args=(loc, scale))
+        ks_statistic, p_value = kstest(samples, norm(loc=loc, scale=scale).cdf)
         expected_p_value = 0.05
         assert p_value > expected_p_value
