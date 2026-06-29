@@ -37,3 +37,14 @@ def assert_computational_stability(log_probs: FloatArray[Any]) -> None:
 
     assert not np.isnan(log_probs).any(), "Log-probabilities array contains NaN"
     assert not np.isposinf(log_probs).any(), "Log-probabilities array contains +Inf"
+
+
+def assert_dtype(tensor: FloatArray[Any] | list[Any], expected_dtype: type[np.floating]) -> None:
+    """
+    Asserts that the tensor or list elements have the specified floating point dtype.
+    """
+
+    if isinstance(tensor, list):
+        assert all(type(v) is expected_dtype for v in tensor), f"Not all elements in list are of type {expected_dtype}"
+    else:
+        assert tensor.dtype == expected_dtype, f"Expected dtype {expected_dtype}, got {tensor.dtype}"
