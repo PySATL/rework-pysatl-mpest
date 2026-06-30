@@ -381,13 +381,13 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
         if type(self) is not type(other):
             return False
 
-        sorted_params = sorted(list(self.params))
+        sorted_params = sorted(self.params)
 
         return (
             self.name == other.name
             and self.params == other.params
-            and self.get_params_vector(sorted_params) == other.get_params_vector(sorted_params)
             and self.dtype == other.dtype
+            and self.get_params_vector(sorted_params) == other.get_params_vector(sorted_params)
         )
 
     def __hash__(self) -> int:
@@ -402,7 +402,7 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
             The hash value of the distribution object.
         """
 
-        sorted_params = sorted(list(self.params))
+        sorted_params = sorted(self.params)
         param_values = tuple(self.get_params_vector(sorted_params))
 
-        return hash(tuple([self.name, tuple(self.params), self.dtype, param_values]))
+        return hash((self.name, tuple(sorted_params), self.dtype, param_values))

@@ -89,7 +89,7 @@ class MixtureModel[FloatT: FloatingType]:
     ):
         n_components = len(components)
         if n_components == 0:
-            raise ValueError("List of components cannot be an empty")
+            raise ValueError("List of components cannot be empty")
 
         self._dtype = dtype
 
