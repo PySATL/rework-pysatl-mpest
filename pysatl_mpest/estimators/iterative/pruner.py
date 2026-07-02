@@ -11,11 +11,10 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 
-from ...typings import FloatingType
 from .pipeline_state import PipelineState
 
 
-class Pruner[FloatT: FloatingType](ABC):
+class Pruner(ABC):
     """Abstract base class for component pruning strategies.
 
     Pruner subclasses implement the logic for identifying and removing
@@ -40,7 +39,7 @@ class Pruner[FloatT: FloatingType](ABC):
     """
 
     @abstractmethod
-    def prune(self, state: PipelineState[FloatT]) -> tuple[PipelineState[FloatT], list[int]]:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Analyzes the pipeline state and prunes components from the mixture.
 
         This method is called by the :class:`Pipeline` to inspect the current mixture
@@ -50,13 +49,13 @@ class Pruner[FloatT: FloatingType](ABC):
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current state of the pipeline, containing the data, mixture
             model, and other relevant information.
 
         Returns
         -------
-        PipelineState[FloatT]
+        PipelineState
             The new pipeline state. If components were removed, this state
             contains the updated mixture model. Otherwise, it returns the
             original state.
