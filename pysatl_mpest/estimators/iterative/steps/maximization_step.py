@@ -16,20 +16,19 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
-from typing import Any, ClassVar, cast
+from typing import ClassVar, cast
 
 import numpy as np
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
-from ....typings import FloatingType
 from .._strategies import StrategyFunction, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
 
 
-class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
+class MaximizationStep(PipelineStep):
     """A pipeline step that performs the Maximization (M-step).
 
     This step updates the parameters of each component in the mixture model,
@@ -44,7 +43,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
         A sequence of configuration blocks that define the optimization tasks.
         Each block specifies a component, its parameters to optimize, and the
         maximization strategy to use.
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         A numerical optimizer instance used to find the optimal parameters
         when an analytical solution is not available for a given strategy.
 
@@ -52,7 +51,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
     ----------
     blocks : list[OptimizationBlock]
         The list of optimization tasks to be performed.
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         The numerical optimizer used for parameter estimation.
 
     Methods
@@ -63,7 +62,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
         run
     """
 
-    _strategies: ClassVar[Mapping[MaximizationStrategy, StrategyFunction[Any]]] = MappingProxyType(
+    _strategies: ClassVar[Mapping[MaximizationStrategy, StrategyFunction]] = MappingProxyType(
         {
             MaximizationStrategy.QFUNCTION: q_function_strategy,
             MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD: observed_data_likelihood_strategy,
@@ -71,7 +70,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
         }
     )
 
-    def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer[FloatT]):
+    def __init__(self, blocks: Sequence[OptimizationBlock], optimizer: Optimizer):
         self.blocks = list(blocks)
         self.optimizer = optimizer
 
@@ -88,14 +87,14 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
 
         return [ExpectationStep]
 
-    def _update_components_params(self, component: ContinuousDistribution[FloatT], params: dict[str, FloatT]):
+    def _update_components_params(self, component: ContinuousDistribution, params: dict[str, float]):
         """Helper method to update parameters for a single component.
 
         Parameters
         ----------
         component : ContinuousDistribution
             The component whose parameters are to be updated.
-        params : dict[str, FloatT]
+        params : dict[str, float]
             A dictionary mapping parameter names to their new optimized values.
         """
 
@@ -103,7 +102,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
         param_values = list(params.values())
         component.set_params_from_vector(param_names, param_values)
 
-    def run(self, state: PipelineState[FloatT]) -> PipelineState[FloatT]:
+    def run(self, state: PipelineState) -> PipelineState:
         """Executes the M-step.
 
         This method iterates through the configured optimization blocks,
@@ -113,13 +112,13 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current state of the pipeline. Must contain the responsibility
             matrix :attr:`H` and the mixture model :attr:`curr_mixture`.
 
         Returns
         -------
-        PipelineState[FloatT]
+        PipelineState
             The updated pipeline state with the modified :attr:`curr_mixture`. If the
             :attr:`H` matrix is not available in the input state, the state is
             returned with an error set, and no modifications are made.
@@ -130,13 +129,11 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
             state.error = error
             return state
 
-        results: list[tuple[int, dict[str, FloatT]]] = []
+        results: list[tuple[int, dict[str, float]]] = []
         curr_mixture = state.curr_mixture
 
-        dtype = curr_mixture.dtype
-
         for block in self.blocks:
-            strategy = cast(StrategyFunction[FloatT], self._strategies[block.maximization_strategy])
+            strategy = cast(StrategyFunction, self._strategies[block.maximization_strategy])
             component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
             if state.error:
                 return state
@@ -148,7 +145,7 @@ class MaximizationStep[FloatT: FloatingType](PipelineStep[FloatT]):
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]
-        curr_mixture.log_weights = np.log(new_weights + dtype(1e-30))
+        curr_mixture.log_weights = np.log(new_weights + np.float64(1e-30))
 
         return state
 

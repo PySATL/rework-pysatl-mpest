@@ -17,10 +17,8 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential, Normal
 from ....optimizers import Optimizer
-from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
-from .utils import handle_numerical_overflow
 
 NUMERICAL_TOLERANCE = 1e-9
 
@@ -31,12 +29,12 @@ NUMERICAL_TOLERANCE = 1e-9
 
 
 @singledispatch
-def moments_strategy[FloatT: FloatingType](
-    component: ContinuousDistribution[FloatT],
-    state: PipelineState[FloatT],
+def moments_strategy(
+    component: ContinuousDistribution,
+    state: PipelineState,
     block: OptimizationBlock,
-    optimizer: Optimizer[FloatT],
-) -> tuple[int, dict[str, FloatT]]:
+    optimizer: Optimizer,
+) -> tuple[int, dict[str, float]]:
     """Generic M-step strategy that uses the Method of Moments.
 
     This function serves as the base dispatcher. Since the Method of Moments
@@ -46,13 +44,13 @@ def moments_strategy[FloatT: FloatingType](
 
     Parameters
     ----------
-    component : ContinuousDistribution[FloatT]
+    component : ContinuousDistribution
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline.
     block : OptimizationBlock
         The configuration block defining which component to optimize.
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         The numerical optimizer (unused in this strategy).
 
     Raises
@@ -70,9 +68,9 @@ def moments_strategy[FloatT: FloatingType](
 
 
 @moments_strategy.register(Exponential)
-def _[FloatT: FloatingType](
-    component: Exponential[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
-) -> tuple[int, dict[str, FloatT]]:
+def _(
+    component: Exponential, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, float]]:
     """Specialized Moments parameter estimation strategy for the Exponential distribution
     using an analytical solution.
 
@@ -103,7 +101,6 @@ def _[FloatT: FloatingType](
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
-    dtype = component.dtype
     X = state.X
     H_j = state.H[:, block.component_id]
 
@@ -117,27 +114,21 @@ def _[FloatT: FloatingType](
         return block.component_id, {}
 
     weighted_sum_X = np.dot(H_j, X)
-    if np.isinf(weighted_sum_X):
-        handle_numerical_overflow(state, context="Moments optimization")
-        return block.component_id, {}
 
     m1 = weighted_sum_X / N_j
 
     # Update both location (loc) and lambda (rate) if they are in the optimization block
     if Exponential.PARAM_LOC in params_to_optimize and Exponential.PARAM_RATE in params_to_optimize:
         weighted_sum_X2 = np.dot(H_j, X**2)
-        if np.isinf(weighted_sum_X2):
-            handle_numerical_overflow(state, context="Moments optimization")
-            return block.component_id, {}
 
         m2 = weighted_sum_X2 / N_j
 
-        variance = np.maximum(m2 - m1**2, dtype(NUMERICAL_TOLERANCE))
+        variance = np.maximum(m2 - m1**2, np.float64(NUMERICAL_TOLERANCE))
 
         std_dev = np.sqrt(variance)
 
-        new_params[Exponential.PARAM_RATE] = dtype(1.0 / std_dev)
-        new_params[Exponential.PARAM_LOC] = dtype(m1 - std_dev)
+        new_params[Exponential.PARAM_RATE] = float(1.0 / std_dev)
+        new_params[Exponential.PARAM_LOC] = float(m1 - std_dev)
 
     # Update lambda (rate) if it's in the optimization block
     elif Exponential.PARAM_RATE in params_to_optimize:
@@ -146,12 +137,12 @@ def _[FloatT: FloatingType](
         if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
             new_params[Exponential.PARAM_RATE] = component.rate
         else:
-            new_params[Exponential.PARAM_RATE] = dtype(1.0 / denominator)
+            new_params[Exponential.PARAM_RATE] = float(1.0 / denominator)
 
     # Update location (loc) if it's in the optimization block
     elif Exponential.PARAM_LOC in params_to_optimize:
-        new_loc = m1 - (dtype(1.0) / component.rate)
-        new_params[Exponential.PARAM_LOC] = dtype(new_loc)
+        new_loc = m1 - (np.float64(1.0) / component.rate)
+        new_params[Exponential.PARAM_LOC] = float(new_loc)
 
     return block.component_id, new_params
 
@@ -162,9 +153,9 @@ def _[FloatT: FloatingType](
 
 
 @moments_strategy.register(Normal)
-def _[FloatT: FloatingType](
-    component: Normal[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
-) -> tuple[int, dict[str, FloatT]]:
+def _(
+    component: Normal, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+) -> tuple[int, dict[str, float]]:
     """
     Update parameters of a univariate Normal component using weighted moments.
 
@@ -184,11 +175,11 @@ def _[FloatT: FloatingType](
 
     Parameters
     ----------
-    component : Normal[FloatT]
+    component : Normal
         Normal distribution component to be updated. The method may update
         ``component.loc`` and/or ``component.scale`` depending on
         ``component.params_to_optimize`` and the block configuration.
-    state : PipelineState[FloatT]
+    state : PipelineState
         Current pipeline state containing:
 
         - ``X`` : array-like
@@ -200,7 +191,7 @@ def _[FloatT: FloatingType](
         Optimization block describing which component is being optimized and
         which parameters are allowed to change. The component index is taken
         from ``block.component_id``.
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         Optimizer instance provided by the pipeline. It is not used directly by
         this moments-based strategy but is included for API consistency.
 
@@ -209,7 +200,7 @@ def _[FloatT: FloatingType](
     component_id : int
         The identifier of the optimized component, equal to
         ``block.component_id``.
-    new_params : dict[str, FloatT]
+    new_params : dict[str, float]
         Dictionary of updated parameters for the component. Keys correspond to
         Normal parameter names (e.g., ``component.PARAM_LOC``,
         ``component.PARAM_SCALE``). If no update is performed (e.g., negligible
@@ -236,10 +227,10 @@ def _[FloatT: FloatingType](
 
          \\sigma_j = \\sqrt{\\frac{\\sum_i w_i (x_i - \\mu_j)^2}{N_j}}
 
-    - The scale is lower-bounded by machine epsilon for the component dtype to
+    - The scale is lower-bounded by machine epsilon for the component np.float64 to
       avoid degeneracy:
 
-      ``scale = max(scale, np.finfo(dtype).eps)``.
+      ``scale = max(scale, np.finfo(np.float64).eps)``.
 
     - If ``N_j`` is close to zero (within ``NUMERICAL_TOLERANCE``), the
       parameters are not updated.
@@ -255,13 +246,12 @@ def _[FloatT: FloatingType](
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
-    dtype = component.dtype
-    MIN_SCALE = np.finfo(dtype).eps
+    MIN_SCALE = np.finfo(np.float64).eps
     X = state.X
     H_j = state.H[:, block.component_id]
 
     params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
-    new_params = {}
+    new_params: dict[str, float] = {}
 
     N_j = np.sum(H_j)
 
@@ -270,14 +260,14 @@ def _[FloatT: FloatingType](
         return block.component_id, {}
 
     if component.PARAM_LOC in params_to_optimize:
-        new_loc = np.average(X, weights=H_j)
+        new_loc = float(np.average(X, weights=H_j))
         new_params[component.PARAM_LOC] = new_loc
     else:
         new_loc = component.loc
 
     if component.PARAM_SCALE in params_to_optimize:
         new_scale = np.sqrt(np.average((X - new_loc) ** 2, weights=H_j))
-        new_params[component.PARAM_SCALE] = new_scale
+        new_params[component.PARAM_SCALE] = float(new_scale)
 
         new_scale = max(new_scale, MIN_SCALE)
 

@@ -9,6 +9,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
+import numpy as np
 from numpy.typing import ArrayLike
 
 from ..typings import FloatArray
@@ -148,7 +149,7 @@ class ContinuousDistribution(ABC):
 
         return [getattr(self, name) for name in param_names]
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[float | float]):
+    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[np.float64 | float]):
         """Sets parameter values from a sequence of floats.
 
         Updates the distribution's parameters using values from the provided
@@ -198,7 +199,7 @@ class ContinuousDistribution(ABC):
         return self.params - self._fixed_params
 
     @abstractmethod
-    def pdf(self, X: ArrayLike) -> float | FloatArray:
+    def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Probability Density Function.
 
         Parameters
@@ -208,13 +209,13 @@ class ContinuousDistribution(ABC):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
-    def ppf(self, P: ArrayLike) -> float | FloatArray:
+    def ppf(self, P: ArrayLike) -> np.float64 | FloatArray:
         """Percent Point Function (PPF) or quantile function.
 
         This is the inverse of the Cumulative Distribution Function (CDF).
@@ -227,13 +228,13 @@ class ContinuousDistribution(ABC):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
-    def lpdf(self, X: ArrayLike) -> float | FloatArray:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Logarithm of the Probability Density Function.
 
         Evaluating the log-PDF is often more numerically stable than
@@ -247,7 +248,7 @@ class ContinuousDistribution(ABC):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -273,7 +274,7 @@ class ContinuousDistribution(ABC):
         """
 
     @abstractmethod
-    def generate(self, size: int | tuple[int, ...] | None = None) -> float | FloatArray:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
         """Generates random samples from the distribution.
 
         Parameters
@@ -286,7 +287,7 @@ class ContinuousDistribution(ABC):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 

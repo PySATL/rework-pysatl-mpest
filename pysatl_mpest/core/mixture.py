@@ -405,7 +405,9 @@ class MixtureModel:
                 decimals = np.finfo(np.float64).precision
                 weights_to_use = np.round(weights_to_use, decimals)
 
-            pairs = sorted(zip(self.components, weights_to_use), key=lambda p: hash(p[0]))
+            pairs: list[tuple[ContinuousDistribution, float]] = sorted(
+                zip(self.components, weights_to_use), key=lambda p: hash(p[0])
+            )
             if not for_hashing:
                 self._sorted_pairs_cache = pairs
             return pairs

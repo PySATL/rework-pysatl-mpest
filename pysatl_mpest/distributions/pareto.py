@@ -84,7 +84,7 @@ class Pareto(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -108,7 +108,7 @@ class Pareto(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -143,7 +143,7 @@ class Pareto(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -181,7 +181,7 @@ class Pareto(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`shape` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -216,7 +216,7 @@ class Pareto(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`scale` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -281,7 +281,7 @@ class Pareto(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 

@@ -90,7 +90,7 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -115,7 +115,7 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -148,7 +148,7 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -275,7 +275,7 @@ class Weibull(ContinuousDistribution):
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
