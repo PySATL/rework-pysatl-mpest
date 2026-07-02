@@ -9,7 +9,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-import numpy as np
 from numpy.typing import ArrayLike
 
 from ..typings import FloatArray
@@ -353,4 +352,4 @@ class ContinuousDistribution(ABC):
         sorted_params = sorted(self.params)
         param_values = tuple(self.get_params_vector(sorted_params))
 
-        return hash((self.name, tuple(sorted_params), self.dtype, param_values))
+        return hash((self.name, tuple(sorted_params), param_values))

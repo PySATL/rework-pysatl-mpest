@@ -9,11 +9,10 @@ import numpy as np
 from scipy.stats import uniform
 
 from ..core import Parameter
-from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class Uniform(ContinuousDistribution):
     """
     The Uniform continuous probability distribution.
 
@@ -60,8 +59,8 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     left_border = Parameter()
     right_border = Parameter()
 
-    def __init__(self, left_border: float, right_border: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        super().__init__(dtype=dtype)
+    def __init__(self, left_border: float, right_border: float):
+        super().__init__()
         if left_border >= right_border:
             raise ValueError("right_border parameter must be strictly greater than left_border")
         if not (np.isfinite(left_border) and np.isfinite(right_border)):
@@ -97,12 +96,12 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -124,17 +123,16 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(P)
-        P = np.asarray(P, dtype=self.dtype)
-        dtype = self.dtype
+        P = np.asarray(P, dtype=np.float64)
 
         result = np.where(
-            (P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), dtype(np.nan)
+            (P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), np.float64(np.nan)
         )
 
         if is_scalar:
@@ -161,18 +159,17 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
         valid_dist = self.right_border > self.left_border
-        result = np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), dtype(-np.inf))
+        result = np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), np.float64(-np.inf))
 
         if is_scalar:
             return result[()]
@@ -195,17 +192,16 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The gradient of the lpdf with respect to :attr:`left_border` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        result = np.where(in_range, dtype(1.0) / (self.right_border - self.left_border), dtype(0.0))
+        result = np.where(in_range, np.float64(1.0) / (self.right_border - self.left_border), np.float64(0.0))
 
         if is_scalar:
             return result[()]
@@ -228,17 +224,16 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The gradient of the lpdf with respect to :attr:`right_border` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        result = np.where(in_range, dtype(-1.0) / (self.right_border - self.left_border), dtype(0.0))
+        result = np.where(in_range, np.float64(-1.0) / (self.right_border - self.left_border), np.float64(0.0))
 
         if is_scalar:
             return result[()]
@@ -256,7 +251,7 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -265,7 +260,7 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
 
         gradient_calculators = {
             self.LEFT_BORDER: self._dlog_left_border,
@@ -275,7 +270,7 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0), dtype=self.dtype)
+            return np.empty((len(X), 0), dtype=np.float64)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -296,15 +291,15 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
         samples = uniform.rvs(loc=self.left_border, scale=self.right_border - self.left_border, size=size)
 
         if size is None:
-            return self.dtype(samples)
-        return np.asarray(samples, dtype=self.dtype)
+            return np.float64(samples)
+        return np.asarray(samples, dtype=np.float64)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -313,10 +308,7 @@ class Uniform[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Uniform(left_border=0.0, right_border=2.0, dtype=np.float64)".
+            "Uniform(left_border=0.0, right_border=2.0)".
         """
 
-        return (
-            f"{self.__class__.__name__}(left_border={self.left_border}, "
-            f"right_border={self.right_border}, dtype=np.{self.dtype.__name__})"
-        )
+        return f"{self.__class__.__name__}(left_border={self.left_border}, right_border={self.right_border})"

@@ -9,11 +9,10 @@ import numpy as np
 from scipy.stats import cauchy
 
 from ..core import Parameter
-from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class Cauchy(ContinuousDistribution):
     """Class for the two-parameter cauchy distribution.
 
     Parameters
@@ -50,8 +49,8 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0.0, "Scale parameter should be positive")
 
-    def __init__(self, loc: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        super().__init__(dtype=dtype)
+    def __init__(self, loc: float, scale: float):
+        super().__init__()
         self.loc = loc
         self.scale = scale
 
@@ -82,12 +81,12 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -109,23 +108,22 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(P)
-        P = np.asarray(P, dtype=self.dtype)
-        dtype = self.dtype
+        P = np.asarray(P, dtype=np.float64)
 
         result = np.where(
             (P >= 0) & (P <= 1),
             np.where(
                 (P == 0) | (P == 1),
-                np.where(P == 1, dtype(np.inf), dtype(-np.inf)),
-                self.loc + self.scale * np.tan(dtype(np.pi) * (P - dtype(0.5))),
+                np.where(P == 1, np.float64(np.inf), np.float64(-np.inf)),
+                self.loc + self.scale * np.tan(np.float64(np.pi) * (P - np.float64(0.5))),
             ),
-            dtype(np.nan),
+            np.float64(np.nan),
         )
         if is_scalar:
             return result[()]
@@ -150,20 +148,19 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         result = (
-            np.log(dtype(1.0))
-            - np.log(dtype(np.pi))
+            np.log(np.float64(1.0))
+            - np.log(np.float64(np.pi))
             - np.log(self.scale)
-            - np.log(dtype(1.0) + ((X - self.loc) / self.scale) ** 2)
+            - np.log(np.float64(1.0) + ((X - self.loc) / self.scale) ** 2)
         )
 
         if is_scalar:
@@ -190,16 +187,17 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The gradient of the lpdf with respect to :attr:`loc` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
-        result = (dtype(2) * X - dtype(2) * self.loc) / (self.scale**2 + X**2 - dtype(2) * self.loc * X + self.loc**2)
+        result = (np.float64(2) * X - np.float64(2) * self.loc) / (
+            self.scale**2 + X**2 - np.float64(2) * self.loc * X + self.loc**2
+        )
 
         if is_scalar:
             return result[()]
@@ -225,17 +223,16 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The gradient of the lpdf with respect to :attr:`scale` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
-        result = (-(self.scale**2) + X**2 - dtype(2) * self.loc * X + self.loc**2) / (
-            self.scale**3 + self.scale * (X**2) - dtype(2) * self.loc * self.scale * X + self.scale * self.loc**2
+        result = (-(self.scale**2) + X**2 - np.float64(2) * self.loc * X + self.loc**2) / (
+            self.scale**3 + self.scale * (X**2) - np.float64(2) * self.loc * self.scale * X + self.scale * self.loc**2
         )
 
         if is_scalar:
@@ -254,7 +251,7 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -263,7 +260,7 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
 
         gradient_calculators = {
             self.PARAM_LOC: self._dlog_loc,
@@ -273,7 +270,7 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0), dtype=self.dtype)
+            return np.empty((len(X), 0), dtype=np.float64)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -294,15 +291,15 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
         samples = cauchy.rvs(loc=self.loc, scale=self.scale, size=size)
 
         if size is None:
-            return self.dtype(samples)
-        return np.asarray(samples, dtype=self.dtype)
+            return np.float64(samples)
+        return np.asarray(samples, dtype=np.float64)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -311,7 +308,7 @@ class Cauchy[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Cauchy(loc=0.0, scale=2.0, dtype=np.float64)".
+            "Cauchy(loc=0.0, scale=2.0)".
         """
 
-        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale}, dtype=np.{self.dtype.__name__})"
+        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale})"

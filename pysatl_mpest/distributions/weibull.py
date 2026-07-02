@@ -9,11 +9,10 @@ import numpy as np
 from scipy.stats import weibull_min
 
 from ..core import Parameter
-from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class Weibull(ContinuousDistribution):
     """Class for the three-parameter Weibull distribution.
 
     Parameters
@@ -55,8 +54,8 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0, "Scale parameter must be positive")
 
-    def __init__(self, shape: float, loc: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        super().__init__(dtype=dtype)
+    def __init__(self, shape: float, loc: float, scale: float):
+        super().__init__()
         self.shape = shape
         self.loc = loc
         self.scale = scale
@@ -91,12 +90,12 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -116,17 +115,16 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(P)
-        P = np.asarray(P, dtype=self.dtype)
-        dtype = self.dtype
+        P = np.asarray(P, dtype=np.float64)
 
-        ppf_vals = self.loc + self.scale * np.power(-np.log(dtype(1) - P), dtype(1.0) / self.shape)
-        result = np.where((P >= 0) & (P <= 1), ppf_vals, dtype(np.nan))
+        ppf_vals = self.loc + self.scale * np.power(-np.log(np.float64(1) - P), np.float64(1.0) / self.shape)
+        result = np.where((P >= 0) & (P <= 1), ppf_vals, np.float64(np.nan))
 
         if is_scalar:
             return result[()]
@@ -150,14 +148,13 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -166,10 +163,10 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
             lpdf_vals = (
                 np.log(self.shape)
                 - np.log(self.scale)
-                + np.nan_to_num((self.shape - dtype(1)) * np.log(z), nan=dtype(0.0))
+                + np.nan_to_num((self.shape - np.float64(1)) * np.log(z), nan=np.float64(0.0))
                 - np.power(z, self.shape)
             )
-        result = np.where(self.loc < X, lpdf_vals, dtype(-np.inf))
+        result = np.where(self.loc < X, lpdf_vals, np.float64(-np.inf))
 
         if is_scalar:
             return result[()]
@@ -179,17 +176,18 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """Partial derivative of the lpdf w.r.t. the shape parameter."""
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
             # Handle z^k * ln(z), which -> 0 as z -> 0.
             # This prevents NaN from 0 * -inf.
             grad = (
-                dtype(1.0) / self.shape + np.log(z) - np.nan_to_num(np.power(z, self.shape) * np.log(z), nan=dtype(0.0))
+                np.float64(1.0) / self.shape
+                + np.log(z)
+                - np.nan_to_num(np.power(z, self.shape) * np.log(z), nan=np.float64(0.0))
             )
-        result = np.where(self.loc < X, np.nan_to_num(grad), dtype(0.0))
+        result = np.where(self.loc < X, np.nan_to_num(grad), np.float64(0.0))
 
         if is_scalar:
             return result[()]
@@ -199,15 +197,14 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
-            grad = -(self.shape - dtype(1)) / (X - self.loc) + (self.shape / self.scale) * np.power(
-                z, self.shape - dtype(1)
+            grad = -(self.shape - np.float64(1)) / (X - self.loc) + (self.shape / self.scale) * np.power(
+                z, self.shape - np.float64(1)
             )
-        result = np.where(self.loc < X, np.nan_to_num(grad), dtype(0.0))
+        result = np.where(self.loc < X, np.nan_to_num(grad), np.float64(0.0))
 
         if is_scalar:
             return result[()]
@@ -217,12 +214,11 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         z = (X - self.loc) / self.scale
         grad = -self.shape / self.scale + (self.shape / self.scale) * np.power(z, self.shape)
-        result = np.where(self.loc < X, grad, dtype(0.0))
+        result = np.where(self.loc < X, grad, np.float64(0.0))
 
         if is_scalar:
             return result[()]
@@ -238,7 +234,7 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -247,7 +243,7 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
 
         gradient_calculators = {
             self.PARAM_SHAPE: self._dlog_shape,
@@ -258,7 +254,7 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0), dtype=self.dtype)
+            return np.empty((len(X), 0), dtype=np.float64)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -279,15 +275,15 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        float | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
         samples = weibull_min.rvs(c=self.shape, loc=self.loc, scale=self.scale, size=size)
 
         if size is None:
-            return self.dtype(samples)
-        return np.asarray(samples, dtype=self.dtype)
+            return np.float64(samples)
+        return np.asarray(samples, dtype=np.float64)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -296,10 +292,7 @@ class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Weibull(shape=2.0, loc=0.0, scale=1.0, dtype=np.float64)".
+            "Weibull(shape=2.0, loc=0.0, scale=1.0)".
         """
 
-        return (
-            f"{self.__class__.__name__}(shape={self.shape}, "
-            f"loc={self.loc}, scale={self.scale}, dtype=np.{self.dtype.__name__})"
-        )
+        return f"{self.__class__.__name__}(shape={self.shape}, loc={self.loc}, scale={self.scale})"
