@@ -86,7 +86,7 @@ def q_function_strategy(
     def target(vector_params):
         temp_comp.set_params_from_vector(params_to_optimize, vector_params)
         lpdf_values = temp_comp.lpdf(X)
-        safe_lpdf = np.where(H_j == 0, np.float64(0.0), lpdf_values)
+        safe_lpdf = np.where(H_j == 0, 0.0, lpdf_values)
         return -np.dot(H_j, safe_lpdf)
 
     new_params = optimizer.minimize(target, temp_comp.get_params_vector(params_to_optimize))
@@ -155,7 +155,7 @@ def _(
         denominator = weighted_sum_X / N_j - loc
 
         if denominator > NUMERICAL_TOLERANCE:
-            new_params[Exponential.PARAM_RATE] = np.float64(1.0) / denominator
+            new_params[Exponential.PARAM_RATE] = 1.0 / denominator
         else:
             # If the weighted average is too close to loc,
             # leave rate unchanged to avoid infinity.
@@ -288,11 +288,11 @@ def _(
             X_minus_loc = X - final_loc
 
             # Use np.maximum to avoid taking powers of negative numbers if final_loc is slightly off
-            safe_X_minus_loc = np.maximum(X_minus_loc, np.float64(NUMERICAL_TOLERANCE))
+            safe_X_minus_loc = np.maximum(X_minus_loc, float(NUMERICAL_TOLERANCE))
 
             weighted_sum = np.dot(H_j, safe_X_minus_loc**final_shape)
             if weighted_sum > NUMERICAL_TOLERANCE:
-                new_scale = (weighted_sum / N_j) ** (np.float64(1.0) / final_shape)
+                new_scale = (weighted_sum / N_j) ** (1.0 / final_shape)
                 new_params[Weibull.PARAM_SCALE] = new_scale
             else:
                 new_params[Weibull.PARAM_SCALE] = component.scale

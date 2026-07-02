@@ -123,7 +123,7 @@ def _(
 
         m2 = weighted_sum_X2 / N_j
 
-        variance = np.maximum(m2 - m1**2, np.float64(NUMERICAL_TOLERANCE))
+        variance = np.maximum(m2 - m1**2, float(NUMERICAL_TOLERANCE))
 
         std_dev = np.sqrt(variance)
 
@@ -141,7 +141,7 @@ def _(
 
     # Update location (loc) if it's in the optimization block
     elif Exponential.PARAM_LOC in params_to_optimize:
-        new_loc = m1 - (np.float64(1.0) / component.rate)
+        new_loc = m1 - (1.0 / component.rate)
         new_params[Exponential.PARAM_LOC] = float(new_loc)
 
     return block.component_id, new_params

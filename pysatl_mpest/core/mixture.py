@@ -117,7 +117,7 @@ class MixtureModel:
         if np.any(weights < 0):
             raise ValueError("Weights must be positive.")
 
-        if not np.isclose(np.sum(weights), np.float64(1.0)):
+        if not np.isclose(np.sum(weights), 1.0):
             raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
 
     @property
@@ -197,8 +197,8 @@ class MixtureModel:
         if not (0 < weight < 1):
             raise ValueError("The weight of the new component must be in the range (0, 1).")
 
-        d_weight = np.float64(weight)
-        self._log_weights += np.log(np.float64(1.0) - d_weight)
+        d_weight = float(weight)
+        self._log_weights += np.log(1.0 - d_weight)
         new_log_weight = np.log(d_weight)
         self._log_weights = np.append(self._log_weights, new_log_weight)
 

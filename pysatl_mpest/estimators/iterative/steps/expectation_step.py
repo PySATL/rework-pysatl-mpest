@@ -87,14 +87,14 @@ class ExpectationStep(PipelineStep):
         log_H = log_weighted_likelihoods - log_denominator
 
         H_soft = np.exp(log_H)
-        H_soft[np.isnan(H_soft)] = np.float64(0.0)
+        H_soft[np.isnan(H_soft)] = 0.0
 
         if not self.is_soft:
             n_samples = X.shape[0]
             H_hard = np.zeros_like(H_soft, dtype=np.float64)
 
             max_indices = np.argmax(H_soft, axis=1)
-            H_hard[np.arange(n_samples), max_indices] = np.float64(1.0)
+            H_hard[np.arange(n_samples), max_indices] = 1.0
 
             state.H = H_hard
         else:

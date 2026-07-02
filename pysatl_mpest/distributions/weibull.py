@@ -123,8 +123,8 @@ class Weibull(ContinuousDistribution):
         is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=np.float64)
 
-        ppf_vals = self.loc + self.scale * np.power(-np.log(np.float64(1) - P), np.float64(1.0) / self.shape)
-        result = np.where((P >= 0) & (P <= 1), ppf_vals, np.float64(np.nan))
+        ppf_vals = self.loc + self.scale * np.power(-np.log(1.0 - P), 1.0 / self.shape)
+        result = np.where((P >= 0) & (P <= 1), ppf_vals, np.nan)
 
         if is_scalar:
             return result[()]
@@ -163,10 +163,10 @@ class Weibull(ContinuousDistribution):
             lpdf_vals = (
                 np.log(self.shape)
                 - np.log(self.scale)
-                + np.nan_to_num((self.shape - np.float64(1)) * np.log(z), nan=np.float64(0.0))
+                + np.nan_to_num((self.shape - 1.0) * np.log(z), nan=0.0)
                 - np.power(z, self.shape)
             )
-        result = np.where(self.loc < X, lpdf_vals, np.float64(-np.inf))
+        result = np.where(self.loc < X, lpdf_vals, -np.inf)
 
         if is_scalar:
             return result[()]
@@ -182,12 +182,8 @@ class Weibull(ContinuousDistribution):
         with np.errstate(divide="ignore", invalid="ignore"):
             # Handle z^k * ln(z), which -> 0 as z -> 0.
             # This prevents NaN from 0 * -inf.
-            grad = (
-                np.float64(1.0) / self.shape
-                + np.log(z)
-                - np.nan_to_num(np.power(z, self.shape) * np.log(z), nan=np.float64(0.0))
-            )
-        result = np.where(self.loc < X, np.nan_to_num(grad), np.float64(0.0))
+            grad = 1.0 / self.shape + np.log(z) - np.nan_to_num(np.power(z, self.shape) * np.log(z), nan=0.0)
+        result = np.where(self.loc < X, np.nan_to_num(grad), 0.0)
 
         if is_scalar:
             return result[()]
@@ -201,10 +197,8 @@ class Weibull(ContinuousDistribution):
 
         z = (X - self.loc) / self.scale
         with np.errstate(divide="ignore", invalid="ignore"):
-            grad = -(self.shape - np.float64(1)) / (X - self.loc) + (self.shape / self.scale) * np.power(
-                z, self.shape - np.float64(1)
-            )
-        result = np.where(self.loc < X, np.nan_to_num(grad), np.float64(0.0))
+            grad = -(self.shape - 1.0) / (X - self.loc) + (self.shape / self.scale) * np.power(z, self.shape - 1.0)
+        result = np.where(self.loc < X, np.nan_to_num(grad), 0.0)
 
         if is_scalar:
             return result[()]
@@ -218,7 +212,7 @@ class Weibull(ContinuousDistribution):
 
         z = (X - self.loc) / self.scale
         grad = -self.shape / self.scale + (self.shape / self.scale) * np.power(z, self.shape)
-        result = np.where(self.loc < X, grad, np.float64(0.0))
+        result = np.where(self.loc < X, grad, 0.0)
 
         if is_scalar:
             return result[()]

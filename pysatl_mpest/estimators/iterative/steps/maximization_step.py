@@ -145,7 +145,7 @@ class MaximizationStep(PipelineStep):
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]
-        curr_mixture.log_weights = np.log(new_weights + np.float64(1e-30))
+        curr_mixture.log_weights = np.log(new_weights + 1e-30)
 
         return state
 

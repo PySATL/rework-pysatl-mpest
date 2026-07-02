@@ -116,9 +116,7 @@ class Pareto(ContinuousDistribution):
         is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=np.float64)
 
-        result = np.where(
-            (P >= 0) & (P <= 1), self.scale * (np.float64(1) - P) ** (np.float64(-1.0) / self.shape), np.float64(np.nan)
-        )
+        result = np.where((P >= 0) & (P <= 1), self.scale * (1.0 - P) ** (-1.0 / self.shape), np.nan)
 
         if is_scalar:
             return result[()]
@@ -153,8 +151,8 @@ class Pareto(ContinuousDistribution):
 
         result = np.where(
             self.scale <= X,
-            np.log(self.shape) + self.shape * np.log(self.scale) - (np.float64(1) + self.shape) * np.log(X),
-            np.float64(-np.inf),
+            np.log(self.shape) + self.shape * np.log(self.scale) - (1.0 + self.shape) * np.log(X),
+            -np.inf,
         )
 
         if is_scalar:
@@ -189,9 +187,7 @@ class Pareto(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(
-            self.scale <= X, np.float64(1.0) / self.shape + np.log(self.scale) - np.log(X), np.float64(0.0)
-        )
+        result = np.where(self.scale <= X, 1.0 / self.shape + np.log(self.scale) - np.log(X), 0.0)
 
         if is_scalar:
             return result[()]
@@ -224,7 +220,7 @@ class Pareto(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(self.scale <= X, self.shape / self.scale, np.float64(0.0))
+        result = np.where(self.scale <= X, self.shape / self.scale, 0.0)
         if is_scalar:
             return result[()]
         return result

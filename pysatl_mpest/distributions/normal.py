@@ -143,9 +143,7 @@ class Normal(ContinuousDistribution):
         X = np.asarray(X, dtype=np.float64)
 
         z = (X - self.loc) / self.scale
-        result = (
-            -np.log(self.scale) - np.float64(0.5) * np.log(np.float64(2.0) * np.float64(np.pi)) - np.float64(0.5) * z**2
-        )
+        result = -np.log(self.scale) - 0.5 * np.log(2.0 * np.pi) - 0.5 * z**2
 
         if is_scalar:
             return result[()]
@@ -169,7 +167,7 @@ class Normal(ContinuousDistribution):
         X = np.asarray(X, dtype=np.float64)
 
         z_sq = ((X - self.loc) / self.scale) ** 2
-        result = (z_sq - np.float64(1.0)) / self.scale
+        result = (z_sq - 1.0) / self.scale
 
         if is_scalar:
             return result[()]

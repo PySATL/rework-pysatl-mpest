@@ -151,7 +151,7 @@ class Beta(ContinuousDistribution):
                 self.left_border
                 + (self.right_border - self.left_border) * beta_dist.ppf(P, self.alpha, self.beta).astype(np.float64)
             ),
-            np.float64(np.nan),
+            np.nan,
         )
 
         if is_scalar:
@@ -236,8 +236,8 @@ class Beta(ContinuousDistribution):
             in_bounds,
             np.log(X - self.left_border)
             - np.log(self.right_border - self.left_border)
-            - (np.float64(digamma(self.alpha)) - np.float64(digamma(self.alpha + self.beta))),
-            np.float64(0.0),
+            - (digamma(self.alpha) - digamma(self.alpha + self.beta)),
+            0.0,
         )
 
         if is_scalar:
@@ -280,8 +280,8 @@ class Beta(ContinuousDistribution):
             in_bounds,
             np.log(self.right_border - X)
             - np.log(self.right_border - self.left_border)
-            - (np.float64(digamma(self.beta)) - np.float64(digamma(self.alpha + self.beta))),
-            np.float64(0.0),
+            - (digamma(self.beta) - digamma(self.alpha + self.beta)),
+            0.0,
         )
 
         if is_scalar:
@@ -321,10 +321,10 @@ class Beta(ContinuousDistribution):
         result = np.where(
             in_bounds,
             (
-                ((self.alpha + self.beta - np.float64(1)) / (self.right_border - self.left_border))
-                - ((self.alpha - np.float64(1)) / (X - self.left_border))
+                ((self.alpha + self.beta - 1.0) / (self.right_border - self.left_border))
+                - ((self.alpha - 1.0) / (X - self.left_border))
             ),
-            np.float64(0.0),
+            0.0,
         )
 
         if is_scalar:
@@ -364,10 +364,10 @@ class Beta(ContinuousDistribution):
         result = np.where(
             in_bounds,
             (
-                ((self.beta - np.float64(1)) / (self.right_border - X))
-                - ((self.alpha + self.beta - np.float64(1)) / (self.right_border - self.left_border))
+                ((self.beta - 1.0) / (self.right_border - X))
+                - ((self.alpha + self.beta - 1.0) / (self.right_border - self.left_border))
             ),
-            np.float64(0.0),
+            0.0,
         )
 
         if is_scalar:

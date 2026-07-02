@@ -120,10 +120,10 @@ class Cauchy(ContinuousDistribution):
             (P >= 0) & (P <= 1),
             np.where(
                 (P == 0) | (P == 1),
-                np.where(P == 1, np.float64(np.inf), np.float64(-np.inf)),
-                self.loc + self.scale * np.tan(np.float64(np.pi) * (P - np.float64(0.5))),
+                np.where(P == 1, np.inf, -np.inf),
+                self.loc + self.scale * np.tan(np.pi * (P - 0.5)),
             ),
-            np.float64(np.nan),
+            np.nan,
         )
         if is_scalar:
             return result[()]
@@ -156,12 +156,7 @@ class Cauchy(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = (
-            np.log(np.float64(1.0))
-            - np.log(np.float64(np.pi))
-            - np.log(self.scale)
-            - np.log(np.float64(1.0) + ((X - self.loc) / self.scale) ** 2)
-        )
+        result = np.log(1.0) - np.log(np.pi) - np.log(self.scale) - np.log(1.0 + ((X - self.loc) / self.scale) ** 2)
 
         if is_scalar:
             return result[()]
@@ -195,9 +190,7 @@ class Cauchy(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = (np.float64(2) * X - np.float64(2) * self.loc) / (
-            self.scale**2 + X**2 - np.float64(2) * self.loc * X + self.loc**2
-        )
+        result = (2.0 * X - 2.0 * self.loc) / (self.scale**2 + X**2 - 2.0 * self.loc * X + self.loc**2)
 
         if is_scalar:
             return result[()]
@@ -231,8 +224,8 @@ class Cauchy(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = (-(self.scale**2) + X**2 - np.float64(2) * self.loc * X + self.loc**2) / (
-            self.scale**3 + self.scale * (X**2) - np.float64(2) * self.loc * self.scale * X + self.scale * self.loc**2
+        result = (-(self.scale**2) + X**2 - 2.0 * self.loc * X + self.loc**2) / (
+            self.scale**3 + self.scale * (X**2) - 2.0 * self.loc * self.scale * X + self.scale * self.loc**2
         )
 
         if is_scalar:

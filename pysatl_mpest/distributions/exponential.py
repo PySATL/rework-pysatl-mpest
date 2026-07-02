@@ -112,7 +112,7 @@ class Exponential(ContinuousDistribution):
         is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=np.float64)
 
-        result = np.where((P >= 0) & (P <= 1), self.loc - np.log(np.float64(1) - P) / self.rate, np.float64(np.nan))
+        result = np.where((P >= 0) & (P <= 1), self.loc - np.log(1.0 - P) / self.rate, np.nan)
         if is_scalar:
             return result[()]
         return result
@@ -141,7 +141,7 @@ class Exponential(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(self.loc <= X, np.log(self.rate) - self.rate * (X - self.loc), np.float64(-np.inf))
+        result = np.where(self.loc <= X, np.log(self.rate) - self.rate * (X - self.loc), -np.inf)
         if is_scalar:
             return result[()]
         return result
@@ -172,7 +172,7 @@ class Exponential(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(self.loc <= X, self.rate, np.float64(0.0))
+        result = np.where(self.loc <= X, self.rate, 0.0)
         if is_scalar:
             return result[()]
         return result
@@ -203,7 +203,7 @@ class Exponential(ContinuousDistribution):
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(self.loc <= X, np.float64(1.0) / self.rate - (X - self.loc), np.float64(0.0))
+        result = np.where(self.loc <= X, 1.0 / self.rate - (X - self.loc), 0.0)
         if is_scalar:
             return result[()]
         return result

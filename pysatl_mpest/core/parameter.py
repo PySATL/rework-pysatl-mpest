@@ -155,7 +155,8 @@ class Parameter:
         if np.ndim(value) > 0:
             raise TypeError(f"Parameter '{self.public_name}' must be a scalar, got array of shape {np.shape(value)}.")
 
-        if not self.invariant(value):
+        float_value = float(value)
+        if not self.invariant(float_value):
             raise ValueError(f"Invalid value for '{self.public_name}': {self.error_message}")
 
-        setattr(instance, self.private_name, value)
+        setattr(instance, self.private_name, float_value)

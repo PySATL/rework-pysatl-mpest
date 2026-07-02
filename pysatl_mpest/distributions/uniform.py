@@ -131,9 +131,7 @@ class Uniform(ContinuousDistribution):
         is_scalar = np.isscalar(P)
         P = np.asarray(P, dtype=np.float64)
 
-        result = np.where(
-            (P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), np.float64(np.nan)
-        )
+        result = np.where((P >= 0) & (P <= 1), self.left_border + P * (self.right_border - self.left_border), np.nan)
 
         if is_scalar:
             return result[()]
@@ -169,7 +167,7 @@ class Uniform(ContinuousDistribution):
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
         valid_dist = self.right_border > self.left_border
-        result = np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), np.float64(-np.inf))
+        result = np.where(in_range & valid_dist, -np.log(self.right_border - self.left_border), -np.inf)
 
         if is_scalar:
             return result[()]
@@ -201,7 +199,7 @@ class Uniform(ContinuousDistribution):
         X = np.asarray(X, dtype=np.float64)
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        result = np.where(in_range, np.float64(1.0) / (self.right_border - self.left_border), np.float64(0.0))
+        result = np.where(in_range, 1.0 / (self.right_border - self.left_border), 0.0)
 
         if is_scalar:
             return result[()]
@@ -233,7 +231,7 @@ class Uniform(ContinuousDistribution):
         X = np.asarray(X, dtype=np.float64)
 
         in_range = (self.left_border <= X) & (self.right_border >= X)
-        result = np.where(in_range, np.float64(-1.0) / (self.right_border - self.left_border), np.float64(0.0))
+        result = np.where(in_range, -1.0 / (self.right_border - self.left_border), 0.0)
 
         if is_scalar:
             return result[()]
