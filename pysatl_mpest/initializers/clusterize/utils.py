@@ -6,8 +6,9 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from collections.abc import Callable
 from copy import copy
-from typing import Any, Callable, TypedDict
+from typing import Any, TypedDict
 
 import numpy as np
 
