@@ -43,7 +43,6 @@ def compute_sample_lmoments[FloatT: FloatingType](X: np.ndarray, H: np.ndarray, 
     return l1, l2
 
 
-
 # ------------------------
 # Base L-moments strategy
 # ------------------------
