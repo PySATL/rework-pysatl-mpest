@@ -6,9 +6,9 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from types import MappingProxyType
-from typing import Any, Callable, ClassVar, Optional
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -131,7 +131,7 @@ class ClusterizeInitializer(Initializer):
         self.is_accurate = is_accurate
         self.clusterizer = clusterizer
         self.optimizer = optimizer
-        self.n_components: Optional[int] = None
+        self.n_components: int | None = None
         self.method: MatchingMethod = MatchingMethod.GREEDY
         self.score_func: ScoringMethod = ScoringMethod.LIKELIHOOD
         self.estimation_strategies: list[EstimationStrategy] = []
