@@ -11,6 +11,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from functools import singledispatch
+from typing import cast
 
 import numpy as np
 from scipy.special import gamma
@@ -29,7 +30,9 @@ L_SKEWNESS_THRESHOLD = 0.5
 # ------------------------
 # function to compute 1-st and 2-nd l-moments
 # ------------------------
-def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: float, need_l3: bool = False) -> tuple[float, float, float]:
+def compute_sample_lmoments[FloatT: FloatingType](
+    X: np.ndarray, H: np.ndarray, N_j: FloatT, need_l3: bool = False
+) -> tuple[FloatT, FloatT, FloatT]:
     idx = np.argsort(X)
     X_sorted = X[idx]
     H_sorted = H[idx]
@@ -43,13 +46,13 @@ def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: float, need_l3: b
     l2 = 2 * b1 - l1
 
     if not need_l3:
-        return float(l1), float(l2), 0.0
+        return l1, l2, cast(FloatT, 0.0)
 
     b2 = np.sum(H_sorted * X_sorted * (rank_weights**2)) / N_j
 
     l3 = 6 * b2 - 6 * b1 + l1
 
-    return float(l1), float(l2), float(l3)
+    return l1, l2, l3
 
 
 # ------------------------
@@ -110,11 +113,11 @@ def _[FloatT: FloatingType](
 
     Parameters
     ----------
-    component : Weibull[DType]
+    component : Weibull[FloatT]
         Weibull distribution component to be updated. The method may update
         ``component.loc``, ``component.scale``, and/or ``component.shape``
         depending on ``component.params_to_optimize`` and the block configuration.
-    state : PipelineState[DType]
+    state : PipelineState[FloatT]
         Current pipeline state containing:
 
         - ``X`` : array-like
@@ -126,7 +129,7 @@ def _[FloatT: FloatingType](
         Optimization block describing which component is being optimized and
         which parameters are allowed to change. The component index is taken
         from ``block.component_id``.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         Optimizer instance provided by the pipeline. It is not used directly by
         this analytical strategy but is included for API consistency.
 
@@ -135,7 +138,7 @@ def _[FloatT: FloatingType](
     component_id : int
         The identifier of the optimized component, equal to
         ``block.component_id``.
-    new_params : dict[str, DType]
+    new_params : dict[str, FloatT]
         Dictionary of updated parameters for the component. Keys correspond to
         Weibull parameter names (e.g., ``component.PARAM_LOC``,
         ``component.PARAM_SCALE``, ``component.PARAM_SHAPE``). If no update

@@ -28,4 +28,10 @@ observed_data_likelihood_strategy: StrategyFunction[Any] = _observed_data_likeli
 moments_strategy: StrategyFunction[Any] = _moments_strategy
 lmoments_strategy: StrategyFunction[Any] = _lmoments_strategy
 
-__all__ = ["StrategyFunction", "lmoments_strategy", "moments_strategy", "observed_data_likelihood_strategy", "q_function_strategy"]
+__all__ = [
+    "StrategyFunction",
+    "lmoments_strategy",
+    "moments_strategy",
+    "observed_data_likelihood_strategy",
+    "q_function_strategy",
+]
