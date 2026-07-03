@@ -222,6 +222,9 @@ def _[FloatT: FloatingType](
 
     # Scenario 3: Fixed rate, free loc
     elif component.PARAM_LOC in params_to_optimize:
+        # rate is fixed.
+        # loc = l1 - 1 / rate_fixed
+
         new_loc = l1 - (1.0 / component.rate)
 
         if np.isinf(new_loc):
