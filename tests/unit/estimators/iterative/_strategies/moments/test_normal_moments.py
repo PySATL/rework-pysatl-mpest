@@ -64,7 +64,7 @@ def test_moments_normal_raises_value_error_if_h_is_none(parametrized_normal_setu
 def test_moments_normal_returns_correct_types(parametrized_normal_setup):
     """
     Verifies that the function returns a tuple with the correct
-    data types (int, dict[str, DType]).
+    data types (int, dict[str, FloatT]).
     """
 
     normal_component, pipeline_state, dtype = parametrized_normal_setup

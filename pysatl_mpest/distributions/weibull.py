@@ -9,11 +9,11 @@ import numpy as np
 from scipy.stats import weibull_min
 
 from ..core import Parameter
-from ..typings import DType
+from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Weibull(ContinuousDistribution[DType]):
+class Weibull[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     """Class for the three-parameter Weibull distribution.
 
     Parameters
@@ -55,7 +55,7 @@ class Weibull(ContinuousDistribution[DType]):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0, "Scale parameter must be positive")
 
-    def __init__(self, shape: float, loc: float, scale: float, dtype: type[DType] = np.float64):  # type: ignore[assignment]
+    def __init__(self, shape: float, loc: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
         super().__init__(dtype=dtype)
         self.shape = shape
         self.loc = loc
@@ -91,7 +91,7 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -116,7 +116,7 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -150,7 +150,7 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -238,7 +238,7 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        FloatArray[FloatT]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -279,7 +279,7 @@ class Weibull(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             A scalar or NumPy array containing the generated samples.
         """
 

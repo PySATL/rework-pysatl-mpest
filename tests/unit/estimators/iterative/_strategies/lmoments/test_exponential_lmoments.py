@@ -1,7 +1,7 @@
 """Tests for L-Moments optimization strategy for Exponential distribution"""
 
-__author__ = "Aleksandra Ri"
-__copyright__ = "Copyright (c) 2025 PySATL project"
+__author__ = "Maksim Pastukhov"
+__copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 

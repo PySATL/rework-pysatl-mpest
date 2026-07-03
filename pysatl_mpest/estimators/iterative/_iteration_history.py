@@ -11,17 +11,14 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from dataclasses import dataclass
-from typing import Generic
-
-from numpy.typing import NDArray
 
 from ...core import MixtureModel
-from ...typings import DType
+from ...typings import FloatingType, MultivariateFloatArray, UnivariateFloatArray
 from .pruner import Pruner
 
 
 @dataclass
-class IterationRecord(Generic[DType]):
+class IterationRecord[FloatT: FloatingType]:
     """Data class representing a single pipeline iteration snapshot.
 
     This class captures the complete state of a pipeline iteration after
@@ -32,15 +29,15 @@ class IterationRecord(Generic[DType]):
     ----------
     iteration : int
         The iteration number (0-based index).
-    mixture : MixtureModel[DType]
+    mixture : MixtureModel[FloatT]
         The state of the mixture model after pruning in this iteration.
-    X : NDArray[DType]
+    X : UnivariateFloatArray[FloatT]
         The input data sample being processed (conventionally named `X`).
-    H : Optional[NDArray[DType]]
+    H : Optional[MultivariateFloatArray[FloatT]]
         The responsibility matrix (posterior probabilities) if available,
         where `H[i, j]` represents the probability that data point `i`
         belongs to component `j`. May be `None` if not computed.
-    pruners_used : Optional[list[Pruner[DType]]]
+    pruners_used : Optional[list[Pruner[FloatT]]]
         List of pruner instances that were applied during this iteration.
         `None` or empty if no pruning occurred.
     error : Optional[Exception]
@@ -49,14 +46,14 @@ class IterationRecord(Generic[DType]):
     """
 
     iteration: int
-    mixture: MixtureModel[DType]
-    X: NDArray[DType]
-    H: NDArray[DType] | None
-    pruners_used: list[Pruner[DType]] | None
+    mixture: MixtureModel[FloatT]
+    X: UnivariateFloatArray[FloatT]
+    H: MultivariateFloatArray[FloatT] | None
+    pruners_used: list[Pruner[FloatT]] | None
     error: Exception | None
 
 
-class IterationsHistory(Generic[DType]):
+class IterationsHistory[FloatT: FloatingType]:
     """A container for storing and accessing pipeline iteration history.
 
     `IterationsHistory` collects and stores snapshots of each pipeline iteration
@@ -98,7 +95,7 @@ class IterationsHistory(Generic[DType]):
     _counter : int
         Internal counter tracking the total number of `save_record()` calls
         (i.e., total iterations processed, not just recorded ones).
-    _history : list[IterationRecord[DType]]
+    _history : list[IterationRecord[FloatT]]
         List of stored iteration records. Only iterations matching the
         recording frequency are appended.
 
@@ -120,11 +117,11 @@ class IterationsHistory(Generic[DType]):
         if once_in_iterations < 1:
             raise ValueError("Parameter once_in_iterations must be a positive integer")
 
-        self._history: list[IterationRecord[DType]] = []
+        self._history: list[IterationRecord[FloatT]] = []
         self._counter: int = 0
         self.once_in_iterations = once_in_iterations
 
-    def save_record(self, record: IterationRecord[DType]) -> None:
+    def save_record(self, record: IterationRecord[FloatT]) -> None:
         """Store an iteration record based on the configured frequency.
 
         The record is stored only if the current internal counter is divisible
@@ -133,7 +130,7 @@ class IterationsHistory(Generic[DType]):
 
         Parameters
         ----------
-        record : IterationRecord[DType]
+        record : IterationRecord[FloatT]
             The iteration snapshot to potentially store. The `record.iteration`
             should ideally match the instance's internal state, though this is
             not enforced.
@@ -168,7 +165,7 @@ class IterationsHistory(Generic[DType]):
 
         return len(self._history)
 
-    def __getitem__(self, index: int) -> IterationRecord[DType]:
+    def __getitem__(self, index: int) -> IterationRecord[FloatT]:
         """Access a stored iteration record by index.
 
         Supports both positive (0-based) and negative indexing (e.g., `-1` for last).
@@ -181,7 +178,7 @@ class IterationsHistory(Generic[DType]):
 
         Returns
         -------
-        IterationRecord[DType]
+        IterationRecord[FloatT]
             The recorded state of the specified iteration.
 
         Raises

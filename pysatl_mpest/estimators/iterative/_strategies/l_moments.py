@@ -7,7 +7,7 @@ interface that can be specialized for specific distribution types.
 """
 
 __author__ = "Maksim Pastukhov"
-__copyright__ = "Copyright (c) 2025 PySATL project"
+__copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from functools import singledispatch
@@ -16,7 +16,7 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution, Exponential
 from ....optimizers import Optimizer
-from ....typings import DType
+from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 from .utils import handle_numerical_overflow
@@ -27,7 +27,7 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 # function to compute 1-st and 2-nd l-moments
 # ------------------------
-def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType) -> tuple[float, float]:
+def compute_sample_lmoments[FloatT: FloatingType](X: np.ndarray, H: np.ndarray, N_j: FloatT) -> tuple[FloatT, FloatT]:
     idx = np.argsort(X)
     X_sorted = X[idx]
     H_sorted = H[idx]
@@ -40,7 +40,7 @@ def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType) -> tuple[f
     b1 = np.sum(H_sorted * X_sorted * rank_weights) / N_j
     l2 = 2 * b1 - l1
 
-    return float(l1), float(l2)
+    return l1, l2
 
 
 # ------------------------
@@ -49,12 +49,12 @@ def compute_sample_lmoments(X: np.ndarray, H: np.ndarray, N_j: DType) -> tuple[f
 
 
 @singledispatch
-def lmoments_strategy(
-    component: ContinuousDistribution[DType],
-    state: PipelineState[DType],
+def lmoments_strategy[FloatT: FloatingType](
+    component: ContinuousDistribution[FloatT],
+    state: PipelineState[FloatT],
     block: OptimizationBlock,
-    optimizer: Optimizer[DType],
-) -> tuple[int, dict[str, DType]]:
+    optimizer: Optimizer[FloatT],
+) -> tuple[int, dict[str, FloatT]]:
     """Generic M-step strategy based on L-moments.
 
     Unlike the Q-function strategy, L-moments do not have a universal numerical
@@ -78,9 +78,9 @@ def lmoments_strategy(
 
 
 @lmoments_strategy.register(Exponential)
-def _(
-    component: Exponential[DType], state: PipelineState[DType], block: OptimizationBlock, optimizer: Optimizer[DType]
-) -> tuple[int, dict[str, DType]]:
+def _[FloatT: FloatingType](
+    component: Exponential[FloatT], state: PipelineState[FloatT], block: OptimizationBlock, optimizer: Optimizer[FloatT]
+) -> tuple[int, dict[str, FloatT]]:
     """
     Update parameters of a univariate Exponential component using L-moments.
 
@@ -100,11 +100,11 @@ def _(
 
     Parameters
     ----------
-    component : Exponential[DType]
+    component : Exponential[FloatT]
         Exponential distribution component to be updated. The method may update
         ``component.loc`` and/or ``component.rate`` depending on
         ``component.params_to_optimize`` and the block configuration.
-    state : PipelineState[DType]
+    state : PipelineState[FloatT]
         Current pipeline state containing:
 
         - ``X`` : array-like
@@ -116,7 +116,7 @@ def _(
         Optimization block describing which component is being optimized and
         which parameters are allowed to change. The component index is taken
         from ``block.component_id``.
-    optimizer : Optimizer[DType]
+    optimizer : Optimizer[FloatT]
         Optimizer instance provided by the pipeline. It is not used directly by
         this analytical strategy but is included for API consistency.
 
@@ -125,7 +125,7 @@ def _(
     component_id : int
         The identifier of the optimized component, equal to
         ``block.component_id``.
-    new_params : dict[str, DType]
+    new_params : dict[str, FloatT]
         Dictionary of updated parameters for the component. Keys correspond to
         Exponential parameter names (e.g., ``component.PARAM_LOC``,
         ``component.PARAM_RATE``). If no update is performed, an empty dict
@@ -206,25 +206,23 @@ def _(
     if component.PARAM_RATE in params_to_optimize and component.PARAM_LOC in params_to_optimize:
         # l2 = 1 / (2 * rate) => rate = 1 / (2 * l2)
         # l1 = loc + 1 / rate => loc = l1 - 1 / rate
-        new_rate: DType | float = 1.0 / (2.0 * l2) if l2 > NUMERICAL_TOLERANCE else 1e-6
-        new_loc: DType | float = l1 - (1.0 / new_rate)
+        new_rate = 1.0 / (2.0 * l2) if l2 > NUMERICAL_TOLERANCE else 1e-6
+        new_loc = l1 - (1.0 / new_rate)
 
         new_params[component.PARAM_RATE] = dtype(new_rate)
         new_params[component.PARAM_LOC] = dtype(new_loc)
 
-    # Сценарий 2: Фиксированный loc, свободный rate
+    # Scenario 2: Fixed loc, free rate
     elif component.PARAM_RATE in params_to_optimize:
-        # loc фиксирован. Используем l1 для оценки rate (более эффективно, чем l2)
-        # l1 = loc_fixed + 1 / rate => rate = 1 / (l1 - loc_fixed)
         diff = l1 - component.loc
 
-        new_rate = component.rate if np.isclose(diff, 0.0, atol=1e-12) else 1.0 / diff
+        new_rate = component.rate if (np.isclose(diff, 0.0, atol=1e-12) or (diff <= 0)) else 1.0 / diff
 
         new_params[component.PARAM_RATE] = dtype(new_rate)
 
-    # Сценарий 3: Фиксированный rate, свободный loc
+    # Scenario 3: Fixed rate, free loc
     elif component.PARAM_LOC in params_to_optimize:
-        # rate фиксирован.
+        # rate is fixed.
         # loc = l1 - 1 / rate_fixed
 
         new_loc = l1 - (1.0 / component.rate)

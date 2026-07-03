@@ -9,11 +9,11 @@ import numpy as np
 from scipy.stats import norm
 
 from ..core import Parameter
-from ..typings import DType
+from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Normal(ContinuousDistribution[DType]):
+class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     """Class for the Normal (Gaussian) distribution.
 
     Parameters
@@ -50,7 +50,7 @@ class Normal(ContinuousDistribution[DType]):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0, "Scale parameter must be positive")
 
-    def __init__(self, loc: float, scale: float, dtype: type[DType] = np.float64):  # type: ignore[assignment]
+    def __init__(self, loc: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
         super().__init__(dtype=dtype)
         self.loc = loc
         self.scale = scale
@@ -83,7 +83,7 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -105,7 +105,7 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -135,7 +135,7 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -186,7 +186,7 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        FloatArray[FloatT]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -228,7 +228,7 @@ class Normal(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             A scalar or NumPy array containing the generated samples.
         """
 

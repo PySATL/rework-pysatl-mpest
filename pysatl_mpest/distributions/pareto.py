@@ -10,10 +10,10 @@ from scipy.stats import pareto
 
 from ..core.parameter import Parameter
 from ..distributions.continuous_dist import ContinuousDistribution
-from ..typings import DType
+from ..typings import FloatingType
 
 
-class Pareto(ContinuousDistribution[DType]):
+class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     """Class for the two-parameter Pareto distribution.
 
     The Pareto distribution is a power-law probability distribution commonly used
@@ -53,7 +53,7 @@ class Pareto(ContinuousDistribution[DType]):
     shape = Parameter(lambda x: x > 0, "Shape parameter must be a positive")
     scale = Parameter(lambda x: x > 0, "Scale parameter must be a positive")
 
-    def __init__(self, shape: float, scale: float, dtype: type[DType] = np.float64):  # type: ignore[assignment]
+    def __init__(self, shape: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
         super().__init__(dtype=dtype)
         self.shape = shape
         self.scale = scale
@@ -85,7 +85,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -109,7 +109,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -143,7 +143,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -182,7 +182,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`shape` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -216,7 +216,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`scale` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -242,7 +242,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        NDArray[DType]
+        FloatArray[FloatT]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -282,7 +282,7 @@ class Pareto(ContinuousDistribution[DType]):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             A scalar or NumPy array containing the generated samples.
         """
 

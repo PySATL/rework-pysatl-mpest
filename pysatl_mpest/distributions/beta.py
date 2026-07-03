@@ -10,11 +10,11 @@ from scipy.special import digamma
 from scipy.stats import beta as beta_dist
 
 from ..core import Parameter
-from ..typings import DType
+from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Beta(ContinuousDistribution):
+class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     """Class for the four-parameteric beta distribution.
        Parameters
        ----------
@@ -67,7 +67,7 @@ class Beta(ContinuousDistribution):
         beta: float,
         left_border: float,
         right_border: float,
-        dtype: type[DType] = np.float64,  # type: ignore[assignment]
+        dtype: type[FloatT] = np.float64,  # type: ignore[assignment]
     ):
         super().__init__(dtype=dtype)
         if left_border >= right_border:
@@ -109,7 +109,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
 
@@ -139,7 +139,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -186,7 +186,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -227,7 +227,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`alpha` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -272,7 +272,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`beta` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -315,7 +315,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`left_border` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -359,7 +359,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             The gradient of the lpdf with respect to :attr:`right_border` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -394,7 +394,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        NDArray[DType]
+        FloatArray[FloatT]
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -436,7 +436,7 @@ class Beta(ContinuousDistribution):
 
         Returns
         -------
-        DType | NDArray[DType]
+        FloatT | FloatArray[FloatT]
             A scalar or NumPy array containing the generated samples.
         """
 

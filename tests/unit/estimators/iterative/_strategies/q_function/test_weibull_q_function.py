@@ -70,7 +70,7 @@ def test_q_function_weibull_raises_value_error_if_h_is_none(parametrized_weibull
 def test_q_function_weibull_returns_correct_types(parametrized_weibull_setup):
     """
     Verifies that the function returns a tuple with the correct
-    data types (int, dict[str, DType]).
+    data types (int, dict[str, FloatT]).
     """
 
     weibull_component, pipeline_state, mock_optimizer, dtype = parametrized_weibull_setup

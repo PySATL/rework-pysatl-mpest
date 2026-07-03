@@ -28,5 +28,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from .base_estimator import BaseEstimator
 from .ecm import ECM
+from .ecme import ECME
 
-__all__ = ["ECM", "BaseEstimator"]
+__all__ = ["ECM", "ECME", "BaseEstimator"]

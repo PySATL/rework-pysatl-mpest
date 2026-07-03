@@ -5,11 +5,13 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from ....exceptions import NumericalStabilityError
-from ....typings import DType
+from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 
 
-def handle_numerical_overflow(state: PipelineState[DType], context: str = "optimization") -> None:
+def handle_numerical_overflow[FloatT: FloatingType](
+    state: PipelineState[FloatT], context: str = "optimization"
+) -> None:
     """Creates and registers a numerical stability error in the pipeline state.
 
     This helper function is called when a numerical instability (e.g., infinity)
@@ -22,7 +24,7 @@ def handle_numerical_overflow(state: PipelineState[DType], context: str = "optim
 
     Parameters
     ----------
-    state : PipelineState[DType]
+    state : PipelineState[FloatT]
         The current pipeline state where the error will be recorded.
     context : str
         The context name to include in the error message (e.g. 'Moments optimization', 'Q-function optimization').

@@ -1,191 +1,171 @@
-"""Tests for Parameter class"""
+"""Tests for Parameter descriptor."""
 
-__author__ = "Danil Totmyanin, Aleksandra Ri"
-__copyright__ = "Copyright (c) 2025 PySATL project"
+__author__ = "Danil Totmyanin"
+__copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
 from pysatl_mpest.core import Parameter
-
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
-
-
-class _OwnerClass:
-    """
-    A helper class to test the Parameter descriptor.
-    It simulates a class (like a distribution) that uses Parameter instances
-    as attributes.
-    """
-
-    positive_param = Parameter(invariant=lambda x: x > 0, error_message="Value must be positive.")
-    any_param = Parameter()
-
-    def __init__(self, positive_val: float, any_val: float, dtype: np.floating):
-        """
-        Initializes the owner class and its parameters.
-        Also initializes a set to keep track of fixed parameters.
-        """
-        self._fixed_params: set[str] = set()
-        self.dtype = dtype
-
-        self.positive_param = positive_val
-        self.any_param = any_val
+from tests.mocks.core.parameter import MockParameterOwner
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def owner_instance(request) -> _OwnerClass:
-    """
-    Pytest fixture to provide a clean instance of _OwnerClass for each test.
-    """
-
-    dtype = request.param
-    return _OwnerClass(positive_val=10.0, any_val=-5.0, dtype=dtype)
-
-
-def test_parameter_initialization():
-    """
-    Tests that the Parameter descriptor is initialized correctly with
-    the specified invariant and error message.
-    """
-
-    def invariant(x):
-        return x > 0
-
-    error_message = "Must be a positive number."
-
-    param = Parameter(invariant=invariant, error_message=error_message)
-
-    assert param.invariant == invariant
-    assert param.error_message == error_message
-
-
-def test_parameter_initialization_defaults():
-    """
-    Tests that the Parameter descriptor uses correct default values
-    when no invariant or error message is provided.
-    """
+def test_parameter_default_init() -> None:
+    """Test default initialization of Parameter descriptor."""
 
     param = Parameter()
-
-    assert param.invariant(1)
-    assert param.invariant(0)
-    assert param.invariant(-100.5)
+    assert param.invariant(1.0) is True
+    assert param.invariant(-1.0) is True
     assert param.error_message == "Parameter value is not valid."
 
 
-def test_set_name_is_called_correctly():
-    """
-    Tests that the __set_name__ method correctly sets the public and
-    private names of the parameter attribute. This is called automatically
-    by Python when the owner class is created.
-    """
+def test_parameter_custom_init() -> None:
+    """Test custom initialization of Parameter descriptor."""
 
-    positive_descriptor = _OwnerClass.positive_param
-    any_descriptor = _OwnerClass.any_param
-
-    assert positive_descriptor.public_name == "positive_param"
-    assert positive_descriptor.private_name == "_positive_param"
-    assert any_descriptor.public_name == "any_param"
-    assert any_descriptor.private_name == "_any_param"
+    param = Parameter(invariant=lambda x: x > 0, error_message="Custom error.")
+    assert param.invariant(1.0) is True
+    assert param.invariant(-1.0) is False
+    assert param.error_message == "Custom error."
 
 
-def test_get_from_class_returns_descriptor():
-    """
-    Tests that accessing the parameter from the class (not an instance)
-    returns the Parameter descriptor instance itself.
-    """
+def test_parameter_set_name() -> None:
+    """Test __set_name__ assigns proper names to descriptor."""
 
-    result = _OwnerClass.positive_param
+    descriptor = MockParameterOwner.__dict__["any_param"]
 
-    assert isinstance(result, Parameter)
-    assert result.error_message == "Value must be positive."
+    assert descriptor.public_name == "any_param"
+    assert descriptor.private_name == "_any_param"
 
 
-def test_get_from_instance_returns_value(owner_instance: _OwnerClass):
-    """
-    Tests that accessing the parameter from an instance of the owner class
-    returns the actual float value stored in the instance.
-    """
+def test_parameter_get_class_access() -> None:
+    """Test that accessing parameter via class returns the descriptor itself."""
 
-    dtype = owner_instance.dtype
-
-    positive_value = owner_instance.positive_param
-    expected_positive_value = 10.0
-    any_value = owner_instance.any_param
-    expected_any_value = -5.0
-
-    assert isinstance(positive_value, dtype)
-    assert np.isclose(positive_value, expected_positive_value, atol=1e-3)
-    assert isinstance(any_value, dtype)
-    assert np.isclose(any_value, expected_any_value, atol=1e-3)
+    descriptor = MockParameterOwner.any_param
+    assert isinstance(descriptor, Parameter)
 
 
-def test_set_valid_value(owner_instance: _OwnerClass):
-    """
-    Tests that a valid value that satisfies the invariant can be
-    successfully assigned to the parameter.
-    """
+def test_parameter_get_instance_access(floating_dtype: type[np.floating]) -> None:
+    """Test that accessing parameter via instance returns the value."""
 
-    dtype = owner_instance.dtype
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
 
-    new_positive_value = 25.5
-    owner_instance.positive_param = new_positive_value
-    assert owner_instance.positive_param == new_positive_value
-    assert isinstance(owner_instance.positive_param, dtype)
+    np.testing.assert_allclose(owner.positive_param, 5.0)
+    np.testing.assert_allclose(owner.any_param, -3.0)
+    assert type(owner.positive_param) is floating_dtype
+    assert type(owner.any_param) is floating_dtype
+
+
+def test_parameter_set_valid(floating_dtype: type[np.floating]) -> None:
+    """Test setting valid values and casting to dtype."""
+
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
+
+    owner.positive_param = 10
+    np.testing.assert_allclose(owner.positive_param, 10.0)
+    assert type(owner.positive_param) is floating_dtype
+
+    owner.any_param = 2.5
+    np.testing.assert_allclose(owner.any_param, 2.5)
+    assert type(owner.any_param) is floating_dtype
+
+
+def test_parameter_invariant_violation(floating_dtype: type[np.floating]) -> None:
+    """Test assigning a value that fails the invariant check."""
+
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
+
+    with pytest.raises(ValueError, match="Value must be positive."):
+        owner.positive_param = 0.0
+
+    with pytest.raises(ValueError, match="Value must be positive."):
+        owner.positive_param = -1.5
+
+
+def test_parameter_fixed_violation(floating_dtype: type[np.floating]) -> None:
+    """Test modifying a parameter listed in _fixed_params."""
+
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
+    owner._fixed_params = {"positive_param"}
+
+    with pytest.raises(AttributeError, match="This parameter is fixed."):
+        owner.positive_param = 10.0
+
+
+def test_parameter_uninitialized_access() -> None:
+    """Test that accessing an uninitialized parameter raises AttributeError."""
+
+    owner = MockParameterOwner.__new__(MockParameterOwner)
+    with pytest.raises(AttributeError):
+        _ = owner.positive_param
+
+
+def test_parameter_missing_dtype_fallback() -> None:
+    """Test that parameter falls back to np.float64 if owner lacks dtype attribute."""
+
+    class FallbackOwner:
+        param = Parameter()
+
+    owner = FallbackOwner()
+    owner.param = 5
+
+    assert type(owner.param) is np.float64
+    np.testing.assert_allclose(owner.param, 5.0)
+
+
+@pytest.mark.parametrize("invalid_val", ["invalid_string", {"a": 1}])
+def test_parameter_incompatible_types(floating_dtype: type[np.floating], invalid_val: object) -> None:
+    """Test that assigning incompatible types raises conversion errors."""
+
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
+
+    with pytest.raises((ValueError, TypeError)):
+        owner.any_param = invalid_val  # type: ignore
 
 
 @pytest.mark.parametrize(
-    "param_name, invalid_value, error_msg",
+    "edge_val",
     [
-        ("positive_param", 0, "Invalid value for 'positive_param': Value must be positive."),
-        ("positive_param", -100.0, "Invalid value for 'positive_param': Value must be positive."),
+        0.0,
+        -0.0,
+        np.nan,
+        np.inf,
+        -np.inf,
     ],
 )
-def test_set_invalid_value_raises_value_error(
-    owner_instance: _OwnerClass, param_name: str, invalid_value: float, error_msg: str
-):
-    """
-    Tests that assigning a value that violates the parameter's invariant
-    raises a ValueError with the correct message.
-    """
+def test_parameter_edge_values(floating_dtype: type[np.floating], edge_val: float) -> None:
+    """Test parameter invariants against numerical edge cases."""
 
-    with pytest.raises(ValueError) as exc_info:
-        setattr(owner_instance, param_name, invalid_value)
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
 
-    assert str(exc_info.value) == error_msg
+    val_casted = floating_dtype(edge_val)
+    # Suppress RuntimeWarning for np.nan > 0
+    with np.errstate(invalid="ignore"):
+        expected_pass = bool(val_casted > 0)
 
-
-def test_set_fixed_parameter_raises_attribute_error(owner_instance: _OwnerClass):
-    """
-    Tests that attempting to change a parameter that has been 'fixed'
-    raises an AttributeError.
-    """
-
-    param_name_to_fix = "positive_param"
-    owner_instance._fixed_params.add(param_name_to_fix)
-
-    with pytest.raises(AttributeError) as exc_info:
-        owner_instance.positive_param = 999.0
-
-    expected_msg = f"Cannot set '{param_name_to_fix}' for instance of '_OwnerClass' class. This parameter is fixed."
-    assert str(exc_info.value) == expected_msg
-
-    expected_positive_value = 10.0
-    assert owner_instance.positive_param == expected_positive_value
+    if expected_pass:
+        owner.positive_param = edge_val
+        assert type(owner.positive_param) is floating_dtype
+    else:
+        with pytest.raises(ValueError, match="Value must be positive."):
+            owner.positive_param = edge_val
 
 
-def test_can_set_unfixed_parameter_after_fixing_another(owner_instance: _OwnerClass):
-    """
-    Tests that fixing one parameter does not prevent other, unfixed
-    parameters from being changed.
-    """
+def test_parameter_tiny_value(floating_dtype: type[np.floating]) -> None:
+    """Test that the smallest normal positive value for the specific dtype passes the invariant."""
 
-    owner_instance._fixed_params.add("positive_param")
-    owner_instance.any_param = 123.45
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
+    tiny_val = np.finfo(floating_dtype).tiny
 
-    expected_positive_value = 10.0
-    expected_any_value = 123.45
+    # This should pass since tiny_val > 0 is True for its respective dtype
+    owner.positive_param = tiny_val
+    assert type(owner.positive_param) is floating_dtype
+    np.testing.assert_allclose(owner.positive_param, tiny_val)
 
-    assert owner_instance.any_param == expected_any_value
-    assert owner_instance.positive_param == expected_positive_value
+
+def test_parameter_array_assignment(floating_dtype: type[np.floating]) -> None:
+    """Test that assigning an array to a parameter raises a TypeError."""
+
+    owner = MockParameterOwner(positive_val=5.0, any_val=-3.0, dtype=floating_dtype)
+
+    with pytest.raises(TypeError, match=r"must be a scalar, got array of shape \(2,\)."):
+        owner.positive_param = [1.0, 2.0]  # type: ignore
