@@ -7,29 +7,28 @@ __license__ = "SPDX-License-Identifier: MIT"
 from collections.abc import Callable
 
 from pysatl_mpest.optimizers.optimizer import Optimizer
-from pysatl_mpest.typings import FloatingType
 
 
-class MockOptimizer[FloatT: FloatingType](Optimizer[FloatT]):
+class MockOptimizer(Optimizer):
     """A minimal mock implementation of Optimizer.
 
     This mock simply returns the input parameters without performing
     any actual optimization.
     """
 
-    def minimize(self, target: Callable, params: list[FloatT]) -> list[FloatT]:
+    def minimize(self, target: Callable, params: list[float]) -> list[float]:
         """Returns the input parameters unchanged.
 
         Parameters
         ----------
         target : Callable
             The objective function to minimize (ignored).
-        params : list[FloatT]
+        params : list[float]
             A list of initial values for the parameters.
 
         Returns
         -------
-        list[FloatT]
+        list[float]
             The unchanged input parameters.
         """
 

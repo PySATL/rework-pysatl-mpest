@@ -7,10 +7,10 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from pysatl_mpest.core import Parameter
 from pysatl_mpest.distributions import ContinuousDistribution
-from pysatl_mpest.typings import ArrayLike, FloatArray, FloatingType
+from pysatl_mpest.typings import ArrayLike, FloatArray
 
 
-class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class MockParameterOwner(ContinuousDistribution):
     """A helper class to test the Parameter descriptor.
 
     It simulates a class (like a distribution) that uses Parameter instances
@@ -22,15 +22,13 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         A strictly positive parameter.
     any_val : float
         Any parameter without constraints.
-    dtype : type[FloatT]
-        The numpy dtype.
     """
 
     positive_param = Parameter(invariant=lambda x: x > 0, error_message="Value must be positive.")
     any_param = Parameter()
 
-    def __init__(self, positive_val: float, any_val: float, dtype: type[FloatT]):
-        super().__init__(dtype)
+    def __init__(self, positive_val: float, any_val: float):
+        super().__init__()
 
         self.positive_param = positive_val
         self.any_param = any_val
@@ -59,7 +57,7 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         return {"positive_param", "any_param"}
 
-    def pdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Dummy PDF implementation returning X.
 
         Parameters
@@ -69,13 +67,13 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The dummy PDF evaluation (returns X).
         """
 
         return X  # type: ignore
 
-    def ppf(self, P: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def ppf(self, P: ArrayLike) -> np.float64 | FloatArray:
         """Dummy PPF implementation returning P.
 
         Parameters
@@ -85,13 +83,13 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The dummy PPF evaluation (returns P).
         """
 
         return P  # type: ignore
 
-    def lpdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Dummy LPDF implementation returning X.
 
         Parameters
@@ -101,13 +99,13 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The dummy LPDF evaluation (returns X).
         """
 
         return X  # type: ignore
 
-    def log_gradients(self, X: ArrayLike) -> FloatArray[FloatT]:
+    def log_gradients(self, X: ArrayLike) -> FloatArray:
         """Dummy gradient implementation returning zeros.
 
         Parameters
@@ -117,13 +115,13 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             Zeros array matching the gradient shape.
         """
 
         return np.zeros_like(X)
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> FloatT | FloatArray[FloatT]:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
         """Dummy data generator.
 
         Parameters
@@ -133,7 +131,7 @@ class MockParameterOwner[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             Always 0.0.
         """
 

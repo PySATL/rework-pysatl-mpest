@@ -10,7 +10,7 @@ import numpy as np
 from pysatl_mpest.typings import FloatArray
 
 
-def assert_probabilities_sum_to_one(weights: FloatArray[Any], rtol: float = 1e-5, atol: float = 1e-8) -> None:
+def assert_probabilities_sum_to_one(weights: FloatArray, rtol: float = 1e-5, atol: float = 1e-8) -> None:
     """
     Asserts that the elements of the probability (or weights) array sum to one.
     If the array is multi-dimensional, the sum is checked along the last axis (axis=-1).
@@ -19,7 +19,7 @@ def assert_probabilities_sum_to_one(weights: FloatArray[Any], rtol: float = 1e-5
     np.testing.assert_allclose(np.sum(weights, axis=-1), 1.0, rtol=rtol, atol=atol)
 
 
-def assert_no_nan_inf(tensor: FloatArray[Any]) -> None:
+def assert_no_nan_inf(tensor: FloatArray) -> None:
     """
     Asserts that the tensor does not contain any NaN or Inf values.
     """
@@ -28,7 +28,7 @@ def assert_no_nan_inf(tensor: FloatArray[Any]) -> None:
     assert not np.isinf(tensor).any(), "Array contains Inf"
 
 
-def assert_computational_stability(log_probs: FloatArray[Any]) -> None:
+def assert_computational_stability(log_probs: FloatArray) -> None:
     """
     Asserts the computational stability of a log-probabilities (lpdf) tensor.
     Ensures no NaN values are present. For Inf, only -Inf is allowed
@@ -39,7 +39,7 @@ def assert_computational_stability(log_probs: FloatArray[Any]) -> None:
     assert not np.isposinf(log_probs).any(), "Log-probabilities array contains +Inf"
 
 
-def assert_dtype(tensor: FloatArray[Any] | list[Any], expected_dtype: type[np.floating]) -> None:
+def assert_dtype(tensor: FloatArray | list[Any], expected_dtype: type[np.floating]) -> None:
     """
     Asserts that the tensor or list elements have the specified floating point dtype.
     """
