@@ -45,10 +45,6 @@ class Exponential(CoreDistributionAdapter):
     def __init__(self, lambda_: float):
         super().__init__(ParametricFamilyRegister.get(FamilyName.EXPONENTIAL), "rate", lambda_=lambda_)
 
-    @property
-    def name(self) -> str:
-        return "Exponential"
-
     def __repr__(self) -> str:
         """Returns a string representation of the object.
 
