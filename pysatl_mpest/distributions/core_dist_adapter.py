@@ -94,17 +94,19 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         self.core_dist = self.core_family.distribution(self.parametrization_name, **current_params)
 
-    def _calc_characteristic(self, char_name: CharacteristicName, array: ArrayLike) -> FloatArray:
+    def _calc_characteristic(self, char_name: CharacteristicName, array: ArrayLike) -> np.float64 | FloatArray:
         """Helper to calculate a characteristic and cast the output."""
-        return cast(
-            FloatArray,
-            np.asarray(
-                self.core_dist.calculate_characteristic(char_name, np.asarray(array)),
-                dtype=np.float64,
-            ),
+        arr = np.asarray(array)
+        is_scalar = arr.ndim == 0
+        res = np.asarray(
+            self.core_dist.calculate_characteristic(char_name, arr),
+            dtype=np.float64,
         )
+        if is_scalar:
+            return np.float64(res.item())
+        return cast(FloatArray, res)
 
-    def pdf(self, X: ArrayLike) -> FloatArray:
+    def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """
         Evaluate the probability density function.
 
@@ -115,12 +117,13 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         Returns
         -------
-        FloatArray
+        np.float64 | FloatArray
             The computed PDF values.
         """
+
         return self._calc_characteristic(CharacteristicName.PDF, X)
 
-    def lpdf(self, X: ArrayLike) -> FloatArray:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """
         Evaluate the log probability density function.
 
@@ -131,12 +134,12 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         Returns
         -------
-        FloatArray
+        np.float64 | FloatArray
             The computed log-PDF values.
         """
         return self._calc_characteristic(CharacteristicName.LPDF, X)
 
-    def ppf(self, P: ArrayLike) -> FloatArray:
+    def ppf(self, P: ArrayLike) -> np.float64 | FloatArray:
         """
         Evaluate the percent point function (inverse CDF).
 
@@ -147,7 +150,7 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         Returns
         -------
-        FloatArray
+        np.float64 | FloatArray
             The computed PPF values.
         """
         return self._calc_characteristic(CharacteristicName.PPF, P)
@@ -170,6 +173,16 @@ class CoreDistributionAdapter(ContinuousDistribution):
         FloatArray
             Gradients of the log-pdf with respect to the free parameters.
         """
+
+        X = np.asarray(X, dtype=np.float64)
+        is_scalar = X.ndim == 0
+
+        if len(self.params_to_optimize) == 0:
+            if is_scalar:
+                return np.empty(shape=(0,))
+            else:
+                return np.empty(shape=(len(X), 0))
+
         fixed_kwargs = {name: getattr(self, name) for name in self._fixed_params}
 
         viewed_family = self.core_family.view(**fixed_kwargs)
@@ -177,7 +190,11 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         p_viewed = viewed_family.parametrizations[self.parametrization_name](**free_kwargs)
 
-        score_val = viewed_family.score(p_viewed, np.asarray(X))
+        score_val = viewed_family.score(p_viewed, X)
+
+        if is_scalar:
+            return score_val[0]
+
         return cast(FloatArray, np.asarray(score_val, dtype=np.float64))
 
     def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:

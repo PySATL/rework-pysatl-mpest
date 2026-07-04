@@ -9,11 +9,19 @@ __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from .golden import GoldenDataComparator
-from .math_assertions import assert_computational_stability, assert_no_nan_inf, assert_probabilities_sum_to_one
+from .math_assertions import (
+    assert_computational_stability,
+    assert_is_array_type,
+    assert_is_scalar_type,
+    assert_no_nan_inf,
+    assert_probabilities_sum_to_one,
+)
 
 __all__ = [
     "GoldenDataComparator",
     "assert_computational_stability",
+    "assert_is_array_type",
+    "assert_is_scalar_type",
     "assert_no_nan_inf",
     "assert_probabilities_sum_to_one",
 ]
