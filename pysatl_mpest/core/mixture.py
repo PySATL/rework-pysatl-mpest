@@ -207,6 +207,13 @@ class MixtureModel:
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
+    def set_component(self, new_component: "ContinuousDistribution", component_idx: int):
+        if not (0 <= component_idx <= self.n_components - 1):
+            raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
+
+        self._components[component_idx] = copy(new_component)
+        self._sorted_pairs_cache = None
+
     def remove_component(self, component_idx: int):
         """Removes a component from the mixture by its index.
 
