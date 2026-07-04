@@ -138,9 +138,7 @@ class TestExponentialLPDF:
 class TestExponentialPPF:
     """Tests for the ppf (Percent Point Function) method using hypothesis."""
 
-    @given(
-        lambda_=st_lambda_, p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True))
-    )
+    @given(lambda_=st_lambda_, p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)))
     def test_ppf_return_type_and_shape_for_array_input(self, lambda_, p):
         """Tests the return type and shape of the ppf method for array input."""
 
@@ -235,12 +233,19 @@ class TestExponentialGenerate:
 
         np.random.seed(456)
         random.seed(456)
-        lambda_ =  2.0
+        lambda_ = 2.0
         dist = Exponential(lambda_=lambda_)
         size = 10000
 
         samples = dist.generate(size=size)
 
-        _, p_value = kstest(samples, "expon", args=(0, 1 / lambda_,))
+        _, p_value = kstest(
+            samples,
+            "expon",
+            args=(
+                0,
+                1 / lambda_,
+            ),
+        )
         lower_bound = 0.05
         assert p_value > lower_bound
