@@ -32,6 +32,12 @@ class DummyDistribution(ContinuousDistribution):
         self.param2 = param2
         self._pdf_value = pdf_value
 
+    def clone_with_params(self, param_names: list[str], vector: list[float]) -> "DummyDistribution":
+        new_dist = DummyDistribution(self.param1, self.param2, self._pdf_value)
+        for name, value in zip(param_names, vector):
+            setattr(new_dist, name, float(value))
+        return new_dist
+
     @property
     def name(self) -> str:
         return "Dummy"

@@ -9,8 +9,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from copy import copy
-
 import numpy as np
 
 from ....distributions import ContinuousDistribution
@@ -59,22 +57,18 @@ def observed_data_likelihood_strategy(
     component_id = block.component_id
     params_to_optimize = sorted(list(block.params_to_optimize.intersection(component.params_to_optimize)))
 
-    temp_mixture = copy(state.curr_mixture)
-    target_comp = temp_mixture.components[component_id]
-    background_term = np.zeros(n_samples, dtype=np.float64)
+    weights = state.curr_mixture.weights
+    target_weight = weights[component_id]
 
+    background_term = np.zeros(n_samples, dtype=np.float64)
     for i, comp in enumerate(state.curr_mixture.components):
         if i != component_id:
-            background_term += temp_mixture.weights[i] * comp.pdf(X)
+            background_term += weights[i] * comp.pdf(X)
 
     def target(vector_params):
-        target_comp.set_params_from_vector(params_to_optimize, vector_params)
-        comp_pdf = target_comp.pdf(X)
-        mixture_pdf = background_term + (temp_mixture.weights[component_id] * comp_pdf)
-        mixture_pdf = np.maximum(mixture_pdf, tol)
-        res = -np.sum(np.log(mixture_pdf))
+        temp_comp = component.clone_with_params(params_to_optimize, vector_params)
+        mixture_pdf = np.maximum(background_term + target_weight * temp_comp.pdf(X), tol)
+        return -np.sum(np.log(mixture_pdf))
 
-        return res
-
-    new_params = optimizer.minimize(target, target_comp.get_params_vector(params_to_optimize))
+    new_params = optimizer.minimize(target, component.get_params_vector(params_to_optimize))
     return component_id, dict(zip(params_to_optimize, new_params))
