@@ -238,7 +238,7 @@ class MixtureModel:
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
-    def pdf(self, X: ArrayLike) -> float | FloatArray:
+    def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Probability Density Function of the mixture.
 
         The PDF is computed as the weighted sum of the PDFs of its
@@ -251,7 +251,7 @@ class MixtureModel:
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -259,7 +259,7 @@ class MixtureModel:
         X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
-    def lpdf(self, X: ArrayLike) -> float | FloatArray:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Logarithms of the Probability Density Function.
 
         Parameters
@@ -269,7 +269,7 @@ class MixtureModel:
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
@@ -306,7 +306,7 @@ class MixtureModel:
         X = np.asarray(X, dtype=np.float64)
         return np.sum(self.lpdf(X))
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> float | FloatArray:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
         """Generates random samples from the mixture model.
 
         First, a component is chosen based on the mixture weights. Then, a
@@ -323,7 +323,7 @@ class MixtureModel:
 
         Returns
         -------
-        float | FloatArray
+        np.float64 | FloatArray
             A NumPy array containing the generated samples. Returns an
             empty array if :attr:`size` is not positive.
         """

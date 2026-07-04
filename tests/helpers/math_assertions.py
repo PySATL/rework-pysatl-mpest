@@ -4,7 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from typing import Any
 
 import numpy as np
 from pysatl_mpest.typings import FloatArray
@@ -37,14 +36,3 @@ def assert_computational_stability(log_probs: FloatArray) -> None:
 
     assert not np.isnan(log_probs).any(), "Log-probabilities array contains NaN"
     assert not np.isposinf(log_probs).any(), "Log-probabilities array contains +Inf"
-
-
-def assert_dtype(tensor: FloatArray | list[Any], expected_dtype: type[np.floating]) -> None:
-    """
-    Asserts that the tensor or list elements have the specified floating point dtype.
-    """
-
-    if isinstance(tensor, list):
-        assert all(type(v) is expected_dtype for v in tensor), f"Not all elements in list are of type {expected_dtype}"
-    else:
-        assert tensor.dtype == expected_dtype, f"Expected dtype {expected_dtype}, got {tensor.dtype}"

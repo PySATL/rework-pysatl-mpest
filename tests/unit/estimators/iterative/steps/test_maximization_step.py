@@ -20,8 +20,6 @@ from pysatl_mpest.estimators.iterative import (
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
 
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
-
 
 @pytest.fixture
 def mock_optimizer(mocker: MockerFixture) -> Optimizer:
@@ -30,17 +28,14 @@ def mock_optimizer(mocker: MockerFixture) -> Optimizer:
     return mocker.MagicMock(spec=Optimizer)
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def parametrized_state(request, mocker: MockerFixture) -> PipelineState:
+@pytest.fixture
+def parametrized_state(mocker: MockerFixture) -> PipelineState:
     """
-    Creates a parametrized PipelineState fixture for various dtypes.
+    Creates a PipelineState fixture for testing.
 
-    This fixture runs for each data type in DTYPES_TO_TEST, constructing a
-    mock MixtureModel and PipelineState where all relevant arrays (X, H) and
-    model attributes share the same parametrized dtype. This enables robust
-    testing of data type preservation.
+    This fixture constructs a mock MixtureModel and PipelineState where
+    all relevant arrays (X, H) and model attributes use np.float64.
     """
-    dtype = request.param
 
     comp1 = mocker.MagicMock(spec=ContinuousDistribution)
     comp2 = mocker.MagicMock(spec=ContinuousDistribution)
@@ -49,10 +44,9 @@ def parametrized_state(request, mocker: MockerFixture) -> PipelineState:
     mixture = mocker.MagicMock(spec=MixtureModel)
     mixture.__getitem__.side_effect = lambda i: mock_components[i]
     mixture.__iter__.return_value = iter(mock_components)
-    mixture.dtype = dtype
 
-    X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=dtype)
-    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=dtype)
+    X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=np.float64)
+    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=np.float64)
     return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mixture, error=None)
 
 
@@ -119,7 +113,6 @@ class TestMaximizationStep:
         the correct arguments and that the component parameters are updated.
         """
         state = parametrized_state
-        dtype = state.curr_mixture.dtype
 
         block = OptimizationBlock(
             component_id=0,
@@ -130,7 +123,7 @@ class TestMaximizationStep:
 
         # Strategy patching
         mock_strategy = mocker.patch("pysatl_mpest.estimators.iterative.steps.maximization_step.q_function_strategy")
-        optimized_params = {"loc": dtype(1.5), "rate": dtype(2.5)}
+        optimized_params = {"loc": np.float64(1.5), "rate": np.float64(2.5)}
         mock_strategy.return_value = (0, optimized_params)
 
         # _strategies dict patching
@@ -150,10 +143,6 @@ class TestMaximizationStep:
         param_values = list(optimized_params.values())
         target_component.set_params_from_vector.assert_called_once_with(param_names, param_values)
 
-        # type correct
-        for value in param_values:
-            assert isinstance(value, dtype)
-
     def test_run_updates_mixture_weights_correctly(
         self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
     ):
@@ -161,13 +150,12 @@ class TestMaximizationStep:
         Verifies the correct update of mixture weights.
         """
         state = parametrized_state
-        dtype = state.curr_mixture.dtype
 
         # Sum of responsibilities for component 0: 0.8 + 0.7 + 0.1 + 0.2 = 1.8
         # Sum of responsibilities for component 1: 0.2 + 0.3 + 0.9 + 0.8 = 2.2
         # New weights: [1.8/4, 2.2/4] = [0.45, 0.55]
-        expected_new_weights = np.array([0.45, 0.55], dtype=dtype)
-        expected_log_weights = np.log(expected_new_weights + 1e-30).astype(dtype)
+        expected_new_weights = np.array([0.45, 0.55], dtype=np.float64)
+        expected_log_weights = np.log(expected_new_weights + 1e-30).astype(np.float64)
 
         # `log_weigths` patching
         p = mocker.PropertyMock()
@@ -182,11 +170,7 @@ class TestMaximizationStep:
 
         # Check that `log_weigths` was set correctly
         actual_log_weights = p.call_args.args[0]
-        atol = 1e-4 if dtype == np.float16 else 1e-7
-        np.testing.assert_allclose(actual_log_weights, expected_log_weights, atol=atol)
-
-        # type correct
-        assert actual_log_weights.dtype == dtype
+        np.testing.assert_allclose(actual_log_weights, expected_log_weights, atol=1e-7)
 
     def test_run_processes_blocks_sequentially(
         self,

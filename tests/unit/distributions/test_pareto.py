@@ -18,8 +18,6 @@ from pysatl_mpest.distributions.pareto import Pareto
 from scipy.integrate import quad
 from scipy.stats import kstest, pareto
 
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
-
 st_shape = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
 st_scale = st.floats(min_value=1e-3, max_value=1e3, allow_nan=False, allow_infinity=False)
 
@@ -40,72 +38,69 @@ def load_r_test_cases():
     return cases
 
 
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestParetoInitialization:
     """Tests for the __init__ method and basic properties."""
 
-    def test_initialization_successful(self, dtype):
+    def test_initialization_successful(self):
         """Tests that the instance is initialized correctly with valid parameters."""
 
         shape, scale = 0.5, 2.0
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
-        assert dist.shape.dtype == dtype
-        assert dist.scale.dtype == dtype
-        assert dist.shape == dtype(shape)
-        assert dist.scale == dtype(scale)
+        dist = Pareto(shape=shape, scale=scale)
+        assert dist.shape == shape
+        assert dist.scale == scale
 
-    def test_name_property(self, dtype):
+    def test_name_property(self):
         """Tests that the name property returns the correct string."""
 
-        dist = Pareto(shape=1.0, scale=2.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=2.0)
         assert dist.name == "Pareto"
 
-    def test_params_property(self, dtype):
+    def test_params_property(self):
         """Tests that the params property returns the correct set of parameter names."""
 
-        dist = Pareto(shape=1.0, scale=1.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=1.0)
         assert dist.params == {"shape", "scale"}
 
-    def test_shape_invariant_violation(self, dtype):
+    def test_shape_invariant_violation(self):
         """Tests that initializing with a non-positive shape raises a ValueError."""
 
         with pytest.raises(ValueError, match="Shape parameter must be a positive"):
-            Pareto(shape=0.0, scale=1.0, dtype=dtype)
+            Pareto(shape=0.0, scale=1.0)
         with pytest.raises(ValueError, match="Shape parameter must be a positive"):
-            Pareto(shape=-1.0, scale=1.0, dtype=dtype)
+            Pareto(shape=-1.0, scale=1.0)
 
-    def test_scale_invariant_violation(self, dtype):
+    def test_scale_invariant_violation(self):
         """Tests that initializing with a non-positive scale raises a ValueError."""
 
         with pytest.raises(ValueError, match="Scale parameter must be a positive"):
-            Pareto(shape=1.0, scale=0.0, dtype=dtype)
+            Pareto(shape=1.0, scale=0.0)
         with pytest.raises(ValueError, match="Scale parameter must be a positive"):
-            Pareto(shape=1.0, scale=-1.0, dtype=dtype)
+            Pareto(shape=1.0, scale=-1.0)
 
-    def test_shape_assignment_violation(self, dtype):
+    def test_shape_assignment_violation(self):
         """Tests that assigning a non-positive shape after initialization raises a ValueError."""
 
-        dist = Pareto(shape=1.0, scale=1.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=1.0)
         with pytest.raises(ValueError, match="Shape parameter must be a positive"):
             dist.shape = 0.0
         with pytest.raises(ValueError, match="Shape parameter must be a positive"):
             dist.shape = -10.0
 
-    def test_scale_assignment_violation(self, dtype):
+    def test_scale_assignment_violation(self):
         """Tests that assigning a non-positive scale after initialization raises a ValueError."""
 
-        dist = Pareto(shape=1.0, scale=1.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=1.0)
         with pytest.raises(ValueError, match="Scale parameter must be a positive"):
             dist.scale = 0.0
         with pytest.raises(ValueError, match="Scale parameter must be a positive"):
             dist.scale = -10.0
 
-    def test_repr_method(self, dtype):
+    def test_repr_method(self):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Pareto(shape=1.23, scale=4.56, dtype=dtype)
+        dist = Pareto(shape=1.23, scale=4.56)
         repr_str = repr(dist)
-        assert repr_str == f"Pareto(shape={dist.shape}, scale={dist.scale}, dtype=np.{dtype.__name__})"
+        assert repr_str == f"Pareto(shape={dist.shape}, scale={dist.scale})"
 
         recreated_dist = eval(repr_str)
         assert dist == recreated_dist
@@ -114,28 +109,26 @@ class TestParetoInitialization:
 class TestParetoPDF:
     """Tests for the pdf method using hypothesis."""
 
-    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e2, 1e2)))
-    def test_pdf_properties_for_array_input(self, x, dtype):
+    def test_pdf_properties_for_array_input(self, x):
         """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
-        dist = Pareto(shape=1.0, scale=2.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=2.0)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
-        assert pdf_values.dtype == dtype
+        assert pdf_values.dtype == np.float64
         assert pdf_values.shape == x.shape
         assert np.all(pdf_values >= 0)
 
-    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(x=st.floats(-1e2, 1e2))
-    def test_pdf_properties_for_scalar_input(self, x, dtype):
+    def test_pdf_properties_for_scalar_input(self, x):
         """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
 
         shape, scale = 1.0, 2.0
-        dist = Pareto(shape, scale, dtype=dtype)
+        dist = Pareto(shape, scale)
         pdf_value = dist.pdf(x)
         assert np.isscalar(pdf_value)
-        assert isinstance(pdf_value, dtype)
+        assert isinstance(pdf_value, (float, np.float64))
         assert pdf_value >= 0
 
     @pytest.mark.parametrize("x,shape,scale,expected_pdf", load_r_test_cases())
@@ -181,26 +174,24 @@ class TestParetoPDF:
 class TestParetoLPDF:
     """Tests for the lpdf (log-PDF) method using hypothesis."""
 
-    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(0, 10), elements=st.floats(-1e6, 1e6)))
-    def test_lpdf_return_type_and_shape_for_array_input(self, shape, scale, x, dtype):
+    def test_lpdf_return_type_and_shape_for_array_input(self, shape, scale, x):
         """Tests the return type and shape of the lpdf method for array input."""
 
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
-        assert lpdf_values.dtype == dtype
+        assert lpdf_values.dtype == np.float64
         assert lpdf_values.shape == x.shape
 
-    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(shape=st_shape, scale=st_scale, x=st.floats(-1e6, 1e6))
-    def test_lpdf_return_type_and_shape_for_scalar_input(self, shape, scale, x, dtype):
+    def test_lpdf_return_type_and_shape_for_scalar_input(self, shape, scale, x):
         """Tests the return type and shape of the lpdf method for scalar input."""
 
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         lpdf_value = dist.lpdf(x)
         assert np.isscalar(lpdf_value)
-        assert isinstance(lpdf_value, dtype)
+        assert isinstance(lpdf_value, (float, np.float64))
 
     @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3, allow_infinity=False, allow_nan=False))
     def test_lpdf_against_scipy(self, shape, scale, x):
@@ -224,30 +215,28 @@ class TestParetoLPDF:
 class TestParetoPPF:
     """Tests for the ppf (Percent Point Function) method using hypothesis."""
 
-    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(
         shape=st_shape,
         scale=st_scale,
         p=arrays(np.float64, st.integers(0, 10), elements=st.floats(0, 1, exclude_max=True)),
     )
-    def test_ppf_return_type_and_shape_for_array_input(self, shape, scale, p, dtype):
+    def test_ppf_return_type_and_shape_for_array_input(self, shape, scale, p):
         """Tests the return type and shape of the ppf method for array input."""
 
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
-        assert ppf_values.dtype == dtype
+        assert ppf_values.dtype == np.float64
         assert ppf_values.shape == p.shape
 
-    @pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
     @given(shape=st_shape, scale=st_scale, p=st.floats(0, 1, exclude_max=True))
-    def test_ppf_return_type_and_shape_for_scalar_input(self, shape, scale, p, dtype):
+    def test_ppf_return_type_and_shape_for_scalar_input(self, shape, scale, p):
         """Tests the return type and shape of the ppf method for scalar input."""
 
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         ppf_value = dist.ppf(p)
         assert np.isscalar(ppf_value)
-        assert isinstance(ppf_value, dtype)
+        assert isinstance(ppf_value, (float, np.float64))
 
     @given(shape=st_shape, scale=st_scale, p=st.floats(0, 1))
     def test_ppf_against_scipy(self, shape, scale, p):
@@ -266,7 +255,6 @@ class TestParetoPPF:
         assert np.isnan(dist.ppf(p_val))
 
 
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestParetoGradients:
     """Tests for gradient calculation methods."""
 
@@ -274,65 +262,63 @@ class TestParetoGradients:
 
     @settings(suppress_health_check=[HealthCheck.filter_too_much])
     @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_shape_numerical_for_array_input(self, shape, scale, x, dtype):
+    def test_dlog_shape_numerical_for_array_input(self, shape, scale, x):
         """Checks the analytical gradient for 'shape' against a numerical approximation for array input."""
 
         assume(np.all(x > scale))
 
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         analytical_grad = dist._dlog_shape(x)
 
         assert isinstance(analytical_grad, np.ndarray)
-        assert analytical_grad.dtype == dtype
+        assert analytical_grad.dtype == np.float64
         assert analytical_grad.shape == x.shape
 
-        if dtype == np.float64:
-            lpdf_plus_h = Pareto(shape=shape + self.h, scale=scale).lpdf(x)
-            lpdf_minus_h = Pareto(shape=shape - self.h, scale=scale).lpdf(x)
+        lpdf_plus_h = Pareto(shape=shape + self.h, scale=scale).lpdf(x)
+        lpdf_minus_h = Pareto(shape=shape - self.h, scale=scale).lpdf(x)
 
-            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
-            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
+        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
 
     @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3))
-    def test_dlog_shape_for_scalar_input(self, shape, scale, x, dtype):
+    def test_dlog_shape_for_scalar_input(self, shape, scale, x):
         """Checks that the gradient for 'shape' for a scalar input returns a scalar."""
 
         assume(x > scale)
-        dist = Pareto(shape, scale, dtype=dtype)
+        dist = Pareto(shape, scale)
         analytical_grad = dist._dlog_shape(x)
         assert np.isscalar(analytical_grad)
-        assert isinstance(analytical_grad, dtype)
+        assert isinstance(analytical_grad, (float, np.float64))
 
     @settings(suppress_health_check=[HealthCheck.filter_too_much])
     @given(shape=st_shape, scale=st_scale, x=arrays(np.float64, st.integers(1, 10), elements=st.floats(1e-3, 1e3)))
-    def test_dlog_scale_numerical_for_array_input(self, shape, scale, x, dtype):
+    def test_dlog_scale_numerical_for_array_input(self, shape, scale, x):
         """Checks the analytical gradient for 'scale' against a numerical approximation for array input."""
 
         assume(np.all(x > scale + self.h))
 
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         analytical_grad = dist._dlog_scale(x)
 
         assert isinstance(analytical_grad, np.ndarray)
-        assert analytical_grad.dtype == dtype
+        assert analytical_grad.dtype == np.float64
         assert analytical_grad.shape == x.shape
 
-        if dtype == np.float64:
-            lpdf_plus_h = Pareto(shape=shape, scale=scale + self.h).lpdf(x)
-            lpdf_minus_h = Pareto(shape=shape, scale=scale - self.h).lpdf(x)
+        lpdf_plus_h = Pareto(shape=shape, scale=scale + self.h).lpdf(x)
+        lpdf_minus_h = Pareto(shape=shape, scale=scale - self.h).lpdf(x)
 
-            numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
-            np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
+        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
+        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
 
     @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3))
-    def test_dlog_scale_for_scalar_input(self, shape, scale, x, dtype):
+    def test_dlog_scale_for_scalar_input(self, shape, scale, x):
         """Checks that the gradient for 'scale' for a scalar input returns a scalar."""
 
         assume(x > scale + self.h)
-        dist = Pareto(shape, scale, dtype=dtype)
+        dist = Pareto(shape, scale)
         analytical_grad = dist._dlog_scale(x)
         assert np.isscalar(analytical_grad)
-        assert isinstance(analytical_grad, dtype)
+        assert isinstance(analytical_grad, (float, np.float64))
 
     @pytest.mark.parametrize(
         "fixed_params, expected_shape_col, expected_params",
@@ -343,10 +329,10 @@ class TestParetoGradients:
             (["shape", "scale"], 0, []),
         ],
     )
-    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params, dtype):
+    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
         """Tests the structure and content of log_gradients with various fixed parameters."""
 
-        dist = Pareto(shape=1.0, scale=2.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=2.0)
         for param in fixed_params:
             dist.fix_param(param)
 
@@ -354,7 +340,7 @@ class TestParetoGradients:
         gradients = dist.log_gradients(x)
 
         assert isinstance(gradients, np.ndarray)
-        assert gradients.dtype == dtype
+        assert gradients.dtype == np.float64
         assert gradients.shape == (len(x), expected_shape_col)
 
         if "shape" in expected_params:
@@ -365,18 +351,17 @@ class TestParetoGradients:
             np.testing.assert_allclose(gradients[:, idx], dist._dlog_scale(x))
 
     @given(shape=st_shape, scale=st_scale, x=st.floats(1e-3, 1e3))
-    def test_log_gradients_for_scalar_input(self, shape, scale, x, dtype):
+    def test_log_gradients_for_scalar_input(self, shape, scale, x):
         """Checks that the log_gradients for a scalar input returns a 1D-array."""
 
         assume(x > scale + self.h)
-        dist = Pareto(shape, scale, dtype=dtype)
+        dist = Pareto(shape, scale)
         gradients = dist.log_gradients(x)
         assert isinstance(gradients, np.ndarray)
-        assert gradients.dtype == dtype
+        assert gradients.dtype == np.float64
         assert gradients.ndim == 1
 
 
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 class TestParetoGenerate:
     """Tests for the generate method."""
 
@@ -390,38 +375,38 @@ class TestParetoGenerate:
             ((2, 3), (2, 3), False),
         ],
     )
-    def test_generate_type_and_shape(self, dtype, size, expected_shape, is_scalar):
+    def test_generate_type_and_shape(self, size, expected_shape, is_scalar):
         """Tests that generated samples have the correct type and shape."""
 
         np.random.seed(42)
         random.seed(42)
-        dist = Pareto(shape=1.0, scale=2.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=2.0)
         samples = dist.generate(size=size)
 
         if is_scalar:
             assert np.isscalar(samples)
-            assert isinstance(samples, dtype)
+            assert isinstance(samples, (float, np.float64))
         else:
             assert isinstance(samples, np.ndarray)
             assert samples.shape == expected_shape
-            assert samples.dtype == dtype
+            assert samples.dtype == np.float64
 
     @pytest.mark.parametrize("size", [-1, -10])
-    def test_generate_negative_size(self, size, dtype):
+    def test_generate_negative_size(self, size):
         """Tests that generating a negative number of samples raises ValueError."""
 
-        dist = Pareto(shape=1.0, scale=2.0, dtype=dtype)
+        dist = Pareto(shape=1.0, scale=2.0)
 
         with pytest.raises(ValueError):
             dist.generate(size=size)
 
-    def test_generate_statistical_properties(self, dtype):
+    def test_generate_statistical_properties(self):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
         np.random.seed(123)
         random.seed(123)
         shape, scale = 5.0, 0.5
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         size = 20000
 
         samples = dist.generate(size=size)
@@ -432,13 +417,13 @@ class TestParetoGenerate:
         assert np.mean(samples, dtype=np.float64) == pytest.approx(theoretical_mean, rel=0.1)
         assert np.var(samples, dtype=np.float64) == pytest.approx(theoretical_var, rel=0.1)
 
-    def test_generate_kolmogorov_smirnov(self, dtype):
+    def test_generate_kolmogorov_smirnov(self):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
 
         np.random.seed(456)
         random.seed(456)
         shape, scale = 10.0, 2.0
-        dist = Pareto(shape=shape, scale=scale, dtype=dtype)
+        dist = Pareto(shape=shape, scale=scale)
         size = 1000
 
         samples = dist.generate(size=size)

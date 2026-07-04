@@ -455,5 +455,5 @@ class Beta(ContinuousDistribution):
             f"alpha={self.alpha}, "
             f"beta={self.beta}, "
             f"left_border={self.left_border}, "
-            f"right_border={self.right_border}, "
+            f"right_border={self.right_border})"
         )
