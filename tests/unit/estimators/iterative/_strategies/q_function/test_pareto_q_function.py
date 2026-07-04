@@ -13,31 +13,27 @@ from pysatl_mpest.distributions import Pareto
 from pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock, PipelineState
 from pysatl_mpest.estimators.iterative._strategies import q_function_strategy
 
-DTYPES_TO_TEST: list[np.floating] = [np.float16, np.float32, np.float64]
-
 # Test Fixtures
 # -------------
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def parametrized_pareto_setup(request) -> tuple[Pareto, PipelineState, np.floating]:
+@pytest.fixture()
+def parametrized_pareto_setup() -> tuple[Pareto, PipelineState]:
     """
     Creates a parametrized fixture providing a default Pareto component, and a
     corresponding PipelineState for various dtypes.
     """
-    dtype = request.param
-
-    component = Pareto(shape=1.0, scale=0.5, dtype=dtype)
+    component = Pareto(shape=1.0, scale=0.5)
 
     state = PipelineState(
-        X=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=dtype),
-        H=np.array([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.6, 0.4], [0.5, 0.5]], dtype=dtype),
+        X=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64),
+        H=np.array([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.6, 0.4], [0.5, 0.5]], dtype=np.float64),
         prev_mixture=None,
         curr_mixture=None,
         error=None,
     )
 
-    return component, state, dtype
+    return component, state
 
 
 # Tests
@@ -49,7 +45,7 @@ def test_q_function_pareto_raises_value_error_if_h_is_none(parametrized_pareto_s
     Verifies that a ValueError is raised if the responsibility
     matrix H in the pipeline state has not been computed.
     """
-    pareto_component, state, _ = parametrized_pareto_setup
+    pareto_component, state = parametrized_pareto_setup
 
     state.H = None
 
@@ -67,7 +63,7 @@ def test_q_function_pareto_returns_correct_types(parametrized_pareto_setup):
     data types (int, dict[str, float]).
     """
 
-    pareto_component, pipeline_state, dtype = parametrized_pareto_setup
+    pareto_component, pipeline_state = parametrized_pareto_setup
 
     expected_len = 2
 
@@ -85,7 +81,7 @@ def test_q_function_pareto_returns_correct_types(parametrized_pareto_setup):
     if result[1]:
         key, value = next(iter(result[1].items()))
         assert isinstance(key, str)
-        assert isinstance(value, dtype)
+        assert isinstance(value, float)
 
 
 @pytest.mark.parametrize(
@@ -109,7 +105,7 @@ def test_q_function_pareto_respects_fixed_and_optimizable_params(
     to update based on the optimization block and the component's fixed parameters.
     """
 
-    pareto_component, pipeline_state, dtype = parametrized_pareto_setup
+    pareto_component, pipeline_state = parametrized_pareto_setup
 
     for param in fixed_params_on_component:
         pareto_component.fix_param(param)
@@ -131,9 +127,9 @@ def test_q_function_pareto_handles_negligible_responsibility(parametrized_pareto
     its parameters are not updated.
     """
 
-    pareto_component, pipeline_state, dtype = parametrized_pareto_setup
+    pareto_component, pipeline_state = parametrized_pareto_setup
 
-    pipeline_state.H.fill(dtype(1e-10))  # Make all responsibilities negligible
+    pipeline_state.H.fill(1e-10)  # Make all responsibilities negligible
     block = OptimizationBlock(
         component_id=0,
         params_to_optimize={"shape", "scale"},
@@ -150,16 +146,15 @@ def test_pareto_scale_fallback_with_invalid_data():
     Tests that Pareto scale optimization falls back to current value if no valid data
     points are found (mask is empty) (Line 384 else branch).
     """
-    dtype = np.float64
     # Responsibilities are high (1.0), so we pass the early N_j check.
     # However, data X is negative. Pareto requires X > 0 (and X >= scale).
     # The mask (H > tol) & (X > 0) will be all False.
 
-    X = np.array([-1.0, -2.0], dtype=dtype)
-    H = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=dtype)
+    X = np.array([-1.0, -2.0], dtype=np.float64)
+    H = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=np.float64)
 
     original_scale = 1.5
-    comp = Pareto(shape=2.0, scale=original_scale, dtype=dtype)
+    comp = Pareto(shape=2.0, scale=original_scale)
 
     state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
 
@@ -179,16 +174,15 @@ def test_pareto_shape_fallback_zero_denominator():
     It triggers when the denominator (weighted sum of log(X/scale)) is close to zero.
     This implies X is very close to scale (log(1) = 0).
     """
-    dtype = np.float64
     # log(X/scale) = log(1) = 0
     # denominator = sum(H * 0) = 0
 
-    X = np.array([2.0], dtype=dtype)
-    H = np.array([[1.0, 0.0]], dtype=dtype)
+    X = np.array([2.0], dtype=np.float64)
+    H = np.array([[1.0, 0.0]], dtype=np.float64)
 
     original_shape = 3.0
     original_scale = 2.0
-    comp = Pareto(shape=original_shape, scale=original_scale, dtype=dtype)
+    comp = Pareto(shape=original_shape, scale=original_scale)
 
     state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
 
@@ -208,20 +202,18 @@ def test_pareto_shape_fallback_zero_denominator():
 
 
 @st.composite
-def pareto_data_and_true_params(draw, dtype_strategy=st.sampled_from([np.float32, np.float64])):
+def pareto_data_and_true_params(draw):
     """Generates a true Pareto component and a data sample from it."""
-
-    dtype = draw(dtype_strategy)
 
     # 1. Generate realistic parameters for the true distribution
     true_shape = draw(st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False))
     true_scale = draw(st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False))
-    true_component = Pareto(shape=true_shape, scale=true_scale, dtype=dtype)
+    true_component = Pareto(shape=true_shape, scale=true_scale)
 
     # 2. Generate a large data sample from this distribution
     X = true_component.generate(size=1000000)
 
-    return (X, dtype(true_shape), dtype(true_scale), dtype)
+    return (X, true_shape, true_scale)
 
 
 @settings(max_examples=50, deadline=None)
@@ -234,16 +226,16 @@ def test_q_function_pareto_recovers_true_params_on_ideal_data(data):
     """
 
     # --- Arrange ---
-    X, true_shape, true_scale, dtype = data
+    X, true_shape, true_scale = data
 
     # This is the key assumption for this test: perfect knowledge that all
     # data points belong to our component of interest (responsibilities are all 1.0).
-    H_j = np.ones_like(X, dtype=dtype)
+    H_j = np.ones_like(X, dtype=np.float64)
     H = np.vstack([H_j, np.zeros_like(H_j)]).T  # Simulate a 2-component mixture context
 
     # Use a starting component with completely different parameters to ensure
     # the update is based on data, not the initial guess.
-    start_component = Pareto(shape=0.001, scale=0.001, dtype=dtype)
+    start_component = Pareto(shape=0.001, scale=0.001)
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
     block = OptimizationBlock(
@@ -256,7 +248,3 @@ def test_q_function_pareto_recovers_true_params_on_ideal_data(data):
     # --- Assert ---
     assert new_params[Pareto.PARAM_SHAPE] == pytest.approx(true_shape, rel=0.05, abs=0.2)
     assert new_params[Pareto.PARAM_SCALE] == pytest.approx(true_scale, rel=0.05)
-
-    # Verify that the returned parameters have the correct dtype.
-    assert isinstance(new_params[Pareto.PARAM_SHAPE], dtype)
-    assert isinstance(new_params[Pareto.PARAM_SCALE], dtype)

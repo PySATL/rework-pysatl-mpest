@@ -8,10 +8,9 @@ from collections.abc import Callable
 
 from pysatl_mpest.estimators.iterative.breakpointer import Breakpointer
 from pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
-from pysatl_mpest.typings import FloatingType
 
 
-class MockMaxIterationsBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
+class MockMaxIterationsBreakpointer(Breakpointer):
     """A mock breakpointer that stops after a specific number of iterations.
 
     Parameters
@@ -24,12 +23,12 @@ class MockMaxIterationsBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
         self.max_iterations = max_iterations
         self._current_iteration = 0
 
-    def check(self, state: PipelineState[FloatT]) -> bool:
+    def check(self, state: PipelineState) -> bool:
         """Evaluates the state and returns True if max iterations are reached.
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current pipeline state.
 
         Returns
@@ -42,24 +41,24 @@ class MockMaxIterationsBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
         return self._current_iteration >= self.max_iterations
 
 
-class MockCallbackBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
+class MockCallbackBreakpointer(Breakpointer):
     """A mock breakpointer that delegates the check logic to a callback.
 
     Parameters
     ----------
-    check_callback : Callable[[PipelineState[FloatT]], bool]
+    check_callback : Callable[[PipelineState], bool]
         A function to evaluate the state and return a boolean.
     """
 
-    def __init__(self, check_callback: Callable[[PipelineState[FloatT]], bool]) -> None:
+    def __init__(self, check_callback: Callable[[PipelineState], bool]) -> None:
         self.check_callback = check_callback
 
-    def check(self, state: PipelineState[FloatT]) -> bool:
+    def check(self, state: PipelineState) -> bool:
         """Evaluates the state using the provided callback.
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current pipeline state.
 
         Returns
@@ -71,15 +70,15 @@ class MockCallbackBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
         return self.check_callback(state)
 
 
-class MockNeverBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
+class MockNeverBreakpointer(Breakpointer):
     """A mock breakpointer that never signals to stop."""
 
-    def check(self, state: PipelineState[FloatT]) -> bool:
+    def check(self, state: PipelineState) -> bool:
         """Always returns False.
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current pipeline state.
 
         Returns

@@ -7,10 +7,10 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from pysatl_mpest.core import Parameter
 from pysatl_mpest.distributions import ContinuousDistribution
-from pysatl_mpest.typings import ArrayLike, FloatArray, FloatingType
+from pysatl_mpest.typings import ArrayLike, FloatArray
 
 
-class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class MockContinuousDistribution(ContinuousDistribution):
     """A concrete implementation of ContinuousDistribution for testing purposes.
 
     This class implements all abstract methods, allowing to instantiate it
@@ -24,15 +24,13 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
         Second parameter, by default 2.0
     name : str, optional
         Name of the distribution, by default "Dummy"
-    dtype : type[FloatT], optional
-        Floating point precision type, by default np.float64
     """
 
     param1 = Parameter()
     param2 = Parameter()
 
-    def __init__(self, param1: float = 1.0, param2: float = 2.0, name: str = "Dummy", dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        super().__init__(dtype=dtype)
+    def __init__(self, param1: float = 1.0, param2: float = 2.0, name: str = "Dummy"):
+        super().__init__()
         self.param1 = param1
         self.param2 = param2
         self._name = name
@@ -61,7 +59,7 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
 
         return {"param1", "param2"}
 
-    def pdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Predictable PDF returning 1.0 for all elements.
 
         Parameters
@@ -71,16 +69,16 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             1.0 for each element.
         """
 
-        X_arr = np.asarray(X, dtype=self.dtype)
+        X_arr = np.asarray(X, dtype=np.float64)
         if X_arr.ndim == 0:
-            return self.dtype(1.0)
-        return np.ones_like(X_arr, dtype=self.dtype)
+            return np.float64(1.0)
+        return np.ones_like(X_arr, dtype=np.float64)
 
-    def ppf(self, P: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def ppf(self, P: ArrayLike) -> np.float64 | FloatArray:
         """Predictable PPF returning 1.0 for all elements.
 
         Parameters
@@ -90,16 +88,16 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             1.0 for each element.
         """
 
-        P_arr = np.asarray(P, dtype=self.dtype)
+        P_arr = np.asarray(P, dtype=np.float64)
         if P_arr.ndim == 0:
-            return self.dtype(1.0)
-        return np.ones_like(P_arr, dtype=self.dtype)
+            return np.float64(1.0)
+        return np.ones_like(P_arr, dtype=np.float64)
 
-    def lpdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Predictable LPDF returning log(1 + X).
 
         A predictable lpdf is needed to test q_function.
@@ -112,17 +110,17 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-probability values.
         """
 
-        X_arr = np.asarray(X, dtype=self.dtype)
+        X_arr = np.asarray(X, dtype=np.float64)
         res = np.log1p(X_arr)
         if res.ndim == 0:
-            return self.dtype(res)
-        return res.astype(self.dtype)
+            return np.float64(res)
+        return res.astype(np.float64)
 
-    def log_gradients(self, X: ArrayLike) -> FloatArray[FloatT]:
+    def log_gradients(self, X: ArrayLike) -> FloatArray:
         """Predictable gradients returning zeros.
 
         Parameters
@@ -132,15 +130,15 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array of zeros matching the shape of (len(X), num_params).
         """
 
         X_arr = np.atleast_1d(X)
         num_params = len(self.params_to_optimize)
-        return np.zeros((len(X_arr), num_params), dtype=self.dtype)
+        return np.zeros((len(X_arr), num_params), dtype=np.float64)
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> FloatT | FloatArray[FloatT]:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
         """Predictable generator returning sequential numbers.
 
         Parameters
@@ -150,23 +148,23 @@ class MockContinuousDistribution[FloatT: FloatingType](ContinuousDistribution[Fl
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             Sequential values up to the requested size.
         """
 
         if size is None:
-            return self.dtype(0.0)
+            return np.float64(0.0)
 
         if isinstance(size, tuple):
             n = int(np.prod(size))
-            return np.arange(n, dtype=self.dtype).reshape(size)
-        return np.arange(size, dtype=self.dtype)
+            return np.arange(n, dtype=np.float64).reshape(size)
+        return np.arange(size, dtype=np.float64)
 
 
-class MockInfLpdfContinuousDistribution[FloatT: FloatingType](MockContinuousDistribution[FloatT]):
+class MockInfLpdfContinuousDistribution(MockContinuousDistribution):
     """A dummy distribution that returns -inf for negative inputs."""
 
-    def lpdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Predictable LPDF returning -inf if X < 0, else log1p(X).
 
         Parameters
@@ -176,12 +174,12 @@ class MockInfLpdfContinuousDistribution[FloatT: FloatingType](MockContinuousDist
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-probability values, with -inf where X < 0.
         """
 
-        X_arr = np.asarray(X, dtype=self.dtype)
+        X_arr = np.asarray(X, dtype=np.float64)
         res = np.where(X_arr < 0, -np.inf, np.log1p(X_arr))
         if res.ndim == 0:
-            return self.dtype(res)
-        return res.astype(self.dtype)
+            return res
+        return res.astype(np.float64)

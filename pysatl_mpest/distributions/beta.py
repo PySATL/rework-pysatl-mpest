@@ -10,11 +10,10 @@ from scipy.special import digamma
 from scipy.stats import beta as beta_dist
 
 from ..core import Parameter
-from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class Beta(ContinuousDistribution):
     """Class for the four-parameteric beta distribution.
        Parameters
        ----------
@@ -67,9 +66,8 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         beta: float,
         left_border: float,
         right_border: float,
-        dtype: type[FloatT] = np.float64,  # type: ignore[assignment]
     ):
-        super().__init__(dtype=dtype)
+        super().__init__()
         if left_border >= right_border:
             raise ValueError("Left border must be less than right border")
         self.alpha = alpha
@@ -109,13 +107,13 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
 
         """
 
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -139,22 +137,21 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(P)
-        P = np.asarray(P, dtype=self.dtype)
-        dtype = self.dtype
+        P = np.asarray(P, dtype=np.float64)
 
         result = np.where(
             (P >= 0) & (P <= 1),
             (
                 self.left_border
-                + (self.right_border - self.left_border) * beta_dist.ppf(P, self.alpha, self.beta).astype(dtype)
+                + (self.right_border - self.left_border) * beta_dist.ppf(P, self.alpha, self.beta).astype(np.float64)
             ),
-            dtype(np.nan),
+            np.nan,
         )
 
         if is_scalar:
@@ -186,18 +183,17 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         Z = (X - self.left_border) / (self.right_border - self.left_border)
 
-        log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta).astype(dtype)
+        log_pdf_standard = beta_dist.logpdf(Z, self.alpha, self.beta).astype(np.float64)
         result = log_pdf_standard - np.log(self.right_border - self.left_border)
 
         if is_scalar:
@@ -227,22 +223,21 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`alpha` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         result = np.where(
             in_bounds,
             np.log(X - self.left_border)
             - np.log(self.right_border - self.left_border)
-            - (dtype(digamma(self.alpha)) - dtype(digamma(self.alpha + self.beta))),
-            dtype(0.0),
+            - (digamma(self.alpha) - digamma(self.alpha + self.beta)),
+            0.0,
         )
 
         if is_scalar:
@@ -272,22 +267,21 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`beta` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         result = np.where(
             in_bounds,
             np.log(self.right_border - X)
             - np.log(self.right_border - self.left_border)
-            - (dtype(digamma(self.beta)) - dtype(digamma(self.alpha + self.beta))),
-            dtype(0.0),
+            - (digamma(self.beta) - digamma(self.alpha + self.beta)),
+            0.0,
         )
 
         if is_scalar:
@@ -315,23 +309,22 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`left_border` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         result = np.where(
             in_bounds,
             (
-                ((self.alpha + self.beta - dtype(1)) / (self.right_border - self.left_border))
-                - ((self.alpha - dtype(1)) / (X - self.left_border))
+                ((self.alpha + self.beta - 1.0) / (self.right_border - self.left_border))
+                - ((self.alpha - 1.0) / (X - self.left_border))
             ),
-            dtype(0.0),
+            0.0,
         )
 
         if is_scalar:
@@ -359,23 +352,22 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`right_border` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         in_bounds = (self.left_border < X) & (self.right_border >= X)
         result = np.where(
             in_bounds,
             (
-                ((self.beta - dtype(1)) / (self.right_border - X))
-                - ((self.alpha + self.beta - dtype(1)) / (self.right_border - self.left_border))
+                ((self.beta - 1.0) / (self.right_border - X))
+                - ((self.alpha + self.beta - 1.0) / (self.right_border - self.left_border))
             ),
-            dtype(0.0),
+            0.0,
         )
 
         if is_scalar:
@@ -394,7 +386,7 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -403,7 +395,7 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
 
         gradient_calculators = {
             self.PARAM_ALPHA: self._dlog_alpha,
@@ -415,7 +407,7 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0), dtype=self.dtype)
+            return np.empty((len(X), 0), dtype=np.float64)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -436,7 +428,7 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
@@ -445,8 +437,8 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         )
 
         if size is None:
-            return self.dtype(samples)
-        return np.asarray(samples, dtype=self.dtype)
+            return np.float64(samples)
+        return np.asarray(samples, dtype=np.float64)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -455,7 +447,7 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Beta(alpha=1.0, beta=2.0, left_border=0.0, right_border=1.0, dtype=np.float64)".
+            "Beta(alpha=1.0, beta=2.0, left_border=0.0, right_border=1.0)".
         """
 
         return (
@@ -463,6 +455,5 @@ class Beta[FloatT: FloatingType](ContinuousDistribution[FloatT]):
             f"alpha={self.alpha}, "
             f"beta={self.beta}, "
             f"left_border={self.left_border}, "
-            f"right_border={self.right_border}, "
-            f"dtype=np.{self.dtype.__name__})"
+            f"right_border={self.right_border})"
         )

@@ -16,14 +16,12 @@ from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.distributions import ContinuousDistribution
 from pysatl_mpest.estimators.iterative import PipelineState, PriorThresholdPruner
 
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
-
 
 class DummyDistribution(ContinuousDistribution):
     """A simple mock implementation of ContinuousDistribution for testing purposes."""
 
-    def __init__(self, name: str, dtype: np.floating = np.float64):
-        super().__init__(dtype=dtype)
+    def __init__(self, name: str):
+        super().__init__()
         self._name = name
 
     @property
@@ -50,7 +48,7 @@ class DummyDistribution(ContinuousDistribution):
         pass
 
     def __repr__(self):
-        return f"DummyDistribution(name='{self.name}, dtype='{self.dtype}')"
+        return f"DummyDistribution(name='{self.name}')"
 
 
 # --- Fixtures ---
@@ -102,7 +100,6 @@ def test_init_raises_value_error_for_invalid_threshold(invalid_threshold):
 # --- Tests for the prune method ---
 
 
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
 @pytest.mark.parametrize(
     "threshold, initial_weights, expected_n_components, expected_remaining_indices, expected_removed_indices",
     [
@@ -132,7 +129,6 @@ def test_prune_removes_correct_components(
     expected_n_components,
     expected_remaining_indices,
     expected_removed_indices,
-    dtype,
 ):
     """
     Basic and edge case tests: checks the core logic of component removal.
@@ -141,10 +137,10 @@ def test_prune_removes_correct_components(
     """
 
     pruner = PriorThresholdPruner(threshold)
-    components = [DummyDistribution(f"comp_{i}", dtype=dtype) for i in range(len(initial_weights))]
-    initial_mixture = MixtureModel(components, weights=initial_weights, dtype=dtype)
+    components = [DummyDistribution(f"comp_{i}") for i in range(len(initial_weights))]
+    initial_mixture = MixtureModel(components, weights=initial_weights)
     state = PipelineState(
-        X=np.array([], dtype=dtype), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
+        X=np.array([], dtype=np.float64), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
     )
 
     new_state, removed_components_indices = pruner.prune(state)
@@ -162,15 +158,8 @@ def test_prune_removes_correct_components(
     # Check that the sum of weights after pruning is 1.0
     assert np.isclose(np.sum(new_mixture.weights), 1.0)
 
-    # --- Assert dtype preservation ---
-    assert new_mixture.dtype == dtype
-    assert new_mixture.weights.dtype == dtype
-    for comp in new_mixture.components:
-        assert comp.dtype == dtype
 
-
-@pytest.mark.parametrize("dtype", DTYPES_TO_TEST)
-def test_prune_does_not_remove_last_component(dtype):
+def test_prune_does_not_remove_last_component():
     """
     Edge case test: verifies that the pruner does not remove the last component,
     even if its weight is below the threshold.
@@ -178,19 +167,15 @@ def test_prune_does_not_remove_last_component(dtype):
 
     pruner = PriorThresholdPruner(threshold=0.9)
     # Mixture with two components, both below the threshold
-    components = [DummyDistribution("comp_0", dtype=dtype), DummyDistribution("comp_1", dtype=dtype)]
-    initial_mixture = MixtureModel(components[:2], weights=[0.5, 0.5], dtype=dtype)
+    components = [DummyDistribution("comp_0"), DummyDistribution("comp_1")]
+    initial_mixture = MixtureModel(components[:2], weights=[0.5, 0.5])
     state = PipelineState(
-        X=np.array([], dtype=dtype), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
+        X=np.array([], dtype=np.float64), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
     )
 
     # After the first prune, one component will remain, which should not be removed
     new_state, _ = pruner.prune(state)
     assert new_state.curr_mixture.n_components == 1
-
-    # type correct
-    assert new_state.curr_mixture.dtype == dtype
-    assert new_state.curr_mixture.weights.dtype == dtype
 
 
 def test_prune_preserves_other_pipeline_state_attributes(dummy_components):

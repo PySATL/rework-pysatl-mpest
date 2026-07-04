@@ -12,10 +12,10 @@ from collections.abc import Sequence
 import numpy as np
 from numpy.typing import ArrayLike
 
-from ..typings import FloatArray, FloatingType
+from ..typings import FloatArray
 
 
-class ContinuousDistribution[FloatT: FloatingType](ABC):
+class ContinuousDistribution(ABC):
     """Abstract base class for continuous distributions.
 
     This class defines the basic mathematical functions of distributions
@@ -87,23 +87,8 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
     """
 
-    _dtype: type[FloatT]
-
-    def __init__(self, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        """This constructor must be called by all descendants to ensure
-        proper initialization of common attributes like `fixed_params`
-        and `dtype`.
-
-        Parameters
-        ----------
-        dtype : Type[FloatT], optional
-            The numpy data type used for internal calculations and
-            output arrays (e.g., `np.float32` or `np.float64`).
-            Defaults to `np.float64`.
-        """
-
+    def __init__(self):
         self._fixed_params: set[str] = set()
-        self._dtype = dtype
 
     def fix_param(self, name: str):
         """Fixes a parameter, excluding it from optimization and further changes.
@@ -137,7 +122,7 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         self._fixed_params.discard(name)
 
-    def get_params_vector(self, param_names: Sequence[str]) -> list[FloatT]:
+    def get_params_vector(self, param_names: Sequence[str]) -> list:
         """Retrieves specified parameter values as a list.
 
         Parameters
@@ -164,15 +149,14 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         return [getattr(self, name) for name in param_names]
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[float | FloatT]):
+    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[np.float64 | float]):
         """Sets parameter values from a sequence of floats.
 
         Updates the distribution's parameters using values from the provided
         sequence. The order of values in the :attr:`vector` must correspond to the order
         of names in :attr:`param_names`. This vector can contain
         standard numerical types like `int` or `float`. Internally, each
-        value is automatically cast to the distribution's specific `dtype`
-        (e.g., `numpy.float32` or `numpy.float64`)
+        value is automatically cast to the `np.float64`.
 
         Parameters
         ----------
@@ -196,13 +180,7 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
             raise ValueError(f"Invalid parameter names provided: {invalid_params}")
 
         for name, value in zip(param_names, vector):
-            setattr(self, name, self.dtype(value))
-
-    @property
-    def dtype(self) -> type[FloatT]:
-        """type[FloatT]: The numpy data type of the distribution's outputs."""
-
-        return self._dtype
+            setattr(self, name, float(value))
 
     @property
     @abstractmethod
@@ -221,7 +199,7 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
         return self.params - self._fixed_params
 
     @abstractmethod
-    def pdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Probability Density Function.
 
         Parameters
@@ -231,13 +209,13 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
-    def ppf(self, P: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def ppf(self, P: ArrayLike) -> np.float64 | FloatArray:
         """Percent Point Function (PPF) or quantile function.
 
         This is the inverse of the Cumulative Distribution Function (CDF).
@@ -250,13 +228,13 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
-    def lpdf(self, X: ArrayLike) -> FloatT | FloatArray[FloatT]:
+    def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Logarithm of the Probability Density Function.
 
         Evaluating the log-PDF is often more numerically stable than
@@ -270,13 +248,13 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
     @abstractmethod
-    def log_gradients(self, X: ArrayLike) -> FloatArray[FloatT]:
+    def log_gradients(self, X: ArrayLike) -> FloatArray:
         """Calculates the gradients of the log-PDF with respect to its parameters.
 
         The gradients are computed for the parameters that are not fixed.
@@ -288,7 +266,7 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X` and
             each column corresponds to the gradient with respect to a specific
             optimizable parameter. The order of columns corresponds to the
@@ -296,7 +274,7 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
         """
 
     @abstractmethod
-    def generate(self, size: int | tuple[int, ...] | None = None) -> FloatT | FloatArray[FloatT]:
+    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
         """Generates random samples from the distribution.
 
         Parameters
@@ -309,51 +287,22 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
-    def astype[NewFloatT: FloatingType](self, new_dtype: type[NewFloatT]) -> "ContinuousDistribution[NewFloatT]":
-        """Creates a copy of the distribution with a new data type.
-
-        If the specified `new_dtype` is the same as the instance's current `dtype`,
-        this method returns the original instance instead.
-
-        Parameters
-        ----------
-        new_dtype : type[NewFloatT]
-            The target NumPy data type for the new distribution instance.
-
-        Returns
-        -------
-        ContinuousDistribution[NewFloatT]
-            A new distribution instance with all parameters converted to the
-            specified `new_dtype`, or the original instance if the `dtype` is
-            unchanged.
-        """
-
-        if self._dtype is new_dtype:
-            return self  # type: ignore[return-value]
-
-        params_dict = {p: new_dtype(getattr(self, p)) for p in self.params}
-
-        new_instance = self.__class__(**params_dict, dtype=new_dtype)  # type: ignore[arg-type]
-        new_instance._fixed_params = self._fixed_params.copy()
-
-        return new_instance  # type: ignore[return-value]
-
-    def __copy__(self) -> "ContinuousDistribution[FloatT]":
+    def __copy__(self) -> "ContinuousDistribution":
         """Creates a copy of the distribution instance.
 
         Returns
         -------
-        ContinuousDistribution[FloatT]
+        ContinuousDistribution
             A new instance of the distribution, identical to the original.
         """
 
         params_dict = {p: getattr(self, p) for p in self.params}
 
-        new_instance = self.__class__(**params_dict, dtype=self.dtype)
+        new_instance = self.__class__(**params_dict)
         new_instance._fixed_params = self._fixed_params.copy()
 
         return new_instance
@@ -386,7 +335,6 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
         return (
             self.name == other.name
             and self.params == other.params
-            and self.dtype == other.dtype
             and self.get_params_vector(sorted_params) == other.get_params_vector(sorted_params)
         )
 
@@ -405,4 +353,4 @@ class ContinuousDistribution[FloatT: FloatingType](ABC):
         sorted_params = sorted(self.params)
         param_values = tuple(self.get_params_vector(sorted_params))
 
-        return hash((self.name, tuple(sorted_params), self.dtype, param_values))
+        return hash((self.name, tuple(sorted_params), param_values))

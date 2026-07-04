@@ -17,7 +17,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from ..distributions.continuous_dist import ContinuousDistribution
-from ..typings import BoolScalar, FloatingType, Scalar
+from ..typings import BoolScalar, Scalar
 
 
 class Parameter:
@@ -71,7 +71,7 @@ class Parameter:
         self.invariant = invariant
         self.error_message = error_message
 
-    def __set_name__[FloatT: FloatingType](self, owner: type["ContinuousDistribution[FloatT]"], name: str):
+    def __set_name__(self, owner: type["ContinuousDistribution"], name: str):
         """Sets the name for the public and private attributes.
 
         This method is automatically called when a descriptor instance is created
@@ -90,20 +90,16 @@ class Parameter:
         self.private_name = "_" + name
 
     @overload
-    def __get__[FloatT: FloatingType](
-        self, instance: None, owner: type["ContinuousDistribution[FloatT]"]
-    ) -> "Parameter":
+    def __get__(self, instance: None, owner: type["ContinuousDistribution"]) -> "Parameter":
         """If access is via a class, return the descriptor object itself."""
 
     @overload
-    def __get__[FloatT: FloatingType](
-        self, instance: "ContinuousDistribution[FloatT]", owner: type["ContinuousDistribution[FloatT]"]
-    ) -> FloatT:
+    def __get__(self, instance: "ContinuousDistribution", owner: type["ContinuousDistribution"]) -> float:
         """If access is via an object, return the value."""
 
-    def __get__[FloatT: FloatingType](
-        self, instance: Optional["ContinuousDistribution[FloatT]"], owner: type["ContinuousDistribution[FloatT]"]
-    ) -> Union[FloatT, "Parameter"]:
+    def __get__(
+        self, instance: Optional["ContinuousDistribution"], owner: type["ContinuousDistribution"]
+    ) -> Union[float, "Parameter"]:
         """Returns the parameter value or the descriptor itself.
 
         If access is through an instance of the class, it returns the
@@ -120,7 +116,7 @@ class Parameter:
 
         Returns
         -------
-        FloatT or Parameter
+        float or Parameter
             The value of the parameter or the descriptor itself.
         """
 
@@ -129,7 +125,7 @@ class Parameter:
 
         return getattr(instance, self.private_name)
 
-    def __set__[FloatT: FloatingType](self, instance: "ContinuousDistribution[FloatT]", value: Scalar):
+    def __set__(self, instance: "ContinuousDistribution", value: Scalar):
         """Sets the parameter value after validation.
 
         Before setting a new value, it checks whether the parameter is
@@ -137,7 +133,7 @@ class Parameter:
 
         Parameters
         ----------
-        instance : "ContinuousDistribution[FloatT]"
+        instance : "ContinuousDistribution"
             An instance of the owner class.
         value : Scalar
             The new value for the parameter.
@@ -156,13 +152,11 @@ class Parameter:
                 "This parameter is fixed."
             )
 
-        owner_dtype = getattr(instance, "dtype", np.float64)
-        d_value = owner_dtype(value)
+        if np.ndim(value) > 0:
+            raise TypeError(f"Parameter '{self.public_name}' must be a scalar, got array of shape {np.shape(value)}.")
 
-        if np.ndim(d_value) > 0:
-            raise TypeError(f"Parameter '{self.public_name}' must be a scalar, got array of shape {np.shape(d_value)}.")
-
-        if not self.invariant(d_value):
+        float_value = float(value)
+        if not self.invariant(float_value):
             raise ValueError(f"Invalid value for '{self.public_name}': {self.error_message}")
 
-        setattr(instance, self.private_name, d_value)
+        setattr(instance, self.private_name, float_value)

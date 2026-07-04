@@ -15,18 +15,16 @@ import numpy as np
 
 from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
-from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
-from .utils import handle_numerical_overflow
 
 
-def observed_data_likelihood_strategy[FloatT: FloatingType](
-    component: ContinuousDistribution[FloatT],
-    state: PipelineState[FloatT],
+def observed_data_likelihood_strategy(
+    component: ContinuousDistribution,
+    state: PipelineState,
     block: OptimizationBlock,
-    optimizer: Optimizer[FloatT],
-) -> tuple[int, dict[str, FloatT]]:
+    optimizer: Optimizer,
+) -> tuple[int, dict[str, float]]:
     """Generic strategy that calculates optimized parameters by maximizing observed data log-likelihood.
 
     This function calculates the new parameters for a component by directly
@@ -38,33 +36,32 @@ def observed_data_likelihood_strategy[FloatT: FloatingType](
 
     Parameters
     ----------
-    component : ContinuousDistribution[FloatT]
+    component : ContinuousDistribution
         The distribution component type/instance used for dispatch and parameter metadata.
-    state : PipelineState[FloatT]
+    state : PipelineState
         The current state containing data X and current mixture parameters.
         (Note: Responsibilities H are not used in this strategy).
     block : OptimizationBlock
         Configuration defining which parameters to optimize (component_id and param names).
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         Numerical optimizer instance.
 
     Returns
     -------
-    tuple[int, dict[str, FloatT]]
+    tuple[int, dict[str, float]]
         Component ID and a dictionary of the optimized parameters.
     """
 
     X = state.X
     n_samples = X.shape[0]
-    dtype = component.dtype
-    tol = np.finfo(dtype).tiny
+    tol = np.finfo(np.float64).tiny
 
     component_id = block.component_id
     params_to_optimize = sorted(list(block.params_to_optimize.intersection(component.params_to_optimize)))
 
     temp_mixture = copy(state.curr_mixture)
     target_comp = temp_mixture.components[component_id]
-    background_term = np.zeros(n_samples, dtype=dtype)
+    background_term = np.zeros(n_samples, dtype=np.float64)
 
     for i, comp in enumerate(state.curr_mixture.components):
         if i != component_id:
@@ -76,9 +73,6 @@ def observed_data_likelihood_strategy[FloatT: FloatingType](
         mixture_pdf = background_term + (temp_mixture.weights[component_id] * comp_pdf)
         mixture_pdf = np.maximum(mixture_pdf, tol)
         res = -np.sum(np.log(mixture_pdf))
-
-        if np.isinf(res):
-            handle_numerical_overflow(state, "Observed data likelihood optimization")
 
         return res
 

@@ -25,8 +25,8 @@ class DummyDistribution(ContinuousDistribution):
     param1 = Parameter()
     param2 = Parameter()
 
-    def __init__(self, param1: float, param2: float, dtype: np.floating = np.float64):
-        super().__init__(dtype=dtype)
+    def __init__(self, param1: float, param2: float):
+        super().__init__()
         self.param1 = param1
         self.param2 = param2
 
@@ -45,7 +45,7 @@ class DummyDistribution(ContinuousDistribution):
         return np.array([])
 
     def lpdf(self, X):
-        return np.log(np.array([0.5] * len(X), dtype=self.dtype))
+        return np.log(np.array([0.5] * len(X), dtype=np.float64))
 
     def log_gradients(self, X):
         return np.array([])

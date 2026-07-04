@@ -9,11 +9,10 @@ import numpy as np
 from scipy.stats import norm
 
 from ..core import Parameter
-from ..typings import FloatingType
 from .continuous_dist import ContinuousDistribution
 
 
-class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class Normal(ContinuousDistribution):
     """Class for the Normal (Gaussian) distribution.
 
     Parameters
@@ -50,8 +49,8 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     loc = Parameter()
     scale = Parameter(lambda x: x > 0, "Scale parameter must be positive")
 
-    def __init__(self, loc: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        super().__init__(dtype=dtype)
+    def __init__(self, loc: float, scale: float):
+        super().__init__()
         self.loc = loc
         self.scale = scale
 
@@ -83,12 +82,12 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -105,18 +104,18 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(P)
-        P = np.asarray(P, dtype=self.dtype)
+        P = np.asarray(P, dtype=np.float64)
         result = norm.ppf(P, loc=self.loc, scale=self.scale)
 
         if is_scalar:
-            return self.dtype(result)
-        return np.asarray(result, dtype=self.dtype)
+            return np.float64(result)
+        return np.asarray(result, dtype=np.float64)
 
     def lpdf(self, X):
         """Log of the Probability Density Function (LPDF).
@@ -135,17 +134,16 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         z = (X - self.loc) / self.scale
-        result = -np.log(self.scale) - dtype(0.5) * np.log(dtype(2.0) * dtype(np.pi)) - dtype(0.5) * z**2
+        result = -np.log(self.scale) - 0.5 * np.log(2.0 * np.pi) - 0.5 * z**2
 
         if is_scalar:
             return result[()]
@@ -155,7 +153,7 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """Partial derivative of the lpdf w.r.t. the loc parameter."""
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         result = (X - self.loc) / (self.scale**2)
 
         if is_scalar:
@@ -166,11 +164,10 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """Partial derivative of the lpdf w.r.t. the scale parameter."""
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         z_sq = ((X - self.loc) / self.scale) ** 2
-        result = (z_sq - dtype(1.0)) / self.scale
+        result = (z_sq - 1.0) / self.scale
 
         if is_scalar:
             return result[()]
@@ -186,7 +183,7 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -195,7 +192,7 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
 
         gradient_calculators = {
             self.PARAM_LOC: self._dlog_loc,
@@ -205,7 +202,7 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0), dtype=self.dtype)
+            return np.empty((len(X), 0), dtype=np.float64)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -228,15 +225,15 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
         samples = norm.rvs(loc=self.loc, scale=self.scale, size=size)
 
         if size is None:
-            return self.dtype(samples)
-        return np.asarray(samples, dtype=self.dtype)
+            return np.float64(samples)
+        return np.asarray(samples, dtype=np.float64)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -245,7 +242,7 @@ class Normal[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Normal(loc=0.0, scale=1.0, dtype=np.float64)".
+            "Normal(loc=0.0, scale=1.0)".
         """
 
-        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale}, dtype=np.{self.dtype.__name__})"
+        return f"{self.__class__.__name__}(loc={self.loc}, scale={self.scale})"

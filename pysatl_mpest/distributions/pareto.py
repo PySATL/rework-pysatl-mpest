@@ -10,10 +10,9 @@ from scipy.stats import pareto
 
 from ..core.parameter import Parameter
 from ..distributions.continuous_dist import ContinuousDistribution
-from ..typings import FloatingType
 
 
-class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
+class Pareto(ContinuousDistribution):
     """Class for the two-parameter Pareto distribution.
 
     The Pareto distribution is a power-law probability distribution commonly used
@@ -53,8 +52,8 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
     shape = Parameter(lambda x: x > 0, "Shape parameter must be a positive")
     scale = Parameter(lambda x: x > 0, "Scale parameter must be a positive")
 
-    def __init__(self, shape: float, scale: float, dtype: type[FloatT] = np.float64):  # type: ignore[assignment]
-        super().__init__(dtype=dtype)
+    def __init__(self, shape: float, scale: float):
+        super().__init__()
         self.shape = shape
         self.scale = scale
 
@@ -85,12 +84,12 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
         return np.exp(self.lpdf(X))
 
     def ppf(self, P):
@@ -109,16 +108,15 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The PPF values corresponding to each probability in :attr:`P`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(P)
-        P = np.asarray(P, dtype=self.dtype)
-        dtype = self.dtype
+        P = np.asarray(P, dtype=np.float64)
 
-        result = np.where((P >= 0) & (P <= 1), self.scale * (dtype(1) - P) ** (dtype(-1.0) / self.shape), dtype(np.nan))
+        result = np.where((P >= 0) & (P <= 1), self.scale * (1.0 - P) ** (-1.0 / self.shape), np.nan)
 
         if is_scalar:
             return result[()]
@@ -143,19 +141,18 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The log-PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
         result = np.where(
             self.scale <= X,
-            np.log(self.shape) + self.shape * np.log(self.scale) - (dtype(1) + self.shape) * np.log(X),
-            dtype(-np.inf),
+            np.log(self.shape) + self.shape * np.log(self.scale) - (1.0 + self.shape) * np.log(X),
+            -np.inf,
         )
 
         if is_scalar:
@@ -182,16 +179,15 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`shape` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(self.scale <= X, dtype(1.0) / self.shape + np.log(self.scale) - np.log(X), dtype(0.0))
+        result = np.where(self.scale <= X, 1.0 / self.shape + np.log(self.scale) - np.log(X), 0.0)
 
         if is_scalar:
             return result[()]
@@ -216,16 +212,15 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             The gradient of the lpdf with respect to :attr:`scale` for each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
-        dtype = self.dtype
+        X = np.asarray(X, dtype=np.float64)
 
-        result = np.where(self.scale <= X, self.shape / self.scale, dtype(0.0))
+        result = np.where(self.scale <= X, self.shape / self.scale, 0.0)
         if is_scalar:
             return result[()]
         return result
@@ -242,7 +237,7 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatArray[FloatT]
+        FloatArray
             An array where each row corresponds to a data point in :attr:`X`
             and each column corresponds to the gradient with respect to a
             specific optimizable parameter. The order of columns corresponds
@@ -251,7 +246,7 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         """
 
         is_scalar = np.isscalar(X)
-        X = np.asarray(X, dtype=self.dtype)
+        X = np.asarray(X, dtype=np.float64)
 
         gradient_calculators = {
             self.PARAM_SHAPE: self._dlog_shape,
@@ -261,7 +256,7 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         optimizable_params = sorted(list(self.params_to_optimize))
 
         if not optimizable_params:
-            return np.empty((len(X), 0), dtype=self.dtype)
+            return np.empty((len(X), 0), dtype=np.float64)
 
         gradients = [gradient_calculators[param](X) for param in optimizable_params]
 
@@ -282,15 +277,15 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
 
         Returns
         -------
-        FloatT | FloatArray[FloatT]
+        np.float64 | FloatArray
             A scalar or NumPy array containing the generated samples.
         """
 
         samples = pareto.rvs(scale=self.scale, b=self.shape, size=size)
 
         if size is None:
-            return self.dtype(samples)
-        return np.asarray(samples, dtype=self.dtype)
+            return np.float64(samples)
+        return np.asarray(samples, dtype=np.float64)
 
     def __repr__(self) -> str:
         """Returns a string representation of the object.
@@ -299,7 +294,7 @@ class Pareto[FloatT: FloatingType](ContinuousDistribution[FloatT]):
         -------
         str
             A string that can be used to recreate the object, e.g.,
-            "Pareto(shape=0.0, scale=2.0, dtype=np.float64)".
+            "Pareto(shape=0.0, scale=2.0)".
         """
 
-        return f"{self.__class__.__name__}(shape={self.shape}, scale={self.scale}, dtype=np.{self.dtype.__name__})"
+        return f"{self.__class__.__name__}(shape={self.shape}, scale={self.scale})"

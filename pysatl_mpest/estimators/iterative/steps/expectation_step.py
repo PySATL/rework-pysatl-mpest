@@ -8,12 +8,11 @@ __license__ = "SPDX-License-Identifier: MIT"
 import numpy as np
 from scipy.special import logsumexp
 
-from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 
 
-class ExpectationStep[FloatT: FloatingType](PipelineStep[FloatT]):
+class ExpectationStep(PipelineStep):
     """A pipeline step that performs the Expectation (E-step).
 
     This step calculates the responsibility matrix H, where H[i, j] is
@@ -58,7 +57,7 @@ class ExpectationStep[FloatT: FloatingType](PipelineStep[FloatT]):
 
         return [MaximizationStep]
 
-    def run(self, state: PipelineState[FloatT]) -> PipelineState[FloatT]:
+    def run(self, state: PipelineState) -> PipelineState:
         """Executes the E-step by calculating the responsibility matrix H.
 
         This method computes the log-likelihood of each data point under each
@@ -68,19 +67,17 @@ class ExpectationStep[FloatT: FloatingType](PipelineStep[FloatT]):
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current state of the pipeline, which must contain the input
             data X and the current mixture model curr_mixture.
 
         Returns
         -------
-        PipelineState[FloatT]
+        PipelineState
             The updated pipeline state with the H attribute computed and set.
         """
 
         X, mixture = state.X, state.curr_mixture
-
-        dtype = mixture.dtype
 
         log_p_xij_matrix = np.array([comp.lpdf(X) for comp in mixture.components])
         log_p_xij_matrix = log_p_xij_matrix.T
@@ -90,14 +87,14 @@ class ExpectationStep[FloatT: FloatingType](PipelineStep[FloatT]):
         log_H = log_weighted_likelihoods - log_denominator
 
         H_soft = np.exp(log_H)
-        H_soft[np.isnan(H_soft)] = dtype(0.0)
+        H_soft[np.isnan(H_soft)] = 0.0
 
         if not self.is_soft:
             n_samples = X.shape[0]
-            H_hard = np.zeros_like(H_soft, dtype=dtype)
+            H_hard = np.zeros_like(H_soft, dtype=np.float64)
 
             max_indices = np.argmax(H_soft, axis=1)
-            H_hard[np.arange(n_samples), max_indices] = dtype(1.0)
+            H_hard[np.arange(n_samples), max_indices] = 1.0
 
             state.H = H_hard
         else:

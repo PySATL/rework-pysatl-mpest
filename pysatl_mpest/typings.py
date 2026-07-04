@@ -10,12 +10,11 @@ import numpy as np
 from numpy._typing import ArrayLike
 
 Scalar = int | float | np.floating | np.integer
-FloatingType = np.floating
 BoolScalar = bool | np.bool_
 
-type UnivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int], np.dtype[T]]
-type MultivariateFloatArray[T: FloatingType] = np.ndarray[tuple[int, int], np.dtype[T]]
-type FloatArray[T: FloatingType] = np.ndarray[tuple[int, ...], np.dtype[T]]
+type UnivariateFloatArray = np.ndarray[tuple[int], np.dtype[np.float64]]
+type MultivariateFloatArray = np.ndarray[tuple[int, int], np.dtype[np.float64]]
+type FloatArray = np.ndarray[tuple[int, ...], np.dtype[np.float64]]
 
 type UnivariateIntArray = np.ndarray[tuple[int], np.dtype[np.integer]]
 type IntArray = np.ndarray[tuple[int, ...], np.dtype[np.integer]]

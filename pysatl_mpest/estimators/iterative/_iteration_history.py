@@ -13,12 +13,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 from dataclasses import dataclass
 
 from ...core import MixtureModel
-from ...typings import FloatingType, MultivariateFloatArray, UnivariateFloatArray
+from ...typings import MultivariateFloatArray, UnivariateFloatArray
 from .pruner import Pruner
 
 
 @dataclass
-class IterationRecord[FloatT: FloatingType]:
+class IterationRecord:
     """Data class representing a single pipeline iteration snapshot.
 
     This class captures the complete state of a pipeline iteration after
@@ -29,15 +29,15 @@ class IterationRecord[FloatT: FloatingType]:
     ----------
     iteration : int
         The iteration number (0-based index).
-    mixture : MixtureModel[FloatT]
+    mixture : MixtureModel
         The state of the mixture model after pruning in this iteration.
-    X : UnivariateFloatArray[FloatT]
+    X : UnivariateFloatArray
         The input data sample being processed (conventionally named `X`).
-    H : Optional[MultivariateFloatArray[FloatT]]
+    H : Optional[MultivariateFloatArray]
         The responsibility matrix (posterior probabilities) if available,
         where `H[i, j]` represents the probability that data point `i`
         belongs to component `j`. May be `None` if not computed.
-    pruners_used : Optional[list[Pruner[FloatT]]]
+    pruners_used : Optional[list[Pruner]]
         List of pruner instances that were applied during this iteration.
         `None` or empty if no pruning occurred.
     error : Optional[Exception]
@@ -46,14 +46,14 @@ class IterationRecord[FloatT: FloatingType]:
     """
 
     iteration: int
-    mixture: MixtureModel[FloatT]
-    X: UnivariateFloatArray[FloatT]
-    H: MultivariateFloatArray[FloatT] | None
-    pruners_used: list[Pruner[FloatT]] | None
+    mixture: MixtureModel
+    X: UnivariateFloatArray
+    H: MultivariateFloatArray | None
+    pruners_used: list[Pruner] | None
     error: Exception | None
 
 
-class IterationsHistory[FloatT: FloatingType]:
+class IterationsHistory:
     """A container for storing and accessing pipeline iteration history.
 
     `IterationsHistory` collects and stores snapshots of each pipeline iteration
@@ -95,7 +95,7 @@ class IterationsHistory[FloatT: FloatingType]:
     _counter : int
         Internal counter tracking the total number of `save_record()` calls
         (i.e., total iterations processed, not just recorded ones).
-    _history : list[IterationRecord[FloatT]]
+    _history : list[IterationRecord]
         List of stored iteration records. Only iterations matching the
         recording frequency are appended.
 
@@ -117,11 +117,11 @@ class IterationsHistory[FloatT: FloatingType]:
         if once_in_iterations < 1:
             raise ValueError("Parameter once_in_iterations must be a positive integer")
 
-        self._history: list[IterationRecord[FloatT]] = []
+        self._history: list[IterationRecord] = []
         self._counter: int = 0
         self.once_in_iterations = once_in_iterations
 
-    def save_record(self, record: IterationRecord[FloatT]) -> None:
+    def save_record(self, record: IterationRecord) -> None:
         """Store an iteration record based on the configured frequency.
 
         The record is stored only if the current internal counter is divisible
@@ -130,7 +130,7 @@ class IterationsHistory[FloatT: FloatingType]:
 
         Parameters
         ----------
-        record : IterationRecord[FloatT]
+        record : IterationRecord
             The iteration snapshot to potentially store. The `record.iteration`
             should ideally match the instance's internal state, though this is
             not enforced.
@@ -165,7 +165,7 @@ class IterationsHistory[FloatT: FloatingType]:
 
         return len(self._history)
 
-    def __getitem__(self, index: int) -> IterationRecord[FloatT]:
+    def __getitem__(self, index: int) -> IterationRecord:
         """Access a stored iteration record by index.
 
         Supports both positive (0-based) and negative indexing (e.g., `-1` for last).
@@ -178,7 +178,7 @@ class IterationsHistory[FloatT: FloatingType]:
 
         Returns
         -------
-        IterationRecord[FloatT]
+        IterationRecord
             The recorded state of the specified iteration.
 
         Raises
