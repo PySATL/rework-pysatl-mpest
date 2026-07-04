@@ -117,32 +117,12 @@ def _(
 
     m1 = weighted_sum_X / N_j
 
-    # Update both location (loc) and lambda (rate) if they are in the optimization block
-    if Exponential.PARAM_LOC in params_to_optimize and Exponential.PARAM_RATE in params_to_optimize:
-        weighted_sum_X2 = np.dot(H_j, X**2)
-
-        m2 = weighted_sum_X2 / N_j
-
-        variance = np.maximum(m2 - m1**2, float(NUMERICAL_TOLERANCE))
-
-        std_dev = np.sqrt(variance)
-
-        new_params[Exponential.PARAM_RATE] = float(1.0 / std_dev)
-        new_params[Exponential.PARAM_LOC] = float(m1 - std_dev)
-
     # Update lambda (rate) if it's in the optimization block
-    elif Exponential.PARAM_RATE in params_to_optimize:
-        denominator = m1 - component.loc
-
-        if np.isclose(denominator, 0.0, NUMERICAL_TOLERANCE):
-            new_params[Exponential.PARAM_RATE] = component.rate
+    if "lambda_" in params_to_optimize:
+        if np.isclose(m1, 0.0, atol=NUMERICAL_TOLERANCE):
+            new_params["lambda_"] = component.lambda_
         else:
-            new_params[Exponential.PARAM_RATE] = float(1.0 / denominator)
-
-    # Update location (loc) if it's in the optimization block
-    elif Exponential.PARAM_LOC in params_to_optimize:
-        new_loc = m1 - (1.0 / component.rate)
-        new_params[Exponential.PARAM_LOC] = float(new_loc)
+            new_params["lambda_"] = float(1.0 / m1)
 
     return block.component_id, new_params
 
@@ -202,8 +182,8 @@ def _(
         ``block.component_id``.
     new_params : dict[str, float]
         Dictionary of updated parameters for the component. Keys correspond to
-        Normal parameter names (e.g., ``component.PARAM_LOC``,
-        ``component.PARAM_SCALE``). If no update is performed (e.g., negligible
+        Normal parameter names (e.g., ``"mu"``,
+        ``"sigma"``). If no update is performed (e.g., negligible
         responsibility), an empty dict is returned.
 
     Raises
@@ -259,15 +239,15 @@ def _(
     if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
 
-    if component.PARAM_LOC in params_to_optimize:
+    if "mu" in params_to_optimize:
         new_loc = float(np.average(X, weights=H_j))
-        new_params[component.PARAM_LOC] = new_loc
+        new_params["mu"] = new_loc
     else:
-        new_loc = component.loc
+        new_loc = component.mu
 
-    if component.PARAM_SCALE in params_to_optimize:
+    if "sigma" in params_to_optimize:
         new_scale = np.sqrt(np.average((X - new_loc) ** 2, weights=H_j))
-        new_params[component.PARAM_SCALE] = float(new_scale)
+        new_params["sigma"] = float(new_scale)
 
         new_scale = max(new_scale, MIN_SCALE)
 

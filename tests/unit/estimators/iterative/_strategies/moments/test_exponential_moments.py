@@ -23,7 +23,7 @@ def parametrized_exponential_setup(request) -> tuple[Exponential, PipelineState]
     Creates a parametrized fixture providing an Exponential component and a
     corresponding PipelineState for various dtypes.
     """
-    component = Exponential(loc=0.0, rate=1.0)
+    component = Exponential(lambda_=1.0)
 
     state = PipelineState(
         X=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64),
@@ -48,7 +48,7 @@ def test_moments_exponential_raises_value_error_if_h_is_none(parametrized_expone
     state.H = None
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
@@ -58,12 +58,12 @@ def test_moments_exponential_raises_value_error_if_h_is_none(parametrized_expone
 def test_moments_exponential_returns_correct_types(parametrized_exponential_setup):
     """
     Verifies that the function returns a tuple with the correct
-    data types (int, dict[str, FloatT]).
+    data types (int, dict[str, float]).
     """
     exponential_component, pipeline_state = parametrized_exponential_setup
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     result = moments_strategy(exponential_component, pipeline_state, block, optimizer=None)
@@ -81,13 +81,9 @@ def test_moments_exponential_returns_correct_types(parametrized_exponential_setu
 @pytest.mark.parametrize(
     "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
     [
-        ({"loc", "rate"}, set(), {"loc", "rate"}),  # Optimize both, none are fixed
-        ({"loc"}, set(), {"loc"}),  # Optimize only loc
-        ({"rate"}, set(), {"rate"}),  # Optimize only rate
-        ({"loc", "rate"}, {"loc"}, {"rate"}),  # Optimize both, but loc is fixed
-        ({"loc", "rate"}, {"rate"}, {"loc"}),  # Optimize both, but rate is fixed
-        ({"loc", "rate"}, {"loc", "rate"}, set()),  # Optimize both, but both are fixed
-        ({"non_existent_param", "loc"}, set(), {"loc"}),  # Ignore non-existent params
+        ({"lambda_"}, set(), {"lambda_"}),  # Optimize lambda
+        ({"lambda_"}, {"lambda_"}, set()),  # Optimize lambda, but it is fixed
+        ({"non_existent_param"}, set(), set()),  # Ignore non-existent params
         (set(), set(), set()),  # Optimize nothing
     ],
 )
@@ -125,7 +121,7 @@ def test_moments_exponential_handles_negligible_responsibility(parametrized_expo
     pipeline_state.H.fill(1e-10)  # Make all responsibilities negligible
     block = OptimizationBlock(
         component_id=0,
-        params_to_optimize={"loc", "rate"},
+        params_to_optimize={"lambda_"},
         maximization_strategy=MaximizationStrategy.MOMENTS,
     )
 
@@ -134,28 +130,26 @@ def test_moments_exponential_handles_negligible_responsibility(parametrized_expo
     assert new_params == {}
 
 
-def test_moments_exponential_rate_fallback_when_mean_equals_loc(parametrized_exponential_setup):
+def test_moments_exponential_lambda_fallback_when_mean_is_zero(parametrized_exponential_setup):
     """
-    Tests the edge case where the weighted mean of the data equals the component's location.
+    Tests the edge case where the weighted mean of the data is zero.
 
-    In the formula `rate = 1 / (mean - loc)`, if `mean == loc`, a division by zero would occur.
-    The code should handle this by keeping the component's original rate.
+    In the formula `lambda_ = 1 / mean`, if `mean == 0.0`, a division by zero would occur.
+    The code should handle this by keeping the component's original lambda_.
     """
     component, state = parametrized_exponential_setup
 
-    loc_val = component.loc
-    state.X = np.array([loc_val, loc_val], dtype=np.float64)
+    state.X = np.array([0.0, 0.0], dtype=np.float64)
     state.H = np.array([[1.0], [1.0]], dtype=np.float64)
 
-    component.fix_param("loc")
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"rate"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     _, new_params = moments_strategy(component, state, block, optimizer=None)
 
-    assert Exponential.PARAM_RATE in new_params
-    assert new_params[Exponential.PARAM_RATE] == component.rate
+    assert "lambda_" in new_params
+    assert new_params["lambda_"] == component.lambda_
 
 
 # Property-Based Test with Hypothesis
@@ -165,19 +159,17 @@ def test_moments_exponential_rate_fallback_when_mean_equals_loc(parametrized_exp
 @st.composite
 def exponential_data_and_true_params(draw):
     """
-    Generates a true Exponential component and a data sample from it,
-    all configured with a specific dtype.
+    Generates a true Exponential component and a data sample from it.
     """
 
-    true_loc = draw(st.floats(min_value=-100, max_value=100))
-    true_rate = draw(st.floats(min_value=0.1, max_value=100))
-    true_component = Exponential(loc=true_loc, rate=true_rate)
+    true_lambda = draw(st.floats(min_value=0.1, max_value=100))
+    true_component = Exponential(lambda_=true_lambda)
 
-    # 2. Generate a data sample from this distribution
+    # Generate a data sample from this distribution
     sample_size = draw(st.integers(min_value=10000, max_value=10000))
     X = true_component.generate(size=sample_size)
 
-    return X, true_loc, true_rate
+    return X, true_lambda
 
 
 @settings(max_examples=50)
@@ -189,7 +181,7 @@ def test_moments_exponential_recovers_true_params_on_ideal_data(data):
     This confirms the statistical validity of the implemented formulas in an ideal case.
     """
     # --- Arrange ---
-    X, true_loc, true_rate = data
+    X, true_lambda = data
 
     # This is the key assumption for this test: perfect knowledge that all
     # data points belong to our component of interest.
@@ -197,17 +189,13 @@ def test_moments_exponential_recovers_true_params_on_ideal_data(data):
     H = np.vstack([H_j, np.zeros_like(H_j)]).T  # Simulate a 2-component mixture
 
     # Use a starting component with completely different parameters
-    start_component = Exponential(loc=-999.0, rate=0.001)
+    start_component = Exponential(lambda_=0.001)
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     _, new_params = moments_strategy(start_component, state, block, optimizer=None)
 
-    # The estimated parameters won't be exactly the same due to sampling noise,
-    # so we use pytest.approx with a relative tolerance.
-    # For a large enough sample, the estimates should be reasonably close.
-    assert new_params[Exponential.PARAM_LOC] == pytest.approx(true_loc, abs=0.2)
-    assert new_params[Exponential.PARAM_RATE] == pytest.approx(true_rate, rel=0.1)
+    assert new_params["lambda_"] == pytest.approx(true_lambda, rel=0.1)
