@@ -61,6 +61,12 @@ class DummyDistribution(ContinuousDistribution):
         safe_lpdf = np.where(H_j == 0, 0.0, lpdf_values)
         return np.dot(H_j, safe_lpdf).item()
 
+    def clone_with_params(self, param_names: list[str], vector: list[float]) -> "DummyDistribution":
+        new_dist = DummyDistribution(self.param1, self.param2)
+        for name, value in zip(param_names, vector):
+            setattr(new_dist, name, float(value))
+        return new_dist
+
 
 # --- Test Fixtures ---
 
@@ -212,8 +218,7 @@ def test_q_function_strategy_correctness_and_interaction(
 
     # Check that the target function correctly calls q_function with a negative sign
     test_vector = [1.0] * num_params_to_optimize
-    temp_comp = copy(mock_component)
-    temp_comp.set_params_from_vector(sorted_keys, test_vector)
+    temp_comp = mock_component.clone_with_params(sorted_keys, test_vector)
     expected_q_value = temp_comp.q_function(pipeline_state.X, pipeline_state.H[:, component_id])
 
     assert target_func(test_vector) == -expected_q_value

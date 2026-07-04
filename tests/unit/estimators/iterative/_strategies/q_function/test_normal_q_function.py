@@ -23,7 +23,7 @@ def parametrized_normal_setup() -> tuple[Normal, PipelineState]:
     Creates a parametrized fixture providing a Normal component (standard normal) and a
     corresponding PipelineState for various dtypes.
     """
-    component = Normal(loc=0.0, scale=1.0)
+    component = Normal(mu=0.0, sigma=1.0)
 
     state = PipelineState(
         X=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
@@ -48,7 +48,7 @@ def test_q_function_normal_raises_value_error_if_h_is_none(parametrized_normal_s
     state.H = None
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
     with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
@@ -65,7 +65,7 @@ def test_q_function_normal_returns_correct_types(parametrized_normal_setup):
     expected_len = 2
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
     result = q_function_strategy(normal_component, pipeline_state, block, optimizer=None)
@@ -91,29 +91,27 @@ def test_q_function_normal_zero_variance_update(parametrized_normal_setup):
     state.X = np.array([10.0, 10.0])
     state.H = np.array([[1.0, 0.0], [1.0, 0.0]])
 
-    component.loc = 10.0
-    component.scale = 2.5
+    component = Normal(mu=10.0, sigma=2.5)
+    component.fix_param("mu")
 
-    component.fix_param("loc")
-
-    block = OptimizationBlock(0, {"scale"}, MaximizationStrategy.QFUNCTION)
+    block = OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION)
 
     _, new_params = q_function_strategy(component, state, block, optimizer=None)
 
     # Should keep original scale
-    assert new_params["scale"] == component.scale
+    assert new_params["sigma"] == component.sigma
 
 
 @pytest.mark.parametrize(
     "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
     [
-        ({"loc", "scale"}, set(), {"loc", "scale"}),  # Optimize both, none are fixed
-        ({"loc"}, set(), {"loc"}),  # Optimize only loc
-        ({"scale"}, set(), {"scale"}),  # Optimize only scale
-        ({"loc", "scale"}, {"loc"}, {"scale"}),  # Optimize both, but loc is fixed
-        ({"loc", "scale"}, {"scale"}, {"loc"}),  # Optimize both, but scale is fixed
-        ({"loc", "scale"}, {"loc", "scale"}, set()),  # Optimize both, but both are fixed
-        ({"non_existent_param", "loc"}, set(), {"loc"}),  # Ignore non-existent params
+        ({"mu", "sigma"}, set(), {"mu", "sigma"}),  # Optimize both, none are fixed
+        ({"mu"}, set(), {"mu"}),  # Optimize only loc
+        ({"sigma"}, set(), {"sigma"}),  # Optimize only scale
+        ({"mu", "sigma"}, {"mu"}, {"sigma"}),  # Optimize both, but loc is fixed
+        ({"mu", "sigma"}, {"sigma"}, {"mu"}),  # Optimize both, but scale is fixed
+        ({"mu", "sigma"}, {"mu", "sigma"}, set()),  # Optimize both, but both are fixed
+        ({"non_existent_param", "mu"}, set(), {"mu"}),  # Ignore non-existent params
         (set(), set(), set()),  # Optimize nothing
     ],
 )
@@ -151,7 +149,7 @@ def test_q_function_normal_handles_negligible_responsibility(parametrized_normal
     pipeline_state.H.fill(1e-10)  # Make all responsibilities negligible
     block = OptimizationBlock(
         component_id=0,
-        params_to_optimize={"shape", "loc", "scale"},
+        params_to_optimize={"shape", "mu", "sigma"},
         maximization_strategy=MaximizationStrategy.QFUNCTION,
     )
 
@@ -171,14 +169,14 @@ def normal_data_and_true_params(draw):
     all configured with a specific dtype.
     """
     # 1. Generate realistic parameters for the true distribution
-    true_loc = draw(st.floats(min_value=-1000, max_value=1000, allow_nan=False, allow_infinity=False))
-    true_scale = draw(st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False))
-    true_component = Normal(loc=true_loc, scale=true_scale)
+    true_mu = draw(st.floats(min_value=-1000, max_value=1000, allow_nan=False, allow_infinity=False))
+    true_sigma = draw(st.floats(min_value=0.1, max_value=100, allow_nan=False, allow_infinity=False))
+    true_component = Normal(mu=true_mu, sigma=true_sigma)
 
     # 2. Generate a large data sample from this distribution
     X = true_component.generate(size=1000000)
 
-    return (X, true_loc, true_scale)
+    return (X, true_mu, true_sigma)
 
 
 @settings(max_examples=50, deadline=None)
@@ -191,7 +189,7 @@ def test_q_function_normal_recovers_true_params_on_ideal_data(data):
     """
 
     # --- Arrange ---
-    X, true_loc, true_scale = data
+    X, true_mu, true_sigma = data
 
     # This is the key assumption for this test: perfect knowledge that all
     # data points belong to our component of interest (responsibilities are all 1.0).
@@ -200,11 +198,11 @@ def test_q_function_normal_recovers_true_params_on_ideal_data(data):
 
     # Use a starting component with completely different parameters to ensure
     # the update is based on data, not the initial guess.
-    start_component = Normal(loc=-999.0, scale=0.001)
+    start_component = Normal(mu=-999.0, sigma=0.001)
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
     # --- Act ---
@@ -213,5 +211,5 @@ def test_q_function_normal_recovers_true_params_on_ideal_data(data):
     # --- Assert ---
     tolerance = {"rel": 0.05, "abs": 0.2}
 
-    assert new_params[Normal.PARAM_LOC] == pytest.approx(true_loc, **tolerance)
-    assert new_params[Normal.PARAM_SCALE] == pytest.approx(true_scale, **tolerance)
+    assert new_params["mu"] == pytest.approx(true_mu, **tolerance)
+    assert new_params["sigma"] == pytest.approx(true_sigma, **tolerance)

@@ -182,6 +182,12 @@ class ContinuousDistribution(ABC):
         for name, value in zip(param_names, vector):
             setattr(self, name, float(value))
 
+    @abstractmethod
+    def clone_with_params(
+        self, param_names: Sequence[str], vector: Sequence[np.float64 | float]
+    ) -> "ContinuousDistribution":
+        pass
+
     @property
     @abstractmethod
     def name(self) -> str:

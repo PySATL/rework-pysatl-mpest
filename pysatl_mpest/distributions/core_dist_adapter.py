@@ -94,6 +94,18 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         self.core_dist = self.core_family.distribution(self.parametrization_name, **current_params)
 
+    def clone_with_params(
+        self, param_names: Sequence[str], vector: Sequence[np.float64 | float]
+    ) -> "CoreDistributionAdapter":
+        current_params = self.core_dist.parametrization.parameters.copy()
+        for name, value in zip(param_names, vector):
+            current_params[name] = float(value)
+
+        new_instance = CoreDistributionAdapter(self.core_family, self.parametrization_name, **current_params)
+
+        new_instance._fixed_params = self._fixed_params.copy()
+        return new_instance
+
     def _calc_characteristic(self, char_name: CharacteristicName, array: ArrayLike) -> np.float64 | FloatArray:
         """Helper to calculate a characteristic and cast the output."""
         arr = np.asarray(array)
