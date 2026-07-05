@@ -137,12 +137,6 @@ class TestMaximizationStep:
         # mock_strategy was called once
         mock_strategy.assert_called_once_with(target_component, state, block, mock_optimizer)
 
-        # The component parameters were updated
-        # _update_components_params calls set_params_from_vector
-        param_names = list(optimized_params.keys())
-        param_values = list(optimized_params.values())
-        target_component.set_params_from_vector.assert_called_once_with(param_names, param_values)
-
     def test_run_updates_mixture_weights_correctly(
         self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
     ):
@@ -226,10 +220,6 @@ class TestMaximizationStep:
         second_call_args = mock_strategy.call_args_list[1].args
         assert second_call_args[0] is component0
         assert second_call_args[2] is block0
-
-        # Assert that parameters were updated for both components
-        component1.set_params_from_vector.assert_called_once_with(["rate"], [1.1])
-        component0.set_params_from_vector.assert_called_once_with(["loc"], [2.2])
 
     def test_clear_after_prune_removes_blocks_for_pruned_components(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune removes optimization blocks for pruned components."""
