@@ -15,6 +15,6 @@ def run_test(
 
     mixture = MixtureModel(components=components, weights=weights)
 
-    X = mixture.generate(size, random_state=42)
+    X = mixture.generate(size, random_state=43)
     result = method.estimate(X)
     return result

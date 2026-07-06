@@ -144,13 +144,19 @@ class MockContinuousDistribution(ContinuousDistribution):
         num_params = len(self.params_to_optimize)
         return np.zeros((len(X_arr), num_params), dtype=np.float64)
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
+    def generate(
+        self,
+        size: int | tuple[int, ...] | None = None,
+        random_state: int | np.random.Generator | None = None,
+    ) -> np.float64 | FloatArray:
         """Predictable generator returning sequential numbers.
 
         Parameters
         ----------
         size : int | tuple[int, ...], optional
             Output shape, by default None.
+        random_state : int | np.random.Generator | None, optional
+            A seed or random number generator to use for reproducible output.
 
         Returns
         -------

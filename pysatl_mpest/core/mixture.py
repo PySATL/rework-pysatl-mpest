@@ -356,7 +356,9 @@ class MixtureModel:
         component_choices = rng.choice(self.n_components, size=n_samples, p=self.weights)
         counts = np.bincount(component_choices, minlength=self.n_components)
 
-        samples_list = [self.components[i].generate(size=count) for i, count in enumerate(counts) if count > 0]
+        samples_list = [
+            self.components[i].generate(size=count, random_state=rng) for i, count in enumerate(counts) if count > 0
+        ]
 
         samples = np.concatenate(samples_list)
         rng.shuffle(samples)

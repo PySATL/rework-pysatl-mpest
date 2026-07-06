@@ -246,7 +246,11 @@ class ContinuousDistribution(ABC):
         """
 
     @abstractmethod
-    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
+    def generate(
+        self,
+        size: int | tuple[int, ...] | None = None,
+        random_state: int | np.random.Generator | None = None,
+    ) -> np.float64 | FloatArray:
         """Generates random samples from the distribution.
 
         Parameters
@@ -256,6 +260,8 @@ class ContinuousDistribution(ABC):
             - If None (default), returns a single scalar.
             - If int, returns a 1D array of that length.
             - If tuple, returns an array of that shape.
+        random_state : int | np.random.Generator | None, optional
+            A seed or random number generator to use for reproducible output.
 
         Returns
         -------

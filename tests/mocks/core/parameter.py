@@ -127,18 +127,24 @@ class MockParameterOwner(ContinuousDistribution):
 
         return np.zeros_like(X)
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
-        """Dummy data generator.
+    def generate(
+        self,
+        size: int | tuple[int, ...] | None = None,
+        random_state: int | np.random.Generator | None = None,
+    ) -> np.float64 | FloatArray:
+        """Predictable generator returning sequential numbers.
 
         Parameters
         ----------
         size : int | tuple[int, ...], optional
             Output shape, by default None.
+        random_state : int | np.random.Generator | None, optional
+            A seed or random number generator to use for reproducible output.
 
         Returns
         -------
         np.float64 | FloatArray
-            Always 0.0.
+            Sequential values up to the requested size.
         """
 
         return 0.0  # type: ignore

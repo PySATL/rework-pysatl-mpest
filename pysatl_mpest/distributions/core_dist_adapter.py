@@ -189,7 +189,11 @@ class CoreDistributionAdapter(ContinuousDistribution):
 
         return cast(FloatArray, np.asarray(score_val, dtype=np.float64))
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
+    def generate(
+        self,
+        size: int | tuple[int, ...] | None = None,
+        random_state: int | np.random.Generator | None = None,
+    ) -> np.float64 | FloatArray:
         """
         Generate random samples from the distribution.
 
@@ -197,12 +201,27 @@ class CoreDistributionAdapter(ContinuousDistribution):
         ----------
         size : int | tuple[int, ...] | None, default=None
             The shape of the generated samples. If None, returns a scalar.
+        random_state : int | np.random.Generator | None, optional
+            A seed or random number generator to use for reproducible output.
 
         Returns
         -------
         np.float64 | FloatArray
             The generated random samples.
         """
+        if random_state is not None:
+            rng = np.random.default_rng(random_state)
+
+            if size is None:
+                return np.float64(self.ppf(rng.random()))
+
+            if isinstance(size, int):
+                return cast(FloatArray, np.asarray(self.ppf(rng.random(size)), dtype=np.float64))
+
+            total_elements = int(np.prod(size))
+            samples = np.asarray(self.ppf(rng.random(total_elements)), dtype=np.float64)
+            return cast(FloatArray, samples.reshape(size))
+
         if size is None:
             return np.float64(self.core_dist.sample(n=1)[0])
 
@@ -210,5 +229,5 @@ class CoreDistributionAdapter(ContinuousDistribution):
             return cast(FloatArray, np.asarray(self.core_dist.sample(n=size), dtype=np.float64))
 
         total_elements = int(np.prod(size))
-        samples = self.core_dist.sample(n=total_elements)
-        return cast(FloatArray, np.asarray(samples.reshape(size), dtype=np.float64))
+        raw_samples = self.core_dist.sample(n=total_elements)
+        return cast(FloatArray, np.asarray(raw_samples.reshape(size), dtype=np.float64))
