@@ -249,7 +249,7 @@ class TestNormalGenerate:
         random.seed(456)
         mu, sigma = -10.0, 5.0
         dist = Normal(mu=mu, sigma=sigma)
-        size = 1000
+        size = 10000
 
         samples = dist.generate(size=size)
         ks_statistic, p_value = kstest(samples, norm(loc=mu, scale=sigma).cdf)

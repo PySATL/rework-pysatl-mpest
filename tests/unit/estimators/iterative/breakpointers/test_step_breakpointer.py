@@ -18,7 +18,7 @@ from pysatl_mpest.estimators.iterative import PipelineState, StepBreakpointer
 def dummy_state() -> PipelineState:
     """Provides a dummy PipelineState instance for tests."""
 
-    dummy_mixture = MixtureModel([Exponential(0, 1)])
+    dummy_mixture = MixtureModel([Exponential(1)])
     return PipelineState(np.array([]), None, None, dummy_mixture, None)
 
 

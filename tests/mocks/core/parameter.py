@@ -57,6 +57,12 @@ class MockParameterOwner(ContinuousDistribution):
 
         return {"positive_param", "any_param"}
 
+    def clone_with_params(self, param_names: list[str], vector: list[float]) -> "MockContinuousDistribution":
+        new_dist = MockContinuousDistribution(self.param1, self.param2)
+        for name, value in zip(param_names, vector):
+            setattr(new_dist, name, float(value))
+        return new_dist
+
     def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Dummy PDF implementation returning X.
 

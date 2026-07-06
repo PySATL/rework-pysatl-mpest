@@ -23,7 +23,7 @@ from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord
 # functions to set up objects for tests
 @pytest.fixture
 def exponential_components() -> list[Exponential]:
-    return [Exponential(loc=0, rate=1), Exponential(loc=5, rate=2)]
+    return [Exponential(1), Exponential(2)]
 
 
 @pytest.fixture

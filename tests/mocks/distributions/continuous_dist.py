@@ -59,6 +59,12 @@ class MockContinuousDistribution(ContinuousDistribution):
 
         return {"param1", "param2"}
 
+    def clone_with_params(self, param_names: list[str], vector: list[float]) -> "MockContinuousDistribution":
+        new_dist = MockContinuousDistribution(self.param1, self.param2)
+        for name, value in zip(param_names, vector):
+            setattr(new_dist, name, float(value))
+        return new_dist
+
     def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Predictable PDF returning 1.0 for all elements.
 

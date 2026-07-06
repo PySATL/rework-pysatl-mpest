@@ -314,7 +314,7 @@ class TestUniformGenerate:
         random.seed(456)
         lower_bound, upper_bound = 10.0, 12.0
         dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
-        size = 1000
+        size = 10000
 
         samples = dist.generate(size=size)
 
