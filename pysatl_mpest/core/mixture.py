@@ -3,22 +3,20 @@ manipulation, and analysis of a finite mixture of continuous probability
 distributions."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
-__copyright__ = "Copyright (c) 2025 PySATL project"
+__copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Iterator, Sequence
 from copy import copy
-from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy.special import logsumexp, softmax
 
-from ..typings import FloatArray, Scalar, UnivariateFloatArray
+from pysatl_mpest.core.parametric_adapter import ParametricAdapter
 
-if TYPE_CHECKING:
-    from ..distributions import ContinuousDistribution
+from ..typings import FloatArray, Scalar, UnivariateFloatArray
 
 
 class MixtureModel:
@@ -34,16 +32,16 @@ class MixtureModel:
 
     Parameters
     ----------
-    components : Sequence[ContinuousDistribution]
+    components : Sequence[ParametricAdapter]
         A sequence of distribution objects that will form the mixture.
-    weights : Optional[ArrayLike], optional
+    weights : ArrayLike | None, optional
         An array of initial weights for the components. The weights must be
         positive and sum to 1. If None, components are assigned equal
         weights. Defaults to None.
 
     Attributes
     ----------
-    components : tuple[ContinuousDistribution, ...]
+    components : tuple[ParametricAdapter, ...]
         A tuple of the distribution objects that form the mixture.
     n_components : int
         The number of components in the mixture.
@@ -75,7 +73,7 @@ class MixtureModel:
 
     def __init__(
         self,
-        components: Sequence["ContinuousDistribution"],
+        components: Sequence["ParametricAdapter"],
         weights: ArrayLike | None = None,
     ):
         n_components = len(components)
@@ -92,7 +90,7 @@ class MixtureModel:
         self._log_weights = np.log(weights + np.finfo(np.float64).tiny)
         self._cached_weights: UnivariateFloatArray | None = None
 
-        self._sorted_pairs_cache: list[tuple[ContinuousDistribution, float]] | None = None
+        self._sorted_pairs_cache: list[tuple[ParametricAdapter, float]] | None = None
 
     def _validate_weights(self, n_components: int, weights: UnivariateFloatArray):
         """Validates the component weights.
@@ -101,7 +99,7 @@ class MixtureModel:
         ----------
         n_components : int
             The expected number of components.
-        weights : NDArray
+        weights : UnivariateFloatArray
             The array of weights to validate.
 
         Raises
@@ -128,7 +126,7 @@ class MixtureModel:
 
     @property
     def components(self):
-        """tuple[ContinuousDistribution, ...]: The components of the mixture."""
+        """tuple[ParametricAdapter, ...]: The components of the mixture."""
 
         return tuple(self._components)
 
@@ -175,7 +173,7 @@ class MixtureModel:
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
-    def add_component(self, component: "ContinuousDistribution", weight: Scalar):
+    def add_component(self, component: "ParametricAdapter", weight: Scalar):
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
         If :attr:`weight` is specified for the new component, the old component
@@ -183,7 +181,7 @@ class MixtureModel:
 
         Parameters
         ----------
-        component : ContinuousDistribution
+        component : ParametricAdapter
             The distribution component to add.
         weight : Scalar
             The weight for the new component, a number in the range (0, 1).
@@ -207,12 +205,38 @@ class MixtureModel:
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
-    def set_component(self, new_component: "ContinuousDistribution", component_idx: int):
-        if not (0 <= component_idx <= self.n_components - 1):
+    def __setitem__(self, key: int, value: "ParametricAdapter"):
+        """Sets or replaces a component at a specific index.
+
+        Parameters
+        ----------
+        key : int
+            The index of the component to replace.
+        value : ParametricAdapter
+            The new distribution component to set.
+
+        Raises
+        ------
+        IndexError
+            If the index is out of bounds.
+        """
+        if not (0 <= key <= self.n_components - 1):
             raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
 
-        self._components[component_idx] = copy(new_component)
+        self._components[key] = copy(value)
         self._sorted_pairs_cache = None
+
+    def set_component(self, new_component: "ParametricAdapter", component_idx: int):
+        """Replaces a component at a specific index.
+
+        Parameters
+        ----------
+        new_component : ParametricAdapter
+            The new distribution component.
+        component_idx : int
+            The index to replace.
+        """
+        self[component_idx] = new_component
 
     def remove_component(self, component_idx: int):
         """Removes a component from the mixture by its index.
@@ -369,7 +393,7 @@ class MixtureModel:
         target_shape = (size,) if isinstance(size, int) else size
         return samples.reshape(target_shape)
 
-    def __getitem__(self, key: int) -> "ContinuousDistribution":
+    def __getitem__(self, key: int) -> "ParametricAdapter":
         """Retrieves components by index.
 
         Parameters
@@ -379,21 +403,21 @@ class MixtureModel:
 
         Returns
         -------
-        ContinuousDistribution
+        ParametricAdapter
             A single component of the mixture
         """
 
         return self.components[key]
 
-    def __iter__(self) -> Iterator["ContinuousDistribution"]:
+    def __iter__(self) -> Iterator["ParametricAdapter"]:
         """Returns an iterator over the mixture components.
 
         This allows the `MixtureModel` instance to be used directly in
         loops, such as a `for` loop, to iterate over its components.
 
-        Yields
-        ------
-        Iterator[ContinuousDistribution
+        Returns
+        -------
+        Iterator[ParametricAdapter]
             An iterator that yields the components of the mixture model.
         """
 
@@ -412,7 +436,7 @@ class MixtureModel:
         new_mixture = MixtureModel(components=copied_components, weights=self.weights.copy())
         return new_mixture
 
-    def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ContinuousDistribution", float]]:
+    def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ParametricAdapter", float]]:
         """Internal helper to get component-weight pairs, sorted by component hash."""
 
         if self._sorted_pairs_cache is None or for_hashing:
@@ -421,7 +445,7 @@ class MixtureModel:
                 decimals = np.finfo(np.float64).precision
                 weights_to_use = np.round(weights_to_use, decimals)
 
-            pairs: list[tuple[ContinuousDistribution, float]] = sorted(
+            pairs: list[tuple[ParametricAdapter, float]] = sorted(
                 zip(self.components, weights_to_use), key=lambda p: hash(p[0])
             )
             if not for_hashing:
