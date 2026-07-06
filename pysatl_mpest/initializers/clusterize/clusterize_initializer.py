@@ -7,6 +7,7 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Mapping
+from copy import copy
 from types import MappingProxyType
 from typing import Any, Callable, ClassVar, Optional
 
@@ -321,9 +322,12 @@ class ClusterizeInitializer(Initializer):
 
         new_distributions = []
         for i, dist in enumerate(distributions):
-            params_names, params_values = zip(*params[i].items())
-            dist.set_params_from_vector(list(params_names), list(params_values))
-            new_distributions.append(dist)
+            if params[i]:
+                params_names, params_values = zip(*params[i].items())
+                new_dist = dist.clone_with_params(list(params_names), list(params_values))
+            else:
+                new_dist = copy(dist)
+            new_distributions.append(new_dist)
 
         return new_distributions, weights
 
@@ -371,8 +375,11 @@ class ClusterizeInitializer(Initializer):
             model = self.models[k]
             H_k = H[:, k]
             params = estimation_funcs[k](model, X, H_k, optimizer)
-            params_names, params_values = zip(*params.items())
-            model.set_params_from_vector(params_names, params_values)
+            if params:
+                params_names, params_values = zip(*params.items())
+                model = model.clone_with_params(list(params_names), list(params_values))
+            else:
+                model = copy(model)
             weight = np.sum(H, axis=0)[k] / len(X)
 
             distributions.append(model)

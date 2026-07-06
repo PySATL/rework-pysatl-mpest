@@ -129,9 +129,11 @@ def _estimate_and_score_component(
         A dictionary containing the fitted model, estimated parameters,
         calculated score, and component weight.
     """
-    temp_model = copy(model)
-    new_params: dict[str, float] = estimation_func(temp_model, X, H_k, optimizer)
-    temp_model.set_params_from_vector(list(new_params.keys()), list(new_params.values()))
+    new_params: dict[str, float] = estimation_func(model, X, H_k, optimizer)
+    if new_params:
+        temp_model = model.clone_with_params(list(new_params.keys()), list(new_params.values()))
+    else:
+        temp_model = copy(model)
 
     score = score_func(temp_model, X, H_k)
     weight = float(np.sum(H_k) / len(X))

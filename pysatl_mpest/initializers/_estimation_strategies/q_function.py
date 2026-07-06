@@ -6,7 +6,6 @@ __author__ = "Viktor Khanukaev"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
 from functools import singledispatch
 
 import numpy as np
@@ -81,14 +80,13 @@ def q_function_strategy(
     """
 
     params_to_optimize = list(component.params_to_optimize)
-    temp_comp = copy(component)
 
     def target(vector_params):
-        temp_comp.set_params_from_vector(params_to_optimize, vector_params)
-        lpdf_values = temp_comp.lpdf(X)
+        comp = component.clone_with_params(params_to_optimize, vector_params)
+        lpdf_values = comp.lpdf(X)
         return -np.dot(H_j, lpdf_values).item()
 
-    initial_params = temp_comp.get_params_vector(params_to_optimize)
+    initial_params = component.get_params_vector(params_to_optimize)
     new_params_vector = optimizer.minimize(target, initial_params)
 
     new_params = dict(zip(params_to_optimize, new_params_vector))
@@ -120,7 +118,7 @@ def q_function_strategy_exponential(
     Returns
     -------
     dict[str, float]
-        Dictionary containing estimated values for 'loc' and 'rate' parameters.
+        Dictionary containing estimated values for 'lambda_' parameter.
 
     See Also
     --------
@@ -130,23 +128,20 @@ def q_function_strategy_exponential(
     -----
     **Methodology**
 
-    For Exponential distribution, the parameters are estimated analytically:
+    For Exponential distribution, the parameter is estimated analytically:
 
-    - Location parameter (loc): Estimated as the minimum value among data points
-      with significant weights (above numerical tolerance)
-    - Rate parameter (rate): Estimated using the method of moments with weighted
-      data points, considering the numerical tolerance for stability
+    - Rate parameter (lambda_): Estimated using the method of moments with weighted
+      data points, considering the numerical tolerance for stability.
 
     **Numerical Stability**
 
-    - Uses `NUMERICAL_TOLERANCE` to avoid numerical underflow and division by zero
-    - Applies `np.maximum` to ensure positive values in calculations
-    - Falls back to original parameter values when estimation is not feasible
+    - Uses `NUMERICAL_TOLERANCE` to avoid numerical underflow and division by zero.
+    - Falls back to original parameter values when estimation is not feasible.
 
     **Mathematical Formulation**
 
     The rate parameter is estimated as:
-        rate = N_j / Σ(H_j * max(X - loc, tolerance))
+        lambda_ = N_j / Σ(H_j * X)
     where N_j is the sum of weights for the component.
 
     Example
@@ -155,30 +150,26 @@ def q_function_strategy_exponential(
     >>> from pysatl_mpest.optimizers.scipy_nelder_mead import ScipyNelderMead
     >>> import numpy as np
 
-    >>> exp_dist = Exponential(loc=0, rate=1)
+    >>> exp_dist = Exponential(lambda_=1.0)
     >>> X = np.random.exponential(1, 100)
     >>> H_j = np.ones(100) / 100
     >>> optimizer = ScipyNelderMead()
     >>> params = q_function_strategy_exponential(exp_dist, X, H_j, optimizer)
-    >>> print(f"Estimated loc: {params['loc']:.3f}, rate: {params['rate']:.3f}")
+    >>> print(f"Estimated lambda_: {params['lambda_']:.3f}")
     """
 
     new_params: dict = {}
     N_j = np.sum(H_j).item()
 
-    if np.any(H_j > NUMERICAL_TOLERANCE):
-        relevant_X = X[H_j > NUMERICAL_TOLERANCE]
-        new_params["loc"] = np.min(relevant_X).item()
+    if N_j <= NUMERICAL_TOLERANCE:
+        return {}
+
+    weighted_sum_X = np.dot(H_j, X).item()
+    denominator = weighted_sum_X / N_j
+
+    if denominator > NUMERICAL_TOLERANCE:
+        new_params["lambda_"] = 1.0 / denominator
     else:
-        new_params["loc"] = component.loc
-
-    loc = new_params.get("loc", component.loc)
-
-    weighted_sum = np.dot(H_j, np.maximum(X - loc, NUMERICAL_TOLERANCE)).item()
-
-    if weighted_sum > NUMERICAL_TOLERANCE:
-        new_params["rate"] = N_j / weighted_sum
-    else:
-        new_params["rate"] = component.rate
+        new_params["lambda_"] = component.lambda_
 
     return new_params

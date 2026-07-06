@@ -21,8 +21,8 @@ class TestUtils:
     def setup_method(self):
         self.mock_optimizer = Mock(spec=Optimizer)
         self.mock_model = Mock(spec=ContinuousDistribution)
+        self.mock_model.clone_with_params.return_value = self.mock_model
         self.mock_model.__copy__ = Mock(return_value=self.mock_model)
-        self.mock_model.set_params_from_vector = Mock()
 
     def test_validate_clusters_valid_input(self):
         weight_main = 0.8
@@ -73,7 +73,7 @@ class TestUtils:
         assert result["params"] == {"loc": loc_val}
         assert result["score"] == score_val
         assert result["weight"] == expected_weight
-        self.mock_model.set_params_from_vector.assert_called()
+        self.mock_model.clone_with_params.assert_called_once()
 
     def test_precompute_fits(self):
         array_size = 10

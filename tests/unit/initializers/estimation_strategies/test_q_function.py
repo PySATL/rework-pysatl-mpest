@@ -18,7 +18,7 @@ COMPARISON_CONSTANT = 1e-10
 class TestQFunctionStrategyExponential:
     def setup_method(self):
         self.mock_optimizer = Mock(spec=Optimizer)
-        self.component = Exponential(loc=1.0, rate=2.0)
+        self.component = Exponential(lambda_=2.0)
 
     def test_normal_case(self):
         X = np.array([1.5, 2.0, 2.5, 3.0, 3.5])
@@ -26,31 +26,20 @@ class TestQFunctionStrategyExponential:
 
         result = q_function_strategy(self.component, X, H_j, self.mock_optimizer)
 
-        assert Exponential.PARAM_LOC in result
-        assert Exponential.PARAM_RATE in result
+        assert "lambda_" in result
 
-        relevant_X = X[H_j > NUMERICAL_TOLERANCE]
-        expected_loc = np.min(relevant_X).item()
-        assert result[Exponential.PARAM_LOC] == expected_loc
-
-        weighted_sum = np.dot(H_j, np.maximum(X - result[Exponential.PARAM_LOC], NUMERICAL_TOLERANCE)).item()
+        weighted_sum_X = np.dot(H_j, X).item()
         N_j = np.sum(H_j).item()
-        expected_rate = N_j / weighted_sum
-        assert result[Exponential.PARAM_RATE] == expected_rate
+        expected_lambda = N_j / weighted_sum_X
+        assert result["lambda_"] == expected_lambda
 
     def test_all_H_j_below_tolerance(self):
-        original_loc = self.component.loc
-        original_rate = self.component.rate
         X = np.array([1.5, 2.0, 2.5, 3.0, 3.5])
         H_j = np.array([NUMERICAL_TOLERANCE] * 5) / 10
 
         result = q_function_strategy(self.component, X, H_j, self.mock_optimizer)
 
-        assert Exponential.PARAM_LOC in result
-        assert Exponential.PARAM_RATE in result
-
-        assert result[Exponential.PARAM_LOC] == original_loc
-        assert abs(result[Exponential.PARAM_RATE] - original_rate) < COMPARISON_CONSTANT
+        assert not result  # Should return empty dict when all weights below tolerance
 
     def test_weighted_sum_below_tolerance(self):
         X = np.array([1.001, 1.002, 1.003])
@@ -58,17 +47,12 @@ class TestQFunctionStrategyExponential:
 
         result = q_function_strategy(self.component, X, H_j, self.mock_optimizer)
 
-        assert Exponential.PARAM_LOC in result
-        assert Exponential.PARAM_RATE in result
+        assert "lambda_" in result
 
-        relevant_X = X[H_j > NUMERICAL_TOLERANCE]
-        expected_loc = np.min(relevant_X).item()
-        assert result[Exponential.PARAM_LOC] == expected_loc
-
-        weighted_sum = np.dot(H_j, np.maximum(X - result[Exponential.PARAM_LOC], NUMERICAL_TOLERANCE)).item()
+        weighted_sum_X = np.dot(H_j, X).item()
         N_j = np.sum(H_j).item()
-        expected_rate = N_j / weighted_sum
-        assert result[Exponential.PARAM_RATE] == expected_rate
+        expected_lambda = N_j / weighted_sum_X
+        assert result["lambda_"] == expected_lambda
 
     def test_X_equals_loc_case(self):
         X = np.array([1.0, 1.0, 1.0])
@@ -76,15 +60,12 @@ class TestQFunctionStrategyExponential:
 
         result = q_function_strategy(self.component, X, H_j, self.mock_optimizer)
 
-        assert Exponential.PARAM_LOC in result
-        assert Exponential.PARAM_RATE in result
-
-        assert result[Exponential.PARAM_LOC] == 1.0
+        assert "lambda_" in result
 
         N_j = np.sum(H_j).item()
-        weighted_sum = np.dot(H_j, np.maximum(X - 1.0, NUMERICAL_TOLERANCE)).item()
-        expected_rate = N_j / weighted_sum
-        assert abs(result[Exponential.PARAM_RATE] - expected_rate) < COMPARISON_CONSTANT
+        weighted_sum_X = np.dot(H_j, X).item()
+        expected_lambda = N_j / weighted_sum_X
+        assert abs(result["lambda_"] - expected_lambda) < COMPARISON_CONSTANT
 
 
 class TestQFunctionStrategyGeneric:
@@ -98,11 +79,12 @@ class TestQFunctionStrategyGeneric:
             def get_params_vector(self, params):
                 return np.array([1.0, 2.0])
 
-            def set_params_from_vector(self, params, vector):
-                pass
-
-            def q_function(self, X, H_j):
-                return 0.5
+            def clone_with_params(self, params, vector):
+                mock = Mock()
+                # When target is evaluated, we need it to return an lpdf value.
+                # Returning an array that dots with [0.5, 0.5] to a valid scalar.
+                mock.lpdf.return_value = np.array([1.0, 1.0])
+                return mock
 
         mock_component = MockDistribution()
 
@@ -121,7 +103,7 @@ class TestQFunctionStrategyIntegration:
         assert registry[object] != registry[Exponential]
 
     def test_correct_dispatcher_called(self):
-        exponential = Exponential(loc=1.0, rate=2.0)
+        exponential = Exponential(lambda_=2.0)
 
         mock_optimizer = Mock(spec=Optimizer)
         X = np.array([1.5, 2.0, 2.5])
@@ -131,5 +113,4 @@ class TestQFunctionStrategyIntegration:
 
         mock_optimizer.minimize.assert_not_called()
 
-        assert Exponential.PARAM_LOC in result
-        assert Exponential.PARAM_RATE in result
+        assert "lambda_" in result
