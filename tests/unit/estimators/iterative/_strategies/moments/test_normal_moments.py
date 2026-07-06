@@ -210,11 +210,12 @@ def normal_data_and_true_params(draw):
     # Avoid extremely small scales to prevent random noise issues in tests
     true_sigma = draw(st.floats(min_value=0.5, max_value=20))
 
-    true_component = Normal(mu=true_mu, sigma=true_sigma)
+    Normal(mu=true_mu, sigma=true_sigma)
 
     # Generate a large sample to ensure convergence of moments
     sample_size = draw(st.integers(min_value=5000, max_value=10000))
-    X = true_component.generate(size=sample_size)
+    rng = np.random.default_rng(42)
+    X = rng.normal(loc=true_mu, scale=true_sigma, size=sample_size)
 
     return X, true_mu, true_sigma
 
@@ -265,8 +266,6 @@ def normal_data_with_random_weights(draw):
     true_sigma = draw(st.floats(min_value=0.5, max_value=5.0))
 
     rng = np.random.default_rng(42)
-
-    np.random.seed(42)
 
     sample_size = 15000  # Достаточно для сходимости
     X = rng.normal(loc=true_mu, scale=true_sigma, size=sample_size)

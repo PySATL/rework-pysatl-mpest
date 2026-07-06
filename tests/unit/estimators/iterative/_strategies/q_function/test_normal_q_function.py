@@ -172,13 +172,12 @@ def normal_data_and_true_params(draw):
     true_mu = draw(st.floats(min_value=-50, max_value=50))
     # Avoid extremely small scales to prevent random noise issues in tests
     true_sigma = draw(st.floats(min_value=0.5, max_value=20))
-    true_component = Normal(mu=true_mu, sigma=true_sigma)
-
-    np.random.seed(42)
+    Normal(mu=true_mu, sigma=true_sigma)
 
     # 2. Generate a large data sample from this distribution
     sample_size = 10000
-    X = true_component.generate(size=sample_size)
+    rng = np.random.default_rng(42)
+    X = rng.normal(loc=true_mu, scale=true_sigma, size=sample_size)
 
     return (X, true_mu, true_sigma)
 

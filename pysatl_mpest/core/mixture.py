@@ -313,7 +313,11 @@ class MixtureModel:
         X = np.asarray(X, dtype=np.float64)
         return np.sum(self.lpdf(X))
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
+    def generate(
+        self,
+        size: int | tuple[int, ...] | None = None,
+        random_state: int | np.random.Generator | None = None,
+    ) -> np.float64 | FloatArray:
         """Generates random samples from the mixture model.
 
         First, a component is chosen based on the mixture weights. Then, a
@@ -327,6 +331,8 @@ class MixtureModel:
             - If None (default), returns a single scalar.
             - If int, returns a 1D array of that length.
             - If tuple, returns an array of that shape.
+        random_state : int | np.random.Generator | None, optional
+            A seed or random number generator to use for reproducible output.
 
         Returns
         -------
@@ -346,13 +352,14 @@ class MixtureModel:
             if n_samples == 0:
                 return np.empty(size, dtype=np.float64)
 
-        component_choices = np.random.choice(self.n_components, size=n_samples, p=self.weights)
+        rng = np.random.default_rng(random_state)
+        component_choices = rng.choice(self.n_components, size=n_samples, p=self.weights)
         counts = np.bincount(component_choices, minlength=self.n_components)
 
         samples_list = [self.components[i].generate(size=count) for i, count in enumerate(counts) if count > 0]
 
         samples = np.concatenate(samples_list)
-        np.random.shuffle(samples)
+        rng.shuffle(samples)
 
         if size is None:
             return samples[0]

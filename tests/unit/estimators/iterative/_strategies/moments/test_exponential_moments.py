@@ -163,13 +163,12 @@ def exponential_data_and_true_params(draw):
     """
 
     true_lambda = draw(st.floats(min_value=0.1, max_value=100))
-    true_component = Exponential(lambda_=true_lambda)
-
-    np.random.seed(42)
+    Exponential(lambda_=true_lambda)
 
     # Generate a data sample from this distribution
     sample_size = draw(st.integers(min_value=10000, max_value=10000))
-    X = true_component.generate(size=sample_size)
+    rng = np.random.default_rng(42)
+    X = rng.exponential(scale=1.0 / true_lambda, size=sample_size)
 
     return X, true_lambda
 
