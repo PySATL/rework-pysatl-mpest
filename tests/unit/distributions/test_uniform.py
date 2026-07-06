@@ -273,7 +273,7 @@ class TestUniformGenerate:
         np.random.seed(42)
         random.seed(42)
         dist = Uniform(lower_bound=0.0, upper_bound=2.0)
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
         if is_scalar:
             assert isinstance(samples, float)
@@ -288,18 +288,16 @@ class TestUniformGenerate:
         dist = Uniform(lower_bound=0.0, upper_bound=1.0)
 
         with pytest.raises(ValueError):
-            dist.generate(size=size)
+            dist.generate(size=size, random_state=42)
 
     def test_generate_statistical_properties(self):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
-        np.random.seed(123)
-        random.seed(123)
         lower_bound, upper_bound = 5.0, 5.5
         dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         size = 20000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
         theoretical_mean = (upper_bound + lower_bound) / 2
         theoretical_var = (upper_bound - lower_bound) ** 2 / 12
@@ -310,13 +308,11 @@ class TestUniformGenerate:
     def test_generate_kolmogorov_smirnov(self):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
 
-        np.random.seed(456)
-        random.seed(456)
         lower_bound, upper_bound = 10.0, 12.0
         dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         size = 10000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
         _, p_value = kstest(samples, "uniform", args=(lower_bound, upper_bound - lower_bound))
         lower_bound = 0.05

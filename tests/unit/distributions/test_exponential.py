@@ -209,18 +209,16 @@ class TestExponentialGenerate:
         dist = Exponential(lambda_=1.0)
 
         with pytest.raises(ValueError):
-            dist.generate(size=size)
+            dist.generate(size=size, random_state=42)
 
     def test_lambda_statistical_properties(self):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
-        np.random.seed(123)
-        random.seed(123)
         lambda_ = 0.5
         dist = Exponential(lambda_=lambda_)
         size = 20000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
         theoretical_mean = 1 / lambda_
         theoretical_var = (1 / lambda_) ** 2
@@ -237,7 +235,7 @@ class TestExponentialGenerate:
         dist = Exponential(lambda_=lambda_)
         size = 10000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
         _, p_value = kstest(
             samples,

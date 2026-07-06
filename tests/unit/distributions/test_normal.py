@@ -4,7 +4,6 @@ __author__ = "Maksim Pastukhov, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-import random
 
 import numpy as np
 import pytest
@@ -213,7 +212,7 @@ class TestNormalGenerate:
         """Tests that generated samples have the correct type and shape."""
 
         dist = Normal(mu=0.0, sigma=1.0)
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
         if is_scalar:
             assert_is_scalar_type(samples)
@@ -227,31 +226,27 @@ class TestNormalGenerate:
         dist = Normal(mu=0.0, sigma=1.0)
 
         with pytest.raises(ValueError):
-            dist.generate(size=size)
+            dist.generate(size=size, random_state=42)
 
     def test_generate_statistical_properties(self):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
-        np.random.seed(123)
-        random.seed(123)
         mu, sigma = 15.0, 3.0
         dist = Normal(mu=mu, sigma=sigma)
         size = 50000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
         assert np.mean(samples) == pytest.approx(mu, rel=0.05)
         assert np.var(samples) == pytest.approx(sigma**2, rel=0.05)
 
     def test_generate_kolmogorov_smirnov(self):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
 
-        np.random.seed(456)
-        random.seed(456)
         mu, sigma = -10.0, 5.0
         dist = Normal(mu=mu, sigma=sigma)
         size = 10000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
         ks_statistic, p_value = kstest(samples, norm(loc=mu, scale=sigma).cdf)
         expected_p_value = 0.05
         assert p_value > expected_p_value
