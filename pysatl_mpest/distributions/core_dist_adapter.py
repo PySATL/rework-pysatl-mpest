@@ -74,26 +74,6 @@ class CoreDistributionAdapter(ContinuousDistribution):
         new_instance._fixed_params = self._fixed_params.copy()
         return new_instance
 
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[np.float64 | float]) -> None:
-        """
-        Update the free parameters from a flat vector sequence.
-
-        Since the core structures are immutable, this recreates the internal
-        core distribution instance.
-
-        Parameters
-        ----------
-        param_names : Sequence[str]
-            The names of the parameters to update.
-        vector : Sequence[np.float64 | float]
-            The new values for the corresponding parameters.
-        """
-        current_params = self.core_dist.parametrization.parameters.copy()
-        for name, value in zip(param_names, vector):
-            current_params[name] = float(value)
-
-        self.core_dist = self.core_family.distribution(self.parametrization_name, **current_params)
-
     def clone_with_params(
         self, param_names: Sequence[str], vector: Sequence[np.float64 | float]
     ) -> "CoreDistributionAdapter":

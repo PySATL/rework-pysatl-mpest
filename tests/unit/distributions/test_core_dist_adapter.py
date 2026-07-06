@@ -56,18 +56,6 @@ def test_copy(core_adapter: CoreDistributionAdapter) -> None:
     assert adapter_copy._fixed_params == core_adapter._fixed_params
 
 
-def test_set_params_from_vector(core_adapter: CoreDistributionAdapter) -> None:
-    """Test updating parameters from a vector."""
-    target_mu = 2.0
-    target_sigma = 3.0
-    core_adapter.set_params_from_vector(["mu", "sigma"], [target_mu, target_sigma])
-
-    assert core_adapter.mu == target_mu
-    assert core_adapter.sigma == target_sigma
-    assert core_adapter.core_dist.parametrization.parameters["mu"] == target_mu
-    assert core_adapter.core_dist.parametrization.parameters["sigma"] == target_sigma
-
-
 def test_pdf_lpdf_ppf(core_adapter: CoreDistributionAdapter) -> None:
     """Test PDF, LPDF, and PPF methods."""
     x = np.array([0.0, 1.0])

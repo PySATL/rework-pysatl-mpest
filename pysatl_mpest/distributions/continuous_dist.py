@@ -49,7 +49,6 @@ class ContinuousDistribution(ABC):
         fix_param
         unfix_param
         get_params_vector
-        set_params_from_vector
         astype
 
     **Abstract methods**
@@ -148,39 +147,6 @@ class ContinuousDistribution(ABC):
             raise ValueError(f"Invalid parameter names provided: {invalid_params}")
 
         return [getattr(self, name) for name in param_names]
-
-    def set_params_from_vector(self, param_names: Sequence[str], vector: Sequence[np.float64 | float]):
-        """Sets parameter values from a sequence of floats.
-
-        Updates the distribution's parameters using values from the provided
-        sequence. The order of values in the :attr:`vector` must correspond to the order
-        of names in :attr:`param_names`. This vector can contain
-        standard numerical types like `int` or `float`. Internally, each
-        value is automatically cast to the `np.float64`.
-
-        Parameters
-        ----------
-        param_names : Sequence[str]
-            A sequence of parameter names to update.
-        vector : Sequence[float]
-            A sequence of new values for the parameters.
-
-        Raises
-        ------
-        ValueError
-            If any parameter names do not exist, or if the length of
-            :attr:`param_names` does not match the length of :attr:`vector`.
-        """
-
-        if len(param_names) != len(vector):
-            raise ValueError("The number of parameter names must match the number of values in the vector.")
-
-        if not set(param_names).issubset(self.params):
-            invalid_params = set(param_names) - self.params
-            raise ValueError(f"Invalid parameter names provided: {invalid_params}")
-
-        for name, value in zip(param_names, vector):
-            setattr(self, name, float(value))
 
     @abstractmethod
     def clone_with_params(
