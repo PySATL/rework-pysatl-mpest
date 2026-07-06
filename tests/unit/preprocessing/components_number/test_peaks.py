@@ -1,7 +1,7 @@
 """Unit test module which test the Peak method"""
 
 import pytest
-from pysatl_mpest.distributions import Exponential, Normal, Weibull
+from pysatl_mpest.distributions import Normal
 from pysatl_mpest.preprocessing.components_number import Peaks
 from tests.unit.preprocessing.components_number.components_num_utils import run_test
 
@@ -9,16 +9,20 @@ from tests.unit.preprocessing.components_number.components_num_utils import run_
 @pytest.mark.parametrize(
     "components, weights, size",
     [
-        ([Normal(5.0, 2.0)], [1.0], 200),
         (
-            [Weibull(5.0, 0.0, 2.0), Weibull(7.0, 0.0, 1.0), Weibull(11.0, 0.0, 3.0)],
-            [0.33, 0.33, 0.34],
-            500,
+            [Normal(mu=5.0, sigma=1.0), Normal(mu=15.0, sigma=1.0)],
+            [0.5, 0.5],
+            2000,
         ),
         (
-            [Weibull(4.0, 0.0, 2.0), Normal(7.5, 2.5), Weibull(10.0, 0.0, 4.0)],
+            [Normal(mu=0.0, sigma=1.0), Normal(mu=10.0, sigma=1.0), Normal(mu=20.0, sigma=1.0)],
+            [0.33, 0.33, 0.34],
+            2000,
+        ),
+        (
+            [Normal(mu=0.0, sigma=1.0), Normal(mu=10.0, sigma=1.0), Normal(mu=20.0, sigma=1.0)],
             [0.2, 0.4, 0.4],
-            1000,
+            2000,
         ),
     ],
 )
@@ -31,19 +35,24 @@ def test_correct_estimating(components, weights, size):
     "components, weights, size",
     [
         (
-            [Weibull(10.0, 0.0, 1.0), Weibull(4.0, 0.0, 6.0), Exponential(0.0, 3.5)],
+            [Normal(mu=0.0, sigma=1.0), Normal(mu=0.5, sigma=1.0), Normal(mu=1.0, sigma=1.0)],
             [0.2, 0.4, 0.4],
-            200,
+            2000,
         ),
         (
-            [Exponential(0.0, 0.5), Exponential(0.0, 3.5), Normal(9.0, 3.5), Normal(3.0, 6.0)],
+            [
+                Normal(mu=0.0, sigma=1.0),
+                Normal(mu=0.5, sigma=1.0),
+                Normal(mu=1.0, sigma=1.0),
+                Normal(mu=1.5, sigma=1.0),
+            ],
             [0.1, 0.2, 0.4, 0.3],
             5000,
         ),
         (
-            [Normal(3.0, 1.5), Weibull(7.0, 0.0, 2.0)],
-            [0.7, 0.3],
-            1000,
+            [Normal(mu=0.0, sigma=1.0), Normal(mu=0.5, sigma=1.0)],
+            [0.5, 0.5],
+            2000,
         ),
     ],
 )
