@@ -207,6 +207,13 @@ class MixtureModel:
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
+    def set_component(self, new_component: "ContinuousDistribution", component_idx: int):
+        if not (0 <= component_idx <= self.n_components - 1):
+            raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
+
+        self._components[component_idx] = copy(new_component)
+        self._sorted_pairs_cache = None
+
     def remove_component(self, component_idx: int):
         """Removes a component from the mixture by its index.
 
@@ -306,7 +313,11 @@ class MixtureModel:
         X = np.asarray(X, dtype=np.float64)
         return np.sum(self.lpdf(X))
 
-    def generate(self, size: int | tuple[int, ...] | None = None) -> np.float64 | FloatArray:
+    def generate(
+        self,
+        size: int | tuple[int, ...] | None = None,
+        random_state: int | np.random.Generator | None = None,
+    ) -> np.float64 | FloatArray:
         """Generates random samples from the mixture model.
 
         First, a component is chosen based on the mixture weights. Then, a
@@ -320,6 +331,8 @@ class MixtureModel:
             - If None (default), returns a single scalar.
             - If int, returns a 1D array of that length.
             - If tuple, returns an array of that shape.
+        random_state : int | np.random.Generator | None, optional
+            A seed or random number generator to use for reproducible output.
 
         Returns
         -------
@@ -339,13 +352,16 @@ class MixtureModel:
             if n_samples == 0:
                 return np.empty(size, dtype=np.float64)
 
-        component_choices = np.random.choice(self.n_components, size=n_samples, p=self.weights)
+        rng = np.random.default_rng(random_state)
+        component_choices = rng.choice(self.n_components, size=n_samples, p=self.weights)
         counts = np.bincount(component_choices, minlength=self.n_components)
 
-        samples_list = [self.components[i].generate(size=count) for i, count in enumerate(counts) if count > 0]
+        samples_list = [
+            self.components[i].generate(size=count, random_state=rng) for i, count in enumerate(counts) if count > 0
+        ]
 
         samples = np.concatenate(samples_list)
-        np.random.shuffle(samples)
+        rng.shuffle(samples)
 
         if size is None:
             return samples[0]

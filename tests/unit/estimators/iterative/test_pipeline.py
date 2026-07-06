@@ -107,7 +107,9 @@ class ModifyingStep(PipelineStep):
             state.curr_mixture.log_weights = np.log(new_weights + 1e-30)
 
         if state.curr_mixture.n_components > 0:
-            state.curr_mixture.components[0].set_params_from_vector(["loc"], [999.0])
+            comp = state.curr_mixture.components[0]
+            new_comp = comp.clone_with_params(["lambda_"], [999.0])
+            state.curr_mixture.set_component(new_comp, 0)
 
         if state.curr_mixture.n_components > 1:
             state.curr_mixture.remove_component(1)
@@ -126,10 +128,11 @@ class ParameterIncrementStep(PipelineStep):
         return [ParameterIncrementStep]
 
     def run(self, state: PipelineState) -> PipelineState:
-        # Increment 'loc' for each component by 1
-        for component in state.curr_mixture.components:
-            new_loc = component.get_params_vector(["loc"])[0] + 1.0
-            component.set_params_from_vector(["loc"], [new_loc])
+        # Increment 'lambda_' for each component by 1
+        for i, component in enumerate(state.curr_mixture.components):
+            new_lambda = component.get_params_vector(["lambda_"])[0] + 1.0
+            new_comp = component.clone_with_params(["lambda_"], [new_lambda])
+            state.curr_mixture.set_component(new_comp, i)
 
         # Predictably shift weights (e.g., increase first, decrease second)
         new_weights = state.curr_mixture.weights.copy()
@@ -184,7 +187,7 @@ class MockPruner(Pruner):
 @pytest.fixture
 def initial_mixture() -> MixtureModel:
     """Provides a basic MixtureModel with two components."""
-    components = [Exponential(loc=0, rate=1), Exponential(loc=5, rate=2)]
+    components = [Exponential(1.0), Exponential(2.0)]
     return MixtureModel(components, weights=[0.5, 0.5])
 
 
@@ -304,15 +307,14 @@ class TestPipelineFit:
         pipeline = Pipeline(steps, breakpointers)
 
         # Initial state from fixture:
-        # Component 0: loc=0, rate=1, weight=0.5
-        # Component 1: loc=5, rate=2, weight=0.5
+        # Component 0: lambda_=1.0, weight=0.5
+        # Component 1: lambda_=2.0, weight=0.5
 
         # Expected state after 2 iterations:
-        # Iter 1: locs=[1, 6], weights=[0.6, 0.4]
-        # Iter 2: locs=[2, 7], weights=[0.7, 0.3]
+        # Iter 1: lambdas=[2, 3], weights=[0.6, 0.4]
+        # Iter 2: lambdas=[3, 4], weights=[0.7, 0.3]
 
-        expected_final_locs = np.array([2.0, 7.0], dtype=np.float64)
-        expected_final_rates = np.array([1.0, 2.0], dtype=np.float64)  # Rates should not change
+        expected_final_lambdas = np.array([3.0, 4.0], dtype=np.float64)
         expected_final_weights = np.array([0.7, 0.3], dtype=np.float64)
 
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
@@ -329,11 +331,9 @@ class TestPipelineFit:
             err_msg="Mixture weights did not reach the expected values.",
         )
 
-        final_locs = np.array([comp.loc for comp in fitted_mixture.components], dtype=np.float64)
-        final_rates = np.array([comp.rate for comp in fitted_mixture.components], dtype=np.float64)
+        final_lambdas = np.array([comp.lambda_ for comp in fitted_mixture.components], dtype=np.float64)
 
-        np.testing.assert_allclose(final_locs, expected_final_locs, rtol=rtol)
-        np.testing.assert_allclose(final_rates, expected_final_rates, rtol=rtol)
+        np.testing.assert_allclose(final_lambdas, expected_final_lambdas, rtol=rtol)
 
     def test_fit_does_not_modify_original_mixture(self, initial_mixture, sample_data):
         """
@@ -359,8 +359,8 @@ class TestPipelineFit:
 
         # Comparing parameters of the components
         for i in range(initial_mixture.n_components):
-            original_params = original_mixture_copy.components[i].get_params_vector(["loc", "rate"])
-            current_params = initial_mixture.components[i].get_params_vector(["loc", "rate"])
+            original_params = original_mixture_copy.components[i].get_params_vector(["lambda_"])
+            current_params = initial_mixture.components[i].get_params_vector(["lambda_"])
             np.testing.assert_array_equal(
                 current_params,
                 original_params,
@@ -542,9 +542,9 @@ class TestMaximizationStepClearAfterPrune:
         """Tests that clear_after_prune removes optimization blocks for pruned components."""
 
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"param1"}, "q_function"),
+            OptimizationBlock(1, {"param2"}, "q_function"),
+            OptimizationBlock(2, {"param1", "param2"}, "q_function"),
         ]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
@@ -563,9 +563,9 @@ class TestMaximizationStepClearAfterPrune:
         """Tests that clear_after_prune preserves optimization parameters for remaining blocks."""
 
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate", "scale"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"param1"}, "q_function"),
+            OptimizationBlock(1, {"param2", "param3"}, "q_function"),
+            OptimizationBlock(2, {"param1", "param2"}, "q_function"),
         ]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
@@ -575,13 +575,13 @@ class TestMaximizationStepClearAfterPrune:
         step.clear_after_prune(removed_indices)
 
         # Check that optimization parameters are preserved
-        assert step.blocks[0].params_to_optimize == {"loc"}
-        assert step.blocks[1].params_to_optimize == {"loc", "rate"}
+        assert step.blocks[0].params_to_optimize == {"param1"}
+        assert step.blocks[1].params_to_optimize == {"param1", "param2"}
 
     def test_clear_after_prune_with_empty_removal(self):
         """Tests that clear_after_prune does nothing when no components are removed."""
 
-        blocks = [OptimizationBlock(0, {"loc"}, "q_function"), OptimizationBlock(1, {"rate"}, "q_function")]
+        blocks = [OptimizationBlock(0, {"param1"}, "q_function"), OptimizationBlock(1, {"param2"}, "q_function")]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
         original_blocks = list(step.blocks)  # Create a copy
@@ -604,10 +604,10 @@ class TestMaximizationStepClearAfterPrune:
         """Tests clear_after_prune with multiple components removed."""
 
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"scale"}, "q_function"),
-            OptimizationBlock(3, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"param1"}, "q_function"),
+            OptimizationBlock(1, {"param2"}, "q_function"),
+            OptimizationBlock(2, {"param3"}, "q_function"),
+            OptimizationBlock(3, {"param1", "param2"}, "q_function"),
         ]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
@@ -620,5 +620,5 @@ class TestMaximizationStepClearAfterPrune:
         assert step.blocks[0].component_id == 0  # Originally component 0
         assert step.blocks[1].component_id == 1  # Originally component 2, now reindexed to 1
 
-        assert step.blocks[0].params_to_optimize == {"loc"}
-        assert step.blocks[1].params_to_optimize == {"scale"}
+        assert step.blocks[0].params_to_optimize == {"param1"}
+        assert step.blocks[1].params_to_optimize == {"param3"}

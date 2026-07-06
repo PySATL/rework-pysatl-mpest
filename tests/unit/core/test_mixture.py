@@ -130,6 +130,31 @@ def test_add_component() -> None:
     assert_allclose(mixture.weights, [0.5, 0.5], rtol=rtol, atol=atol)
 
 
+def test_set_component() -> None:
+    """Test replacing a component at a specific index."""
+    comp1 = MockContinuousDistribution(param1=1.0)
+    comp2 = MockContinuousDistribution(param1=2.0)
+    comp3 = MockContinuousDistribution(param1=3.0)
+
+    expected_n_components = 2
+
+    mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6])
+
+    # We first access __eq__ or hash to populate the cache
+    _ = mixture == mixture  # noqa: PLR0124
+    assert mixture._sorted_pairs_cache is not None
+
+    mixture.set_component(comp3, 1)
+
+    assert mixture.n_components == expected_n_components
+    assert mixture.components[0] == comp1
+    assert mixture.components[1] == comp3
+    assert mixture.components[1] is not comp3  # Since copy() should be used
+
+    # Verify that the sorted pairs cache was invalidated
+    assert mixture._sorted_pairs_cache is None
+
+
 def test_add_component_invalid_weight() -> None:
     """Test adding component with invalid weight bounds."""
     comp1 = MockContinuousDistribution()

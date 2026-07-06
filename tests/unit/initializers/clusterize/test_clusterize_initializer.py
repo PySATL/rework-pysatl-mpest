@@ -27,10 +27,14 @@ class TestClusterizeInitializer:
         self.dist1 = Mock(spec=ContinuousDistribution)
         self.dist1.params_to_optimize = ["loc", "scale"]
         self.dist1.get_params_vector.return_value = [0.0, 1.0]
+        self.dist1.clone_with_params.return_value = self.dist1
+        self.dist1.__copy__ = Mock(return_value=self.dist1)
 
         self.dist2 = Mock(spec=ContinuousDistribution)
         self.dist2.params_to_optimize = ["loc", "scale"]
         self.dist2.get_params_vector.return_value = [5.0, 2.0]
+        self.dist2.clone_with_params.return_value = self.dist2
+        self.dist2.__copy__ = Mock(return_value=self.dist2)
 
         self.dists = [self.dist1, self.dist2]
 
@@ -146,14 +150,14 @@ class TestClusterizeInitializer:
         call_count = 2
         assert mock_est_func.call_count == call_count
 
-        self.dist1.set_params_from_vector.assert_called_once()
-        args0 = self.dist1.set_params_from_vector.call_args[0]
+        self.dist1.clone_with_params.assert_called_once()
+        args0 = self.dist1.clone_with_params.call_args[0]
         assert "loc" in args0[0] and "scale" in args0[0]
         arg00, arg01 = 10.0, 1.5
         assert arg00 in args0[1] and arg01 in args0[1]
 
-        self.dist2.set_params_from_vector.assert_called_once()
-        args1 = self.dist2.set_params_from_vector.call_args[0]
+        self.dist2.clone_with_params.assert_called_once()
+        args1 = self.dist2.clone_with_params.call_args[0]
         arg11 = -5.0
         assert arg11 in args1[1]
 
@@ -185,8 +189,8 @@ class TestClusterizeInitializer:
 
         assert res_weights == [0.1, 0.9]
 
-        self.dist1.set_params_from_vector.assert_called()
-        self.dist2.set_params_from_vector.assert_called()
+        self.dist1.clone_with_params.assert_called()
+        self.dist2.clone_with_params.assert_called()
 
     def test_accurate_init_fallback(self):
         """Test that empty params from matching triggers fast_init."""

@@ -87,7 +87,9 @@ class MaximizationStep(PipelineStep):
 
         return [ExpectationStep]
 
-    def _update_components_params(self, component: ContinuousDistribution, params: dict[str, float]):
+    def _update_components_params(
+        self, component: ContinuousDistribution, params: dict[str, float]
+    ) -> ContinuousDistribution:
         """Helper method to update parameters for a single component.
 
         Parameters
@@ -100,7 +102,7 @@ class MaximizationStep(PipelineStep):
 
         param_names = list(params.keys())
         param_values = list(params.values())
-        component.set_params_from_vector(param_names, param_values)
+        return component.clone_with_params(param_names, param_values)
 
     def run(self, state: PipelineState) -> PipelineState:
         """Executes the M-step.
@@ -141,7 +143,8 @@ class MaximizationStep(PipelineStep):
 
         for result in results:
             component_id, params = result
-            self._update_components_params(curr_mixture[component_id], params)
+            new_component = self._update_components_params(curr_mixture[component_id], params)
+            curr_mixture.set_component(new_component, component_id)
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]

@@ -24,7 +24,7 @@ def parametrized_exponential_setup() -> tuple[Exponential, PipelineState]:
     corresponding PipelineState for various dtypes.
     """
 
-    component = Exponential(loc=0.0, rate=1.0)
+    component = Exponential(lambda_=1.0)
 
     state = PipelineState(
         X=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
@@ -49,7 +49,7 @@ def test_q_function_exponential_raises_value_error_if_h_is_none(parametrized_exp
     state.H = None
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
     with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
@@ -64,7 +64,7 @@ def test_q_function_exponential_returns_correct_types(parametrized_exponential_s
     exponential_component, pipeline_state = parametrized_exponential_setup
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
     result = q_function_strategy(exponential_component, pipeline_state, block, optimizer=None)
@@ -86,63 +86,25 @@ def test_q_function_exponential_denominator_zero_rate_update(parametrized_expone
     """
     component, state = parametrized_exponential_setup
 
-    # X = 2.0, loc = 2.0 -> X - loc = 0.
-    state.X = np.array([2.0])
+    # X = 0.0 -> weighted average is 0.
+    state.X = np.array([0.0])
     state.H = np.array([[1.0, 0.0]])  # 1 sample
 
-    component.loc = 2.0
-    component.rate = 5.0
-
-    component.fix_param("loc")
-
-    block = OptimizationBlock(0, {"rate"}, MaximizationStrategy.QFUNCTION)
+    block = OptimizationBlock(0, {"lambda_"}, MaximizationStrategy.QFUNCTION)
 
     _, new_params = q_function_strategy(component, state, block, optimizer=None)
 
     # Should keep original rate to avoid division by zero
-    assert Exponential.PARAM_RATE in new_params
-    assert new_params["rate"] == component.rate
-
-
-def test_exponential_loc_fallback_low_individual_weights():
-    """
-    Tests the fallback branch for Exponential 'loc' (Line 155) where
-    individual weights are below tolerance (so relevant_X is empty),
-    but their sum is significant enough to bypass the early exit check.
-    """
-    tolerance = 1e-9
-
-    # Create weights slightly below tolerance
-    weight_val = 0.5 * tolerance  # 0.5e-9
-
-    # Create enough samples so their sum is > tolerance
-    # 10 * 0.5e-9 = 5e-9 > 1e-9
-    n_samples = 10
-    X = np.arange(n_samples)
-    H = np.full((n_samples, 2), weight_val)
-
-    comp = Exponential(loc=5.0, rate=1.0)
-    state = PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=None, error=None)
-    block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc"}, maximization_strategy=MaximizationStrategy.QFUNCTION
-    )
-
-    _, new_params = q_function_strategy(comp, state, block, optimizer=None)
-
-    assert Exponential.PARAM_LOC in new_params
-    assert new_params[Exponential.PARAM_LOC] == comp.loc
+    assert "lambda_" in new_params
+    assert new_params["lambda_"] == component.lambda_
 
 
 @pytest.mark.parametrize(
     "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
     [
-        ({"loc", "rate"}, set(), {"loc", "rate"}),  # Optimize both, none are fixed
-        ({"loc"}, set(), {"loc"}),  # Optimize only loc
-        ({"rate"}, set(), {"rate"}),  # Optimize only rate
-        ({"loc", "rate"}, {"loc"}, {"rate"}),  # Optimize both, but loc is fixed
-        ({"loc", "rate"}, {"rate"}, {"loc"}),  # Optimize both, but rate is fixed
-        ({"loc", "rate"}, {"loc", "rate"}, set()),  # Optimize both, but both are fixed
-        ({"non_existent_param", "loc"}, set(), {"loc"}),  # Ignore non-existent params
+        ({"lambda_"}, set(), {"lambda_"}),  # Optimize lambda_, none are fixed
+        ({"lambda_"}, {"lambda_"}, set()),  # Optimize lambda_, but it is fixed
+        ({"non_existent_param", "lambda_"}, set(), {"lambda_"}),  # Ignore non-existent params
         (set(), set(), set()),  # Optimize nothing
     ],
 )
@@ -180,7 +142,7 @@ def test_q_function_exponential_handles_negligible_responsibility(parametrized_e
     pipeline_state.H.fill(1e-10)  # Make all responsibilities negligible
     block = OptimizationBlock(
         component_id=0,
-        params_to_optimize={"loc", "rate"},
+        params_to_optimize={"lambda_"},
         maximization_strategy=MaximizationStrategy.QFUNCTION,
     )
 
@@ -199,15 +161,15 @@ def exponential_data_and_true_params(draw):
     Generates a true Exponential component and a data sample from it,
     all configured with a specific dtype.
     """
-    true_loc = draw(st.floats(min_value=-100, max_value=100))
     true_rate = draw(st.floats(min_value=0.1, max_value=100))
-    true_component = Exponential(loc=true_loc, rate=true_rate)
+    Exponential(lambda_=true_rate)
 
     # 2. Generate a data sample from this distribution
     sample_size = draw(st.integers(min_value=10000, max_value=10000))
-    X = true_component.generate(size=sample_size)
+    rng = np.random.default_rng(42)
+    X = rng.exponential(scale=1.0 / true_rate, size=sample_size)
 
-    return (X, true_loc, true_rate)
+    return (X, true_rate)
 
 
 @settings(max_examples=50)
@@ -219,7 +181,7 @@ def test_q_function_exponential_recovers_true_params_on_ideal_data(data):
     This confirms the statistical validity of the implemented formulas in an ideal case.
     """
     # --- Arrange ---
-    X, true_loc, true_rate = data
+    X, true_rate = data
 
     # This is the key assumption for this test: perfect knowledge that all
     # data points belong to our component of interest.
@@ -227,11 +189,11 @@ def test_q_function_exponential_recovers_true_params_on_ideal_data(data):
     H = np.vstack([H_j, np.zeros_like(H_j)]).T  # Simulate a 2-component mixture
 
     # Use a starting component with completely different parameters
-    start_component = Exponential(loc=-999.0, rate=0.001)
+    start_component = Exponential(lambda_=0.001)
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "rate"}, maximization_strategy=MaximizationStrategy.QFUNCTION
+        component_id=0, params_to_optimize={"lambda_"}, maximization_strategy=MaximizationStrategy.QFUNCTION
     )
 
     _, new_params = q_function_strategy(start_component, state, block, optimizer=None)
@@ -239,5 +201,4 @@ def test_q_function_exponential_recovers_true_params_on_ideal_data(data):
     # The estimated parameters won't be exactly the same due to sampling noise,
     # so we use pytest.approx with a relative tolerance.
     # For a large enough sample, the estimates should be reasonably close.
-    assert new_params[Exponential.PARAM_LOC] == pytest.approx(true_loc, abs=0.05)
-    assert new_params[Exponential.PARAM_RATE] == pytest.approx(true_rate, rel=0.05)
+    assert new_params["lambda_"] == pytest.approx(true_rate, rel=0.05)

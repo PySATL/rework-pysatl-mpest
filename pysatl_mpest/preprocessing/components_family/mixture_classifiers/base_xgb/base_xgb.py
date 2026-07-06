@@ -6,7 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from pathlib import Path
 
-from pysatl_mpest.distributions import Beta, Cauchy, Exponential, Normal, Uniform, Weibull
+from pysatl_mpest.distributions import Exponential, Normal, Uniform
 from pysatl_mpest.preprocessing.components_family.classifier_criterions import (
     MixtureClassifierCriterions,
 )
@@ -24,11 +24,12 @@ XGBBaseModel = MixtureClassifierModel(
     str(Path(__file__).parent / "labels.csv"),
     MixtureClassifierCriterions(),
     {
-        "G": Normal(0.0, 1.0),
-        "W": Weibull(1.0, 0.0, 1.0),
-        "U": Uniform(0.0, 1.0),
-        "C": Cauchy(0.0, 1.0),
-        "E": Exponential(0.0, 1.0),
-        "B": Beta(0.0, 0.0, 0.0, 1.0),
+        "G": Normal(mu=0.0, sigma=1.0),
+        "U": Uniform(lower_bound=0.0, upper_bound=1.0),
+        "E": Exponential(lambda_=1.0),
+        # Graceful degradation / Fallbacks for unsupported core distributions
+        "W": Exponential(lambda_=1.0),  # Fallback for Weibull
+        "B": Uniform(lower_bound=0.0, upper_bound=1.0),  # Fallback for Beta
+        "C": Normal(mu=0.0, sigma=1.0),  # Fallback for Cauchy
     },
 )

@@ -24,7 +24,7 @@ def parametrized_normal_setup() -> tuple[Normal, PipelineState]:
     corresponding PipelineState for various dtypes.
     """
 
-    component = Normal(loc=0.0, scale=1.0)
+    component = Normal(mu=0.0, sigma=1.0)
 
     state = PipelineState(
         X=np.array([1.0, 2.0, 3.0, 4.0, 5.0], dtype=np.float64),
@@ -50,7 +50,7 @@ def test_moments_normal_raises_value_error_if_h_is_none(parametrized_normal_setu
     state.H = None
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
@@ -60,13 +60,13 @@ def test_moments_normal_raises_value_error_if_h_is_none(parametrized_normal_setu
 def test_moments_normal_returns_correct_types(parametrized_normal_setup):
     """
     Verifies that the function returns a tuple with the correct
-    data types (int, dict[str, FloatT]).
+    data types (int, dict[str, float]).
     """
 
     normal_component, pipeline_state = parametrized_normal_setup
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     result = moments_strategy(normal_component, pipeline_state, block, optimizer=None)
@@ -84,13 +84,13 @@ def test_moments_normal_returns_correct_types(parametrized_normal_setup):
 @pytest.mark.parametrize(
     "params_to_optimize_in_block, fixed_params_on_component, expected_keys",
     [
-        ({"loc", "scale"}, set(), {"loc", "scale"}),  # Optimize both
-        ({"loc"}, set(), {"loc"}),  # Optimize only loc
-        ({"scale"}, set(), {"scale"}),  # Optimize only scale
-        ({"loc", "scale"}, {"loc"}, {"scale"}),  # Optimize both, but loc is fixed
-        ({"loc", "scale"}, {"scale"}, {"loc"}),  # Optimize both, but scale is fixed
-        ({"loc", "scale"}, {"loc", "scale"}, set()),  # Optimize both, but both are fixed
-        ({"non_existent_param", "loc"}, set(), {"loc"}),  # Ignore non-existent params
+        ({"mu", "sigma"}, set(), {"mu", "sigma"}),  # Optimize both
+        ({"mu"}, set(), {"mu"}),  # Optimize only mu
+        ({"sigma"}, set(), {"sigma"}),  # Optimize only sigma
+        ({"mu", "sigma"}, {"mu"}, {"sigma"}),  # Optimize both, but mu is fixed
+        ({"mu", "sigma"}, {"sigma"}, {"mu"}),  # Optimize both, but sigma is fixed
+        ({"mu", "sigma"}, {"mu", "sigma"}, set()),  # Optimize both, but both are fixed
+        ({"non_existent_param", "mu"}, set(), {"mu"}),  # Ignore non-existent params
         (set(), set(), set()),  # Optimize nothing
     ],
 )
@@ -129,7 +129,7 @@ def test_moments_normal_handles_negligible_responsibility(parametrized_normal_se
     pipeline_state.H.fill(1e-10)  # Make all responsibilities negligible
     block = OptimizationBlock(
         component_id=0,
-        params_to_optimize={"loc", "scale"},
+        params_to_optimize={"mu", "sigma"},
         maximization_strategy=MaximizationStrategy.MOMENTS,
     )
 
@@ -153,15 +153,15 @@ def test_moments_normal_clamping_min_scale(parametrized_normal_setup):
     state.H = np.ones((3, 2), dtype=np.float64)  # Component 0 has full responsibility
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"scale"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"sigma"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     # Act
     _, new_params = moments_strategy(component, state, block, optimizer=None)
 
     # Assert
-    assert Normal.PARAM_SCALE in new_params
-    new_scale = new_params[Normal.PARAM_SCALE]
+    assert "sigma" in new_params
+    new_scale = new_params["sigma"]
 
     # Check that scale is not 0.0, but exactly the machine epsilon for that dtype
     expected_min = np.finfo(np.float64).eps
@@ -186,13 +186,13 @@ def test_moments_normal_calculation_correctness(parametrized_normal_setup):
     state.H = np.array([[0.2], [0.8]], dtype=np.float64)
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     _, new_params = moments_strategy(component, state, block, optimizer=None)
 
-    assert new_params[Normal.PARAM_LOC] == pytest.approx(18.0, rel=1e-4)
-    assert new_params[Normal.PARAM_SCALE] == pytest.approx(4.0, rel=1e-4)
+    assert new_params["mu"] == pytest.approx(18.0, rel=1e-4)
+    assert new_params["sigma"] == pytest.approx(4.0, rel=1e-4)
 
 
 # Property-Based Test with Hypothesis
@@ -206,17 +206,18 @@ def normal_data_and_true_params(draw):
     Restricted to float64 to ensure stability during random generation tests.
     """
 
-    true_loc = draw(st.floats(min_value=-50, max_value=50))
+    true_mu = draw(st.floats(min_value=-50, max_value=50))
     # Avoid extremely small scales to prevent random noise issues in tests
-    true_scale = draw(st.floats(min_value=0.5, max_value=20))
+    true_sigma = draw(st.floats(min_value=0.5, max_value=20))
 
-    true_component = Normal(loc=true_loc, scale=true_scale)
+    Normal(mu=true_mu, sigma=true_sigma)
 
     # Generate a large sample to ensure convergence of moments
     sample_size = draw(st.integers(min_value=5000, max_value=10000))
-    X = true_component.generate(size=sample_size)
+    rng = np.random.default_rng(42)
+    X = rng.normal(loc=true_mu, scale=true_sigma, size=sample_size)
 
-    return X, true_loc, true_scale
+    return X, true_mu, true_sigma
 
 
 @settings(max_examples=50)
@@ -228,18 +229,18 @@ def test_moments_normal_recovers_true_params_on_ideal_data(data):
     """
 
     # --- Arrange ---
-    X, true_loc, true_scale = data
+    X, true_mu, true_sigma = data
 
     # Assume perfect responsibility (1 component mixture)
     H_j = np.ones_like(X, dtype=np.float64)
     H = np.vstack([H_j, np.zeros_like(H_j)]).T
 
     # Start with bad parameters
-    start_component = Normal(loc=-999.0, scale=0.1)
+    start_component = Normal(mu=-999.0, sigma=0.1)
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     # --- Act ---
@@ -247,11 +248,11 @@ def test_moments_normal_recovers_true_params_on_ideal_data(data):
 
     # --- Assert ---
     # Relaxed tolerance for scale because sample std deviation has variance itself
-    assert new_params[Normal.PARAM_LOC] == pytest.approx(true_loc, abs=0.5)
-    assert new_params[Normal.PARAM_SCALE] == pytest.approx(true_scale, rel=0.1)
+    assert new_params["mu"] == pytest.approx(true_mu, abs=1.0)
+    assert new_params["sigma"] == pytest.approx(true_sigma, rel=0.1)
 
-    assert isinstance(new_params[Normal.PARAM_LOC], float)
-    assert isinstance(new_params[Normal.PARAM_SCALE], float)
+    assert isinstance(new_params["mu"], float)
+    assert isinstance(new_params["sigma"], float)
 
 
 @st.composite
@@ -261,17 +262,16 @@ def normal_data_with_random_weights(draw):
     Hypothesis list size limits on large datasets.
     """
 
-    true_loc = draw(st.floats(min_value=-10.0, max_value=10.0))
-    true_scale = draw(st.floats(min_value=0.5, max_value=5.0))
+    true_mu = draw(st.floats(min_value=-10.0, max_value=10.0))
+    true_sigma = draw(st.floats(min_value=0.5, max_value=5.0))
 
-    seed = draw(st.integers(min_value=0, max_value=2**32 - 1))
-    rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(42)
 
     sample_size = 15000  # Достаточно для сходимости
-    X = rng.normal(loc=true_loc, scale=true_scale, size=sample_size)
+    X = rng.normal(loc=true_mu, scale=true_sigma, size=sample_size)
     weights = rng.uniform(low=0.1, high=1.0, size=sample_size)
 
-    return X, weights, true_loc, true_scale
+    return X, weights, true_mu, true_sigma
 
 
 @settings(max_examples=30, deadline=None)
@@ -286,30 +286,30 @@ def test_moments_normal_converges_to_true_params_with_random_weights(data):
     Weighted Mean of X (with random independent weights) -> True Mean
     Weighted Var of X (with random independent weights) -> True Var
     """
-    X, H_j, true_loc, true_scale = data
+    X, H_j, true_mu, true_sigma = data
 
     # --- Arrange ---
     # Create a dummy H matrix (Nx2) where column 0 is our random weights
     H = np.vstack([H_j, np.zeros_like(H_j)]).T
 
     # Start with incorrect parameters to ensure we actually calculate something
-    start_component = Normal(loc=true_loc + 100, scale=true_scale + 50)
+    start_component = Normal(mu=true_mu + 10, sigma=true_sigma + 5)
 
     state = PipelineState(X=X, H=H, curr_mixture=None, prev_mixture=None, error=None)
 
     block = OptimizationBlock(
-        component_id=0, params_to_optimize={"loc", "scale"}, maximization_strategy=MaximizationStrategy.MOMENTS
+        component_id=0, params_to_optimize={"mu", "sigma"}, maximization_strategy=MaximizationStrategy.MOMENTS
     )
 
     # --- Act ---
     _, new_params = moments_strategy(start_component, state, block, optimizer=None)
 
     # --- Assert ---
-    est_loc = new_params[Normal.PARAM_LOC]
-    est_scale = new_params[Normal.PARAM_SCALE]
+    est_loc = new_params["mu"]
+    est_scale = new_params["sigma"]
 
     # Check Location convergence
-    assert est_loc == pytest.approx(true_loc, abs=0.2, rel=0.1)
+    assert est_loc == pytest.approx(true_mu, abs=0.2, rel=0.1)
 
     # Check Scale convergence
-    assert est_scale == pytest.approx(true_scale, rel=0.15)
+    assert est_scale == pytest.approx(true_sigma, rel=0.15)

@@ -32,6 +32,9 @@ class DummyDistribution(ContinuousDistribution):
     def params(self) -> set[str]:
         return {"name"}
 
+    def clone_with_params(self, param_names: list[str], vector: list[float]) -> "DummyDistribution":
+        return DummyDistribution()
+
     def pdf(self, X: ArrayLike) -> NDArray[float64]:
         pass
 

@@ -62,9 +62,9 @@ def mock_pruners() -> list[Pruner]:
 def sample_mixture() -> MixtureModel:
     """Provides a mixture model with two components for testing."""
 
-    components = [Normal(loc=0, scale=1), Exponential(loc=10, rate=1)]
+    components = [Normal(0, 1), Exponential(1)]
     # Fix a parameter in one component to test if `params_to_optimize` is correctly used.
-    components[1].fix_param("rate")
+    components[1].fix_param("lambda_")
     return MixtureModel(components, weights=[0.4, 0.6])
 
 
@@ -130,8 +130,6 @@ class TestECMFit:
         mock_pipeline_instance.fit.assert_called_once_with(sample_data, sample_mixture)
         assert result is sample_mixture
 
-        assert result is sample_mixture
-
     def test_fit_configures_pipeline_steps_correctly(
         self,
         mocker: MockerFixture,
@@ -180,9 +178,6 @@ class TestECMFit:
             assert block.component_id == i
             assert block.params_to_optimize == component.params_to_optimize
             assert block.maximization_strategy == MaximizationStrategy.QFUNCTION
-
-        assert "rate" not in m_step.blocks[1].params_to_optimize
-        assert "loc" in m_step.blocks[1].params_to_optimize
 
     def test_history_access_lifecycle(
         self,

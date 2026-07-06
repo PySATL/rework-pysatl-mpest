@@ -56,28 +56,6 @@ def test_continuous_dist_get_params_vector() -> None:
         dist.get_params_vector(["param1", "invalid"])
 
 
-def test_continuous_dist_set_params_from_vector() -> None:
-    """Test updating parameters from a vector with dtype casting."""
-
-    dist = MockContinuousDistribution()
-
-    expected_param2 = 100.5
-    expected_param1 = 50.0
-
-    dist.set_params_from_vector(["param2", "param1"], [expected_param2, expected_param1])
-
-    np.testing.assert_allclose(dist.param2, expected_param2, rtol=1e-5, atol=1e-8)
-    np.testing.assert_allclose(dist.param1, expected_param1, rtol=1e-5, atol=1e-8)
-    assert type(dist.param2) is float
-    assert type(dist.param1) is float
-
-    with pytest.raises(ValueError, match="number of parameter names must match"):
-        dist.set_params_from_vector(["param1", "param2"], [1.0])
-
-    with pytest.raises(ValueError, match="Invalid parameter names provided"):
-        dist.set_params_from_vector(["param1", "invalid"], [1.0, 2.0])
-
-
 def test_continuous_dist_copy() -> None:
     """Test creating a copy of the distribution."""
 

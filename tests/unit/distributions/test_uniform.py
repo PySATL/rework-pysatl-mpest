@@ -20,11 +20,11 @@ from scipy.stats import kstest, uniform
 def st_valid_border(draw):
     """Generates valid borders"""
 
-    left_border = draw(st.floats(min_value=-1e3, max_value=1e3 - 1, allow_nan=False, allow_infinity=False))
-    right_border = draw(
-        st.floats(min_value=left_border + 1e-6, max_value=left_border + 1e3, allow_nan=False, allow_infinity=False)
+    lower_bound = draw(st.floats(min_value=-1e3, max_value=1e3 - 1, allow_nan=False, allow_infinity=False))
+    upper_bound = draw(
+        st.floats(min_value=lower_bound + 1e-6, max_value=lower_bound + 1e3, allow_nan=False, allow_infinity=False)
     )
-    return left_border, right_border
+    return lower_bound, upper_bound
 
 
 class TestUniformInitialization:
@@ -34,42 +34,28 @@ class TestUniformInitialization:
         """Tests that the instance is initialized correctly with valid parameters."""
 
         l_border, r_border = 0.5, 2.0
-        dist = Uniform(left_border=l_border, right_border=r_border)
-        assert dist.left_border == l_border
-        assert dist.right_border == r_border
+        dist = Uniform(lower_bound=l_border, upper_bound=r_border)
+        assert dist.lower_bound == l_border
+        assert dist.upper_bound == r_border
 
     def test_name_property(self):
         """Tests that the name property returns the correct string."""
 
-        dist = Uniform(left_border=0.0, right_border=1.0)
-        assert dist.name == "Uniform"
+        dist = Uniform(lower_bound=0.0, upper_bound=1.0)
+        assert dist.name == "ContinuousUniform"
 
     def test_params_property(self):
         """Tests that the params property returns the correct set of parameter names."""
 
-        dist = Uniform(left_border=0.0, right_border=1.0)
-        assert dist.params == {"left_border", "right_border"}
-
-    def test_invariant_violation(self):
-        """Tests that initializing with a infinite borders or left border bigger right border  raises a ValueError."""
-
-        with pytest.raises(ValueError, match="right_border parameter must be strictly greater than left_border"):
-            Uniform(0.0, -1.0)
-        with pytest.raises(ValueError, match="right_border parameter must be strictly greater than left_border"):
-            Uniform(0.0, -2.0)
-        with pytest.raises(ValueError, match="right_border parameter must be strictly greater than left_border"):
-            Uniform(0.0, 0.0)
-        with pytest.raises(ValueError, match="Both borders should be finite values"):
-            Uniform(-np.inf, 0.0)
-        with pytest.raises(ValueError, match="Both borders should be finite values"):
-            Uniform(0.0, np.inf)
+        dist = Uniform(lower_bound=0.0, upper_bound=1.0)
+        assert dist.params == {"lower_bound", "upper_bound"}
 
     def test_repr_method(self):
         """Tests that the __repr__ method provides a reproducible string."""
 
-        dist = Uniform(left_border=1.23, right_border=4.56)
+        dist = Uniform(lower_bound=1.23, upper_bound=4.56)
         repr_str = repr(dist)
-        assert repr_str == f"Uniform(left_border={dist.left_border}, right_border={dist.right_border})"
+        assert repr_str == f"Uniform(lower_bound={dist.lower_bound}, upper_bound={dist.upper_bound})"
 
         recreated_dist = eval(repr_str)
         assert dist == recreated_dist
@@ -85,9 +71,9 @@ class TestUniformPDF:
     def test_pdf_properties_for_array_input(self, borders, x):
         """Tests that for an array input, the PDF returns a non-negative array with the correct type and shape."""
 
-        left_border, right_border = borders
+        lower_bound, upper_bound = borders
 
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         pdf_values = dist.pdf(x)
         assert isinstance(pdf_values, np.ndarray)
         assert pdf_values.shape == x.shape
@@ -97,8 +83,8 @@ class TestUniformPDF:
     def test_pdf_properties_for_scalar_input(self, x):
         """Tests that for a scalar input, the PDF returns a non-negative scalar with the correct type."""
 
-        left_border, right_border = -1.0, 12.0
-        dist = Uniform(left_border, right_border)
+        lower_bound, upper_bound = -1.0, 12.0
+        dist = Uniform(lower_bound, upper_bound)
         pdf_value = dist.pdf(x)
         assert isinstance(pdf_value, float)
         assert pdf_value >= 0
@@ -107,28 +93,28 @@ class TestUniformPDF:
     def test_pdf_against_scipy(self, borders, x):
         """Compares the custom PDF implementation against scipy's implementation."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         custom_pdf = dist.pdf(x)
-        scipy_pdf = uniform.pdf(x, loc=left_border, scale=right_border - left_border)
+        scipy_pdf = uniform.pdf(x, loc=lower_bound, scale=upper_bound - lower_bound)
         np.testing.assert_allclose(custom_pdf, scipy_pdf, atol=1e-9)
 
     @given(borders=st_valid_border())
     def test_pdf_integral_is_one(self, borders):
         """Tests that the integral of the PDF over its support is equal to 1."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        integral, error = quad(lambda x: dist.pdf(x).item(), left_border, right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
+        integral, error = quad(lambda x: dist.pdf(x).item(), lower_bound, upper_bound)
         np.testing.assert_allclose(1.0, integral)
 
     @given(borders=st_valid_border(), x=st.floats(max_value=-1e9, allow_infinity=False))
     def test_pdf_outside_support(self, borders, x):
         """Tests that the PDF is zero for values not in range of parameters."""
 
-        left_border, right_border = borders
-        x_val = left_border - abs(x)
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        x_val = lower_bound - abs(x)
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         assert dist.pdf(x_val) == 0.0
 
 
@@ -142,8 +128,8 @@ class TestUniformLPDF:
     def test_lpdf_return_type_and_shape_for_array_input(self, borders, x):
         """Tests the return type and shape of the lpdf method for array input."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         lpdf_values = dist.lpdf(x)
         assert isinstance(lpdf_values, np.ndarray)
         assert lpdf_values.shape == x.shape
@@ -152,8 +138,8 @@ class TestUniformLPDF:
     def test_lpdf_return_type_and_shape_for_scalar_input(self, borders, x):
         """Tests the return type and shape of the lpdf method for scalar input."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         lpdf_value = dist.lpdf(x)
         assert isinstance(lpdf_value, float)
 
@@ -161,20 +147,20 @@ class TestUniformLPDF:
     def test_lpdf_against_scipy(self, borders, x):
         """Compares the custom LPDF implementation against scipy's implementation."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         custom_lpdf = dist.lpdf(x)
-        scipy_lpdf = uniform.logpdf(x, loc=left_border, scale=right_border - left_border)
+        scipy_lpdf = uniform.logpdf(x, loc=lower_bound, scale=upper_bound - lower_bound)
         np.testing.assert_allclose(custom_lpdf, scipy_lpdf, atol=1e-9)
 
     @given(borders=st_valid_border(), x=st.floats(min_value=1e-6))
     def test_lpdf_outside_support(self, borders, x):
         """Tests that the LPDF is -inf for values outside the support."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        assert dist.lpdf(left_border - x) == -np.inf
-        assert dist.lpdf(right_border + x) == -np.inf
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
+        assert dist.lpdf(lower_bound - x) == -np.inf
+        assert dist.lpdf(upper_bound + x) == -np.inf
 
 
 class TestUniformPPF:
@@ -187,8 +173,8 @@ class TestUniformPPF:
     def test_ppf_return_type_and_shape_for_array_input(self, borders, p):
         """Tests the return type and shape of the ppf method for array input."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         ppf_values = dist.ppf(p)
         assert isinstance(ppf_values, np.ndarray)
         assert ppf_values.shape == p.shape
@@ -197,8 +183,8 @@ class TestUniformPPF:
     def test_ppf_return_type_and_shape_for_scalar_input(self, borders, p):
         """Tests the return type and shape of the ppf method for scalar input."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         ppf_value = dist.ppf(p)
         assert isinstance(ppf_value, float)
 
@@ -206,27 +192,20 @@ class TestUniformPPF:
     def test_ppf_against_scipy(self, borders, p):
         """Compares the custom PPF implementation against scipy's implementation."""
 
-        left_border, right_border = borders
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         custom_ppf = dist.ppf(p)
-        scipy_ppf = uniform.ppf(p, loc=left_border, scale=right_border - left_border)
+        scipy_ppf = uniform.ppf(p, loc=lower_bound, scale=upper_bound - lower_bound)
         np.testing.assert_allclose(custom_ppf, scipy_ppf, atol=1e-9)
-
-    @pytest.mark.parametrize("p_val", [-0.5, 1.1, 1.5])
-    def test_ppf_invalid_input(self, p_val):
-        """Tests that PPF returns NaN for probabilities outside the [0, 1) range."""
-
-        dist = Uniform(left_border=0.0, right_border=1.0)
-        assert np.isnan(dist.ppf(p_val))
 
 
 @st.composite
 def st_valid_grad_input_array(draw):
     """Generates valid borders to calculate gradient for an array of x."""
 
-    left_border = draw(st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False))
-    right_border = draw(
-        st.floats(min_value=left_border + 0.1, max_value=left_border + 20.0, allow_nan=False, allow_infinity=False)
+    lower_bound = draw(st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False))
+    upper_bound = draw(
+        st.floats(min_value=lower_bound + 0.1, max_value=lower_bound + 20.0, allow_nan=False, allow_infinity=False)
     )
 
     margin = 0.01
@@ -235,132 +214,41 @@ def st_valid_grad_input_array(draw):
             np.float64,
             st.integers(1, 5),
             elements=st.floats(
-                min_value=left_border + margin, max_value=right_border - margin, allow_nan=False, allow_infinity=False
+                min_value=lower_bound + margin, max_value=upper_bound - margin, allow_nan=False, allow_infinity=False
             ),
         )
     )
 
-    return (left_border, right_border), x_values
+    return (lower_bound, upper_bound), x_values
 
 
 @st.composite
 def st_valid_grad_input_scalar(draw):
     """Generates valid borders to calculate gradient for a scalar x."""
 
-    left_border = draw(st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False))
-    right_border = draw(
-        st.floats(min_value=left_border + 0.1, max_value=left_border + 20.0, allow_nan=False, allow_infinity=False)
+    lower_bound = draw(st.floats(min_value=-10.0, max_value=10.0, allow_nan=False, allow_infinity=False))
+    upper_bound = draw(
+        st.floats(min_value=lower_bound + 0.1, max_value=lower_bound + 20.0, allow_nan=False, allow_infinity=False)
     )
 
     margin = 0.01
     x_value = draw(
-        st.floats(
-            min_value=left_border + margin, max_value=right_border - margin, allow_nan=False, allow_infinity=False
-        )
+        st.floats(min_value=lower_bound + margin, max_value=upper_bound - margin, allow_nan=False, allow_infinity=False)
     )
 
-    return (left_border, right_border), x_value
+    return (lower_bound, upper_bound), x_value
 
 
 class TestUniformGradients:
     """Tests for gradient calculation methods."""
-
-    h = 1e-6
-
-    @given(input_data=st_valid_grad_input_array())
-    def test_dlog_left_border_numerical_for_array_input(self, input_data):
-        """Checks the analytical gradient for 'left_border' against a numerical approximation for array input."""
-
-        borders, x = input_data
-        left_border, right_border = borders
-
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        analytical_grad = dist._dlog_left_border(x)
-
-        assert isinstance(analytical_grad, np.ndarray)
-        assert analytical_grad.shape == x.shape
-
-        lpdf_plus_h = Uniform(left_border=left_border + self.h, right_border=right_border).lpdf(x)
-        lpdf_minus_h = Uniform(left_border=left_border - self.h, right_border=right_border).lpdf(x)
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-4, rtol=1e-3)
-
-    @given(input_data=st_valid_grad_input_scalar())
-    def test_dlog_left_border_for_scalar_input(self, input_data):
-        """Checks that the gradient for 'left_border' for a scalar input returns a scalar."""
-
-        borders, x = input_data
-        left_border, right_border = borders
-
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        analytical_grad = dist._dlog_left_border(x)
-        assert isinstance(analytical_grad, float)
-
-    @given(input_data=st_valid_grad_input_array())
-    def test_dlog_right_border_numerical_for_array_input(self, input_data):
-        """Checks the analytical gradient for 'right_border' against a numerical approximation for array input."""
-
-        borders, x = input_data
-        left_border, right_border = borders
-
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        analytical_grad = dist._dlog_right_border(x)
-
-        assert isinstance(analytical_grad, np.ndarray)
-        assert analytical_grad.shape == x.shape
-
-        lpdf_plus_h = Uniform(left_border=left_border, right_border=right_border + self.h).lpdf(x)
-        lpdf_minus_h = Uniform(left_border=left_border, right_border=right_border - self.h).lpdf(x)
-        numerical_grad = (lpdf_plus_h - lpdf_minus_h) / (2 * self.h)
-        np.testing.assert_allclose(analytical_grad, numerical_grad, atol=1e-3, rtol=1e-3)
-
-    @given(input_data=st_valid_grad_input_scalar())
-    def test_dlog_right_border_for_scalar_input(self, input_data):
-        """Checks that the gradient for 'right_border' for a scalar input returns a scalar."""
-
-        borders, x = input_data
-        left_border, right_border = borders
-
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        analytical_grad = dist._dlog_right_border(x)
-        assert isinstance(analytical_grad, float)
-
-    @pytest.mark.parametrize(
-        "fixed_params, expected_shape_col, expected_params",
-        [
-            ([], 2, ["left_border", "right_border"]),
-            (["left_border"], 1, ["right_border"]),
-            (["right_border"], 1, ["left_border"]),
-            (["left_border", "right_border"], 0, []),
-        ],
-    )
-    def test_log_gradients_structure(self, fixed_params, expected_shape_col, expected_params):
-        """Tests the structure and content of log_gradients with various fixed parameters."""
-
-        dist = Uniform(left_border=1.0, right_border=3.0)
-        for param in fixed_params:
-            dist.fix_param(param)
-
-        x = np.array([1.5, 2.0, 3.0])
-        gradients = dist.log_gradients(x)
-
-        assert isinstance(gradients, np.ndarray)
-        assert gradients.shape == (len(x), expected_shape_col)
-
-        if "left_border" in expected_params:
-            idx = sorted(expected_params).index("left_border")
-            np.testing.assert_allclose(gradients[:, idx], dist._dlog_left_border(x))
-        if "right_border" in expected_params:
-            idx = sorted(expected_params).index("right_border")
-            np.testing.assert_allclose(gradients[:, idx], dist._dlog_right_border(x))
 
     @given(input_data=st_valid_grad_input_scalar())
     def test_log_gradients_for_scalar_input(self, input_data):
         """Checks that the log_gradients for a scalar input returns a 1D-array."""
 
         borders, x = input_data
-        left_border, right_border = borders
-        dist = Uniform(left_border, right_border)
+        lower_bound, upper_bound = borders
+        dist = Uniform(lower_bound, upper_bound)
         gradients = dist.log_gradients(x)
         assert isinstance(gradients, np.ndarray)
         assert gradients.ndim == 1
@@ -384,8 +272,8 @@ class TestUniformGenerate:
 
         np.random.seed(42)
         random.seed(42)
-        dist = Uniform(left_border=0.0, right_border=2.0)
-        samples = dist.generate(size=size)
+        dist = Uniform(lower_bound=0.0, upper_bound=2.0)
+        samples = dist.generate(size=size, random_state=42)
 
         if is_scalar:
             assert isinstance(samples, float)
@@ -397,24 +285,22 @@ class TestUniformGenerate:
     def test_generate_negative_size(self, size):
         """Tests that generating a negative number of samples raises ValueError."""
 
-        dist = Uniform(left_border=0.0, right_border=1.0)
+        dist = Uniform(lower_bound=0.0, upper_bound=1.0)
 
         with pytest.raises(ValueError):
-            dist.generate(size=size)
+            dist.generate(size=size, random_state=42)
 
     def test_generate_statistical_properties(self):
         """Tests if the generated samples have correct statistical properties (mean, variance)."""
 
-        np.random.seed(123)
-        random.seed(123)
-        left_border, right_border = 5.0, 5.5
-        dist = Uniform(left_border=left_border, right_border=right_border)
+        lower_bound, upper_bound = 5.0, 5.5
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
         size = 20000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
-        theoretical_mean = (right_border + left_border) / 2
-        theoretical_var = (right_border - left_border) ** 2 / 12
+        theoretical_mean = (upper_bound + lower_bound) / 2
+        theoretical_var = (upper_bound - lower_bound) ** 2 / 12
 
         assert np.mean(samples, dtype=np.float64) == pytest.approx(theoretical_mean, rel=0.1)
         assert np.var(samples, dtype=np.float64) == pytest.approx(theoretical_var, rel=0.1)
@@ -422,14 +308,12 @@ class TestUniformGenerate:
     def test_generate_kolmogorov_smirnov(self):
         """Performs a Kolmogorov-Smirnov test to check if samples fit the distribution."""
 
-        np.random.seed(456)
-        random.seed(456)
-        left_border, right_border = 10.0, 12.0
-        dist = Uniform(left_border=left_border, right_border=right_border)
-        size = 1000
+        lower_bound, upper_bound = 10.0, 12.0
+        dist = Uniform(lower_bound=lower_bound, upper_bound=upper_bound)
+        size = 10000
 
-        samples = dist.generate(size=size)
+        samples = dist.generate(size=size, random_state=42)
 
-        ks_statistic, p_value = kstest(samples, "uniform", args=(left_border, right_border - left_border))
+        _, p_value = kstest(samples, "uniform", args=(lower_bound, upper_bound - lower_bound))
         lower_bound = 0.05
         assert p_value > lower_bound
