@@ -91,32 +91,7 @@ class MixtureModel:
         self._cached_weights: UnivariateFloatArray | None = None
 
         self._sorted_pairs_cache: list[tuple[ParametricFamilyDistribution, float]] | None = None
-
-    def _validate_weights(self, n_components: int, weights: UnivariateFloatArray):
-        """Validates the component weights.
-
-        Parameters
-        ----------
-        n_components : int
-            The expected number of components.
-        weights : UnivariateFloatArray
-            The array of weights to validate.
-
-        Raises
-        ------
-        ValueError
-            If the number of weights does not match the number of components,
-            if any weight is negative, or if the weights do not sum to 1.
-        """
-
-        if len(weights) != n_components:
-            raise ValueError(f"Components number ({n_components}) must be equal to weights number ({len(weights)}).")
-
-        if np.any(weights < 0):
-            raise ValueError("Weights must be positive.")
-
-        if not np.isclose(np.sum(weights), 1.0):
-            raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
+        self._core_mixture_cache: FiniteMixtureDistribution | None = None
 
     @property
     def n_components(self):
@@ -150,7 +125,7 @@ class MixtureModel:
         return self._log_weights
 
     @log_weights.setter
-    def log_weights(self, new_log_weights: ArrayLike):
+    def log_weights(self, new_log_weights: ArrayLike) -> None:
         """Sets the log-weights for the components.
 
         Parameters
@@ -170,10 +145,9 @@ class MixtureModel:
         if len(new_log_weights) != self.n_components:
             raise ValueError("The length of the new logit vector does not match the number of components.")
         self._log_weights = new_log_weights
-        self._cached_weights = None
-        self._sorted_pairs_cache = None
+        self._invalidate_cache()
 
-    def add_component(self, component: "ParametricFamilyDistribution", weight: Scalar):
+    def add_component(self, component: ParametricFamilyDistribution, weight: Scalar) -> None:
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
         If :attr:`weight` is specified for the new component, the old component
@@ -201,10 +175,9 @@ class MixtureModel:
         self._log_weights = np.append(self._log_weights, new_log_weight)
 
         self._components.append(component)
-        self._cached_weights = None
-        self._sorted_pairs_cache = None
+        self._invalidate_cache()
 
-    def remove_component(self, component_idx: int):
+    def remove_component(self, component_idx: int) -> None:
         """Removes a component from the mixture by its index.
 
         The weights of the remaining components are renormalized to sum to 1.
@@ -232,12 +205,25 @@ class MixtureModel:
         del self._components[component_idx]
         self._log_weights = np.delete(self._log_weights, component_idx)
         self._log_weights -= logsumexp(self._log_weights)
-        self._cached_weights = None
-        self._sorted_pairs_cache = None
+        self._invalidate_cache()
 
     def to_core_mixture(self) -> FiniteMixtureDistribution:
+        """Converts the model to a pysatl_core FiniteMixtureDistribution.
+
+        Returns
+        -------
+        FiniteMixtureDistribution
+            The corresponding finite mixture distribution object.
+        """
         weighted_components = [(float(w), comp) for w, comp in zip(self.weights, self.components)]
         return finite_mixture(weighted_components)
+
+    @property
+    def _core_mixture(self) -> FiniteMixtureDistribution:
+        """Lazy instantiation and caching of the pysatl-core FiniteMixtureDistribution."""
+        if self._core_mixture_cache is None:
+            self._core_mixture_cache = self.to_core_mixture()
+        return self._core_mixture_cache
 
     def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Probability Density Function of the mixture.
@@ -256,9 +242,12 @@ class MixtureModel:
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
-
+        is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
-        return np.exp(self.lpdf(X))
+        result = self._core_mixture.calculate_characteristic(CharacteristicName.PDF, X)
+        if is_scalar:
+            return np.float64(result[()])
+        return np.asarray(result, dtype=np.float64)
 
     def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Logarithms of the Probability Density Function.
@@ -277,17 +266,11 @@ class MixtureModel:
 
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
-        component_lpdfs = np.array(
-            [comp.calculate_characteristic(CharacteristicName.LPDF, X) for comp in self.components]
-        )
-        broadcast_shape = (self.n_components,) + (1,) * X.ndim
-        log_weights = self.log_weights.reshape(broadcast_shape)
-        log_terms = log_weights + component_lpdfs
+        result = self._core_mixture.calculate_characteristic(CharacteristicName.LPDF, X)
 
-        result = logsumexp(log_terms, axis=0)
         if is_scalar:
-            return result[()]
-        return result
+            return np.float64(result[()])
+        return np.asarray(result, dtype=np.float64)
 
     def loglikelihood(self, X: ArrayLike) -> float:
         """Log-likelihood of the complete data :attr:`X`.
@@ -337,16 +320,15 @@ class MixtureModel:
             empty array if :attr:`size` is not positive.
         """
 
+        target_shape: tuple[int, ...]
         if size is None:
             n_samples = 1
-        elif isinstance(size, int):
-            n_samples = size
-            if n_samples == 0:
-                return np.array([], dtype=np.float64)
+            target_shape = ()
         else:
-            n_samples = int(np.prod(size))
+            target_shape = (size,) if isinstance(size, int) else size
+            n_samples = int(np.prod(target_shape))
             if n_samples == 0:
-                return np.empty(size, dtype=np.float64)
+                return np.empty(target_shape, dtype=np.float64)
 
         rng = np.random.default_rng(random_state)
         component_choices = rng.choice(self.n_components, size=n_samples, p=self.weights)
@@ -363,11 +345,9 @@ class MixtureModel:
 
         if size is None:
             return samples[0]
-
-        target_shape = (size,) if isinstance(size, int) else size
         return samples.reshape(target_shape)
 
-    def __getitem__(self, key: int) -> "ParametricFamilyDistribution":
+    def __getitem__(self, key: int) -> ParametricFamilyDistribution:
         """Retrieves components by index.
 
         Parameters
@@ -383,7 +363,7 @@ class MixtureModel:
 
         return self.components[key]
 
-    def __setitem__(self, key: int, value: "ParametricFamilyDistribution"):
+    def __setitem__(self, key: int, value: ParametricFamilyDistribution) -> None:
         """Sets or replaces a component at a specific index.
 
         Parameters
@@ -402,9 +382,9 @@ class MixtureModel:
             raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
 
         self._components[key] = value
-        self._sorted_pairs_cache = None
+        self._invalidate_cache()
 
-    def __iter__(self) -> Iterator["ParametricFamilyDistribution"]:
+    def __iter__(self) -> Iterator[ParametricFamilyDistribution]:
         """Returns an iterator over the mixture components.
 
         This allows the `MixtureModel` instance to be used directly in
@@ -427,26 +407,6 @@ class MixtureModel:
             A new instance of the distribution, identical to the original.
         """
         return MixtureModel(components=list(self._components), weights=self.weights.copy())
-
-    def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ParametricFamilyDistribution", float]]:
-        """Internal helper to get component-weight pairs, sorted by component hash."""
-
-        if self._sorted_pairs_cache is None or for_hashing:
-            weights_to_use = self.weights
-            if for_hashing:
-                decimals = np.finfo(np.float64).precision
-                weights_to_use = np.round(weights_to_use, decimals)
-
-            def get_comp_hash(comp):
-                return hash((comp.family_name, comp.parametrization_name, comp.parametrization))
-
-            pairs = sorted(zip(self.components, weights_to_use), key=lambda p: get_comp_hash(p[0]))
-
-            if not for_hashing:
-                self._sorted_pairs_cache = pairs
-
-            return pairs
-        return self._sorted_pairs_cache
 
     def __eq__(self, other: object) -> bool:
         """Checks if two mixture models are equal.
@@ -472,13 +432,7 @@ class MixtureModel:
         other_pairs = other._get_sorted_pairs()
 
         for (self_comp, self_weight), (other_comp, other_weight) in zip(self_pairs, other_pairs):
-            comps_are_equal = (
-                self_comp.family_name == other_comp.family_name
-                and self_comp.parametrization_name == other_comp.parametrization_name
-                and self_comp.parametrization == other_comp.parametrization
-            )
-
-            if not comps_are_equal or not np.isclose(self_weight, other_weight):
+            if not self._comps_are_equal(self_comp, other_comp) or not np.isclose(self_weight, other_weight):
                 return False
 
         return True
@@ -493,12 +447,57 @@ class MixtureModel:
         int
             The hash value of the mixture model.
         """
-
-        def get_comp_hash(comp: ParametricFamilyDistribution) -> int:
-            return hash((comp.family_name, comp.parametrization_name, comp.parametrization))
-
-        sorted_pairs = self._get_sorted_pairs(for_hashing=True)
-
-        hashable_pairs = tuple((get_comp_hash(comp), weight) for comp, weight in sorted_pairs)
-
+        decimals = np.finfo(np.float64).precision
+        sorted_pairs = self._get_sorted_pairs()
+        hashable_pairs = tuple((self._get_comp_hash(comp), np.round(weight, decimals)) for comp, weight in sorted_pairs)
         return hash((np.float64, hashable_pairs))
+
+    @staticmethod
+    def _get_comp_hash(comp: ParametricFamilyDistribution) -> int:
+        return hash((comp.family_name, comp.parametrization_name, comp.parametrization))
+
+    @staticmethod
+    def _comps_are_equal(comp1: ParametricFamilyDistribution, comp2: ParametricFamilyDistribution) -> bool:
+        return (
+            comp1.family_name == comp2.family_name
+            and comp1.parametrization_name == comp2.parametrization_name
+            and comp1.parametrization == comp2.parametrization
+        )
+
+    def _invalidate_cache(self) -> None:
+        self._cached_weights = None
+        self._sorted_pairs_cache = None
+        self._core_mixture_cache = None
+
+    def _validate_weights(self, n_components: int, weights: UnivariateFloatArray) -> None:
+        """Validates the component weights.
+
+        Parameters
+        ----------
+        n_components : int
+            The expected number of components.
+        weights : UnivariateFloatArray
+            The array of weights to validate.
+
+        Raises
+        ------
+        ValueError
+            If the number of weights does not match the number of components,
+            if any weight is negative, or if the weights do not sum to 1.
+        """
+
+        if len(weights) != n_components:
+            raise ValueError(f"Components number ({n_components}) must be equal to weights number ({len(weights)}).")
+
+        if np.any(weights < 0):
+            raise ValueError("Weights must be positive.")
+
+        if not np.isclose(np.sum(weights), 1.0):
+            raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
+
+    def _get_sorted_pairs(self) -> list[tuple[ParametricFamilyDistribution, float]]:
+        """Internal helper to get component-weight pairs, sorted by component hash."""
+        if self._sorted_pairs_cache is None:
+            pairs = [(comp, float(w)) for comp, w in zip(self.components, self.weights)]
+            self._sorted_pairs_cache = sorted(pairs, key=lambda p: self._get_comp_hash(p[0]))
+        return self._sorted_pairs_cache
