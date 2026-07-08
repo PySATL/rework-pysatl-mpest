@@ -14,7 +14,7 @@ from tests.helpers.math_assertions import (
     assert_computational_stability,
     assert_probabilities_sum_to_one,
 )
-from tests.mocks.distributions.continuous_dist import (
+from tests.mocks.distributions import (
     MockContinuousDistribution,
     MockInfLpdfContinuousDistribution,
 )
@@ -130,7 +130,7 @@ def test_add_component() -> None:
     assert_allclose(mixture.weights, [0.5, 0.5], rtol=rtol, atol=atol)
 
 
-def test_set_component() -> None:
+def test_setitem() -> None:
     """Test replacing a component at a specific index."""
     comp1 = MockContinuousDistribution(param1=1.0)
     comp2 = MockContinuousDistribution(param1=2.0)
@@ -144,12 +144,12 @@ def test_set_component() -> None:
     _ = mixture == mixture  # noqa: PLR0124
     assert mixture._sorted_pairs_cache is not None
 
-    mixture.set_component(comp3, 1)
+    mixture[1] = comp3
 
     assert mixture.n_components == expected_n_components
     assert mixture.components[0] == comp1
     assert mixture.components[1] == comp3
-    assert mixture.components[1] is not comp3  # Since copy() should be used
+    assert mixture.components[1] is comp3  # Since assignment is shallow
 
     # Verify that the sorted pairs cache was invalidated
     assert mixture._sorted_pairs_cache is None
@@ -306,7 +306,7 @@ def test_dunder_methods() -> None:
     # __copy__
     mixture2 = copy(mixture1)
     assert mixture2 is not mixture1
-    assert mixture2.components[0] is not comp1
+    assert mixture2.components[0] is comp1
     assert mixture2.weights is not mixture1.weights
 
     # __eq__ and __hash__

@@ -8,13 +8,13 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Iterator, Sequence
-from copy import copy
 
 import numpy as np
 from numpy.typing import ArrayLike
+from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.transformations.operations.distributions.mixture import FiniteMixtureDistribution, finite_mixture
+from pysatl_core.types import CharacteristicName
 from scipy.special import logsumexp, softmax
-
-from pysatl_mpest.core.parametric_adapter import ParametricAdapter
 
 from ..typings import FloatArray, Scalar, UnivariateFloatArray
 
@@ -32,7 +32,7 @@ class MixtureModel:
 
     Parameters
     ----------
-    components : Sequence[ParametricAdapter]
+    components : Sequence[ParametricFamilyDistribution]
         A sequence of distribution objects that will form the mixture.
     weights : ArrayLike | None, optional
         An array of initial weights for the components. The weights must be
@@ -41,7 +41,7 @@ class MixtureModel:
 
     Attributes
     ----------
-    components : tuple[ParametricAdapter, ...]
+    components : tuple[ParametricFamilyDistribution, ...]
         A tuple of the distribution objects that form the mixture.
     n_components : int
         The number of components in the mixture.
@@ -73,7 +73,7 @@ class MixtureModel:
 
     def __init__(
         self,
-        components: Sequence["ParametricAdapter"],
+        components: Sequence[ParametricFamilyDistribution],
         weights: ArrayLike | None = None,
     ):
         n_components = len(components)
@@ -90,7 +90,7 @@ class MixtureModel:
         self._log_weights = np.log(weights + np.finfo(np.float64).tiny)
         self._cached_weights: UnivariateFloatArray | None = None
 
-        self._sorted_pairs_cache: list[tuple[ParametricAdapter, float]] | None = None
+        self._sorted_pairs_cache: list[tuple[ParametricFamilyDistribution, float]] | None = None
 
     def _validate_weights(self, n_components: int, weights: UnivariateFloatArray):
         """Validates the component weights.
@@ -126,7 +126,7 @@ class MixtureModel:
 
     @property
     def components(self):
-        """tuple[ParametricAdapter, ...]: The components of the mixture."""
+        """tuple[ParametricFamilyDistribution, ...]: The components of the mixture."""
 
         return tuple(self._components)
 
@@ -173,7 +173,7 @@ class MixtureModel:
         self._cached_weights = None
         self._sorted_pairs_cache = None
 
-    def add_component(self, component: "ParametricAdapter", weight: Scalar):
+    def add_component(self, component: "ParametricFamilyDistribution", weight: Scalar):
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
         If :attr:`weight` is specified for the new component, the old component
@@ -181,7 +181,7 @@ class MixtureModel:
 
         Parameters
         ----------
-        component : ParametricAdapter
+        component : ParametricFamilyDistribution
             The distribution component to add.
         weight : Scalar
             The weight for the new component, a number in the range (0, 1).
@@ -200,43 +200,9 @@ class MixtureModel:
         new_log_weight = np.log(d_weight)
         self._log_weights = np.append(self._log_weights, new_log_weight)
 
-        new_component = copy(component)
-        self._components.append(new_component)
+        self._components.append(component)
         self._cached_weights = None
         self._sorted_pairs_cache = None
-
-    def __setitem__(self, key: int, value: "ParametricAdapter"):
-        """Sets or replaces a component at a specific index.
-
-        Parameters
-        ----------
-        key : int
-            The index of the component to replace.
-        value : ParametricAdapter
-            The new distribution component to set.
-
-        Raises
-        ------
-        IndexError
-            If the index is out of bounds.
-        """
-        if not (0 <= key <= self.n_components - 1):
-            raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
-
-        self._components[key] = copy(value)
-        self._sorted_pairs_cache = None
-
-    def set_component(self, new_component: "ParametricAdapter", component_idx: int):
-        """Replaces a component at a specific index.
-
-        Parameters
-        ----------
-        new_component : ParametricAdapter
-            The new distribution component.
-        component_idx : int
-            The index to replace.
-        """
-        self[component_idx] = new_component
 
     def remove_component(self, component_idx: int):
         """Removes a component from the mixture by its index.
@@ -268,6 +234,10 @@ class MixtureModel:
         self._log_weights -= logsumexp(self._log_weights)
         self._cached_weights = None
         self._sorted_pairs_cache = None
+
+    def to_core_mixture(self) -> FiniteMixtureDistribution:
+        weighted_components = [(float(w), comp) for w, comp in zip(self.weights, self.components)]
+        return finite_mixture(weighted_components)
 
     def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Probability Density Function of the mixture.
@@ -307,7 +277,9 @@ class MixtureModel:
 
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
-        component_lpdfs = np.array([comp.lpdf(X) for comp in self.components])
+        component_lpdfs = np.array(
+            [comp.calculate_characteristic(CharacteristicName.LPDF, X) for comp in self.components]
+        )
         broadcast_shape = (self.n_components,) + (1,) * X.ndim
         log_weights = self.log_weights.reshape(broadcast_shape)
         log_terms = log_weights + component_lpdfs
@@ -381,7 +353,9 @@ class MixtureModel:
         counts = np.bincount(component_choices, minlength=self.n_components)
 
         samples_list = [
-            self.components[i].generate(size=count, random_state=rng) for i, count in enumerate(counts) if count > 0
+            np.asarray(self.components[i].sample(n=int(count), random_state=rng), np.float64).ravel()
+            for i, count in enumerate(counts)
+            if count > 0
         ]
 
         samples = np.concatenate(samples_list)
@@ -393,7 +367,7 @@ class MixtureModel:
         target_shape = (size,) if isinstance(size, int) else size
         return samples.reshape(target_shape)
 
-    def __getitem__(self, key: int) -> "ParametricAdapter":
+    def __getitem__(self, key: int) -> "ParametricFamilyDistribution":
         """Retrieves components by index.
 
         Parameters
@@ -403,13 +377,34 @@ class MixtureModel:
 
         Returns
         -------
-        ParametricAdapter
+        ParametricFamilyDistribution
             A single component of the mixture
         """
 
         return self.components[key]
 
-    def __iter__(self) -> Iterator["ParametricAdapter"]:
+    def __setitem__(self, key: int, value: "ParametricFamilyDistribution"):
+        """Sets or replaces a component at a specific index.
+
+        Parameters
+        ----------
+        key : int
+            The index of the component to replace.
+        value : ParametricFamilyDistribution
+            The new distribution component to set.
+
+        Raises
+        ------
+        IndexError
+            If the index is out of bounds.
+        """
+        if not (0 <= key <= self.n_components - 1):
+            raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
+
+        self._components[key] = value
+        self._sorted_pairs_cache = None
+
+    def __iter__(self) -> Iterator["ParametricFamilyDistribution"]:
         """Returns an iterator over the mixture components.
 
         This allows the `MixtureModel` instance to be used directly in
@@ -417,7 +412,7 @@ class MixtureModel:
 
         Returns
         -------
-        Iterator[ParametricAdapter]
+        Iterator[ParametricFamilyDistribution]
             An iterator that yields the components of the mixture model.
         """
 
@@ -431,12 +426,9 @@ class MixtureModel:
         MixtureModel
             A new instance of the distribution, identical to the original.
         """
+        return MixtureModel(components=list(self._components), weights=self.weights.copy())
 
-        copied_components = [copy(component) for component in self._components]
-        new_mixture = MixtureModel(components=copied_components, weights=self.weights.copy())
-        return new_mixture
-
-    def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ParametricAdapter", float]]:
+    def _get_sorted_pairs(self, for_hashing: bool = False) -> list[tuple["ParametricFamilyDistribution", float]]:
         """Internal helper to get component-weight pairs, sorted by component hash."""
 
         if self._sorted_pairs_cache is None or for_hashing:
@@ -445,11 +437,14 @@ class MixtureModel:
                 decimals = np.finfo(np.float64).precision
                 weights_to_use = np.round(weights_to_use, decimals)
 
-            pairs: list[tuple[ParametricAdapter, float]] = sorted(
-                zip(self.components, weights_to_use), key=lambda p: hash(p[0])
-            )
+            def get_comp_hash(comp):
+                return hash((comp.family_name, comp.parametrization_name, comp.parametrization))
+
+            pairs = sorted(zip(self.components, weights_to_use), key=lambda p: get_comp_hash(p[0]))
+
             if not for_hashing:
                 self._sorted_pairs_cache = pairs
+
             return pairs
         return self._sorted_pairs_cache
 
@@ -477,7 +472,13 @@ class MixtureModel:
         other_pairs = other._get_sorted_pairs()
 
         for (self_comp, self_weight), (other_comp, other_weight) in zip(self_pairs, other_pairs):
-            if self_comp != other_comp or not np.isclose(self_weight, other_weight):
+            comps_are_equal = (
+                self_comp.family_name == other_comp.family_name
+                and self_comp.parametrization_name == other_comp.parametrization_name
+                and self_comp.parametrization == other_comp.parametrization
+            )
+
+            if not comps_are_equal or not np.isclose(self_weight, other_weight):
                 return False
 
         return True
@@ -493,5 +494,11 @@ class MixtureModel:
             The hash value of the mixture model.
         """
 
-        sorted_pairs_for_hash = self._get_sorted_pairs(for_hashing=True)
-        return hash((np.float64, tuple(sorted_pairs_for_hash)))
+        def get_comp_hash(comp: ParametricFamilyDistribution) -> int:
+            return hash((comp.family_name, comp.parametrization_name, comp.parametrization))
+
+        sorted_pairs = self._get_sorted_pairs(for_hashing=True)
+
+        hashable_pairs = tuple((get_comp_hash(comp), weight) for comp, weight in sorted_pairs)
+
+        return hash((np.float64, hashable_pairs))
