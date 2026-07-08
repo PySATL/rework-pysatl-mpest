@@ -215,12 +215,14 @@ class MixtureModel:
         FiniteMixtureDistribution
             The corresponding finite mixture distribution object.
         """
+
         weighted_components = [(float(w), comp) for w, comp in zip(self.weights, self.components)]
         return finite_mixture(weighted_components)
 
     @property
     def _core_mixture(self) -> FiniteMixtureDistribution:
         """Lazy instantiation and caching of the pysatl-core FiniteMixtureDistribution."""
+
         if self._core_mixture_cache is None:
             self._core_mixture_cache = self.to_core_mixture()
         return self._core_mixture_cache
@@ -242,6 +244,7 @@ class MixtureModel:
             The PDF values corresponding to each point in :attr:`X`.
             Return a scalar when given a scalar, and to return an array when given an array.
         """
+
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
         result = self._core_mixture.calculate_characteristic(CharacteristicName.PDF, X)
@@ -447,10 +450,11 @@ class MixtureModel:
         int
             The hash value of the mixture model.
         """
+
         decimals = np.finfo(np.float64).precision
         sorted_pairs = self._get_sorted_pairs()
         hashable_pairs = tuple((self._get_comp_hash(comp), np.round(weight, decimals)) for comp, weight in sorted_pairs)
-        return hash((np.float64, hashable_pairs))
+        return hash(hashable_pairs)
 
     @staticmethod
     def _get_comp_hash(comp: ParametricFamilyDistribution) -> int:

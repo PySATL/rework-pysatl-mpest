@@ -348,5 +348,24 @@ def test_eq_cache_usage(mock_comp: ParametricFamilyDistribution) -> None:
 
 def test_hash_precision(mock_comp: ParametricFamilyDistribution) -> None:
     """Test hashing precision works without crashing."""
+
     mixture = MixtureModel([mock_comp])
     assert isinstance(hash(mixture), int)
+
+
+def test_log_weights_getter(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test that log_weights getter returns correct log weights."""
+
+    mixture = MixtureModel(mock_comps, weights=[0.3, 0.7])
+    expected = np.log(np.array([0.3, 0.7], dtype=np.float64) + np.finfo(np.float64).tiny)
+    assert_allclose(mixture.log_weights, expected)
+
+
+def test_setitem_out_of_bounds(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test that replacing a component with invalid index raises IndexError."""
+
+    mixture = MixtureModel(mock_comps)
+    comp = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+    invalid_index = 99
+    with pytest.raises(IndexError, match="must be between"):
+        mixture[invalid_index] = comp
