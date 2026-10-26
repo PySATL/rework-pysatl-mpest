@@ -18,6 +18,8 @@ from pysatl_core.types import CharacteristicName
 from pysatl_mpest.core.mixture import MixtureModel
 from tests.helpers.math_assertions import (
     assert_computational_stability,
+    assert_is_array_type,
+    assert_is_scalar_type,
     assert_probabilities_sum_to_one,
 )
 from tests.mocks.distributions import (
@@ -114,16 +116,16 @@ def test_log_weights_setter(mock_comps: tuple[ParametricFamilyDistribution, ...]
 
 def test_init_invalid_components() -> None:
     """Test that empty component list raises ValueError."""
-    with pytest.raises(ValueError, match="List of components cannot be empty"):
+    with pytest.raises(ValueError, match=r"^List of components cannot be empty$"):
         MixtureModel([])
 
 
 def test_init_invalid_weights(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test that invalid weights raise ValueError."""
-    with pytest.raises(ValueError, match="Weights must be positive"):
+    with pytest.raises(ValueError, match=r"^Weights must be positive\.$"):
         MixtureModel(mock_comps, weights=[-0.1, 1.1])
 
-    with pytest.raises(ValueError, match="Sum of the weights must be equal 1"):
+    with pytest.raises(ValueError, match=r"^Sum of the weights must be equal 1, but it equal 1\.1\.$"):
         MixtureModel(mock_comps, weights=[0.5, 0.6])
 
     with pytest.raises(ValueError, match="must be equal to weights number"):
@@ -177,11 +179,11 @@ def test_add_component_invalid_weight(mock_comp: ParametricFamilyDistribution) -
     mixture = MixtureModel([mock_comp])
     comp2 = cast(ParametricFamilyDistribution, MockContinuousDistribution())
 
-    with pytest.raises(ValueError, match="must be in the range"):
-        mixture.add_component(comp2, weight=-0.1)
-
-    with pytest.raises(ValueError, match="must be in the range"):
-        mixture.add_component(comp2, weight=1.1)
+    message = r"^The weight of the new component must be in the range \(0, 1\)\.$"
+    # The bounds 0 and 1 themselves are not allowed either.
+    for weight in (-0.1, 0.0, 1.0, 1.1):
+        with pytest.raises(ValueError, match=message):
+            mixture.add_component(comp2, weight=weight)
 
 
 def test_remove_component(
@@ -204,14 +206,14 @@ def test_remove_component(
 def test_remove_last_component(mock_comp: ParametricFamilyDistribution) -> None:
     """Test removing the last component raises ValueError."""
     mixture = MixtureModel([mock_comp])
-    with pytest.raises(ValueError, match="last component cannot be removed"):
+    with pytest.raises(ValueError, match=r"^The last component cannot be removed from the model\.$"):
         mixture.remove_component(0)
 
 
 def test_remove_component_out_of_bounds(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test removing a component with invalid index raises IndexError."""
     mixture = MixtureModel(mock_comps)
-    with pytest.raises(IndexError, match="out of range"):
+    with pytest.raises(IndexError, match=r"^Index 2 out of range \[0, 1\]$"):
         mixture.remove_component(2)
 
 
@@ -498,6 +500,63 @@ def test_setitem_out_of_bounds(mock_comps: tuple[ParametricFamilyDistribution, .
 
     mixture = MixtureModel(mock_comps)
     comp = cast(ParametricFamilyDistribution, MockContinuousDistribution())
-    invalid_index = 99
-    with pytest.raises(IndexError, match="must be between"):
-        mixture[invalid_index] = comp
+    # The index equal to the number of components is the closest invalid one.
+    for invalid_index in (len(mock_comps), 99):
+        with pytest.raises(IndexError, match=r"^Index of component must be between 0 and 1$"):
+            mixture[invalid_index] = comp
+
+
+# --- Details found by mutation testing ---
+
+
+def test_default_log_weights_are_normalized() -> None:
+    """Without weights the components are equally likely, and the log-weights are those of the equal weights."""
+    components = [cast(ParametricFamilyDistribution, MockContinuousDistribution()) for _ in range(3)]
+
+    mixture = MixtureModel(components)
+
+    assert_allclose(mixture.log_weights, np.log(np.full(3, 1.0 / 3.0)))
+
+
+def test_add_component_keeps_the_proportions_of_several_components(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    comp1, comp2, comp3 = param_comps
+    mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6])
+    mixture.add_component(comp3, weight=0.5)
+
+    assert_allclose(mixture.weights, [0.2, 0.3, 0.5])
+    assert_allclose(mixture.log_weights, np.log([0.2, 0.3, 0.5]))
+
+
+def test_remove_component_keeps_the_log_weights_normalized(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    mixture = MixtureModel(list(param_comps), weights=[0.2, 0.3, 0.5])
+
+    mixture.remove_component(1)
+
+    assert_allclose(mixture.log_weights, np.log([0.2 / 0.7, 0.5 / 0.7]))
+
+
+def test_pdf_returns_float64_scalar_for_a_scalar() -> None:
+    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
+
+    assert_is_scalar_type(mixture.pdf(1.0))
+    assert_is_array_type(mixture.pdf(np.array([1.0, 2.0])), (2,))
+
+
+def test_pdf_gives_float64_data_to_the_core_mixture(mock_finite_mixture: MagicMock) -> None:
+    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
+
+    mixture.pdf([1, 2, 3])
+
+    received = mock_finite_mixture.return_value.calculate_characteristic.call_args.args[1]
+    assert received.dtype == np.float64
+
+
+def test_pdf_returns_float64_even_if_the_core_mixture_does_not(mock_finite_mixture: MagicMock) -> None:
+    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
+    mock_finite_mixture.return_value.calculate_characteristic.side_effect = lambda name, X: np.ones(3, dtype=np.int32)
+
+    assert_is_array_type(mixture.pdf(np.zeros(3)), (3,))

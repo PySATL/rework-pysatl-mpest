@@ -81,7 +81,7 @@ def test_returns_the_optimizer_result_by_parameter_name(
 def test_raises_if_h_is_not_computed(component: ParametricFamilyDistribution, optimizer: Optimizer) -> None:
     state = make_state(X=np.array([1.0]), H=None)
 
-    with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
+    with pytest.raises(ValueError, match=r"^Responsibility matrix H is not computed\.$"):
         q_function_strategy(component, state, q_block(), optimizer)
 
 

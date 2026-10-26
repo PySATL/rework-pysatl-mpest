@@ -126,6 +126,14 @@ def test_generate_is_reproducible_with_seed(components: list[ParametricFamilyDis
     assert not np.allclose(first, other)
 
 
+def test_generate_without_size_is_a_single_draw() -> None:
+    """A scalar sample uses exactly one draw, so it is the sample of size one."""
+    mixture = MixtureModel([_normal(0.0, 1.0), _exponential(2.0)], weights=[0.5, 0.5])
+
+    for seed in range(5):
+        assert mixture.generate(random_state=seed) == mixture.generate(size=1, random_state=seed)[0]
+
+
 def test_generate_shapes() -> None:
     mixture = MixtureModel([_normal_fixed_mu(1.0, 2.0), _exponential(2.0)], weights=[0.5, 0.5])
     seed = 0

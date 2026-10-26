@@ -37,7 +37,7 @@ def state() -> PipelineState:
 def test_raises_if_h_is_not_computed() -> None:
     state = make_state(X=np.array([1.0]), H=None)
 
-    with pytest.raises(ValueError, match="Responsibility matrix H is not computed."):
+    with pytest.raises(ValueError, match=r"^Responsibility matrix H is not computed\.$"):
         moments_strategy(exponential(1.0), state, moments_block(), optimizer=None)  # type: ignore[arg-type]
 
 

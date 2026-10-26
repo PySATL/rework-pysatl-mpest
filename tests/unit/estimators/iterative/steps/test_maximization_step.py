@@ -102,7 +102,7 @@ class TestMaximizationStep:
 
         assert result_state is state
         assert isinstance(result_state.error, ValueError)
-        assert "Responsibility matrix H is not computed" in str(result_state.error)
+        assert str(result_state.error) == "Responsibility matrix H is not computed."
 
     def test_run_calls_correct_strategy_and_updates_params(
         self,
@@ -347,3 +347,29 @@ class TestMaximizationStep:
         assert str(state.error) == "Fail"
         # Params update should NOT be called because we returned early
         spy.assert_not_called()
+
+
+class TestDetailsFoundByMutationTesting:
+    def test_run_keeps_the_log_weight_of_a_component_without_responsibility_finite(
+        self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
+    ):
+        """A component that has no responsibility gets a tiny weight, not a weight whose logarithm is undefined."""
+        state = parametrized_state
+        state.H = np.array([[1.0, 0.0]] * 4)
+        log_weights = mocker.PropertyMock()
+        type(state.curr_mixture).log_weights = log_weights
+
+        MaximizationStep(blocks=[], optimizer=mock_optimizer).run(state)
+
+        actual = log_weights.call_args.args[0]
+        assert np.all(np.isfinite(actual))
+        np.testing.assert_allclose(actual, [0.0, np.log(1e-30)], atol=1e-9)
+
+    def test_clear_after_prune_renumbers_all_blocks_after_the_removed_one(self, mock_optimizer: Optimizer):
+        """Removing the first of four components shifts every other block by one: 1 -> 0, 2 -> 1, 3 -> 2."""
+        blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(4)]
+        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
+
+        step.clear_after_prune([0])
+
+        assert [block.component_id for block in step.blocks] == [0, 1, 2]

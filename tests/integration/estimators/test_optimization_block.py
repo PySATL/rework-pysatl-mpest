@@ -69,5 +69,11 @@ def test_fixed_parameter_is_rejected(normal_fixed_mu: ParametricFamilyDistributi
 
 
 def test_unknown_and_fixed_parameters_are_reported_together(normal_fixed_mu: ParametricFamilyDistribution) -> None:
-    with pytest.raises(ValueError, match=r"\['tau'\] are not parameters.*\['mu'\] are fixed"):
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"\['tau'\] are not parameters of the 'meanStd' parametrization of 'Normal'; "
+            r"\['mu'\] are fixed and cannot be optimized"
+        ),
+    ):
         make_block({"mu", "tau"}).params_to_update(normal_fixed_mu)

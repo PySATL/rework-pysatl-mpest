@@ -235,7 +235,13 @@ class TestPipelineInitialization:
 
         steps = [MockSingleStep()]
 
-        with pytest.raises(ValueError, match="The 'breakpointers' list cannot be empty"):
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"^The 'breakpointers' list cannot be empty\. "
+                r"At least one stopping criterion must be provided to prevent an infinite loop\.$"
+            ),
+        ):
             Pipeline(steps, [])
 
     def test_init_creates_history_with_correct_frequency(self):
@@ -262,7 +268,7 @@ class TestPipelineValidation:
         """Tests that an empty list of steps raises a ValueError."""
 
         breakpointers = [MockBreakpointer(stop_at_iteration=2)]
-        with pytest.raises(ValueError, match="The 'steps' list cannot be empty"):
+        with pytest.raises(ValueError, match=r"^The 'steps' list cannot be empty for a Pipeline\.$"):
             Pipeline([], breakpointers)
 
     def test_validate_steps_raises_error_for_invalid_order(self):
@@ -752,3 +758,137 @@ class TestPipelinePruningBookkeeping:
         assert first.mixture.n_components == 2  # noqa: PLR2004
         assert first.H.shape == (len(sample_data), 2)
         assert second.H.shape == (len(sample_data), 2)
+
+
+# --- Details found by mutation testing ---
+
+
+class TestPipelineStepValidation:
+    """Tests that the order of the steps is checked for every pair of neighbours."""
+
+    def test_the_last_pair_of_steps_is_checked(self):
+        """The invalid pair is B followed by B at the end of the list."""
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepB(), MockStepB()], [StepBreakpointer(1)])
+
+    def test_the_first_pair_of_steps_is_checked(self):
+        """The invalid pair is A followed by A at the start of the list, then comes B."""
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepA(), MockStepB()], [StepBreakpointer(1)])
+
+    def test_the_pair_closing_the_cycle_is_checked(self):
+        """The neighbours in the list are fine, but the last step A cannot be followed by the first step A."""
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepB(), MockStepA()], [StepBreakpointer(1)])
+
+
+class DataProbeStep(MockSingleStep):
+    """A step that records the data it receives."""
+
+    def __init__(self):
+        super().__init__([])
+        self.dtypes: list[np.dtype] = []
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.dtypes.append(state.X.dtype)
+        return state
+
+
+class PreviousMixtureProbeStep(MockSingleStep):
+    """A step that records the previous mixture next to a copy of the current one, then changes the current one."""
+
+    def __init__(self):
+        super().__init__([])
+        self.seen: list[tuple[MixtureModel | None, MixtureModel]] = []
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.seen.append((state.prev_mixture, copy(state.curr_mixture)))
+        component = state.curr_mixture[0]
+        state.curr_mixture[0] = cc.with_parameters(component, lambda_=cc.all_parameters(component)["lambda_"] + 1.0)
+        return state
+
+
+class FailingStep(MockSingleStep):
+    """A step that sets H and fails on the given run."""
+
+    def __init__(self, failing_run: int):
+        super().__init__([])
+        self.failing_run = failing_run
+        self.runs = 0
+        self.error = ValueError("simulated failure")
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.runs += 1
+        state.H = np.full((len(state.X), state.curr_mixture.n_components), 0.5)
+        if self.runs == self.failing_run:
+            state.error = self.error
+        return state
+
+
+class ErrorSettingPruner(Pruner):
+    """A pruner that removes nothing but leaves an error in the state."""
+
+    def __init__(self):
+        self.error = ValueError("left by the pruner")
+
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
+        state.error = self.error
+        return state, []
+
+
+class TestPipelineFitDetails:
+    def test_fit_gives_float64_data_to_the_steps(self, initial_mixture):
+        step = DataProbeStep()
+
+        Pipeline([step], [StepBreakpointer(2)]).fit([1, 2, 6, 7], initial_mixture)
+
+        assert step.dtypes == [np.float64, np.float64]
+
+    def test_fit_gives_each_iteration_the_mixture_it_started_with_as_the_previous_one(self, initial_mixture):
+        step = PreviousMixtureProbeStep()
+
+        Pipeline([step], [StepBreakpointer(3)]).fit(np.array([1.0, 2.0]), initial_mixture)
+
+        for previous, current_at_start in step.seen:
+            assert previous is not None
+            assert previous == current_at_start
+        assert step.seen[0][0] == initial_mixture
+        assert step.seen[1][0] != step.seen[0][0]
+
+    def test_a_step_error_in_the_first_iteration_is_recorded_in_the_history(self, initial_mixture, sample_data):
+        step = FailingStep(failing_run=1)
+        pipeline = Pipeline([step], [StepBreakpointer(5)])
+
+        with pytest.warns(RuntimeWarning):
+            result = pipeline.fit(sample_data, initial_mixture)
+
+        assert len(pipeline.history) == 1
+        record = pipeline.history[0]
+        assert record.iteration == 0
+        assert record.mixture is result
+        np.testing.assert_array_equal(record.X, sample_data)
+        assert record.H is not None
+        assert record.H.shape == (len(sample_data), 2)
+        assert record.pruners_used is None
+        assert record.error is step.error
+
+    def test_a_step_error_in_a_later_iteration_is_added_to_the_last_record(self, initial_mixture, sample_data):
+        step = FailingStep(failing_run=2)
+        pipeline = Pipeline([step], [StepBreakpointer(5)])
+
+        with pytest.warns(RuntimeWarning):
+            pipeline.fit(sample_data, initial_mixture)
+
+        assert len(pipeline.history) == 1
+        assert pipeline.history[0].error is step.error
+
+    def test_the_record_of_an_iteration_holds_the_data_the_pruners_and_the_error(self, initial_mixture, sample_data):
+        pruner = ErrorSettingPruner()
+        pipeline = Pipeline([MockSingleStep([])], [StepBreakpointer(1)], [pruner])
+
+        pipeline.fit(sample_data, initial_mixture)
+
+        record = pipeline.history[0]
+        np.testing.assert_array_equal(record.X, sample_data)
+        assert record.pruners_used == [pruner]
+        assert record.error is pruner.error
