@@ -24,14 +24,6 @@ from tests.helpers.math_assertions import assert_is_array_type, assert_is_scalar
 
 RTOL, ATOL = 1e-10, 1e-12
 
-# pysatl-core does not implement ``lpdf`` for a finite mixture (``LPDF = "lpdf"  # unimplemented in graph yet``).
-# Remove this marker when ``MixtureModel.lpdf`` computes it itself (step 2 of MIGRATION-PLAN.md).
-lpdf_not_implemented = pytest.mark.xfail(
-    strict=True,
-    raises=RuntimeError,
-    reason="finite mixture of pysatl-core has no lpdf",
-)
-
 Component = tuple[ParametricFamilyDistribution, "stats.rv_continuous"]
 
 
@@ -90,7 +82,6 @@ def test_pdf_matches_reference(make_case: Callable[[], Case]) -> None:
     assert_allclose(case.mixture.pdf(X_GRID), case.reference_pdf(X_GRID), rtol=RTOL, atol=ATOL)
 
 
-@lpdf_not_implemented
 @cases
 def test_lpdf_matches_reference(make_case: Callable[[], Case]) -> None:
     """The log-density agrees with ``logaddexp(log w + scipy logpdf)``, including points outside some supports."""
@@ -99,7 +90,6 @@ def test_lpdf_matches_reference(make_case: Callable[[], Case]) -> None:
     assert_allclose(case.mixture.lpdf(X_GRID), case.reference_lpdf(X_GRID), rtol=RTOL, atol=ATOL)
 
 
-@lpdf_not_implemented
 @cases
 def test_pdf_is_exp_of_lpdf(make_case: Callable[[], Case]) -> None:
     """``pdf`` and ``lpdf`` are consistent."""
@@ -108,7 +98,6 @@ def test_pdf_is_exp_of_lpdf(make_case: Callable[[], Case]) -> None:
     assert_allclose(case.mixture.pdf(X_GRID), np.exp(case.mixture.lpdf(X_GRID)), rtol=RTOL, atol=ATOL)
 
 
-@lpdf_not_implemented
 def test_lpdf_far_tail_is_finite() -> None:
     """Far in the tails ``pdf`` underflows to 0 while ``lpdf`` must stay finite and exact."""
 
@@ -121,7 +110,6 @@ def test_lpdf_far_tail_is_finite() -> None:
     assert_allclose(lpdf, case.reference_lpdf(x), rtol=RTOL, atol=ATOL)
 
 
-@lpdf_not_implemented
 @pytest.mark.filterwarnings("error")
 def test_lpdf_outside_every_support_is_neg_inf() -> None:
     """Where every component has zero density the log-density is ``-inf`` without NaN or warnings."""
@@ -132,7 +120,6 @@ def test_lpdf_outside_every_support_is_neg_inf() -> None:
     assert np.all(np.isneginf(lpdf))
 
 
-@lpdf_not_implemented
 @cases
 def test_lpdf_return_types(make_case: Callable[[], Case]) -> None:
     """A scalar input gives ``np.float64``; an array input gives a ``float64`` array of the same shape."""
@@ -143,7 +130,6 @@ def test_lpdf_return_types(make_case: Callable[[], Case]) -> None:
     assert_is_array_type(mixture.lpdf(X_GRID), X_GRID.shape)
 
 
-@lpdf_not_implemented
 @cases
 def test_loglikelihood_is_sum_of_lpdf(make_case: Callable[[], Case]) -> None:
     """``loglikelihood`` equals the sum of the reference log-densities."""

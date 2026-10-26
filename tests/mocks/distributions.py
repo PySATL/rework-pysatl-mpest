@@ -68,6 +68,42 @@ class MockContinuousDistribution:
         return random_state.normal(size=n)
 
 
+class MockConstantLpdfContinuousDistribution(MockContinuousDistribution):
+    """
+    Mock continuous distribution with a constant log-PDF for testing.
+
+    Parameters
+    ----------
+    log_density : float
+        The value returned as the log-PDF at every point.
+    """
+
+    def __init__(self, log_density: float) -> None:
+        super().__init__(param1=log_density)
+        self.log_density = log_density
+
+    def calculate_characteristic(self, name: CharacteristicName, X: ArrayLike) -> NDArray[np.float64]:
+        """
+        Calculate a characteristic of the distribution.
+
+        Parameters
+        ----------
+        name : CharacteristicName
+            The name of the characteristic to calculate.
+        X : ArrayLike
+            The input data points.
+
+        Returns
+        -------
+        NDArray[np.float64]
+            The calculated characteristic, returning ``log_density`` for LPDF.
+        """
+        X_arr = np.asarray(X, dtype=np.float64)
+        if name == CharacteristicName.LPDF:
+            return np.full_like(X_arr, self.log_density)
+        raise NotImplementedError
+
+
 class MockInfLpdfContinuousDistribution(MockContinuousDistribution):
     """
     Mock continuous distribution with infinite log-PDF for testing.

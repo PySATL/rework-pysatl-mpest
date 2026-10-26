@@ -21,6 +21,7 @@ from tests.helpers.math_assertions import (
     assert_probabilities_sum_to_one,
 )
 from tests.mocks.distributions import (
+    MockConstantLpdfContinuousDistribution,
     MockContinuousDistribution,
     MockInfLpdfContinuousDistribution,
 )
@@ -242,6 +243,66 @@ def test_lpdf_stability() -> None:
     X = np.array([-1.0, 0.0, 1.0])
     lpdf_vals = mixture.lpdf(X)
     assert_computational_stability(cast(np.ndarray, lpdf_vals))
+
+
+def test_lpdf_does_not_use_core_mixture(
+    mock_comps: tuple[ParametricFamilyDistribution, ...], mock_finite_mixture: MagicMock
+) -> None:
+    """Test LPDF is computed by the model itself, not by the pysatl-core mixture."""
+    mixture = MixtureModel(mock_comps)
+
+    mixture.lpdf(np.array([1.0, 2.0]))
+
+    mock_finite_mixture.assert_not_called()
+
+
+def test_lpdf_is_weighted_logsumexp() -> None:
+    """Test LPDF applies the mixture weights to the component log-densities."""
+    comps = (
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-1.0)),
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-3.0)),
+    )
+    mixture = MixtureModel(comps, weights=[0.25, 0.75])
+    expected = np.log(0.25 * np.exp(-1.0) + 0.75 * np.exp(-3.0))
+    rtol, atol = 1e-12, 1e-12
+
+    assert_allclose(mixture.lpdf(np.array([0.0, 1.0])), [expected, expected], rtol=rtol, atol=atol)
+    assert_allclose(mixture.lpdf(0.5), expected, rtol=rtol, atol=atol)
+
+
+@pytest.mark.filterwarnings("error")
+def test_lpdf_all_components_neg_inf() -> None:
+    """Test LPDF is -inf, without NaN or warnings, where every component has zero density."""
+    comps = (
+        cast(ParametricFamilyDistribution, MockInfLpdfContinuousDistribution()),
+        cast(ParametricFamilyDistribution, MockInfLpdfContinuousDistribution()),
+    )
+    mixture = MixtureModel(comps)
+
+    assert np.all(np.isneginf(mixture.lpdf(np.array([-1.0, 0.0, 1.0]))))
+
+
+def test_component_lpdf_matrix_shape(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test the component log-density matrix has the component axis last."""
+    mixture = MixtureModel(mock_comps)
+    n_components = 2
+
+    assert mixture.component_lpdf_matrix(np.zeros(5)).shape == (5, n_components)
+    assert mixture.component_lpdf_matrix(0.5).shape == (n_components,)
+    assert mixture.component_lpdf_matrix(np.zeros((3, 4))).shape == (3, 4, n_components)
+
+
+def test_component_lpdf_matrix_values_exclude_weights() -> None:
+    """Test the matrix holds raw component log-densities, one column per component."""
+    comps = (
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-1.0)),
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-3.0)),
+    )
+    mixture = MixtureModel(comps, weights=[0.25, 0.75])
+
+    matrix = mixture.component_lpdf_matrix(np.array([0.0, 1.0, 2.0]))
+
+    assert_allclose(matrix, np.tile([-1.0, -3.0], (3, 1)))
 
 
 def test_loglikelihood(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:

@@ -17,6 +17,7 @@ from pysatl_core.types import CharacteristicName
 from scipy.special import logsumexp, softmax
 
 from ..typings import FloatArray, Scalar, UnivariateFloatArray
+from . import _components
 
 
 class MixtureModel:
@@ -67,6 +68,7 @@ class MixtureModel:
         remove_component
         pdf
         lpdf
+        component_lpdf_matrix
         loglikelihood
         generate
     """
@@ -255,6 +257,9 @@ class MixtureModel:
     def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
         """Logarithms of the Probability Density Function.
 
+        The log-density is computed as ``logsumexp(log_weights + component log-densities)``,
+        which stays finite where the density itself underflows to zero.
+
         Parameters
         ----------
         X : ArrayLike
@@ -269,11 +274,29 @@ class MixtureModel:
 
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
-        result = self._core_mixture.calculate_characteristic(CharacteristicName.LPDF, X)
+        result = logsumexp(self.component_lpdf_matrix(X) + self.log_weights, axis=-1)
 
         if is_scalar:
             return np.float64(result[()])
         return np.asarray(result, dtype=np.float64)
+
+    def component_lpdf_matrix(self, X: ArrayLike) -> FloatArray:
+        """Log-densities of every component, without the mixture weights.
+
+        Parameters
+        ----------
+        X : ArrayLike
+            The input data points.
+
+        Returns
+        -------
+        FloatArray
+            An array of shape ``(*X.shape, n_components)`` whose last axis indexes
+            the components. For a sample of ``n`` points this is an ``(n, n_components)`` matrix.
+        """
+
+        X = np.asarray(X, dtype=np.float64)
+        return np.stack([_components.lpdf(component, X) for component in self.components], axis=-1)
 
     def loglikelihood(self, X: ArrayLike) -> float:
         """Log-likelihood of the complete data :attr:`X`.
