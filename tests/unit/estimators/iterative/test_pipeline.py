@@ -21,6 +21,7 @@ from pysatl_mpest.estimators.iterative import (
     PipelineState,
     PipelineStep,
     Pruner,
+    StepBreakpointer,
 )
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
 from tests.helpers.families import family
@@ -625,3 +626,129 @@ class TestMaximizationStepClearAfterPrune:
 
         assert step.blocks[0].params_to_optimize == {"param1"}
         assert step.blocks[1].params_to_optimize == {"param3"}
+
+
+# --- Bookkeeping of pruned components ---
+
+
+class RecordingStep(PipelineStep):
+    """A step that logs when it runs and which removed components it is told about."""
+
+    def __init__(self, name: str, log: list[tuple[str, ...]]):
+        self.name = name
+        self.log = log
+
+    @property
+    def available_next_steps(self) -> list[type[PipelineStep]]:
+        return [RecordingStep]
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.log.append(("run", self.name))
+        return state
+
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        self.log.append(("clear", self.name, str(removed_components_indices)))
+
+
+class ResponsibilityStep(RecordingStep):
+    """A step that sets H to uniform responsibilities for the current components."""
+
+    def run(self, state: PipelineState) -> PipelineState:
+        n_components = state.curr_mixture.n_components
+        state.H = np.full((len(state.X), n_components), 1.0 / n_components)
+        return super().run(state)
+
+
+class ScriptedPruner(Pruner):
+    """A pruner that removes the components given for each call, in order, and logs its calls."""
+
+    def __init__(self, name: str, log: list[tuple[str, ...]], removals: list[list[int]]):
+        self.name = name
+        self.log = log
+        self.removals = iter(removals)
+
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
+        removed = next(self.removals, [])
+        self.log.append(("prune", self.name, str(removed)))
+        for index in sorted(removed, reverse=True):
+            state.curr_mixture.remove_component(index)
+        return state, removed
+
+
+def exponential_mixture(n_components: int) -> MixtureModel:
+    components = [family(FamilyName.EXPONENTIAL)(lambda_=float(i + 1)) for i in range(n_components)]
+    return MixtureModel(components)
+
+
+class TestPipelinePruningBookkeeping:
+    """Tests that the steps learn about pruned components right away and exactly once."""
+
+    def test_steps_are_notified_right_after_pruning(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        steps = [RecordingStep("A", log), RecordingStep("B", log)]
+        pipeline = Pipeline(steps, [StepBreakpointer(2)], [ScriptedPruner("p", log, [[0], []])])
+
+        pipeline.fit(sample_data, exponential_mixture(3))
+
+        assert log == [
+            ("run", "A"),
+            ("run", "B"),
+            ("prune", "p", "[0]"),
+            ("clear", "A", "[0]"),
+            ("clear", "B", "[0]"),
+            ("run", "A"),
+            ("run", "B"),
+            ("prune", "p", "[]"),
+        ]
+
+    def test_each_removal_is_reported_once(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        pruner = ScriptedPruner("p", log, [[0], [], [1], []])
+        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(4)], [pruner])
+
+        pipeline.fit(sample_data, exponential_mixture(4))
+
+        assert [entry[2] for entry in log if entry[0] == "clear"] == ["[0]", "[1]"]
+
+    def test_steps_are_not_notified_when_nothing_is_removed(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(3)], [ScriptedPruner("p", log, [])])
+
+        pipeline.fit(sample_data, exponential_mixture(2))
+
+        assert not [entry for entry in log if entry[0] == "clear"]
+
+    def test_each_pruner_reports_indices_relative_to_the_mixture_it_was_given(self, sample_data):
+        """The second pruner sees the mixture without the component the first one removed."""
+        log: list[tuple[str, ...]] = []
+        pruners = [ScriptedPruner("p1", log, [[0]]), ScriptedPruner("p2", log, [[1]])]
+        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(1)], pruners)
+
+        fitted = pipeline.fit(sample_data, exponential_mixture(3))
+
+        assert log == [
+            ("run", "A"),
+            ("prune", "p1", "[0]"),
+            ("clear", "A", "[0]"),
+            ("prune", "p2", "[1]"),
+            ("clear", "A", "[1]"),
+        ]
+        # The components had the rates 1, 2 and 3; the first pruner removed the rate 1, the second one the rate 3.
+        remaining_rate = 2.0
+        assert fitted.n_components == 1
+        assert cc.all_parameters(fitted[0])["lambda_"] == remaining_rate
+
+    def test_columns_of_h_of_pruned_components_are_dropped(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        pipeline = Pipeline(
+            [ResponsibilityStep("A", log)],
+            [StepBreakpointer(2)],
+            [ScriptedPruner("p", log, [[0, 2], []])],
+        )
+
+        pipeline.fit(sample_data, exponential_mixture(4))
+
+        first, second = pipeline.history[0], pipeline.history[1]
+        assert first.mixture.n_components == 2  # noqa: PLR2004
+        assert first.H.shape == (len(sample_data), 2)
+        assert second.H.shape == (len(sample_data), 2)

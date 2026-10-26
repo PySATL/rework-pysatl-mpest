@@ -292,24 +292,98 @@ def test_ecme_with_observed_data_likelihood_improves_the_fit(
 
 # --- pruning ---
 
+PRUNING_THRESHOLD = 0.05
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=IndexError,
-    reason=(
-        "Pipeline passes the indices of the pruned components to the steps after running them, so the next "
-        "M-step still has a block for a component that no longer exists. The failure exists without pysatl-core."
-    ),
-)
-def test_ecm_prunes_a_component_with_a_negligible_weight(X: np.ndarray) -> None:
-    start = MixtureModel([normal(0.0, 1.0), normal(6.0, 1.0), normal(3.0, 1.0)], weights=[0.49, 0.49, 0.02])
-    ecm = ECM(
-        breakpointers=[StepBreakpointer(6)],
-        pruners=[PriorThresholdPruner(0.05)],
+
+def stray_start(stray_positions: tuple[int, ...]) -> MixtureModel:
+    """The two true clusters plus components with a negligible weight that are inserted at the given positions."""
+
+    stray_weight = 0.01
+    components = [normal(0.0, 1.0), normal(6.0, 1.0)]
+    weights = [(1.0 - stray_weight * len(stray_positions)) / 2] * 2
+    for position, mu in zip(stray_positions, (3.0, -3.0, 9.0)):
+        components.insert(position, normal(mu, 1.0))
+        weights.insert(position, stray_weight)
+    return MixtureModel(components, weights=weights)
+
+
+def pruning_ecm(iterations: int = 15) -> ECM:
+    return ECM(
+        breakpointers=[StepBreakpointer(iterations)],
+        pruners=[PriorThresholdPruner(PRUNING_THRESHOLD)],
         optimizer=ScipyNelderMead(),
     )
 
-    fitted = ecm.fit(X, start)
+
+@pytest.mark.parametrize("position", [0, 1, 2], ids=["first", "middle", "last"])
+def test_ecm_prunes_a_component_with_a_negligible_weight(X: np.ndarray, position: int) -> None:
+    fitted = pruning_ecm().fit(X, stray_start((position,)))
+
+    mu, sigma, weights = fitted_arrays(fitted)
+    assert fitted.n_components == 2  # noqa: PLR2004
+    assert_allclose(mu, [0.0, 6.0], atol=0.15)
+    assert_allclose(sigma, [1.0, 1.5], atol=0.15)
+    assert_allclose(weights, TRUE_WEIGHTS, atol=0.03)
+
+
+@pytest.mark.parametrize("positions", [(0, 2), (1, 3), (0, 1)], ids=["0 and 2", "1 and 3", "0 and 1"])
+def test_ecm_prunes_several_components_at_once(X: np.ndarray, positions: tuple[int, ...]) -> None:
+    fitted = pruning_ecm().fit(X, stray_start(positions))
 
     assert fitted.n_components == 2  # noqa: PLR2004
+    assert_allclose(fitted_arrays(fitted)[0], [0.0, 6.0], atol=0.15)
+
+
+def test_ecm_with_pruning_continues_like_a_fit_of_the_pruned_mixture(X: np.ndarray) -> None:
+    """After the pruner removes a component the fit goes on exactly as it would for the smaller mixture."""
+
+    start = stray_start((1,))
+    after_first = ecm_for(1).fit(X, start)
+    assert after_first.weights[1] < PRUNING_THRESHOLD
+    pruned = copy(after_first)
+    pruned.remove_component(1)
+
+    with_pruner = pruning_ecm(iterations=10).fit(X, start)
+    by_hand = ecm_for(9).fit(X, pruned)
+
+    for actual, expected in zip(fitted_arrays(with_pruner), fitted_arrays(by_hand)):
+        assert_allclose(actual, expected, rtol=1e-9)
+
+
+def test_ecm_with_pruning_keeps_the_history_consistent(X: np.ndarray) -> None:
+    ecm = pruning_ecm(iterations=6)
+
+    ecm.fit(X, stray_start((1,)))
+
+    records = [ecm.history[i] for i in range(len(ecm.history))]
+    assert [record.mixture.n_components for record in records][-1] == 2  # noqa: PLR2004
+    for record in records:
+        assert record.H is not None
+        assert record.H.shape == (N_SAMPLES, record.mixture.n_components)
+
+
+def test_ecm_with_pruning_keeps_a_fixed_parameter(X: np.ndarray) -> None:
+    fixed = family(FamilyName.NORMAL).view(mu=6.0)(sigma=2.0)
+    start = MixtureModel([normal(0.0, 1.0), normal(3.0, 1.0), fixed], weights=[0.49, 0.02, 0.49])
+
+    fitted = pruning_ecm().fit(X, start)
+
+    assert fitted.n_components == 2  # noqa: PLR2004
+    assert cc.fixed_parameters(fitted[1]) == {"mu": 6.0}
+    assert cc.all_parameters(fitted[1])["sigma"] == pytest.approx(1.5, abs=0.15)
+
+
+@pytest.mark.parametrize("default_strategy", ["q-func", "odl"])
+def test_ecme_prunes_a_component_with_a_negligible_weight(X: np.ndarray, default_strategy: str) -> None:
+    ecme = ECME(
+        breakpointers=[StepBreakpointer(12)],
+        pruners=[PriorThresholdPruner(PRUNING_THRESHOLD)],
+        optimizer=ScipyNelderMead(),
+        default_strategy=default_strategy,  # type: ignore[arg-type]
+    )
+
+    fitted = ecme.fit(X, stray_start((0,)))
+
+    assert fitted.n_components == 2  # noqa: PLR2004
+    assert_allclose(fitted_arrays(fitted)[0], [0.0, 6.0], atol=0.2)
     assert_allclose(fitted.weights, TRUE_WEIGHTS, atol=0.05)
