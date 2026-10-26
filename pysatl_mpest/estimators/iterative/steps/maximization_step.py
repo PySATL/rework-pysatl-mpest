@@ -19,8 +19,8 @@ from types import MappingProxyType
 from typing import ClassVar, cast
 
 import numpy as np
+from pysatl_core.families import ParametricFamilyDistribution
 
-from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
 from .._strategies import StrategyFunction, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
 from ..pipeline_state import PipelineState
@@ -88,13 +88,13 @@ class MaximizationStep(PipelineStep):
         return [ExpectationStep]
 
     def _update_components_params(
-        self, component: ContinuousDistribution, params: dict[str, float]
-    ) -> ContinuousDistribution:
+        self, component: ParametricFamilyDistribution, params: dict[str, float]
+    ) -> ParametricFamilyDistribution:
         """Helper method to update parameters for a single component.
 
         Parameters
         ----------
-        component : ContinuousDistribution
+        component : ParametricFamilyDistribution
             The component whose parameters are to be updated.
         params : dict[str, float]
             A dictionary mapping parameter names to their new optimized values.

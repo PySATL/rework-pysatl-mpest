@@ -2,7 +2,7 @@
 
 This module implements the logic for updating component parameters by
 equating theoretical moments of the distribution to the empirical weighted
-moments of the data. It uses `functools.singledispatch` to provide a generic
+moments of the data. It dispatches on the family and parametrization of the component to provide a generic
 interface that can be specialized for specific distribution types.
 """
 
@@ -11,14 +11,14 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from functools import singledispatch
-
 import numpy as np
+from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.types import FamilyName
 
-from ....distributions import ContinuousDistribution, Exponential, Normal
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
+from ._dispatch import family_dispatch
 
 NUMERICAL_TOLERANCE = 1e-9
 
@@ -28,9 +28,9 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 
 
-@singledispatch
+@family_dispatch
 def moments_strategy(
-    component: ContinuousDistribution,
+    component: ParametricFamilyDistribution,
     state: PipelineState,
     block: OptimizationBlock,
     optimizer: Optimizer,
@@ -44,7 +44,7 @@ def moments_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution
+    component : ParametricFamilyDistribution
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline.
@@ -67,9 +67,9 @@ def moments_strategy(
 # ---------------------------------
 
 
-@moments_strategy.register(Exponential)
+@moments_strategy.register(FamilyName.EXPONENTIAL, "rate")
 def _(
-    component: Exponential, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """Specialized Moments parameter estimation strategy for the Exponential distribution
     using an analytical solution.
@@ -132,9 +132,9 @@ def _(
 # ---------------------------------
 
 
-@moments_strategy.register(Normal)
+@moments_strategy.register(FamilyName.NORMAL, "meanStd")
 def _(
-    component: Normal, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """
     Update parameters of a univariate Normal component using weighted moments.
@@ -155,7 +155,7 @@ def _(
 
     Parameters
     ----------
-    component : Normal
+    component : ParametricFamilyDistribution
         Normal distribution component to be updated. The method may update
         ``component.loc`` and/or ``component.scale`` depending on
         ``component.params_to_optimize`` and the block configuration.

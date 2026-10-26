@@ -8,7 +8,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 from collections.abc import Callable
 from typing import Any
 
-from ....distributions import ContinuousDistribution
+from pysatl_core.families import ParametricFamilyDistribution
+
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps.block import OptimizationBlock
@@ -17,7 +18,7 @@ from .observed_data_likelihood import observed_data_likelihood_strategy as _obse
 from .q_function import q_function_strategy as _q_function_strategy
 
 type StrategyFunction = Callable[
-    [ContinuousDistribution, PipelineState, OptimizationBlock, Optimizer],
+    [ParametricFamilyDistribution, PipelineState, OptimizationBlock, Optimizer],
     tuple[int, dict[str, float]],
 ]
 

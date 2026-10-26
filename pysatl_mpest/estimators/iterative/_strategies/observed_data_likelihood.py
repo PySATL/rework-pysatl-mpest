@@ -10,15 +10,15 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 import numpy as np
+from pysatl_core.families import ParametricFamilyDistribution
 
-from ....distributions import ContinuousDistribution
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 
 
 def observed_data_likelihood_strategy(
-    component: ContinuousDistribution,
+    component: ParametricFamilyDistribution,
     state: PipelineState,
     block: OptimizationBlock,
     optimizer: Optimizer,
@@ -34,7 +34,7 @@ def observed_data_likelihood_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution
+    component : ParametricFamilyDistribution
         The distribution component type/instance used for dispatch and parameter metadata.
     state : PipelineState
         The current state containing data X and current mixture parameters.

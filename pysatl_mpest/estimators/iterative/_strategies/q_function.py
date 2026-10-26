@@ -2,7 +2,7 @@
 
 This module implements the logic for updating component parameters by
 maximizing the Q-function (the expected complete-data log-likelihood).
-It uses `functools.singledispatch` to provide a generic, optimization-based
+It dispatches on the family and parametrization of the component to provide a generic, optimization-based
 approach for any continuous distribution, as well as specialized, more
 efficient analytical solutions for specific distribution types like the
 `Exponential` distribution.
@@ -13,14 +13,14 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from functools import singledispatch
-
 import numpy as np
+from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.types import FamilyName
 
-from ....distributions import ContinuousDistribution, Exponential, Normal
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
+from ._dispatch import family_dispatch
 
 NUMERICAL_TOLERANCE = 1e-9
 
@@ -30,9 +30,9 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 
 
-@singledispatch
+@family_dispatch
 def q_function_strategy(
-    component: ContinuousDistribution,
+    component: ParametricFamilyDistribution,
     state: PipelineState,
     block: OptimizationBlock,
     optimizer: Optimizer,
@@ -49,7 +49,7 @@ def q_function_strategy(
 
     Parameters
     ----------
-    component : ContinuousDistribution
+    component : ParametricFamilyDistribution
         The distribution component whose parameters are to be optimized.
     state : PipelineState
         The current state of the pipeline, containing the data :attr:`X` and the
@@ -96,9 +96,9 @@ def q_function_strategy(
 # ---------------------------------
 
 
-@q_function_strategy.register(Exponential)
+@q_function_strategy.register(FamilyName.EXPONENTIAL, "rate")
 def _(
-    component: Exponential, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """Specialized Q-function parameter estimation strategy for
     the Exponential distribution using an analytical solution.
@@ -154,9 +154,9 @@ def _(
 # ----------------------------
 
 
-@q_function_strategy.register(Normal)
+@q_function_strategy.register(FamilyName.NORMAL, "meanStd")
 def _(
-    component: Normal, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """Specialized Q-function parameter estimation strategy for
     the normal distribution using an analytical solution.
