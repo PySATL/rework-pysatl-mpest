@@ -31,8 +31,7 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 
 
-@family_dispatch
-def q_function_strategy(
+def _numerical_q_function(
     component: ParametricFamilyDistribution,
     state: PipelineState,
     block: OptimizationBlock,
@@ -51,8 +50,9 @@ def q_function_strategy(
     (for example a negative standard deviation). The target is ``+inf`` at such points,
     so they are never chosen.
 
-    This function is a dispatcher; specific, more efficient implementations can
-    be registered for different families and parametrizations.
+    It is the default implementation of :data:`q_function_strategy`, which uses a
+    specific, more efficient one when it is registered for the family and
+    parametrization of the component.
 
     Parameters
     ----------
@@ -111,8 +111,7 @@ def q_function_strategy(
 # ---------------------------------
 
 
-@q_function_strategy.register(FamilyName.EXPONENTIAL, "rate")
-def _(
+def _exponential_rate(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """
@@ -231,8 +230,7 @@ def _(
 # ----------------------------
 
 
-@q_function_strategy.register(FamilyName.NORMAL, "meanStd")
-def _(
+def _normal_mean_std(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """
@@ -361,3 +359,14 @@ def _(
             new_params["sigma"] = current["sigma"]
 
     return block.component_id, new_params
+
+
+# --------
+# Dispatch
+# --------
+
+# The implementations are plain functions and are registered by a call, not by a decorator:
+# the mutation testing tool does not mutate decorated functions.
+q_function_strategy = family_dispatch(_numerical_q_function)
+q_function_strategy.register(FamilyName.EXPONENTIAL, "rate")(_exponential_rate)
+q_function_strategy.register(FamilyName.NORMAL, "meanStd")(_normal_mean_std)

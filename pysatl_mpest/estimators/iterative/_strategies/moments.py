@@ -29,8 +29,7 @@ NUMERICAL_TOLERANCE = 1e-9
 # ------------------------
 
 
-@family_dispatch
-def moments_strategy(
+def _not_implemented(
     component: ParametricFamilyDistribution,
     state: PipelineState,
     block: OptimizationBlock,
@@ -38,10 +37,10 @@ def moments_strategy(
 ) -> tuple[int, dict[str, float]]:
     """Generic M-step strategy that uses the Method of Moments.
 
-    This function serves as the base dispatcher. Since the Method of Moments
-    typically requires analytical expressions for theoretical moments specific
-    to each distribution, a generic implementation is not provided and raises
-    NotImplementedError.
+    This function is the default implementation of :data:`moments_strategy`. Since the
+    Method of Moments typically requires analytical expressions for theoretical
+    moments specific to each distribution, a generic implementation is not provided
+    and it raises NotImplementedError.
 
     Parameters
     ----------
@@ -71,8 +70,7 @@ def moments_strategy(
 # ---------------------------------
 
 
-@moments_strategy.register(FamilyName.EXPONENTIAL, "rate")
-def _(
+def _exponential_rate(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """
@@ -191,8 +189,7 @@ def _(
 # ---------------------------------
 
 
-@moments_strategy.register(FamilyName.NORMAL, "meanStd")
-def _(
+def _normal_mean_std(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
     """
@@ -318,3 +315,14 @@ def _(
             new_params["sigma"] = current["sigma"]
 
     return block.component_id, new_params
+
+
+# --------
+# Dispatch
+# --------
+
+# The implementations are plain functions and are registered by a call, not by a decorator:
+# the mutation testing tool does not mutate decorated functions.
+moments_strategy = family_dispatch(_not_implemented)
+moments_strategy.register(FamilyName.EXPONENTIAL, "rate")(_exponential_rate)
+moments_strategy.register(FamilyName.NORMAL, "meanStd")(_normal_mean_std)
