@@ -1,0 +1,30 @@
+﻿
+LikelihoodBreakpointer
+======================
+
+.. currentmodule:: pysatl_mpest.estimators.iterative
+
+.. autoclass:: pysatl_mpest.estimators.iterative.LikelihoodBreakpointer
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~LikelihoodBreakpointer.check
+
+
+

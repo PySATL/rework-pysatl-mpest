@@ -1,7 +1,0 @@
-
-fit
-===
-
-.. currentmodule:: rework_pysatl_mpest.estimators
-
-.. automethod:: rework_pysatl_mpest.estimators.BaseEstimator.fit

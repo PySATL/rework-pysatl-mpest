@@ -1,7 +1,0 @@
-
-perform
-=======
-
-.. currentmodule:: rework_pysatl_mpest.initializers
-
-.. automethod:: rework_pysatl_mpest.initializers.Initializer.perform

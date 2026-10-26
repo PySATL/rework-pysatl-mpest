@@ -1,0 +1,72 @@
+﻿
+MixtureModel
+============
+
+.. currentmodule:: pysatl_mpest.core
+
+.. autoclass:: pysatl_mpest.core.MixtureModel
+   :show-inheritance:
+
+
+
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
+
+
+
+.. autosummary::
+   :toctree: .
+   :template: method.rst
+   :hidden:
+
+
+   ~MixtureModel.add_component
+
+   ~MixtureModel.component_lpdf_matrix
+
+   ~MixtureModel.generate
+
+   ~MixtureModel.loglikelihood
+
+   ~MixtureModel.lpdf
+
+   ~MixtureModel.pdf
+
+   ~MixtureModel.remove_component
+
+   ~MixtureModel.to_core_mixture
+
+
+

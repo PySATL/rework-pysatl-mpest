@@ -40,8 +40,8 @@
     <script src="_static/documentation_options.js?v=f2a433a1"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.4/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.0/dist/mermaid-layout-elk.esm.min.mjs"></script>
     <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.esm.min.mjs'
 
@@ -83,9 +83,366 @@ theme_observer.observe(body, {attributes: true});
 window.theme_observer = theme_observer;
 </script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script type="module">
-import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.2.0/dist/mermaid.esm.min.mjs";
-window.addEventListener("load", () => mermaid.run());
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+const defaultStyle = document.createElement('style');
+defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 100%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}
+`;
+document.head.appendChild(defaultStyle);
+
+const fullscreenStyle = document.createElement('style');
+fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 100%;
+}
+
+.mermaid-container > pre > svg {
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+document.head.appendChild(fullscreenStyle);
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness < 128;
+    }
+    return false;
+};
+
+const load = async () => {
+    await mermaid.run();
+
+    const all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(load, 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(load, 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(load, 200);
+        return;
+    }
+
+    const darkTheme = isDarkTheme();
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    const modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    const modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    let previousScrollOffset = [window.scrollX, window.scrollY];
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    const allButtons = [];
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+
+        container.appendChild(fullscreenBtn);
+        allButtons.push(fullscreenBtn);
+    });
+
+    // Update theme classes when theme changes
+    const updateTheme = () => {
+        const dark = isDarkTheme();
+        allButtons.forEach(btn => {
+            if (dark) {
+                btn.classList.add('dark-theme');
+            } else {
+                btn.classList.remove('dark-theme');
+            }
+        });
+        if (dark) {
+            modal.classList.add('dark-theme');
+            modalContent.classList.add('dark-theme');
+            closeBtn.classList.add('dark-theme');
+        } else {
+            modal.classList.remove('dark-theme');
+            modalContent.classList.remove('dark-theme');
+            closeBtn.classList.remove('dark-theme');
+        }
+    };
+
+    // Watch for theme changes
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+    });
+};
+
+window.addEventListener("load", load);
 </script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
     <link rel="index" title="Index" href="#" />
@@ -339,22 +696,19 @@ window.addEventListener("load", () => mermaid.run());
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
- | <a href="#I"><strong>I</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
- | <a href="#N"><strong>N</strong></a>
  | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
- | <a href="#U"><strong>U</strong></a>
- | <a href="#W"><strong>W</strong></a>
+ | <a href="#T"><strong>T</strong></a>
  
 </div>
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.add_component.html#rework_pysatl_mpest.core.MixtureModel.add_component">add_component() (MixtureModel method)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.add_component.html#pysatl_mpest.core.MixtureModel.add_component">add_component() (MixtureModel method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -362,13 +716,11 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/generated/rework_pysatl_mpest.estimators.BaseEstimator.html#rework_pysatl_mpest.estimators.BaseEstimator">BaseEstimator (class in rework_pysatl_mpest.estimators)</a>
+      <li><a href="api/estimators/generated/pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator">BaseEstimator (class in pysatl_mpest.estimators)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.html#rework_pysatl_mpest.distributions.Beta">Beta (class in rework_pysatl_mpest.distributions)</a>
-</li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Breakpointer.html#rework_pysatl_mpest.estimators.iterative.Breakpointer">Breakpointer (class in rework_pysatl_mpest.estimators.iterative)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer">Breakpointer (class in pysatl_mpest.estimators.iterative)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -376,21 +728,25 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.html#rework_pysatl_mpest.distributions.Cauchy">Cauchy (class in rework_pysatl_mpest.distributions)</a>
-</li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Breakpointer.check.html#rework_pysatl_mpest.estimators.iterative.Breakpointer.check">check() (Breakpointer method)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.check.html#pysatl_mpest.estimators.iterative.Breakpointer.check">check() (Breakpointer method)</a>
 
       <ul>
-        <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.StepBreakpointer.check.html#rework_pysatl_mpest.estimators.iterative.StepBreakpointer.check">(StepBreakpointer method)</a>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check">(LikelihoodBreakpointer method)</a>
+</li>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.check.html#pysatl_mpest.estimators.iterative.StepBreakpointer.check">(StepBreakpointer method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer.html#rework_pysatl_mpest.initializers.ClusterizeInitializer">ClusterizeInitializer (class in rework_pysatl_mpest.initializers)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.ExpectationStep.clear_after_prune">clear_after_prune() (ExpectationStep method)</a>
+
+      <ul>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune">(MaximizationStep method)</a>
 </li>
-      <li><a href="api/initializers/generated/rework_pysatl_mpest.initializers.ClusterMatchStrategy.html#rework_pysatl_mpest.initializers.ClusterMatchStrategy">ClusterMatchStrategy (class in rework_pysatl_mpest.initializers)</a>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune">(PipelineStep method)</a>
 </li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.html#rework_pysatl_mpest.distributions.ContinuousDistribution">ContinuousDistribution (class in rework_pysatl_mpest.distributions)</a>
+      </ul></li>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.component_lpdf_matrix.html#pysatl_mpest.core.MixtureModel.component_lpdf_matrix">component_lpdf_matrix() (MixtureModel method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -398,15 +754,13 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/generated/rework_pysatl_mpest.estimators.ECM.html#rework_pysatl_mpest.estimators.ECM">ECM (class in rework_pysatl_mpest.estimators)</a>
-</li>
-      <li><a href="api/initializers/generated/rework_pysatl_mpest.initializers.EstimationStrategy.html#rework_pysatl_mpest.initializers.EstimationStrategy">EstimationStrategy (class in rework_pysatl_mpest.initializers)</a>
+      <li><a href="api/estimators/generated/pysatl_mpest.estimators.ECM.html#pysatl_mpest.estimators.ECM">ECM (class in pysatl_mpest.estimators)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.ExpectationStep.html#rework_pysatl_mpest.estimators.iterative.ExpectationStep">ExpectationStep (class in rework_pysatl_mpest.estimators.iterative)</a>
+      <li><a href="api/estimators/generated/pysatl_mpest.estimators.ECME.html#pysatl_mpest.estimators.ECME">ECME (class in pysatl_mpest.estimators)</a>
 </li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.html#rework_pysatl_mpest.distributions.Exponential">Exponential (class in rework_pysatl_mpest.distributions)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.html#pysatl_mpest.estimators.iterative.ExpectationStep">ExpectationStep (class in pysatl_mpest.estimators.iterative)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -414,30 +768,14 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/generated/rework_pysatl_mpest.estimators.BaseEstimator.fit.html#rework_pysatl_mpest.estimators.BaseEstimator.fit">fit() (BaseEstimator method)</a>
+      <li><a href="api/estimators/generated/pysatl_mpest.estimators.BaseEstimator.fit.html#pysatl_mpest.estimators.BaseEstimator.fit">fit() (BaseEstimator method)</a>
 
       <ul>
-        <li><a href="api/estimators/generated/rework_pysatl_mpest.estimators.ECM.fit.html#rework_pysatl_mpest.estimators.ECM.fit">(ECM method)</a>
+        <li><a href="api/estimators/generated/pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit">(ECM method)</a>
 </li>
-        <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pipeline.fit.html#rework_pysatl_mpest.estimators.iterative.Pipeline.fit">(Pipeline method)</a>
+        <li><a href="api/estimators/generated/pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit">(ECME method)</a>
 </li>
-      </ul></li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.fix_param.html#rework_pysatl_mpest.distributions.Beta.fix_param">fix_param() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.fix_param.html#rework_pysatl_mpest.distributions.Cauchy.fix_param">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.fix_param.html#rework_pysatl_mpest.distributions.ContinuousDistribution.fix_param">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.fix_param.html#rework_pysatl_mpest.distributions.Exponential.fix_param">(Exponential method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.fix_param.html#rework_pysatl_mpest.distributions.Normal.fix_param">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.fix_param.html#rework_pysatl_mpest.distributions.Pareto.fix_param">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.fix_param.html#rework_pysatl_mpest.distributions.Uniform.fix_param">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.fix_param.html#rework_pysatl_mpest.distributions.Weibull.fix_param">(Weibull method)</a>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit">(Pipeline method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -446,53 +784,7 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.generate.html#rework_pysatl_mpest.distributions.Beta.generate">generate() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.generate.html#rework_pysatl_mpest.distributions.Cauchy.generate">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.generate.html#rework_pysatl_mpest.distributions.ContinuousDistribution.generate">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.generate.html#rework_pysatl_mpest.distributions.Exponential.generate">(Exponential method)</a>
-</li>
-        <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.generate.html#rework_pysatl_mpest.core.MixtureModel.generate">(MixtureModel method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.generate.html#rework_pysatl_mpest.distributions.Normal.generate">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.generate.html#rework_pysatl_mpest.distributions.Pareto.generate">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.generate.html#rework_pysatl_mpest.distributions.Uniform.generate">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.generate.html#rework_pysatl_mpest.distributions.Weibull.generate">(Weibull method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.get_params_vector.html#rework_pysatl_mpest.distributions.Beta.get_params_vector">get_params_vector() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.get_params_vector.html#rework_pysatl_mpest.distributions.Cauchy.get_params_vector">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.get_params_vector.html#rework_pysatl_mpest.distributions.ContinuousDistribution.get_params_vector">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.get_params_vector.html#rework_pysatl_mpest.distributions.Exponential.get_params_vector">(Exponential method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.get_params_vector.html#rework_pysatl_mpest.distributions.Normal.get_params_vector">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.get_params_vector.html#rework_pysatl_mpest.distributions.Pareto.get_params_vector">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.get_params_vector.html#rework_pysatl_mpest.distributions.Uniform.get_params_vector">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.get_params_vector.html#rework_pysatl_mpest.distributions.Weibull.get_params_vector">(Weibull method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/initializers/generated/rework_pysatl_mpest.initializers.Initializer.html#rework_pysatl_mpest.initializers.Initializer">Initializer (class in rework_pysatl_mpest.initializers)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.generate.html#pysatl_mpest.core.MixtureModel.generate">generate() (MixtureModel method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -500,100 +792,56 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.log_gradients.html#rework_pysatl_mpest.distributions.Beta.log_gradients">log_gradients() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.log_gradients.html#rework_pysatl_mpest.distributions.Cauchy.log_gradients">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.log_gradients.html#rework_pysatl_mpest.distributions.ContinuousDistribution.log_gradients">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.log_gradients.html#rework_pysatl_mpest.distributions.Exponential.log_gradients">(Exponential method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.log_gradients.html#rework_pysatl_mpest.distributions.Normal.log_gradients">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.log_gradients.html#rework_pysatl_mpest.distributions.Pareto.log_gradients">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.log_gradients.html#rework_pysatl_mpest.distributions.Uniform.log_gradients">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.log_gradients.html#rework_pysatl_mpest.distributions.Weibull.log_gradients">(Weibull method)</a>
-</li>
-      </ul></li>
-      <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.loglikelihood.html#rework_pysatl_mpest.core.MixtureModel.loglikelihood">loglikelihood() (MixtureModel method)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer">LikelihoodBreakpointer (class in pysatl_mpest.estimators.iterative)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.lpdf.html#rework_pysatl_mpest.distributions.Beta.lpdf">lpdf() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.lpdf.html#rework_pysatl_mpest.distributions.Cauchy.lpdf">(Cauchy method)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.loglikelihood.html#pysatl_mpest.core.MixtureModel.loglikelihood">loglikelihood() (MixtureModel method)</a>
 </li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.lpdf.html#rework_pysatl_mpest.distributions.ContinuousDistribution.lpdf">(ContinuousDistribution method)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.lpdf.html#pysatl_mpest.core.MixtureModel.lpdf">lpdf() (MixtureModel method)</a>
 </li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.lpdf.html#rework_pysatl_mpest.distributions.Exponential.lpdf">(Exponential method)</a>
-</li>
-        <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.lpdf.html#rework_pysatl_mpest.core.MixtureModel.lpdf">(MixtureModel method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.lpdf.html#rework_pysatl_mpest.distributions.Normal.lpdf">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.lpdf.html#rework_pysatl_mpest.distributions.Pareto.lpdf">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.lpdf.html#rework_pysatl_mpest.distributions.Uniform.lpdf">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.lpdf.html#rework_pysatl_mpest.distributions.Weibull.lpdf">(Weibull method)</a>
-</li>
-      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="M">M</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.MaximizationStep.html#rework_pysatl_mpest.estimators.iterative.MaximizationStep">MaximizationStep (class in rework_pysatl_mpest.estimators.iterative)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html#pysatl_mpest.estimators.iterative.MaximizationStep">MaximizationStep (class in pysatl_mpest.estimators.iterative)</a>
 </li>
-      <li><a href="api/optimizers/generated/rework_pysatl_mpest.optimizers.Optimizer.minimize.html#rework_pysatl_mpest.optimizers.Optimizer.minimize">minimize() (Optimizer method)</a>
+      <li><a href="api/optimizers/generated/pysatl_mpest.optimizers.Optimizer.minimize.html#pysatl_mpest.optimizers.Optimizer.minimize">minimize() (Optimizer method)</a>
 
       <ul>
-        <li><a href="api/optimizers/generated/rework_pysatl_mpest.optimizers.ScipyNelderMead.minimize.html#rework_pysatl_mpest.optimizers.ScipyNelderMead.minimize">(ScipyNelderMead method)</a>
+        <li><a href="api/optimizers/generated/pysatl_mpest.optimizers.ScipyNelderMead.minimize.html#pysatl_mpest.optimizers.ScipyNelderMead.minimize">(ScipyNelderMead method)</a>
 </li>
-        <li><a href="api/optimizers/generated/rework_pysatl_mpest.optimizers.ScipyPowell.minimize.html#rework_pysatl_mpest.optimizers.ScipyPowell.minimize">(ScipyPowell method)</a>
+        <li><a href="api/optimizers/generated/pysatl_mpest.optimizers.ScipyPowell.minimize.html#pysatl_mpest.optimizers.ScipyPowell.minimize">(ScipyPowell method)</a>
 </li>
       </ul></li>
-      <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.html#rework_pysatl_mpest.core.MixtureModel">MixtureModel (class in rework_pysatl_mpest.core)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel">MixtureModel (class in pysatl_mpest.core)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     module
 
       <ul>
-        <li><a href="api/core/index.html#module-rework_pysatl_mpest.core">rework_pysatl_mpest.core</a>
+        <li><a href="api/core/index.html#module-pysatl_mpest.core">pysatl_mpest.core</a>
 </li>
-        <li><a href="api/distributions/index.html#module-rework_pysatl_mpest.distributions">rework_pysatl_mpest.distributions</a>
+        <li><a href="api/estimators/index.html#module-pysatl_mpest.estimators">pysatl_mpest.estimators</a>
 </li>
-        <li><a href="api/estimators/index.html#module-rework_pysatl_mpest.estimators">rework_pysatl_mpest.estimators</a>
+        <li><a href="api/estimators/direct/index.html#module-pysatl_mpest.estimators.direct">pysatl_mpest.estimators.direct</a>
 </li>
-        <li><a href="api/estimators/direct/index.html#module-rework_pysatl_mpest.estimators.direct">rework_pysatl_mpest.estimators.direct</a>
+        <li><a href="api/estimators/iterative/index.html#module-pysatl_mpest.estimators.iterative">pysatl_mpest.estimators.iterative</a>
 </li>
-        <li><a href="api/estimators/iterative/index.html#module-rework_pysatl_mpest.estimators.iterative">rework_pysatl_mpest.estimators.iterative</a>
-</li>
-        <li><a href="api/initializers/index.html#module-rework_pysatl_mpest.initializers">rework_pysatl_mpest.initializers</a>
-</li>
-        <li><a href="api/optimizers/index.html#module-rework_pysatl_mpest.optimizers">rework_pysatl_mpest.optimizers</a>
+        <li><a href="api/optimizers/index.html#module-pysatl_mpest.optimizers">pysatl_mpest.optimizers</a>
 </li>
       </ul></li>
-  </ul></td>
-</tr></table>
-
-<h2 id="N">N</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.html#rework_pysatl_mpest.distributions.Normal">Normal (class in rework_pysatl_mpest.distributions)</a>
-</li>
   </ul></td>
 </tr></table>
 
 <h2 id="O">O</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/optimizers/generated/rework_pysatl_mpest.optimizers.Optimizer.html#rework_pysatl_mpest.optimizers.Optimizer">Optimizer (class in rework_pysatl_mpest.optimizers)</a>
+      <li><a href="api/optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer">Optimizer (class in pysatl_mpest.optimizers)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -601,137 +849,75 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/core/generated/rework_pysatl_mpest.core.Parameter.html#rework_pysatl_mpest.core.Parameter">Parameter (class in rework_pysatl_mpest.core)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.pdf.html#pysatl_mpest.core.MixtureModel.pdf">pdf() (MixtureModel method)</a>
 </li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.html#rework_pysatl_mpest.distributions.Pareto">Pareto (class in rework_pysatl_mpest.distributions)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline">Pipeline (class in pysatl_mpest.estimators.iterative)</a>
 </li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.pdf.html#rework_pysatl_mpest.distributions.Beta.pdf">pdf() (Beta method)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState">PipelineState (class in pysatl_mpest.estimators.iterative)</a>
+</li>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep">PipelineStep (class in pysatl_mpest.estimators.iterative)</a>
+</li>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PriorThresholdPruner.html#pysatl_mpest.estimators.iterative.PriorThresholdPruner">PriorThresholdPruner (class in pysatl_mpest.estimators.iterative)</a>
+</li>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune.html#pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune">prune() (PriorThresholdPruner method)</a>
 
       <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.pdf.html#rework_pysatl_mpest.distributions.Cauchy.pdf">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.pdf.html#rework_pysatl_mpest.distributions.ContinuousDistribution.pdf">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.pdf.html#rework_pysatl_mpest.distributions.Exponential.pdf">(Exponential method)</a>
-</li>
-        <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.pdf.html#rework_pysatl_mpest.core.MixtureModel.pdf">(MixtureModel method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.pdf.html#rework_pysatl_mpest.distributions.Normal.pdf">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.pdf.html#rework_pysatl_mpest.distributions.Pareto.pdf">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.pdf.html#rework_pysatl_mpest.distributions.Uniform.pdf">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.pdf.html#rework_pysatl_mpest.distributions.Weibull.pdf">(Weibull method)</a>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pruner.prune.html#pysatl_mpest.estimators.iterative.Pruner.prune">(Pruner method)</a>
 </li>
       </ul></li>
-      <li><a href="api/initializers/generated/rework_pysatl_mpest.initializers.ClusterizeInitializer.perform.html#rework_pysatl_mpest.initializers.ClusterizeInitializer.perform">perform() (ClusterizeInitializer method)</a>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner">Pruner (class in pysatl_mpest.estimators.iterative)</a>
+</li>
+      <li>
+    pysatl_mpest.core
 
       <ul>
-        <li><a href="api/initializers/generated/rework_pysatl_mpest.initializers.Initializer.perform.html#rework_pysatl_mpest.initializers.Initializer.perform">(Initializer method)</a>
+        <li><a href="api/core/index.html#module-pysatl_mpest.core">module</a>
 </li>
       </ul></li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pipeline.html#rework_pysatl_mpest.estimators.iterative.Pipeline">Pipeline (class in rework_pysatl_mpest.estimators.iterative)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PipelineState.html#rework_pysatl_mpest.estimators.iterative.PipelineState">PipelineState (class in rework_pysatl_mpest.estimators.iterative)</a>
-</li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PipelineStep.html#rework_pysatl_mpest.estimators.iterative.PipelineStep">PipelineStep (class in rework_pysatl_mpest.estimators.iterative)</a>
-</li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.ppf.html#rework_pysatl_mpest.distributions.Beta.ppf">ppf() (Beta method)</a>
+      <li>
+    pysatl_mpest.estimators
 
       <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.ppf.html#rework_pysatl_mpest.distributions.Cauchy.ppf">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.ppf.html#rework_pysatl_mpest.distributions.ContinuousDistribution.ppf">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.ppf.html#rework_pysatl_mpest.distributions.Exponential.ppf">(Exponential method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.ppf.html#rework_pysatl_mpest.distributions.Normal.ppf">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.ppf.html#rework_pysatl_mpest.distributions.Pareto.ppf">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.ppf.html#rework_pysatl_mpest.distributions.Uniform.ppf">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.ppf.html#rework_pysatl_mpest.distributions.Weibull.ppf">(Weibull method)</a>
+        <li><a href="api/estimators/index.html#module-pysatl_mpest.estimators">module</a>
 </li>
       </ul></li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner.html#rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner">PriorThresholdPruner (class in rework_pysatl_mpest.estimators.iterative)</a>
-</li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune.html#rework_pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune">prune() (PriorThresholdPruner method)</a>
+      <li>
+    pysatl_mpest.estimators.direct
 
       <ul>
-        <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pruner.prune.html#rework_pysatl_mpest.estimators.iterative.Pruner.prune">(Pruner method)</a>
+        <li><a href="api/estimators/direct/index.html#module-pysatl_mpest.estimators.direct">module</a>
 </li>
       </ul></li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.Pruner.html#rework_pysatl_mpest.estimators.iterative.Pruner">Pruner (class in rework_pysatl_mpest.estimators.iterative)</a>
+      <li>
+    pysatl_mpest.estimators.iterative
+
+      <ul>
+        <li><a href="api/estimators/iterative/index.html#module-pysatl_mpest.estimators.iterative">module</a>
 </li>
+      </ul></li>
+      <li>
+    pysatl_mpest.optimizers
+
+      <ul>
+        <li><a href="api/optimizers/index.html#module-pysatl_mpest.optimizers">module</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="R">R</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/core/generated/rework_pysatl_mpest.core.MixtureModel.remove_component.html#rework_pysatl_mpest.core.MixtureModel.remove_component">remove_component() (MixtureModel method)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.remove_component.html#pysatl_mpest.core.MixtureModel.remove_component">remove_component() (MixtureModel method)</a>
 </li>
-      <li>
-    rework_pysatl_mpest.core
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.run.html#pysatl_mpest.estimators.iterative.ExpectationStep.run">run() (ExpectationStep method)</a>
 
       <ul>
-        <li><a href="api/core/index.html#module-rework_pysatl_mpest.core">module</a>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.run.html#pysatl_mpest.estimators.iterative.MaximizationStep.run">(MaximizationStep method)</a>
 </li>
-      </ul></li>
-      <li>
-    rework_pysatl_mpest.distributions
-
-      <ul>
-        <li><a href="api/distributions/index.html#module-rework_pysatl_mpest.distributions">module</a>
-</li>
-      </ul></li>
-      <li>
-    rework_pysatl_mpest.estimators
-
-      <ul>
-        <li><a href="api/estimators/index.html#module-rework_pysatl_mpest.estimators">module</a>
-</li>
-      </ul></li>
-      <li>
-    rework_pysatl_mpest.estimators.direct
-
-      <ul>
-        <li><a href="api/estimators/direct/index.html#module-rework_pysatl_mpest.estimators.direct">module</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    rework_pysatl_mpest.estimators.iterative
-
-      <ul>
-        <li><a href="api/estimators/iterative/index.html#module-rework_pysatl_mpest.estimators.iterative">module</a>
-</li>
-      </ul></li>
-      <li>
-    rework_pysatl_mpest.initializers
-
-      <ul>
-        <li><a href="api/initializers/index.html#module-rework_pysatl_mpest.initializers">module</a>
-</li>
-      </ul></li>
-      <li>
-    rework_pysatl_mpest.optimizers
-
-      <ul>
-        <li><a href="api/optimizers/index.html#module-rework_pysatl_mpest.optimizers">module</a>
-</li>
-      </ul></li>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.ExpectationStep.run.html#rework_pysatl_mpest.estimators.iterative.ExpectationStep.run">run() (ExpectationStep method)</a>
-
-      <ul>
-        <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.MaximizationStep.run.html#rework_pysatl_mpest.estimators.iterative.MaximizationStep.run">(MaximizationStep method)</a>
-</li>
-        <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.PipelineStep.run.html#rework_pysatl_mpest.estimators.iterative.PipelineStep.run">(PipelineStep method)</a>
+        <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.run.html#pysatl_mpest.estimators.iterative.PipelineStep.run">(PipelineStep method)</a>
 </li>
       </ul></li>
   </ul></td>
@@ -740,67 +926,21 @@ window.addEventListener("load", () => mermaid.run());
 <h2 id="S">S</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/optimizers/generated/rework_pysatl_mpest.optimizers.ScipyNelderMead.html#rework_pysatl_mpest.optimizers.ScipyNelderMead">ScipyNelderMead (class in rework_pysatl_mpest.optimizers)</a>
+      <li><a href="api/optimizers/generated/pysatl_mpest.optimizers.ScipyNelderMead.html#pysatl_mpest.optimizers.ScipyNelderMead">ScipyNelderMead (class in pysatl_mpest.optimizers)</a>
 </li>
-      <li><a href="api/optimizers/generated/rework_pysatl_mpest.optimizers.ScipyPowell.html#rework_pysatl_mpest.optimizers.ScipyPowell">ScipyPowell (class in rework_pysatl_mpest.optimizers)</a>
-</li>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.set_params_from_vector.html#rework_pysatl_mpest.distributions.Beta.set_params_from_vector">set_params_from_vector() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.set_params_from_vector.html#rework_pysatl_mpest.distributions.Cauchy.set_params_from_vector">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.set_params_from_vector.html#rework_pysatl_mpest.distributions.ContinuousDistribution.set_params_from_vector">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.set_params_from_vector.html#rework_pysatl_mpest.distributions.Exponential.set_params_from_vector">(Exponential method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.set_params_from_vector.html#rework_pysatl_mpest.distributions.Normal.set_params_from_vector">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.set_params_from_vector.html#rework_pysatl_mpest.distributions.Pareto.set_params_from_vector">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.set_params_from_vector.html#rework_pysatl_mpest.distributions.Uniform.set_params_from_vector">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.set_params_from_vector.html#rework_pysatl_mpest.distributions.Weibull.set_params_from_vector">(Weibull method)</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/estimators/iterative/generated/rework_pysatl_mpest.estimators.iterative.StepBreakpointer.html#rework_pysatl_mpest.estimators.iterative.StepBreakpointer">StepBreakpointer (class in rework_pysatl_mpest.estimators.iterative)</a>
+      <li><a href="api/optimizers/generated/pysatl_mpest.optimizers.ScipyPowell.html#pysatl_mpest.optimizers.ScipyPowell">ScipyPowell (class in pysatl_mpest.optimizers)</a>
+</li>
+      <li><a href="api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.html#pysatl_mpest.estimators.iterative.StepBreakpointer">StepBreakpointer (class in pysatl_mpest.estimators.iterative)</a>
 </li>
   </ul></td>
 </tr></table>
 
-<h2 id="U">U</h2>
+<h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Beta.unfix_param.html#rework_pysatl_mpest.distributions.Beta.unfix_param">unfix_param() (Beta method)</a>
-
-      <ul>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Cauchy.unfix_param.html#rework_pysatl_mpest.distributions.Cauchy.unfix_param">(Cauchy method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.ContinuousDistribution.unfix_param.html#rework_pysatl_mpest.distributions.ContinuousDistribution.unfix_param">(ContinuousDistribution method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Exponential.unfix_param.html#rework_pysatl_mpest.distributions.Exponential.unfix_param">(Exponential method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Normal.unfix_param.html#rework_pysatl_mpest.distributions.Normal.unfix_param">(Normal method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Pareto.unfix_param.html#rework_pysatl_mpest.distributions.Pareto.unfix_param">(Pareto method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.unfix_param.html#rework_pysatl_mpest.distributions.Uniform.unfix_param">(Uniform method)</a>
-</li>
-        <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.unfix_param.html#rework_pysatl_mpest.distributions.Weibull.unfix_param">(Weibull method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Uniform.html#rework_pysatl_mpest.distributions.Uniform">Uniform (class in rework_pysatl_mpest.distributions)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="W">W</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/distributions/generated/rework_pysatl_mpest.distributions.Weibull.html#rework_pysatl_mpest.distributions.Weibull">Weibull (class in rework_pysatl_mpest.distributions)</a>
+      <li><a href="api/core/generated/pysatl_mpest.core.MixtureModel.to_core_mixture.html#pysatl_mpest.core.MixtureModel.to_core_mixture">to_core_mixture() (MixtureModel method)</a>
 </li>
   </ul></td>
 </tr></table>

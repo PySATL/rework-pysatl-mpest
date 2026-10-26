@@ -4,7 +4,7 @@
 mpest.optimizers
 ###############
 
-.. automodule:: rework_pysatl_mpest.optimizers
+.. automodule:: pysatl_mpest.optimizers
    :no-members:
 
 ------------------
