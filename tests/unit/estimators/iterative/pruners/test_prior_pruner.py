@@ -10,58 +10,27 @@ import numpy as np
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
-from numpy._core.numerictypes import float64
-from numpy.typing import ArrayLike, NDArray
+from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import ContinuousDistribution
 from pysatl_mpest.estimators.iterative import PipelineState, PriorThresholdPruner
+from tests.helpers.families import family
 
 
-class DummyDistribution(ContinuousDistribution):
-    """A simple mock implementation of ContinuousDistribution for testing purposes."""
+def make_component(index: int) -> ParametricFamilyDistribution:
+    """Return an exponential component with a unique rate, so that different indices give different components."""
 
-    def __init__(self, name: str):
-        super().__init__()
-        self._name = name
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def params(self) -> set[str]:
-        return {"name"}
-
-    def clone_with_params(self, param_names: list[str], vector: list[float]) -> "DummyDistribution":
-        return DummyDistribution()
-
-    def pdf(self, X: ArrayLike) -> NDArray[float64]:
-        pass
-
-    def ppf(self, P: ArrayLike) -> NDArray[float64]:
-        pass
-
-    def lpdf(self, X: ArrayLike) -> NDArray[float64]:
-        pass
-
-    def log_gradients(self, X: ArrayLike) -> NDArray[float64]:
-        pass
-
-    def generate(self, size: int) -> NDArray[float64]:
-        pass
-
-    def __repr__(self):
-        return f"DummyDistribution(name='{self.name}')"
+    return family(FamilyName.EXPONENTIAL)(lambda_=float(index + 1))
 
 
 # --- Fixtures ---
 
 
 @pytest.fixture
-def dummy_components() -> list[DummyDistribution]:
-    """Fixture that provides a list of unique dummy components."""
+def dummy_components() -> list[ParametricFamilyDistribution]:
+    """Fixture that provides a list of unique components."""
 
-    return [DummyDistribution(f"comp_{i}") for i in range(3)]
+    return [make_component(i) for i in range(3)]
 
 
 # --- Tests for __init__ ---
@@ -140,7 +109,7 @@ def test_prune_removes_correct_components(
     """
 
     pruner = PriorThresholdPruner(threshold)
-    components = [DummyDistribution(f"comp_{i}") for i in range(len(initial_weights))]
+    components = [make_component(i) for i in range(len(initial_weights))]
     initial_mixture = MixtureModel(components, weights=initial_weights)
     state = PipelineState(
         X=np.array([], dtype=np.float64), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
@@ -170,7 +139,7 @@ def test_prune_does_not_remove_last_component():
 
     pruner = PriorThresholdPruner(threshold=0.9)
     # Mixture with two components, both below the threshold
-    components = [DummyDistribution("comp_0"), DummyDistribution("comp_1")]
+    components = [make_component(0), make_component(1)]
     initial_mixture = MixtureModel(components[:2], weights=[0.5, 0.5])
     state = PipelineState(
         X=np.array([], dtype=np.float64), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
@@ -192,7 +161,7 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
     # Create a fully populated state object
     X_data = np.array([1, 2, 3])
     H_data = np.array([[0.1, 0.9], [0.8, 0.2], [0.5, 0.5]])
-    prev_mix = MixtureModel([DummyDistribution("prev_comp")], weights=[1.0])
+    prev_mix = MixtureModel([make_component(10)], weights=[1.0])
     curr_mix = MixtureModel(dummy_components[:2], weights=[0.1, 0.9])
     error_obj = ValueError("test error")
 
@@ -264,7 +233,7 @@ def test_prune_with_hypothesis_generated_data(weights_list, threshold):
     initial_weights = np.array(weights_list) / weights_sum
 
     num_components = len(initial_weights)
-    components = [DummyDistribution(f"comp_{i}") for i in range(num_components)]
+    components = [make_component(i) for i in range(num_components)]
 
     pruner = PriorThresholdPruner(threshold)
     initial_mixture = MixtureModel(components, weights=initial_weights)

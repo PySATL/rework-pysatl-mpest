@@ -10,8 +10,9 @@ from copy import copy
 
 import numpy as np
 import pytest
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import Exponential
+from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators.iterative import (
     Breakpointer,
     MaximizationStep,
@@ -22,6 +23,7 @@ from pysatl_mpest.estimators.iterative import (
     Pruner,
 )
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
+from tests.helpers.families import family
 
 # --- Mock objects for isolated testing ---
 
@@ -108,8 +110,8 @@ class ModifyingStep(PipelineStep):
 
         if state.curr_mixture.n_components > 0:
             comp = state.curr_mixture.components[0]
-            new_comp = comp.clone_with_params(["lambda_"], [999.0])
-            state.curr_mixture.set_component(new_comp, 0)
+            new_comp = cc.with_parameters(comp, lambda_=999.0)
+            state.curr_mixture[0] = new_comp
 
         if state.curr_mixture.n_components > 1:
             state.curr_mixture.remove_component(1)
@@ -130,9 +132,8 @@ class ParameterIncrementStep(PipelineStep):
     def run(self, state: PipelineState) -> PipelineState:
         # Increment 'lambda_' for each component by 1
         for i, component in enumerate(state.curr_mixture.components):
-            new_lambda = component.get_params_vector(["lambda_"])[0] + 1.0
-            new_comp = component.clone_with_params(["lambda_"], [new_lambda])
-            state.curr_mixture.set_component(new_comp, i)
+            new_lambda = cc.all_parameters(component)["lambda_"] + 1.0
+            state.curr_mixture[i] = cc.with_parameters(component, lambda_=new_lambda)
 
         # Predictably shift weights (e.g., increase first, decrease second)
         new_weights = state.curr_mixture.weights.copy()
@@ -187,7 +188,7 @@ class MockPruner(Pruner):
 @pytest.fixture
 def initial_mixture() -> MixtureModel:
     """Provides a basic MixtureModel with two components."""
-    components = [Exponential(1.0), Exponential(2.0)]
+    components = [family(FamilyName.EXPONENTIAL)(lambda_=1.0), family(FamilyName.EXPONENTIAL)(lambda_=2.0)]
     return MixtureModel(components, weights=[0.5, 0.5])
 
 
@@ -331,7 +332,9 @@ class TestPipelineFit:
             err_msg="Mixture weights did not reach the expected values.",
         )
 
-        final_lambdas = np.array([comp.lambda_ for comp in fitted_mixture.components], dtype=np.float64)
+        final_lambdas = np.array(
+            [cc.all_parameters(comp)["lambda_"] for comp in fitted_mixture.components], dtype=np.float64
+        )
 
         np.testing.assert_allclose(final_lambdas, expected_final_lambdas, rtol=rtol)
 
@@ -359,8 +362,8 @@ class TestPipelineFit:
 
         # Comparing parameters of the components
         for i in range(initial_mixture.n_components):
-            original_params = original_mixture_copy.components[i].get_params_vector(["lambda_"])
-            current_params = initial_mixture.components[i].get_params_vector(["lambda_"])
+            original_params = cc.all_parameters(original_mixture_copy.components[i])["lambda_"]
+            current_params = cc.all_parameters(initial_mixture.components[i])["lambda_"]
             np.testing.assert_array_equal(
                 current_params,
                 original_params,
