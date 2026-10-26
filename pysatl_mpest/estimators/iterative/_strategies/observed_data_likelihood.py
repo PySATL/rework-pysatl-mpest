@@ -11,7 +11,9 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 from pysatl_core.families import ParametricFamilyDistribution
+from scipy.special import logsumexp
 
+from ....core import _components
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
@@ -32,12 +34,22 @@ def observed_data_likelihood_strategy(
     Where C_i is the fixed contribution of all other components (background)
     calculated based on the current state.
 
+    Everything is computed with log-densities, so the likelihood stays accurate where the
+    densities themselves underflow to zero. The optimizer may try values that violate the
+    constraints of the parametrization (for example a negative standard deviation), and the
+    log-likelihood is zero where a point has zero density under every component. The target
+    is ``+inf`` in both cases, so such values are never chosen.
+
+    Only the parameters named by the block are optimized; the other parameters of the
+    component, including those fixed with ``family.view(...)``, keep their values.
+
     Parameters
     ----------
     component : ParametricFamilyDistribution
-        The distribution component type/instance used for dispatch and parameter metadata.
+        The distribution component whose parameters are to be optimized.
     state : PipelineState
-        The current state containing data X and current mixture parameters.
+        The current state containing data X and the current mixture, whose weights and other
+        components define the background.
         (Note: Responsibilities H are not used in this strategy).
     block : OptimizationBlock
         Configuration defining which parameters to optimize (component_id and param names).
@@ -48,27 +60,38 @@ def observed_data_likelihood_strategy(
     -------
     tuple[int, dict[str, float]]
         Component ID and a dictionary of the optimized parameters.
+
+    Raises
+    ------
+    ValueError
+        If the block names parameters that are not free parameters of the component.
     """
 
     X = state.X
-    n_samples = X.shape[0]
-    tol = np.finfo(np.float64).tiny
-
     component_id = block.component_id
-    params_to_optimize = sorted(list(block.params_to_optimize.intersection(component.params_to_optimize)))
 
-    weights = state.curr_mixture.weights
-    target_weight = weights[component_id]
+    params_to_optimize = block.params_to_update(component)
+    if not params_to_optimize:
+        return component_id, {}
 
-    background_term = np.zeros(n_samples, dtype=np.float64)
-    for i, comp in enumerate(state.curr_mixture.components):
-        if i != component_id:
-            background_term += weights[i] * comp.pdf(X)
+    mixture = state.curr_mixture
+    log_weights = mixture.log_weights - logsumexp(mixture.log_weights)
 
-    def target(vector_params):
-        temp_comp = component.clone_with_params(params_to_optimize, vector_params)
-        mixture_pdf = np.maximum(background_term + target_weight * temp_comp.pdf(X), tol)
-        return -np.sum(np.log(mixture_pdf))
+    # Log of the contribution of the other components: the target component is masked out.
+    joint = mixture.component_lpdf_matrix(X) + log_weights
+    joint[:, component_id] = -np.inf
+    log_background = logsumexp(joint, axis=1)
 
-    new_params = optimizer.minimize(target, component.get_params_vector(params_to_optimize))
-    return component_id, dict(zip(params_to_optimize, new_params))
+    log_target_weight = log_weights[component_id]
+    current = _components.free_parameters(component)
+
+    def target(vector_params: list[float]) -> float:
+        try:
+            candidate = _components.with_parameters(component, **dict(zip(params_to_optimize, vector_params)))
+        except ValueError:
+            return np.inf
+        log_mixture = np.logaddexp(log_background, log_target_weight + _components.lpdf(candidate, X))
+        return float(-np.sum(log_mixture))
+
+    new_params = optimizer.minimize(target, [current[name] for name in params_to_optimize])
+    return component_id, {name: float(value) for name, value in zip(params_to_optimize, new_params)}
