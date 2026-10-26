@@ -15,6 +15,7 @@ import numpy as np
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 
+from ....core import _components
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
@@ -56,10 +57,13 @@ def moments_strategy(
     Raises
     ------
     NotImplementedError
-        If a specialized moments strategy is not registered for the given
-        distribution type.
+        If a specialized moments strategy is not registered for the family and
+        parametrization of the component.
     """
-    raise NotImplementedError(f"Moments strategy is not implemented for distribution '{component.name}'.")
+    raise NotImplementedError(
+        f"Moments strategy is not implemented for the '{component.parametrization_name}' "
+        f"parametrization of the '{component.family_name}' family."
+    )
 
 
 # ---------------------------------
@@ -71,31 +75,86 @@ def moments_strategy(
 def _(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
-    """Specialized Moments parameter estimation strategy for the Exponential distribution
-    using an analytical solution.
+    """
+    Update the parameter of a univariate Exponential component using the weighted first moment.
 
-    This function provides a closed-form update for the parameters of an
-    `Exponential` distribution using the Method of Moments. It equates the
-    theoretical moments to the empirical weighted moments calculated from
-    the data and responsibilities.
+    This strategy performs a moment-based (closed-form) update of the Exponential
+    distribution in the ``rate`` parametrization from the current responsibility
+    matrix. The update is performed for the component associated with
+    ``block.component_id`` and is limited to the parameters named by the
+    optimization block (all free parameters if ``block.params_to_optimize``
+    is ``None``). The theoretical mean of the distribution is equated to the
+    responsibility-weighted mean of the observed data.
+
+    If the total responsibility of the component is numerically negligible, the
+    function returns without updating any parameters.
+
+    Parameters
+    ----------
+    component : ParametricFamilyDistribution
+        Exponential distribution component in the ``rate`` parametrization to be
+        updated. The method may update ``lambda_`` depending on the block configuration.
+    state : PipelineState
+        Current pipeline state containing:
+
+        - ``X`` : array-like
+          Observations used to compute the estimates.
+        - ``H`` : array-like, shape (n_samples, n_components)
+          Responsibility matrix. Column ``block.component_id`` is used as
+          weights for this component.
+    block : OptimizationBlock
+        Optimization block describing which component is being optimized and
+        which parameters are allowed to change. The component index is taken
+        from ``block.component_id``.
+    optimizer : Optimizer
+        Optimizer instance provided by the pipeline. It is not used directly by
+        this analytical strategy but is included for API consistency.
+
+    Returns
+    -------
+    component_id : int
+        The identifier of the optimized component, equal to
+        ``block.component_id``.
+    new_params : dict[str, float]
+        Dictionary of updated parameters for the component. Keys correspond to
+        the parameter names (``"lambda_"``). If no update is performed (e.g., negligible
+        responsibility), an empty dict is returned.
+
+    Raises
+    ------
+    ValueError
+        If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
+        computed), or if the block names parameters that are not free parameters
+        of the component.
 
     Notes
     -----
-    The analytical updates depend on the set of parameters to optimize:
+    - Let ``w_i = H[i, j]`` be responsibilities for component ``j`` and ``x_i``
+      the observations.
 
-    - **Both `loc` and `rate`**: Derived from the first weighted moment ($m_1$)
-      and the second weighted moment ($m_2$). The variance is estimated as
-      $Var = m_2 - m_1^2$.
-      Then, ``rate`` = $1 / \\sqrt{Var}$ and ``loc`` = $m_1 - \\sqrt{Var}$.
+      The mean of the distribution is $1 / \\lambda$, so the update is:
 
-    - **Only `rate`** (fixed `loc`): Derived from the first moment.
-      ``rate`` = $1 / (m_1 - \\text{loc})$.
+      .. math::
 
-    - **Only `loc`** (fixed `rate`): Derived from the first moment.
-      ``loc`` = $m_1 - (1 / \\text{rate})$.
+         N_j = \\sum_i w_i
 
-    This implementation ignores the `optimizer` parameter as it does not
-    require numerical optimization.
+         m_1 = \\frac{\\sum_i w_i x_i}{N_j}
+
+         \\lambda_j = \\frac{1}{m_1}
+
+    - If ``m_1`` is not greater than ``NUMERICAL_TOLERANCE``, the rate would be
+      infinite or negative, which pysatl-core rejects, so ``lambda_`` is left
+      unchanged.
+
+    - If ``N_j`` is close to zero (within ``NUMERICAL_TOLERANCE``), the
+      parameters are not updated.
+
+    Examples
+    --------
+    Update the rate of component ``j`` using responsibilities::
+
+        component_id, new_params = moments_strategy(exponential_component, state, block, optimizer)
+        # new_params may contain {"lambda_": ...} depending on configuration.
     """
 
     if state.H is None:
@@ -104,8 +163,8 @@ def _(
     X = state.X
     H_j = state.H[:, block.component_id]
 
-    params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
-    new_params = {}
+    params_to_optimize = block.params_to_update(component)
+    new_params: dict[str, float] = {}
 
     N_j = np.sum(H_j)
 
@@ -119,10 +178,10 @@ def _(
 
     # Update lambda (rate) if it's in the optimization block
     if "lambda_" in params_to_optimize:
-        if np.isclose(m1, 0.0, atol=NUMERICAL_TOLERANCE):
-            new_params["lambda_"] = component.lambda_
-        else:
+        if m1 > NUMERICAL_TOLERANCE:
             new_params["lambda_"] = float(1.0 / m1)
+        else:
+            new_params["lambda_"] = _components.free_parameters(component)["lambda_"]
 
     return block.component_id, new_params
 
@@ -142,13 +201,14 @@ def _(
     This strategy performs a moment-based (closed-form) update of the Normal
     distribution parameters from the current responsibility matrix produced by
     the mixture/pipeline state. The update is performed for the component
-    associated with ``block.component_id`` and is limited to the intersection of
-    parameters requested by both the component and the optimization block.
+    associated with ``block.component_id`` and is limited to the parameters named
+    by the optimization block (all free parameters if ``block.params_to_optimize``
+    is ``None``).
 
-    The location is updated as the responsibility-weighted mean of the observed
-    data. The scale is updated as the square root of the responsibility-weighted
-    second central moment (i.e., the weighted standard deviation) around the
-    updated (or fixed) location.
+    The mean ``mu`` is updated as the responsibility-weighted mean of the observed
+    data. The standard deviation ``sigma`` is updated as the square root of the
+    responsibility-weighted second central moment (i.e., the weighted variance)
+    around the updated (or fixed) ``mu``.
 
     If the total responsibility of the component is numerically negligible, the
     function returns without updating any parameters.
@@ -156,9 +216,10 @@ def _(
     Parameters
     ----------
     component : ParametricFamilyDistribution
-        Normal distribution component to be updated. The method may update
-        ``component.loc`` and/or ``component.scale`` depending on
-        ``component.params_to_optimize`` and the block configuration.
+        Normal distribution component in the ``meanStd`` parametrization to be
+        updated. The method may update ``mu`` and/or ``sigma`` depending on the
+        block configuration. A parameter fixed with ``family.view(...)`` keeps its
+        value, and the spread is measured around it.
     state : PipelineState
         Current pipeline state containing:
 
@@ -190,7 +251,8 @@ def _(
     ------
     ValueError
         If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
-        computed).
+        computed), or if the block names parameters that are not free parameters
+        of the component.
 
     Notes
     -----
@@ -207,30 +269,29 @@ def _(
 
          \\sigma_j = \\sqrt{\\frac{\\sum_i w_i (x_i - \\mu_j)^2}{N_j}}
 
-    - The scale is lower-bounded by machine epsilon for the component np.float64 to
-      avoid degeneracy:
-
-      ``scale = max(scale, np.finfo(np.float64).eps)``.
+    - If the weighted variance is not greater than ``NUMERICAL_TOLERANCE`` (for
+      example, all the data coincide with ``mu``), ``sigma`` is left
+      unchanged so that it does not collapse to zero. This is the same rule as in
+      the Q-function strategy.
 
     - If ``N_j`` is close to zero (within ``NUMERICAL_TOLERANCE``), the
       parameters are not updated.
 
     Examples
     --------
-    Update both location and scale for component ``j`` using responsibilities::
+    Update both ``mu`` and ``sigma`` for component ``j`` using responsibilities::
 
         component_id, new_params = moments_strategy(normal_component, state, block, optimizer)
-        # new_params may contain {"loc": ..., "scale": ...} depending on configuration.
+        # new_params may contain {"mu": ..., "sigma": ...} depending on configuration.
     """
 
     if state.H is None:
         raise ValueError("Responsibility matrix H is not computed.")
 
-    MIN_SCALE = np.finfo(np.float64).eps
     X = state.X
     H_j = state.H[:, block.component_id]
 
-    params_to_optimize = component.params_to_optimize.intersection(block.params_to_optimize)
+    params_to_optimize = block.params_to_update(component)
     new_params: dict[str, float] = {}
 
     N_j = np.sum(H_j)
@@ -239,16 +300,21 @@ def _(
     if np.isclose(N_j, 0.0, atol=NUMERICAL_TOLERANCE):
         return block.component_id, {}
 
+    current = _components.all_parameters(component)
+
     if "mu" in params_to_optimize:
         new_loc = float(np.average(X, weights=H_j))
         new_params["mu"] = new_loc
     else:
-        new_loc = component.mu
+        new_loc = current["mu"]
 
     if "sigma" in params_to_optimize:
-        new_scale = np.sqrt(np.average((X - new_loc) ** 2, weights=H_j))
-        new_params["sigma"] = float(new_scale)
+        new_variance = np.average((X - new_loc) ** 2, weights=H_j)
 
-        new_scale = max(new_scale, MIN_SCALE)
+        if new_variance > NUMERICAL_TOLERANCE:
+            new_params["sigma"] = float(np.sqrt(new_variance))
+        else:
+            # The variance is degenerate: keep the old sigma to prevent it from collapsing to zero.
+            new_params["sigma"] = current["sigma"]
 
     return block.component_id, new_params

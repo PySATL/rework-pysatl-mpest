@@ -15,6 +15,7 @@ from pysatl_core.types import FamilyName
 from pysatl_mpest.estimators.iterative import PipelineState
 from pysatl_mpest.estimators.iterative._strategies import q_function_strategy
 from tests.helpers.families import family
+from tests.helpers.moments import weighted_moments
 from tests.helpers.pipeline import make_state, q_block
 
 
@@ -28,16 +29,6 @@ def state() -> PipelineState:
         X=np.array([1.0, 2.0, 3.0, 4.0, 5.0]),
         H=np.array([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.6, 0.4], [0.5, 0.5]]),
     )
-
-
-def weighted_moments(state: PipelineState, component_id: int = 0, mu: float | None = None) -> tuple[float, float]:
-    """The weighted mean and the weighted standard deviation around ``mu`` (the weighted mean by default)."""
-
-    assert state.H is not None
-    H_j = state.H[:, component_id]
-    mean = np.dot(H_j, state.X) / H_j.sum()
-    centre = mean if mu is None else mu
-    return float(mean), float(np.sqrt(np.dot(H_j, (state.X - centre) ** 2) / H_j.sum()))
 
 
 def test_raises_if_h_is_not_computed() -> None:

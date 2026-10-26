@@ -115,22 +115,85 @@ def q_function_strategy(
 def _(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
-    """Specialized Q-function parameter estimation strategy for
-    the Exponential distribution using an analytical solution.
+    """
+    Update the parameter of a univariate Exponential component by maximizing the Q-function analytically.
 
-    This function provides a closed-form update for the parameter of an
+    This strategy provides a closed-form update for the parameter of an
     `Exponential` distribution in the ``rate`` parametrization, which is more
     efficient and precise than general-purpose numerical optimization. It
     calculates the new ``lambda_`` directly from the data and responsibilities.
+    The update is performed for the component associated with ``block.component_id``
+    and is limited to the parameters named by the optimization block (all free
+    parameters if ``block.params_to_optimize`` is ``None``).
+
+    If the total responsibility of the component is numerically negligible, the
+    function returns without updating any parameters.
+
+    Parameters
+    ----------
+    component : ParametricFamilyDistribution
+        Exponential distribution component in the ``rate`` parametrization to be
+        updated. The method may update ``lambda_`` depending on the block configuration.
+    state : PipelineState
+        Current pipeline state containing:
+
+        - ``X`` : array-like
+          Observations used to compute the estimates.
+        - ``H`` : array-like, shape (n_samples, n_components)
+          Responsibility matrix. Column ``block.component_id`` is used as
+          weights for this component.
+    block : OptimizationBlock
+        Optimization block describing which component is being optimized and
+        which parameters are allowed to change. The component index is taken
+        from ``block.component_id``.
+    optimizer : Optimizer
+        Optimizer instance provided by the pipeline. It is not used directly by
+        this analytical strategy but is included for API consistency.
+
+    Returns
+    -------
+    component_id : int
+        The identifier of the optimized component, equal to
+        ``block.component_id``.
+    new_params : dict[str, float]
+        Dictionary of updated parameters for the component. Keys correspond to
+        the parameter names (``"lambda_"``). If no update is performed (e.g., negligible
+        responsibility), an empty dict is returned.
+
+    Raises
+    ------
+    ValueError
+        If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
+        computed), or if the block names parameters that are not free parameters
+        of the component.
 
     Notes
     -----
-    The analytical update is the inverse of the weighted mean of the data:
-    ``lambda_`` = $1 / m_1$, where $m_1$ is the mean of ``X`` weighted by the
-    responsibilities. If $m_1$ is too close to zero, ``lambda_`` is left unchanged.
+    - Let ``w_i = H[i, j]`` be responsibilities for component ``j`` and ``x_i``
+      the observations.
 
-    This implementation ignores the `optimizer` parameter as it does not
-    require numerical optimization.
+      The maximizer of the Q-function is the inverse of the weighted mean of the data:
+
+      .. math::
+
+         N_j = \\sum_i w_i
+
+         m_1 = \\frac{\\sum_i w_i x_i}{N_j}
+
+         \\lambda_j = \\frac{1}{m_1}
+
+    - If ``m_1`` is not greater than ``NUMERICAL_TOLERANCE``, ``lambda_`` is left
+      unchanged to avoid an infinite or negative rate.
+
+    - If ``N_j`` is not greater than ``NUMERICAL_TOLERANCE``, the parameters are
+      not updated.
+
+    Examples
+    --------
+    Update the rate of component ``j`` using responsibilities::
+
+        component_id, new_params = q_function_strategy(exponential_component, state, block, optimizer)
+        # new_params may contain {"lambda_": ...} depending on configuration.
     """
 
     if state.H is None:
@@ -172,25 +235,90 @@ def _(
 def _(
     component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
 ) -> tuple[int, dict[str, float]]:
-    """Specialized Q-function parameter estimation strategy for
-    the normal distribution using an analytical solution.
+    """
+    Update parameters of a univariate Normal component by maximizing the Q-function analytically.
 
-    This function provides a closed-form update for the parameters of a
+    This strategy provides a closed-form update for the parameters of a
     `Normal` distribution in the ``meanStd`` parametrization, which is more
     efficient than numerical optimization. It calculates the new ``mu`` (mean)
     and ``sigma`` (standard deviation) directly from the data and responsibilities.
+    The update is performed for the component associated with ``block.component_id``
+    and is limited to the parameters named by the optimization block (all free
+    parameters if ``block.params_to_optimize`` is ``None``).
+
+    If the total responsibility of the component is numerically negligible, the
+    function returns without updating any parameters.
+
+    Parameters
+    ----------
+    component : ParametricFamilyDistribution
+        Normal distribution component in the ``meanStd`` parametrization to be
+        updated. The method may update ``mu`` and/or ``sigma`` depending on the
+        block configuration. A parameter fixed with ``family.view(...)`` keeps its
+        value, and the spread is measured around it.
+    state : PipelineState
+        Current pipeline state containing:
+
+        - ``X`` : array-like
+          Observations used to compute the estimates.
+        - ``H`` : array-like, shape (n_samples, n_components)
+          Responsibility matrix. Column ``block.component_id`` is used as
+          weights for this component.
+    block : OptimizationBlock
+        Optimization block describing which component is being optimized and
+        which parameters are allowed to change. The component index is taken
+        from ``block.component_id``.
+    optimizer : Optimizer
+        Optimizer instance provided by the pipeline. It is not used directly by
+        this analytical strategy but is included for API consistency.
+
+    Returns
+    -------
+    component_id : int
+        The identifier of the optimized component, equal to
+        ``block.component_id``.
+    new_params : dict[str, float]
+        Dictionary of updated parameters for the component. Keys correspond to
+        the parameter names (``"mu"``, ``"sigma"``). If no update is performed (e.g., negligible
+        responsibility), an empty dict is returned.
+
+    Raises
+    ------
+    ValueError
+        If ``state.H`` is ``None`` (i.e., the responsibility matrix has not been
+        computed), or if the block names parameters that are not free parameters
+        of the component.
 
     Notes
     -----
-    The analytical updates are as follows:
+    - Let ``w_i = H[i, j]`` be responsibilities for component ``j`` and ``x_i``
+      the observations.
 
-    - The new mean ``mu`` is the weighted average of the data `X`.
-    - The new variance (``sigma`` squared) is the weighted average of the
-      squared differences from the mean. If ``mu`` is not being optimized
-      (for example, it is fixed with ``family.view(...)``), its current value is used.
+      The maximizers of the Q-function are:
 
-    The weights are the responsibilities from the matrix `H`. If the new variance is
-    too close to zero, ``sigma`` is left unchanged so that it does not collapse to zero.
+      .. math::
+
+         N_j = \\sum_i w_i
+
+         \\mu_j = \\frac{\\sum_i w_i x_i}{N_j}
+
+         \\sigma_j = \\sqrt{\\frac{\\sum_i w_i (x_i - \\mu_j)^2}{N_j}}
+
+      If ``mu`` is not being optimized (for example, it is fixed with
+      ``family.view(...)``), its current value is used in the formula for ``sigma``.
+
+    - If the weighted variance is not greater than ``NUMERICAL_TOLERANCE``,
+      ``sigma`` is left unchanged so that it does not collapse to zero.
+
+    - If ``N_j`` is not greater than ``NUMERICAL_TOLERANCE``, the parameters are
+      not updated.
+
+    Examples
+    --------
+    Update both ``mu`` and ``sigma`` for component ``j`` using responsibilities::
+
+        component_id, new_params = q_function_strategy(normal_component, state, block, optimizer)
+        # new_params may contain {"mu": ..., "sigma": ...} depending on configuration.
     """
 
     if state.H is None:
@@ -229,7 +357,7 @@ def _(
             new_params["sigma"] = float(np.sqrt(new_variance))
         else:
             # If variance is too small, it can lead to instability.
-            # Keep the old scale to prevent it from collapsing to zero.
+            # Keep the old sigma to prevent it from collapsing to zero.
             new_params["sigma"] = current["sigma"]
 
     return block.component_id, new_params
