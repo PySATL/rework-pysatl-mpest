@@ -5,10 +5,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from unittest.mock import call
+
 import numpy as np
 import pytest
+from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import ContinuousDistribution
 from pysatl_mpest.estimators.iterative import (
     ExpectationStep,
     MaximizationStep,
@@ -37,8 +39,8 @@ def parametrized_state(mocker: MockerFixture) -> PipelineState:
     all relevant arrays (X, H) and model attributes use np.float64.
     """
 
-    comp1 = mocker.MagicMock(spec=ContinuousDistribution)
-    comp2 = mocker.MagicMock(spec=ContinuousDistribution)
+    comp1 = mocker.MagicMock(spec=ParametricFamilyDistribution)
+    comp2 = mocker.MagicMock(spec=ParametricFamilyDistribution)
     mock_components = [comp1, comp2]
 
     mixture = mocker.MagicMock(spec=MixtureModel)
@@ -130,12 +132,18 @@ class TestMaximizationStep:
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
 
+        updated_component = mocker.MagicMock(spec=ParametricFamilyDistribution)
+        update = mocker.patch.object(MaximizationStep, "_update_components_params", return_value=updated_component)
+
         target_component = state.curr_mixture[0]
 
         step.run(state)
 
         # mock_strategy was called once
         mock_strategy.assert_called_once_with(target_component, state, block, mock_optimizer)
+        # the returned parameters were applied to the component, and the result replaced it in the mixture
+        update.assert_called_once_with(target_component, optimized_params)
+        state.curr_mixture.__setitem__.assert_called_once_with(0, updated_component)
 
     def test_run_updates_mixture_weights_correctly(
         self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
@@ -204,6 +212,9 @@ class TestMaximizationStep:
 
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
+        mocker.patch.object(
+            MaximizationStep, "_update_components_params", side_effect=lambda component, params: component
+        )
 
         # Act
         step.run(state)
@@ -220,6 +231,9 @@ class TestMaximizationStep:
         second_call_args = mock_strategy.call_args_list[1].args
         assert second_call_args[0] is component0
         assert second_call_args[2] is block0
+
+        # Assert the results are applied to the mixture in the same order
+        state.curr_mixture.__setitem__.assert_has_calls([call(1, component1), call(0, component0)])
 
     def test_clear_after_prune_removes_blocks_for_pruned_components(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune removes optimization blocks for pruned components."""

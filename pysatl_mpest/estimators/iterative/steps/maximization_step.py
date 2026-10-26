@@ -21,6 +21,7 @@ from typing import ClassVar, cast
 import numpy as np
 from pysatl_core.families import ParametricFamilyDistribution
 
+from ....core import _components
 from ....optimizers import Optimizer
 from .._strategies import StrategyFunction, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
 from ..pipeline_state import PipelineState
@@ -98,11 +99,14 @@ class MaximizationStep(PipelineStep):
             The component whose parameters are to be updated.
         params : dict[str, float]
             A dictionary mapping parameter names to their new optimized values.
+
+        Returns
+        -------
+        ParametricFamilyDistribution
+            A new component with the updated parameters.
         """
 
-        param_names = list(params.keys())
-        param_values = list(params.values())
-        return component.clone_with_params(param_names, param_values)
+        return _components.with_parameters(component, **params)
 
     def run(self, state: PipelineState) -> PipelineState:
         """Executes the M-step.
@@ -141,10 +145,8 @@ class MaximizationStep(PipelineStep):
                 return state
             results.append((component_id, new_params))
 
-        for result in results:
-            component_id, params = result
-            new_component = self._update_components_params(curr_mixture[component_id], params)
-            curr_mixture.set_component(new_component, component_id)
+        for component_id, params in results:
+            curr_mixture[component_id] = self._update_components_params(curr_mixture[component_id], params)
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]
