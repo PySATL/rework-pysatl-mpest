@@ -18,6 +18,10 @@ from scipy.special import logsumexp, softmax
 
 from ..typings import FloatArray, Scalar, UnivariateFloatArray
 from . import _components
+from ._sampling import DeterministicSampling
+
+# Sampling does not depend on the sampling strategy of a component: pysatl-core's default one ignores ``random_state``.
+_SAMPLING = DeterministicSampling()
 
 
 class MixtureModel:
@@ -92,7 +96,7 @@ class MixtureModel:
         self._log_weights = np.log(weights + np.finfo(np.float64).tiny)
         self._cached_weights: UnivariateFloatArray | None = None
 
-        self._sorted_pairs_cache: list[tuple[ParametricFamilyDistribution, float]] | None = None
+        self._sorted_pairs_cache: list[tuple[_components.ComponentKey, float]] | None = None
         self._core_mixture_cache: FiniteMixtureDistribution | None = None
 
     @property
@@ -361,7 +365,7 @@ class MixtureModel:
         counts = np.bincount(component_choices, minlength=self.n_components)
 
         samples_list = [
-            np.asarray(self.components[i].sample(n=int(count), random_state=rng), np.float64).ravel()
+            np.asarray(_SAMPLING.sample(int(count), self.components[i], random_state=rng), np.float64).ravel()
             for i, count in enumerate(counts)
             if count > 0
         ]
@@ -454,11 +458,14 @@ class MixtureModel:
         if not isinstance(other, MixtureModel):
             return NotImplemented
 
+        if self.n_components != other.n_components:
+            return False
+
         self_pairs = self._get_sorted_pairs()
         other_pairs = other._get_sorted_pairs()
 
-        for (self_comp, self_weight), (other_comp, other_weight) in zip(self_pairs, other_pairs):
-            if not self._comps_are_equal(self_comp, other_comp) or not np.isclose(self_weight, other_weight):
+        for (self_key, self_weight), (other_key, other_weight) in zip(self_pairs, other_pairs):
+            if self_key != other_key or not np.isclose(self_weight, other_weight):
                 return False
 
         return True
@@ -475,21 +482,8 @@ class MixtureModel:
         """
 
         decimals = np.finfo(np.float64).precision
-        sorted_pairs = self._get_sorted_pairs()
-        hashable_pairs = tuple((self._get_comp_hash(comp), np.round(weight, decimals)) for comp, weight in sorted_pairs)
+        hashable_pairs = tuple((key, round(weight, decimals)) for key, weight in self._get_sorted_pairs())
         return hash(hashable_pairs)
-
-    @staticmethod
-    def _get_comp_hash(comp: ParametricFamilyDistribution) -> int:
-        return hash((comp.family_name, comp.parametrization_name, comp.parametrization))
-
-    @staticmethod
-    def _comps_are_equal(comp1: ParametricFamilyDistribution, comp2: ParametricFamilyDistribution) -> bool:
-        return (
-            comp1.family_name == comp2.family_name
-            and comp1.parametrization_name == comp2.parametrization_name
-            and comp1.parametrization == comp2.parametrization
-        )
 
     def _invalidate_cache(self) -> None:
         self._cached_weights = None
@@ -522,9 +516,10 @@ class MixtureModel:
         if not np.isclose(np.sum(weights), 1.0):
             raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
 
-    def _get_sorted_pairs(self) -> list[tuple[ParametricFamilyDistribution, float]]:
-        """Internal helper to get component-weight pairs, sorted by component hash."""
+    def _get_sorted_pairs(self) -> list[tuple[_components.ComponentKey, float]]:
+        """Internal helper to get (component key, weight) pairs, sorted so that component order does not matter."""
         if self._sorted_pairs_cache is None:
-            pairs = [(comp, float(w)) for comp, w in zip(self.components, self.weights)]
-            self._sorted_pairs_cache = sorted(pairs, key=lambda p: self._get_comp_hash(p[0]))
+            decimals = np.finfo(np.float64).precision
+            pairs = [(_components.component_key(comp), float(w)) for comp, w in zip(self.components, self.weights)]
+            self._sorted_pairs_cache = sorted(pairs, key=lambda p: (p[0], round(p[1], decimals)))
         return self._sorted_pairs_cache

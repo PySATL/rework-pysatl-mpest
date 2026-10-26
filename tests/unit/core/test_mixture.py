@@ -330,6 +330,19 @@ def test_generate(mock_comp: ParametricFamilyDistribution) -> None:
     assert cast(np.ndarray, sample_2d).shape == (3, 2)
 
 
+def test_generate_is_reproducible_with_seed(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test the same seed gives the same sample, and a different seed gives a different one."""
+    mixture = MixtureModel(mock_comps)
+    seed, other_seed, size = 7, 8, 20
+
+    first = cast(np.ndarray, mixture.generate(size=size, random_state=seed))
+    second = cast(np.ndarray, mixture.generate(size=size, random_state=seed))
+    other = cast(np.ndarray, mixture.generate(size=size, random_state=other_seed))
+
+    assert_allclose(first, second)
+    assert not np.allclose(first, other)
+
+
 def test_generate_zero_size(mock_comp: ParametricFamilyDistribution) -> None:
     """Test generation with zero sizes."""
     mixture = MixtureModel([mock_comp])
@@ -377,6 +390,37 @@ def test_eq_different_length(
     mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
     mixture2 = MixtureModel([comp1])
     assert mixture1 != mixture2
+
+
+def test_eq_different_length_with_zero_weight(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test a zero-weight extra component does not make mixtures equal: the number of components must match."""
+    comp1, comp2, _ = param_comps
+    with_extra = MixtureModel([comp1, comp2], weights=[1.0, 0.0])
+    without_extra = MixtureModel([comp1])
+    assert with_extra != without_extra
+    assert without_extra != with_extra
+
+
+def test_eq_is_independent_of_component_order(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test mixtures with the same (component, weight) pairs in a different order are equal."""
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.2, 0.8])
+    mixture2 = MixtureModel([comp2, comp1], weights=[0.8, 0.2])
+    assert mixture1 == mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_eq_equal_components_with_swapped_weights(mock_comp: ParametricFamilyDistribution) -> None:
+    """Test identical components with swapped weights give equal mixtures."""
+    other = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+    mixture1 = MixtureModel([mock_comp, other], weights=[0.2, 0.8])
+    mixture2 = MixtureModel([mock_comp, other], weights=[0.8, 0.2])
+    assert mixture1 == mixture2
+    assert hash(mixture1) == hash(mixture2)
 
 
 def test_eq_different_components(

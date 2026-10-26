@@ -6,14 +6,41 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from pysatl_core.types import CharacteristicName
 
 
+class MockFamily:
+    """
+    Stands in for a pysatl-core family: it is a plain family, not a view with fixed parameters.
+    """
+
+
+@dataclass(frozen=True)
+class MockParametrization:
+    """
+    Stands in for a pysatl-core parametrization; the family is reachable through ``__family__``.
+
+    Parameters
+    ----------
+    param1 : float
+        A dummy parameter for testing.
+    """
+
+    param1: float
+    __family__: ClassVar[MockFamily] = MockFamily()
+
+
 class MockContinuousDistribution:
     """
     Mock continuous distribution for testing.
+
+    It has the attributes that the internal component helpers read from a pysatl-core distribution.
+    Its quantile function is the identity, so sampling yields uniform values on [0, 1).
 
     Parameters
     ----------
@@ -24,7 +51,8 @@ class MockContinuousDistribution:
     def __init__(self, param1: float = 0.0) -> None:
         self.family_name = "MockFamily"
         self.parametrization_name = "MockParam"
-        self.parametrization = param1
+        self.parametrization = MockParametrization(param1)
+        self.parameters = {"param1": param1}
 
     def calculate_characteristic(self, name: CharacteristicName, X: ArrayLike) -> NDArray[np.float64]:
         """
@@ -45,27 +73,9 @@ class MockContinuousDistribution:
         X_arr = np.asarray(X, dtype=np.float64)
         if name == CharacteristicName.LPDF:
             return np.zeros_like(X_arr)
+        if name == CharacteristicName.PPF:
+            return X_arr
         raise NotImplementedError
-
-    def sample(self, n: int, random_state: np.random.Generator | None = None) -> NDArray[np.float64]:
-        """
-        Generate random samples from the distribution.
-
-        Parameters
-        ----------
-        n : int
-            Number of samples to generate.
-        random_state : np.random.Generator or None, default=None
-            Random number generator instance.
-
-        Returns
-        -------
-        NDArray[np.float64]
-            Generated samples.
-        """
-        if random_state is None:
-            random_state = np.random.default_rng()
-        return random_state.normal(size=n)
 
 
 class MockConstantLpdfContinuousDistribution(MockContinuousDistribution):
