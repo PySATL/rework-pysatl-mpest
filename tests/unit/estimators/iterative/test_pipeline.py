@@ -10,8 +10,9 @@ from copy import copy
 
 import numpy as np
 import pytest
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import Exponential
+from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators.iterative import (
     Breakpointer,
     MaximizationStep,
@@ -20,11 +21,10 @@ from pysatl_mpest.estimators.iterative import (
     PipelineState,
     PipelineStep,
     Pruner,
+    StepBreakpointer,
 )
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
-from pysatl_mpest.exceptions import NumericalStabilityError
-
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
+from tests.helpers.families import family
 
 # --- Mock objects for isolated testing ---
 
@@ -96,19 +96,6 @@ class MockStepWithError(MockSingleStep):
         pass
 
 
-class MockStepThatOverlowsOnFloat16(MockSingleStep):
-    """A mock step that simulates an error occurring only on float16"""
-
-    @property
-    def available_next_steps(self) -> list[type[PipelineStep]]:
-        return [ParameterIncrementStep]
-
-    def run(self, state: PipelineState) -> PipelineState:
-        if state.curr_mixture.dtype == np.float16:
-            state.error = NumericalStabilityError("Overflow!")
-        return state
-
-
 class ModifyingStep(PipelineStep):
     """A concrete mock step that actively modifies the mixture's state."""
 
@@ -123,7 +110,9 @@ class ModifyingStep(PipelineStep):
             state.curr_mixture.log_weights = np.log(new_weights + 1e-30)
 
         if state.curr_mixture.n_components > 0:
-            state.curr_mixture.components[0].set_params_from_vector(["loc"], [999.0])
+            comp = state.curr_mixture.components[0]
+            new_comp = cc.with_parameters(comp, lambda_=999.0)
+            state.curr_mixture[0] = new_comp
 
         if state.curr_mixture.n_components > 1:
             state.curr_mixture.remove_component(1)
@@ -139,13 +128,13 @@ class ParameterIncrementStep(PipelineStep):
 
     @property
     def available_next_steps(self) -> list[type[PipelineStep]]:
-        return [MockStepThatOverlowsOnFloat16, ParameterIncrementStep]
+        return [ParameterIncrementStep]
 
     def run(self, state: PipelineState) -> PipelineState:
-        # Increment 'loc' for each component by 1
-        for component in state.curr_mixture.components:
-            new_loc = component.get_params_vector(["loc"])[0] + 1.0
-            component.set_params_from_vector(["loc"], [new_loc])
+        # Increment 'lambda_' for each component by 1
+        for i, component in enumerate(state.curr_mixture.components):
+            new_lambda = cc.all_parameters(component)["lambda_"] + 1.0
+            state.curr_mixture[i] = cc.with_parameters(component, lambda_=new_lambda)
 
         # Predictably shift weights (e.g., increase first, decrease second)
         new_weights = state.curr_mixture.weights.copy()
@@ -197,19 +186,17 @@ class MockPruner(Pruner):
 # --- Fixtures for tests ---
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def initial_mixture(request) -> MixtureModel:
-    """Provides a basic MixtureModel with two components with parametrized dtype."""
-    dtype = request.param
-    components = [Exponential(loc=0, rate=1, dtype=dtype), Exponential(loc=5, rate=2, dtype=dtype)]
-    return MixtureModel(components, weights=[0.5, 0.5], dtype=dtype)
+@pytest.fixture
+def initial_mixture() -> MixtureModel:
+    """Provides a basic MixtureModel with two components."""
+    components = [family(FamilyName.EXPONENTIAL)(lambda_=1.0), family(FamilyName.EXPONENTIAL)(lambda_=2.0)]
+    return MixtureModel(components, weights=[0.5, 0.5])
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def sample_data(request) -> np.ndarray:
-    """Provides a simple data array with parametrized dtype."""
-    dtype = request.param
-    return np.array([1, 2, 6, 7], dtype=dtype)
+@pytest.fixture
+def sample_data() -> np.ndarray:
+    """Provides a simple data array."""
+    return np.array([1, 2, 6, 7], dtype=np.float64)
 
 
 # --- Initialization (`__init__`) Tests ---
@@ -248,7 +235,13 @@ class TestPipelineInitialization:
 
         steps = [MockSingleStep()]
 
-        with pytest.raises(ValueError, match="The 'breakpointers' list cannot be empty"):
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"^The 'breakpointers' list cannot be empty\. "
+                r"At least one stopping criterion must be provided to prevent an infinite loop\.$"
+            ),
+        ):
             Pipeline(steps, [])
 
     def test_init_creates_history_with_correct_frequency(self):
@@ -275,7 +268,7 @@ class TestPipelineValidation:
         """Tests that an empty list of steps raises a ValueError."""
 
         breakpointers = [MockBreakpointer(stop_at_iteration=2)]
-        with pytest.raises(ValueError, match="The 'steps' list cannot be empty"):
+        with pytest.raises(ValueError, match=r"^The 'steps' list cannot be empty for a Pipeline\.$"):
             Pipeline([], breakpointers)
 
     def test_validate_steps_raises_error_for_invalid_order(self):
@@ -316,40 +309,28 @@ class TestPipelineFit:
         """
 
         expected_n_components = 2
-        dtype = initial_mixture.dtype
 
         steps = [ParameterIncrementStep()]
         breakpointers = [MockBreakpointer(stop_at_iteration=3)]
         pipeline = Pipeline(steps, breakpointers)
 
         # Initial state from fixture:
-        # Component 0: loc=0, rate=1, weight=0.5
-        # Component 1: loc=5, rate=2, weight=0.5
+        # Component 0: lambda_=1.0, weight=0.5
+        # Component 1: lambda_=2.0, weight=0.5
 
         # Expected state after 2 iterations:
-        # Iter 1: locs=[1, 6], weights=[0.6, 0.4]
-        # Iter 2: locs=[2, 7], weights=[0.7, 0.3]
+        # Iter 1: lambdas=[2, 3], weights=[0.6, 0.4]
+        # Iter 2: lambdas=[3, 4], weights=[0.7, 0.3]
 
-        expected_final_locs = np.array([2.0, 7.0], dtype=dtype)
-        expected_final_rates = np.array([1.0, 2.0], dtype=dtype)  # Rates should not change
-        expected_final_weights = np.array([0.7, 0.3], dtype=dtype)
+        expected_final_lambdas = np.array([3.0, 4.0], dtype=np.float64)
+        expected_final_weights = np.array([0.7, 0.3], dtype=np.float64)
 
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
 
         assert fitted_mixture.n_components == expected_n_components
-        # Check type
-        assert fitted_mixture.dtype == dtype
-        assert fitted_mixture.weights.dtype == dtype
-        for component in fitted_mixture.components:
-            assert component.dtype == dtype
 
         # Check weights
-        if dtype == np.float16:
-            rtol = 1e-3
-        elif dtype == np.float32:
-            rtol = 1e-5
-        else:  # float64
-            rtol = 1e-7
+        rtol = 1e-7
 
         np.testing.assert_allclose(
             fitted_mixture.weights,
@@ -358,11 +339,11 @@ class TestPipelineFit:
             err_msg="Mixture weights did not reach the expected values.",
         )
 
-        final_locs = np.array([comp.loc for comp in fitted_mixture.components], dtype=dtype)
-        final_rates = np.array([comp.rate for comp in fitted_mixture.components], dtype=dtype)
+        final_lambdas = np.array(
+            [cc.all_parameters(comp)["lambda_"] for comp in fitted_mixture.components], dtype=np.float64
+        )
 
-        np.testing.assert_allclose(final_locs, expected_final_locs, rtol=rtol)
-        np.testing.assert_allclose(final_rates, expected_final_rates, rtol=rtol)
+        np.testing.assert_allclose(final_lambdas, expected_final_lambdas, rtol=rtol)
 
     def test_fit_does_not_modify_original_mixture(self, initial_mixture, sample_data):
         """
@@ -388,8 +369,8 @@ class TestPipelineFit:
 
         # Comparing parameters of the components
         for i in range(initial_mixture.n_components):
-            original_params = original_mixture_copy.components[i].get_params_vector(["loc", "rate"])
-            current_params = initial_mixture.components[i].get_params_vector(["loc", "rate"])
+            original_params = cc.all_parameters(original_mixture_copy.components[i])["lambda_"]
+            current_params = cc.all_parameters(initial_mixture.components[i])["lambda_"]
             np.testing.assert_array_equal(
                 current_params,
                 original_params,
@@ -560,34 +541,6 @@ class TestPipelineFit:
         for removed_indices in call_log:
             assert removed_indices == [0]
 
-    def test_fit_handles_numerical_stability_error_and_upcasts_dtype(self, mocker):
-        """Tests that Pipeline catches NumericalStabilityError and upgrades the dtype precision to float64."""
-
-        initial_mixture_f16 = MixtureModel([Exponential(loc=0, rate=1, dtype=np.float16)], dtype=np.float16)
-        sample_data_f16 = np.array([1, 2], dtype=np.float16)
-
-        steps = [MockStepThatOverlowsOnFloat16(), ParameterIncrementStep()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=3)]
-
-        pipeline = Pipeline(steps, breakpointers)
-
-        fit_spy = mocker.spy(pipeline, "fit")
-
-        with pytest.warns(UserWarning, match="Restarting pipeline with higher precision"):
-            final_mixture = pipeline.fit(sample_data_f16, initial_mixture_f16)
-
-        expected_count_calls = 2  # One original call, one recursive
-        assert fit_spy.call_count == expected_count_calls
-
-        # Check that the final model in float64
-        assert final_mixture.dtype == np.float64
-        assert final_mixture.weights.dtype == np.float64
-        for component in final_mixture.components:
-            assert component.dtype == np.float64
-
-        # Step logic worked after increasing the precision
-        assert final_mixture.components[0].loc == pytest.approx(2.0)
-
 
 # --- Tests for MaximizationStep clear_after_prune method ---
 
@@ -599,9 +552,9 @@ class TestMaximizationStepClearAfterPrune:
         """Tests that clear_after_prune removes optimization blocks for pruned components."""
 
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"param1"}, "q_function"),
+            OptimizationBlock(1, {"param2"}, "q_function"),
+            OptimizationBlock(2, {"param1", "param2"}, "q_function"),
         ]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
@@ -620,9 +573,9 @@ class TestMaximizationStepClearAfterPrune:
         """Tests that clear_after_prune preserves optimization parameters for remaining blocks."""
 
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate", "scale"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"param1"}, "q_function"),
+            OptimizationBlock(1, {"param2", "param3"}, "q_function"),
+            OptimizationBlock(2, {"param1", "param2"}, "q_function"),
         ]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
@@ -632,13 +585,13 @@ class TestMaximizationStepClearAfterPrune:
         step.clear_after_prune(removed_indices)
 
         # Check that optimization parameters are preserved
-        assert step.blocks[0].params_to_optimize == {"loc"}
-        assert step.blocks[1].params_to_optimize == {"loc", "rate"}
+        assert step.blocks[0].params_to_optimize == {"param1"}
+        assert step.blocks[1].params_to_optimize == {"param1", "param2"}
 
     def test_clear_after_prune_with_empty_removal(self):
         """Tests that clear_after_prune does nothing when no components are removed."""
 
-        blocks = [OptimizationBlock(0, {"loc"}, "q_function"), OptimizationBlock(1, {"rate"}, "q_function")]
+        blocks = [OptimizationBlock(0, {"param1"}, "q_function"), OptimizationBlock(1, {"param2"}, "q_function")]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
         original_blocks = list(step.blocks)  # Create a copy
@@ -661,10 +614,10 @@ class TestMaximizationStepClearAfterPrune:
         """Tests clear_after_prune with multiple components removed."""
 
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"scale"}, "q_function"),
-            OptimizationBlock(3, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"param1"}, "q_function"),
+            OptimizationBlock(1, {"param2"}, "q_function"),
+            OptimizationBlock(2, {"param3"}, "q_function"),
+            OptimizationBlock(3, {"param1", "param2"}, "q_function"),
         ]
 
         step = MaximizationStep(blocks=blocks, optimizer=None)
@@ -677,5 +630,265 @@ class TestMaximizationStepClearAfterPrune:
         assert step.blocks[0].component_id == 0  # Originally component 0
         assert step.blocks[1].component_id == 1  # Originally component 2, now reindexed to 1
 
-        assert step.blocks[0].params_to_optimize == {"loc"}
-        assert step.blocks[1].params_to_optimize == {"scale"}
+        assert step.blocks[0].params_to_optimize == {"param1"}
+        assert step.blocks[1].params_to_optimize == {"param3"}
+
+
+# --- Bookkeeping of pruned components ---
+
+
+class RecordingStep(PipelineStep):
+    """A step that logs when it runs and which removed components it is told about."""
+
+    def __init__(self, name: str, log: list[tuple[str, ...]]):
+        self.name = name
+        self.log = log
+
+    @property
+    def available_next_steps(self) -> list[type[PipelineStep]]:
+        return [RecordingStep]
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.log.append(("run", self.name))
+        return state
+
+    def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        self.log.append(("clear", self.name, str(removed_components_indices)))
+
+
+class ResponsibilityStep(RecordingStep):
+    """A step that sets H to uniform responsibilities for the current components."""
+
+    def run(self, state: PipelineState) -> PipelineState:
+        n_components = state.curr_mixture.n_components
+        state.H = np.full((len(state.X), n_components), 1.0 / n_components)
+        return super().run(state)
+
+
+class ScriptedPruner(Pruner):
+    """A pruner that removes the components given for each call, in order, and logs its calls."""
+
+    def __init__(self, name: str, log: list[tuple[str, ...]], removals: list[list[int]]):
+        self.name = name
+        self.log = log
+        self.removals = iter(removals)
+
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
+        removed = next(self.removals, [])
+        self.log.append(("prune", self.name, str(removed)))
+        for index in sorted(removed, reverse=True):
+            state.curr_mixture.remove_component(index)
+        return state, removed
+
+
+def exponential_mixture(n_components: int) -> MixtureModel:
+    components = [family(FamilyName.EXPONENTIAL)(lambda_=float(i + 1)) for i in range(n_components)]
+    return MixtureModel(components)
+
+
+class TestPipelinePruningBookkeeping:
+    """Tests that the steps learn about pruned components right away and exactly once."""
+
+    def test_steps_are_notified_right_after_pruning(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        steps = [RecordingStep("A", log), RecordingStep("B", log)]
+        pipeline = Pipeline(steps, [StepBreakpointer(2)], [ScriptedPruner("p", log, [[0], []])])
+
+        pipeline.fit(sample_data, exponential_mixture(3))
+
+        assert log == [
+            ("run", "A"),
+            ("run", "B"),
+            ("prune", "p", "[0]"),
+            ("clear", "A", "[0]"),
+            ("clear", "B", "[0]"),
+            ("run", "A"),
+            ("run", "B"),
+            ("prune", "p", "[]"),
+        ]
+
+    def test_each_removal_is_reported_once(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        pruner = ScriptedPruner("p", log, [[0], [], [1], []])
+        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(4)], [pruner])
+
+        pipeline.fit(sample_data, exponential_mixture(4))
+
+        assert [entry[2] for entry in log if entry[0] == "clear"] == ["[0]", "[1]"]
+
+    def test_steps_are_not_notified_when_nothing_is_removed(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(3)], [ScriptedPruner("p", log, [])])
+
+        pipeline.fit(sample_data, exponential_mixture(2))
+
+        assert not [entry for entry in log if entry[0] == "clear"]
+
+    def test_each_pruner_reports_indices_relative_to_the_mixture_it_was_given(self, sample_data):
+        """The second pruner sees the mixture without the component the first one removed."""
+        log: list[tuple[str, ...]] = []
+        pruners = [ScriptedPruner("p1", log, [[0]]), ScriptedPruner("p2", log, [[1]])]
+        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(1)], pruners)
+
+        fitted = pipeline.fit(sample_data, exponential_mixture(3))
+
+        assert log == [
+            ("run", "A"),
+            ("prune", "p1", "[0]"),
+            ("clear", "A", "[0]"),
+            ("prune", "p2", "[1]"),
+            ("clear", "A", "[1]"),
+        ]
+        # The components had the rates 1, 2 and 3; the first pruner removed the rate 1, the second one the rate 3.
+        remaining_rate = 2.0
+        assert fitted.n_components == 1
+        assert cc.all_parameters(fitted[0])["lambda_"] == remaining_rate
+
+    def test_columns_of_h_of_pruned_components_are_dropped(self, sample_data):
+        log: list[tuple[str, ...]] = []
+        pipeline = Pipeline(
+            [ResponsibilityStep("A", log)],
+            [StepBreakpointer(2)],
+            [ScriptedPruner("p", log, [[0, 2], []])],
+        )
+
+        pipeline.fit(sample_data, exponential_mixture(4))
+
+        first, second = pipeline.history[0], pipeline.history[1]
+        assert first.mixture.n_components == 2  # noqa: PLR2004
+        assert first.H.shape == (len(sample_data), 2)
+        assert second.H.shape == (len(sample_data), 2)
+
+
+# --- Details found by mutation testing ---
+
+
+class TestPipelineStepValidation:
+    """Tests that the order of the steps is checked for every pair of neighbours."""
+
+    def test_the_last_pair_of_steps_is_checked(self):
+        """The invalid pair is B followed by B at the end of the list."""
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepB(), MockStepB()], [StepBreakpointer(1)])
+
+    def test_the_first_pair_of_steps_is_checked(self):
+        """The invalid pair is A followed by A at the start of the list, then comes B."""
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepA(), MockStepB()], [StepBreakpointer(1)])
+
+    def test_the_pair_closing_the_cycle_is_checked(self):
+        """The neighbours in the list are fine, but the last step A cannot be followed by the first step A."""
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepB(), MockStepA()], [StepBreakpointer(1)])
+
+
+class DataProbeStep(MockSingleStep):
+    """A step that records the data it receives."""
+
+    def __init__(self):
+        super().__init__([])
+        self.dtypes: list[np.dtype] = []
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.dtypes.append(state.X.dtype)
+        return state
+
+
+class PreviousMixtureProbeStep(MockSingleStep):
+    """A step that records the previous mixture next to a copy of the current one, then changes the current one."""
+
+    def __init__(self):
+        super().__init__([])
+        self.seen: list[tuple[MixtureModel | None, MixtureModel]] = []
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.seen.append((state.prev_mixture, copy(state.curr_mixture)))
+        component = state.curr_mixture[0]
+        state.curr_mixture[0] = cc.with_parameters(component, lambda_=cc.all_parameters(component)["lambda_"] + 1.0)
+        return state
+
+
+class FailingStep(MockSingleStep):
+    """A step that sets H and fails on the given run."""
+
+    def __init__(self, failing_run: int):
+        super().__init__([])
+        self.failing_run = failing_run
+        self.runs = 0
+        self.error = ValueError("simulated failure")
+
+    def run(self, state: PipelineState) -> PipelineState:
+        self.runs += 1
+        state.H = np.full((len(state.X), state.curr_mixture.n_components), 0.5)
+        if self.runs == self.failing_run:
+            state.error = self.error
+        return state
+
+
+class ErrorSettingPruner(Pruner):
+    """A pruner that removes nothing but leaves an error in the state."""
+
+    def __init__(self):
+        self.error = ValueError("left by the pruner")
+
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
+        state.error = self.error
+        return state, []
+
+
+class TestPipelineFitDetails:
+    def test_fit_gives_float64_data_to_the_steps(self, initial_mixture):
+        step = DataProbeStep()
+
+        Pipeline([step], [StepBreakpointer(2)]).fit([1, 2, 6, 7], initial_mixture)
+
+        assert step.dtypes == [np.float64, np.float64]
+
+    def test_fit_gives_each_iteration_the_mixture_it_started_with_as_the_previous_one(self, initial_mixture):
+        step = PreviousMixtureProbeStep()
+
+        Pipeline([step], [StepBreakpointer(3)]).fit(np.array([1.0, 2.0]), initial_mixture)
+
+        for previous, current_at_start in step.seen:
+            assert previous is not None
+            assert previous == current_at_start
+        assert step.seen[0][0] == initial_mixture
+        assert step.seen[1][0] != step.seen[0][0]
+
+    def test_a_step_error_in_the_first_iteration_is_recorded_in_the_history(self, initial_mixture, sample_data):
+        step = FailingStep(failing_run=1)
+        pipeline = Pipeline([step], [StepBreakpointer(5)])
+
+        with pytest.warns(RuntimeWarning):
+            result = pipeline.fit(sample_data, initial_mixture)
+
+        assert len(pipeline.history) == 1
+        record = pipeline.history[0]
+        assert record.iteration == 0
+        assert record.mixture is result
+        np.testing.assert_array_equal(record.X, sample_data)
+        assert record.H is not None
+        assert record.H.shape == (len(sample_data), 2)
+        assert record.pruners_used is None
+        assert record.error is step.error
+
+    def test_a_step_error_in_a_later_iteration_is_added_to_the_last_record(self, initial_mixture, sample_data):
+        step = FailingStep(failing_run=2)
+        pipeline = Pipeline([step], [StepBreakpointer(5)])
+
+        with pytest.warns(RuntimeWarning):
+            pipeline.fit(sample_data, initial_mixture)
+
+        assert len(pipeline.history) == 1
+        assert pipeline.history[0].error is step.error
+
+    def test_the_record_of_an_iteration_holds_the_data_the_pruners_and_the_error(self, initial_mixture, sample_data):
+        pruner = ErrorSettingPruner()
+        pipeline = Pipeline([MockSingleStep([])], [StepBreakpointer(1)], [pruner])
+
+        pipeline.fit(sample_data, initial_mixture)
+
+        record = pipeline.history[0]
+        np.testing.assert_array_equal(record.X, sample_data)
+        assert record.pruners_used == [pruner]
+        assert record.error is pruner.error

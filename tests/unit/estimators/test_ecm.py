@@ -7,8 +7,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import Exponential, Normal
 from pysatl_mpest.estimators import ECM
 from pysatl_mpest.estimators.iterative import (
     Breakpointer,
@@ -20,8 +20,7 @@ from pysatl_mpest.estimators.iterative import (
 )
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
-
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
+from tests.helpers.families import family
 
 # --- Mocks and Fixtures for testing ECM ---
 
@@ -60,22 +59,22 @@ def mock_pruners() -> list[Pruner]:
     return []
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def sample_mixture(request) -> MixtureModel:
-    """Provides a mixture model with two components for testing with parametrized dtype."""
+@pytest.fixture
+def sample_mixture() -> MixtureModel:
+    """Provides a mixture model with two components for testing."""
 
-    dtype = request.param
-    components = [Normal(loc=0, scale=1, dtype=dtype), Exponential(loc=10, rate=1, dtype=dtype)]
-    # Fix a parameter in one component to test if `params_to_optimize` is correctly used.
-    components[1].fix_param("rate")
-    return MixtureModel(components, weights=[0.4, 0.6], dtype=dtype)
+    # The mean of the first component is fixed with a view, so only its free parameters are to be optimized.
+    components = [
+        family(FamilyName.NORMAL).view(mu=0.0)(sigma=1.0),
+        family(FamilyName.EXPONENTIAL)(lambda_=1.0),
+    ]
+    return MixtureModel(components, weights=[0.4, 0.6])
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def sample_data(request) -> np.ndarray:
-    """Provides a simple NumPy array of data with parametrized dtype."""
-    dtype = request.param
-    return np.array([1, 2, 3, 11, 12, 13], dtype=dtype)
+@pytest.fixture
+def sample_data() -> np.ndarray:
+    """Provides a simple NumPy array of data."""
+    return np.array([1, 2, 3, 11, 12, 13], dtype=np.float64)
 
 
 # --- Test Cases ---
@@ -134,12 +133,6 @@ class TestECMFit:
         mock_pipeline_instance.fit.assert_called_once_with(sample_data, sample_mixture)
         assert result is sample_mixture
 
-        # Check types
-        assert result.dtype == sample_mixture.dtype
-        assert result.weights.dtype == sample_mixture.dtype
-        for component in result.components:
-            assert component.dtype == sample_mixture.dtype
-
     def test_fit_configures_pipeline_steps_correctly(
         self,
         mocker: MockerFixture,
@@ -186,11 +179,12 @@ class TestECMFit:
 
         for i, (block, component) in enumerate(zip(m_step.blocks, sample_mixture.components)):
             assert block.component_id == i
-            assert block.params_to_optimize == component.params_to_optimize
+            assert block.params_to_optimize is None
             assert block.maximization_strategy == MaximizationStrategy.QFUNCTION
 
-        assert "rate" not in m_step.blocks[1].params_to_optimize
-        assert "loc" in m_step.blocks[1].params_to_optimize
+        # The blocks resolve to the free parameters of the components, not to the fixed ones.
+        assert m_step.blocks[0].params_to_update(sample_mixture[0]) == ["sigma"]
+        assert m_step.blocks[1].params_to_update(sample_mixture[1]) == ["lambda_"]
 
     def test_history_access_lifecycle(
         self,

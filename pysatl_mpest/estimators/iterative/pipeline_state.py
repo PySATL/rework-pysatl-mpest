@@ -13,11 +13,11 @@ __license__ = "SPDX-License-Identifier: MIT"
 from dataclasses import dataclass
 
 from ...core import MixtureModel
-from ...typings import FloatingType, MultivariateFloatArray, UnivariateFloatArray
+from ...typings import MultivariateFloatArray, UnivariateFloatArray
 
 
 @dataclass
-class PipelineState[FloatT: FloatingType]:
+class PipelineState:
     """Represents the state of a pipeline at a specific point in its execution.
 
     This dataclass is a mutable container that centralizes all information
@@ -27,18 +27,18 @@ class PipelineState[FloatT: FloatingType]:
 
     Args
     ----------
-    X : UnivariateFloatArray[FloatT]
+    X : UnivariateFloatArray
         The input data sample. This data is typically treated as read-only
         throughout the pipeline's execution.
-    H : MultivariateFloatArray[FloatT] | None
+    H : MultivariateFloatArray | None
         The responsibility matrix (posterior probabilities). `H[i, j]`
         represents the probability that data point `i` belongs to component
         `j`. It may not be computed at every step.
-    prev_mixture : MixtureModel[FloatT] | None
+    prev_mixture : MixtureModel | None
         A snapshot of the mixture model from the previous iteration. This is
         useful for convergence checks, such as comparing log-likelihood values.
         It is `None` at the start of the pipeline.
-    curr_mixture : MixtureModel[FloatT]
+    curr_mixture : MixtureModel
         The current state of the mixture model that is being actively
         optimized by the pipeline steps.
     error : Exception | None
@@ -47,8 +47,8 @@ class PipelineState[FloatT: FloatingType]:
         here to signal the pipeline to terminate gracefully.
     """
 
-    X: UnivariateFloatArray[FloatT]
-    H: MultivariateFloatArray[FloatT] | None
-    prev_mixture: MixtureModel[FloatT] | None
-    curr_mixture: MixtureModel[FloatT]
+    X: UnivariateFloatArray
+    H: MultivariateFloatArray | None
+    prev_mixture: MixtureModel | None
+    curr_mixture: MixtureModel
     error: Exception | None

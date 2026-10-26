@@ -7,9 +7,10 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import Exponential
 from pysatl_mpest.estimators.iterative import PipelineState, StepBreakpointer
+from tests.helpers.families import family
 
 # --- Helper Fixtures ---
 
@@ -18,7 +19,7 @@ from pysatl_mpest.estimators.iterative import PipelineState, StepBreakpointer
 def dummy_state() -> PipelineState:
     """Provides a dummy PipelineState instance for tests."""
 
-    dummy_mixture = MixtureModel([Exponential(0, 1)])
+    dummy_mixture = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=1.0)])
     return PipelineState(np.array([]), None, None, dummy_mixture, None)
 
 

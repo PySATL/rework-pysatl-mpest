@@ -6,10 +6,9 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from pysatl_mpest.estimators.iterative.pipeline_state import PipelineState
 from pysatl_mpest.estimators.iterative.pruner import Pruner
-from pysatl_mpest.typings import FloatingType
 
 
-class MockPruner[FloatT: FloatingType](Pruner[FloatT]):
+class MockPruner(Pruner):
     """A mock pruner that removes specific components at a specific iteration.
 
     Parameters
@@ -25,17 +24,17 @@ class MockPruner[FloatT: FloatingType](Pruner[FloatT]):
         self.iteration_to_prune = iteration_to_prune
         self._current_iteration = 0
 
-    def prune(self, state: PipelineState[FloatT]) -> tuple[PipelineState[FloatT], list[int]]:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Removes specified components if the current iteration matches the target.
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current pipeline state.
 
         Returns
         -------
-        PipelineState[FloatT]
+        PipelineState
             The modified (or unmodified) pipeline state.
         list[int]
             The list of removed component indices.

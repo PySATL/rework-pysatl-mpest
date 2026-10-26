@@ -14,12 +14,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from copy import copy
 
-from ....typings import FloatingType, Scalar
+from ....typings import Scalar
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
 
 
-class PriorThresholdPruner[FloatT: FloatingType](Pruner[FloatT]):
+class PriorThresholdPruner(Pruner):
     """A pruner that removes mixture components based on a weight threshold.
 
     This pruner iterates through the components of a :class:`pysatl_mpest.core.MixtureModel`
@@ -58,7 +58,7 @@ class PriorThresholdPruner[FloatT: FloatingType](Pruner[FloatT]):
         if not (0 < self.threshold < 1):
             raise ValueError("Threshold must be between 0 and 1.")
 
-    def prune(self, state: PipelineState[FloatT]) -> tuple[PipelineState[FloatT], list[int]]:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Removes components from the mixture whose weights are below the threshold.
 
         This method inspects :attr:`state.curr_mixture` and removes any component
@@ -69,13 +69,13 @@ class PriorThresholdPruner[FloatT: FloatingType](Pruner[FloatT]):
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current state of the pipeline, containing the mixture model
             to be pruned.
 
         Returns
         -------
-        tuple[PipelineState[FloatT], list[int]]
+        tuple[PipelineState, list[int]]
         A tuple containing:
         - The updated pipeline state. If components were removed,
           :attr:`state.curr_mixture` will be a new,

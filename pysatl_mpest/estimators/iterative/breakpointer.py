@@ -11,11 +11,10 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 from abc import ABC, abstractmethod
 
-from ...typings import FloatingType
 from .pipeline_state import PipelineState
 
 
-class Breakpointer[FloatT: FloatingType](ABC):
+class Breakpointer(ABC):
     """Abstract base class for a pipeline stopping condition.
 
     A Breakpointer is responsible for inspecting the :class:`PipelineState` after each
@@ -41,12 +40,12 @@ class Breakpointer[FloatT: FloatingType](ABC):
     """
 
     @abstractmethod
-    def check(self, state: PipelineState[FloatT]) -> bool:
+    def check(self, state: PipelineState) -> bool:
         """Evaluates the pipeline state to determine if it should stop.
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current state of the pipeline after a full iteration,
             containing the current and previous mixture models.
 

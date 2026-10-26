@@ -9,24 +9,22 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from copy import copy
-
 import numpy as np
+from pysatl_core.families import ParametricFamilyDistribution
+from scipy.special import logsumexp
 
-from ....distributions import ContinuousDistribution
+from ....core import _components
 from ....optimizers import Optimizer
-from ....typings import FloatingType
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
-from .utils import handle_numerical_overflow
 
 
-def observed_data_likelihood_strategy[FloatT: FloatingType](
-    component: ContinuousDistribution[FloatT],
-    state: PipelineState[FloatT],
+def observed_data_likelihood_strategy(
+    component: ParametricFamilyDistribution,
+    state: PipelineState,
     block: OptimizationBlock,
-    optimizer: Optimizer[FloatT],
-) -> tuple[int, dict[str, FloatT]]:
+    optimizer: Optimizer,
+) -> tuple[int, dict[str, float]]:
     """Generic strategy that calculates optimized parameters by maximizing observed data log-likelihood.
 
     This function calculates the new parameters for a component by directly
@@ -36,51 +34,64 @@ def observed_data_likelihood_strategy[FloatT: FloatingType](
     Where C_i is the fixed contribution of all other components (background)
     calculated based on the current state.
 
+    Everything is computed with log-densities, so the likelihood stays accurate where the
+    densities themselves underflow to zero. The optimizer may try values that violate the
+    constraints of the parametrization (for example a negative standard deviation), and the
+    log-likelihood is zero where a point has zero density under every component. The target
+    is ``+inf`` in both cases, so such values are never chosen.
+
+    Only the parameters named by the block are optimized; the other parameters of the
+    component, including those fixed with ``family.view(...)``, keep their values.
+
     Parameters
     ----------
-    component : ContinuousDistribution[FloatT]
-        The distribution component type/instance used for dispatch and parameter metadata.
-    state : PipelineState[FloatT]
-        The current state containing data X and current mixture parameters.
+    component : ParametricFamilyDistribution
+        The distribution component whose parameters are to be optimized.
+    state : PipelineState
+        The current state containing data X and the current mixture, whose weights and other
+        components define the background.
         (Note: Responsibilities H are not used in this strategy).
     block : OptimizationBlock
         Configuration defining which parameters to optimize (component_id and param names).
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         Numerical optimizer instance.
 
     Returns
     -------
-    tuple[int, dict[str, FloatT]]
+    tuple[int, dict[str, float]]
         Component ID and a dictionary of the optimized parameters.
+
+    Raises
+    ------
+    ValueError
+        If the block names parameters that are not free parameters of the component.
     """
 
     X = state.X
-    n_samples = X.shape[0]
-    dtype = component.dtype
-    tol = np.finfo(dtype).tiny
-
     component_id = block.component_id
-    params_to_optimize = sorted(list(block.params_to_optimize.intersection(component.params_to_optimize)))
 
-    temp_mixture = copy(state.curr_mixture)
-    target_comp = temp_mixture.components[component_id]
-    background_term = np.zeros(n_samples, dtype=dtype)
+    params_to_optimize = block.params_to_update(component)
+    if not params_to_optimize:
+        return component_id, {}
 
-    for i, comp in enumerate(state.curr_mixture.components):
-        if i != component_id:
-            background_term += temp_mixture.weights[i] * comp.pdf(X)
+    mixture = state.curr_mixture
+    log_weights = mixture.log_weights - logsumexp(mixture.log_weights)
 
-    def target(vector_params):
-        target_comp.set_params_from_vector(params_to_optimize, vector_params)
-        comp_pdf = target_comp.pdf(X)
-        mixture_pdf = background_term + (temp_mixture.weights[component_id] * comp_pdf)
-        mixture_pdf = np.maximum(mixture_pdf, tol)
-        res = -np.sum(np.log(mixture_pdf))
+    # Log of the contribution of the other components: the target component is masked out.
+    joint = mixture.component_lpdf_matrix(X) + log_weights
+    joint[:, component_id] = -np.inf
+    log_background = logsumexp(joint, axis=1)
 
-        if np.isinf(res):
-            handle_numerical_overflow(state, "Observed data likelihood optimization")
+    log_target_weight = log_weights[component_id]
+    current = _components.free_parameters(component)
 
-        return res
+    def target(vector_params: list[float]) -> float:
+        try:
+            candidate = _components.with_parameters(component, **dict(zip(params_to_optimize, vector_params)))
+        except ValueError:
+            return np.inf
+        log_mixture = np.logaddexp(log_background, log_target_weight + _components.lpdf(candidate, X))
+        return float(-np.sum(log_mixture))
 
-    new_params = optimizer.minimize(target, target_comp.get_params_vector(params_to_optimize))
-    return component_id, dict(zip(params_to_optimize, new_params))
+    new_params = optimizer.minimize(target, [current[name] for name in params_to_optimize])
+    return component_id, {name: float(value) for name, value in zip(params_to_optimize, new_params)}

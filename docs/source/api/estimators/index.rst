@@ -26,6 +26,7 @@ Facades (High-Level API)
    :template: class.rst
 
     ~ECM
+    ~ECME
 
 Abstract Classes
 ================

@@ -4,423 +4,559 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from collections.abc import Iterator
 from copy import copy
+from typing import cast
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from numpy.typing import ArrayLike
+from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.types import CharacteristicName
 from pysatl_mpest.core.mixture import MixtureModel
 from tests.helpers.math_assertions import (
     assert_computational_stability,
-    assert_dtype,
+    assert_is_array_type,
+    assert_is_scalar_type,
     assert_probabilities_sum_to_one,
 )
-from tests.mocks.distributions.continuous_dist import (
+from tests.mocks.distributions import (
+    MockConstantLpdfContinuousDistribution,
     MockContinuousDistribution,
     MockInfLpdfContinuousDistribution,
 )
 
 
-def get_tol(dtype: type[np.floating]) -> tuple[float, float]:
-    """Return appropriate rtol, atol based on floating precision."""
-    if dtype == np.float16:
-        return 1e-3, 1e-4
-    return 1e-5, 1e-8
+@pytest.fixture
+def mock_comp() -> ParametricFamilyDistribution:
+    """Fixture for a single mock distribution."""
+    return cast(ParametricFamilyDistribution, MockContinuousDistribution())
 
 
-def test_init_default_weights(floating_dtype: type[np.floating]) -> None:
+@pytest.fixture
+def mock_comps() -> tuple[ParametricFamilyDistribution, ParametricFamilyDistribution]:
+    """Fixture for two mock distributions."""
+    return (
+        cast(ParametricFamilyDistribution, MockContinuousDistribution()),
+        cast(ParametricFamilyDistribution, MockContinuousDistribution()),
+    )
+
+
+@pytest.fixture
+def param_comps() -> tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution]:
+    """Fixture for three differently parametrized mock distributions."""
+    return (
+        cast(ParametricFamilyDistribution, MockContinuousDistribution(param1=1.0)),
+        cast(ParametricFamilyDistribution, MockContinuousDistribution(param1=2.0)),
+        cast(ParametricFamilyDistribution, MockContinuousDistribution(param1=3.0)),
+    )
+
+
+@pytest.fixture(autouse=True)
+def mock_finite_mixture() -> Iterator[MagicMock]:
+    """Mock the core finite_mixture function to avoid parsing our Mock distributions."""
+    with patch("pysatl_mpest.core.mixture.finite_mixture") as mock_fm:
+        mock_core_dist = MagicMock()
+
+        def mock_calc_char(name: CharacteristicName, X: ArrayLike) -> np.ndarray:
+            X_arr = np.asarray(X, dtype=np.float64)
+            if name == CharacteristicName.LPDF:
+                return np.zeros_like(X_arr)
+            elif name == CharacteristicName.PDF:
+                return np.ones_like(X_arr)
+            return np.zeros_like(X_arr)
+
+        mock_core_dist.calculate_characteristic.side_effect = mock_calc_char
+        mock_fm.return_value = mock_core_dist
+        yield mock_fm
+
+
+def test_init_default_weights(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test initialization with default equal weights."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
+    mixture = MixtureModel(mock_comps)
+    rtol, atol = 1e-5, 1e-8
 
-    mixture = MixtureModel([comp1, comp2], dtype=floating_dtype)
-    rtol, atol = get_tol(floating_dtype)
-
-    expected_n_components = 2
-    assert mixture.n_components == expected_n_components
-    assert_dtype(mixture.weights, floating_dtype)
+    expected_components = 2
+    assert mixture.n_components == expected_components
     assert_probabilities_sum_to_one(mixture.weights, rtol=rtol, atol=atol)
     assert_allclose(mixture.weights, [0.5, 0.5], rtol=rtol, atol=atol)
 
 
-def test_init_custom_weights(floating_dtype: type[np.floating]) -> None:
+def test_init_custom_weights(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test initialization with custom valid weights."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
+    mixture = MixtureModel(mock_comps, weights=[0.2, 0.8])
+    rtol, atol = 1e-5, 1e-8
 
-    mixture = MixtureModel([comp1, comp2], weights=[0.2, 0.8], dtype=floating_dtype)
-    rtol, atol = get_tol(floating_dtype)
-
-    expected_n_components = 2
-    assert mixture.n_components == expected_n_components
-    assert_dtype(mixture.weights, floating_dtype)
+    expected_components = 2
+    assert mixture.n_components == expected_components
     assert_probabilities_sum_to_one(mixture.weights, rtol=rtol, atol=atol)
     assert_allclose(mixture.weights, [0.2, 0.8], rtol=rtol, atol=atol)
 
 
-def test_init_casts_components(floating_dtype: type[np.floating]) -> None:
-    """Test that components passed with a different dtype are cast to mixture's dtype."""
-    # Use the opposite dtype (float64 if float32, float32 if float64)
-    other_dtype = np.float32 if floating_dtype == np.float64 else np.float64
-
-    comp1 = MockContinuousDistribution(dtype=other_dtype)
-    comp2 = MockContinuousDistribution(dtype=other_dtype)
-
-    mixture = MixtureModel([comp1, comp2], dtype=floating_dtype)
-
-    assert mixture.components[0].dtype == floating_dtype
-    assert mixture.components[1].dtype == floating_dtype
-
-
-def test_init_zero_weight(floating_dtype: type[np.floating]) -> None:
+def test_init_zero_weight(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test that exactly 0.0 weight does not crash logarithm."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
+    mixture = MixtureModel(mock_comps, weights=[0.0, 1.0])
+    rtol, atol = 1e-5, 1e-8
 
-    mixture = MixtureModel([comp1, comp2], weights=[0.0, 1.0], dtype=floating_dtype)
-    rtol, atol = get_tol(floating_dtype)
-
-    # 0.0 weight will become very small via np.finfo.tiny, but shouldn't crash
     assert_probabilities_sum_to_one(mixture.weights, rtol=rtol, atol=atol)
     assert_allclose(mixture.weights, [0.0, 1.0], rtol=rtol, atol=atol)
 
 
-def test_log_weights_setter(floating_dtype: type[np.floating]) -> None:
+def test_log_weights_setter(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test that assigning new log-weights recalculates weights."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = np.array(np.log([0.2, 0.8]))
+    rtol, atol = 1e-5, 1e-8
 
-    mixture = MixtureModel([comp1, comp2], dtype=floating_dtype)
-
-    # Set new log-weights that correspond to [0.2, 0.8]
-    mixture.log_weights = np.array(np.log([0.2, 0.8]), dtype=floating_dtype)
-    rtol, atol = get_tol(floating_dtype)
-
-    assert_dtype(mixture.weights, floating_dtype)
     assert_probabilities_sum_to_one(mixture.weights, rtol=rtol, atol=atol)
     assert_allclose(mixture.weights, [0.2, 0.8], rtol=rtol, atol=atol)
 
 
-def test_init_invalid_components(floating_dtype: type[np.floating]) -> None:
+def test_init_invalid_components() -> None:
     """Test that empty component list raises ValueError."""
-    with pytest.raises(ValueError, match="List of components cannot be empty"):
-        MixtureModel([], dtype=floating_dtype)
+    with pytest.raises(ValueError, match=r"^List of components cannot be empty$"):
+        MixtureModel([])
 
 
-def test_init_invalid_weights(floating_dtype: type[np.floating]) -> None:
+def test_init_invalid_weights(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test that invalid weights raise ValueError."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    components = [comp1, comp2]
+    with pytest.raises(ValueError, match=r"^Weights must be positive\.$"):
+        MixtureModel(mock_comps, weights=[-0.1, 1.1])
 
-    # Negative weights
-    with pytest.raises(ValueError, match="Weights must be positive"):
-        MixtureModel(components, weights=[-0.1, 1.1], dtype=floating_dtype)
+    with pytest.raises(ValueError, match=r"^Sum of the weights must be equal 1, but it equal 1\.1\.$"):
+        MixtureModel(mock_comps, weights=[0.5, 0.6])
 
-    # Weights sum not equal to 1
-    with pytest.raises(ValueError, match="Sum of the weights must be equal 1"):
-        MixtureModel(components, weights=[0.5, 0.6], dtype=floating_dtype)
-
-    # Weights length mismatch
     with pytest.raises(ValueError, match="must be equal to weights number"):
-        MixtureModel(components, weights=[1.0], dtype=floating_dtype)
+        MixtureModel(mock_comps, weights=[1.0])
 
 
-def test_log_weights_setter_invalid_length(floating_dtype: type[np.floating]) -> None:
+def test_log_weights_setter_invalid_length(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test that setting log_weights with incorrect length raises ValueError."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1, comp2], dtype=floating_dtype)
-
+    mixture = MixtureModel(mock_comps)
     with pytest.raises(ValueError, match="length of the new logit vector does not match"):
-        mixture.log_weights = np.array([0.0], dtype=floating_dtype)
+        mixture.log_weights = np.array([0.0])
 
 
-def test_add_component(floating_dtype: type[np.floating]) -> None:
+def test_add_component(mock_comp: ParametricFamilyDistribution) -> None:
     """Test adding a valid component correctly updates components and weights."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
-
+    mixture = MixtureModel([mock_comp])
+    comp2 = cast(ParametricFamilyDistribution, MockContinuousDistribution())
     mixture.add_component(comp2, weight=0.5)
-    rtol, atol = get_tol(floating_dtype)
+    rtol, atol = 1e-5, 1e-8
 
-    expected_n_components = 2
-    assert mixture.n_components == expected_n_components
-    assert mixture.components[1] is comp2
-
-    assert_dtype(mixture.weights, floating_dtype)
+    expected_components = 2
+    assert mixture.n_components == expected_components
+    assert mixture.components[1] == comp2
     assert_probabilities_sum_to_one(mixture.weights, rtol=rtol, atol=atol)
-
-    # Originally [1.0], adding weight 0.5 renormalizes to [0.5, 0.5]
     assert_allclose(mixture.weights, [0.5, 0.5], rtol=rtol, atol=atol)
 
 
-def test_add_component_invalid_weight(floating_dtype: type[np.floating]) -> None:
-    """Test adding component with invalid weight bounds."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
+def test_setitem(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test replacing a component at a specific index."""
+    comp1, comp2, comp3 = param_comps
+    mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6])
 
-    with pytest.raises(ValueError, match="must be in the range"):
-        mixture.add_component(comp2, weight=-0.1)
+    _ = mixture == mixture  # noqa: PLR0124
+    assert mixture._sorted_pairs_cache is not None
 
-    with pytest.raises(ValueError, match="must be in the range"):
-        mixture.add_component(comp2, weight=1.1)
+    mixture[1] = comp3
 
-
-def test_add_component_casts_type(floating_dtype: type[np.floating]) -> None:
-    """Test adding a component casts its dtype if needed."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
-
-    other_dtype = np.float32 if floating_dtype == np.float64 else np.float64
-    comp2 = MockContinuousDistribution(dtype=other_dtype)
-
-    mixture.add_component(comp2, weight=0.5)
-
-    assert mixture.components[1].dtype == floating_dtype
-
-
-def test_remove_component(floating_dtype: type[np.floating]) -> None:
-    """Test removing a component renormalizes remaining weights."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    comp3 = MockContinuousDistribution(dtype=floating_dtype)
-
-    mixture = MixtureModel([comp1, comp2, comp3], weights=[0.2, 0.3, 0.5], dtype=floating_dtype)
-    mixture.remove_component(1)
-    rtol, atol = get_tol(floating_dtype)
-
-    expected_n_components = 2
-    assert mixture.n_components == expected_n_components
-    assert mixture.components[0] is comp1
+    expected_components = 2
+    assert mixture.n_components == expected_components
+    assert mixture.components[0] == comp1
+    assert mixture.components[1] == comp3
     assert mixture.components[1] is comp3
 
-    # Remaining weights should be [0.2 / 0.7, 0.5 / 0.7] = [0.2857..., 0.7142...]
-    assert_dtype(mixture.weights, floating_dtype)
+    assert mixture._sorted_pairs_cache is None
+
+
+def test_add_component_invalid_weight(mock_comp: ParametricFamilyDistribution) -> None:
+    """Test adding component with invalid weight bounds."""
+    mixture = MixtureModel([mock_comp])
+    comp2 = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+
+    message = r"^The weight of the new component must be in the range \(0, 1\)\.$"
+    # The bounds 0 and 1 themselves are not allowed either.
+    for weight in (-0.1, 0.0, 1.0, 1.1):
+        with pytest.raises(ValueError, match=message):
+            mixture.add_component(comp2, weight=weight)
+
+
+def test_remove_component(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test removing a component renormalizes remaining weights."""
+    comp1, comp2, comp3 = param_comps
+    mixture = MixtureModel([comp1, comp2, comp3], weights=[0.2, 0.3, 0.5])
+    mixture.remove_component(1)
+    rtol, atol = 1e-5, 1e-8
+
+    expected_components = 2
+    assert mixture.n_components == expected_components
+    assert mixture.components[0] is comp1
+    assert mixture.components[1] is comp3
     assert_probabilities_sum_to_one(mixture.weights, rtol=rtol, atol=atol)
     assert_allclose(mixture.weights, [0.2 / 0.7, 0.5 / 0.7], rtol=rtol, atol=atol)
 
 
-def test_remove_last_component(floating_dtype: type[np.floating]) -> None:
+def test_remove_last_component(mock_comp: ParametricFamilyDistribution) -> None:
     """Test removing the last component raises ValueError."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
-
-    with pytest.raises(ValueError, match="last component cannot be removed"):
+    mixture = MixtureModel([mock_comp])
+    with pytest.raises(ValueError, match=r"^The last component cannot be removed from the model\.$"):
         mixture.remove_component(0)
 
 
-def test_remove_component_out_of_bounds(floating_dtype: type[np.floating]) -> None:
+def test_remove_component_out_of_bounds(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test removing a component with invalid index raises IndexError."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1, comp2], dtype=floating_dtype)
-
-    with pytest.raises(IndexError, match="out of range"):
+    mixture = MixtureModel(mock_comps)
+    with pytest.raises(IndexError, match=r"^Index 2 out of range \[0, 1\]$"):
         mixture.remove_component(2)
 
 
-def test_pdf_and_lpdf(floating_dtype: type[np.floating]) -> None:
+def test_pdf_and_lpdf(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test PDF and LPDF computations with scalar and array inputs."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6], dtype=floating_dtype)
-    rtol, atol = get_tol(floating_dtype)
+    mixture = MixtureModel(mock_comps, weights=[0.4, 0.6])
+    rtol, atol = 1e-5, 1e-8
 
-    # Scalar input
     x_scalar = 1.0
     lpdf_scalar = mixture.lpdf(x_scalar)
     pdf_scalar = mixture.pdf(x_scalar)
-
     assert_allclose(pdf_scalar, np.exp(lpdf_scalar), rtol=rtol, atol=atol)
-    assert isinstance(lpdf_scalar, floating_dtype) or np.isscalar(lpdf_scalar)
 
-    # Array input
-    x_array = np.array([1.0, 2.0, 3.0], dtype=floating_dtype)
+    x_array = np.array([1.0, 2.0, 3.0])
     lpdf_array = mixture.lpdf(x_array)
     pdf_array = mixture.pdf(x_array)
 
     assert lpdf_array.shape == (3,)
     assert pdf_array.shape == (3,)
-    assert_dtype(lpdf_array, floating_dtype)
     assert_allclose(pdf_array, np.exp(lpdf_array), rtol=rtol, atol=atol)
 
 
-def test_lpdf_stability(floating_dtype: type[np.floating]) -> None:
+def test_lpdf_stability() -> None:
     """Test LPDF stability and assert no NaN or positive inf."""
-    comp1 = MockInfLpdfContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1, comp2], weights=[0.5, 0.5], dtype=floating_dtype)
+    comp1 = cast(ParametricFamilyDistribution, MockInfLpdfContinuousDistribution())
+    comp2 = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+    mixture = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
 
-    X = np.array([-1.0, 0.0, 1.0], dtype=floating_dtype)
+    X = np.array([-1.0, 0.0, 1.0])
     lpdf_vals = mixture.lpdf(X)
-
-    # Assert there are no NaNs and no +inf
-    assert_computational_stability(lpdf_vals)
+    assert_computational_stability(cast(np.ndarray, lpdf_vals))
 
 
-def test_loglikelihood(floating_dtype: type[np.floating]) -> None:
+def test_lpdf_does_not_use_core_mixture(
+    mock_comps: tuple[ParametricFamilyDistribution, ...], mock_finite_mixture: MagicMock
+) -> None:
+    """Test LPDF is computed by the model itself, not by the pysatl-core mixture."""
+    mixture = MixtureModel(mock_comps)
+
+    mixture.lpdf(np.array([1.0, 2.0]))
+
+    mock_finite_mixture.assert_not_called()
+
+
+def test_lpdf_is_weighted_logsumexp() -> None:
+    """Test LPDF applies the mixture weights to the component log-densities."""
+    comps = (
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-1.0)),
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-3.0)),
+    )
+    mixture = MixtureModel(comps, weights=[0.25, 0.75])
+    expected = np.log(0.25 * np.exp(-1.0) + 0.75 * np.exp(-3.0))
+    rtol, atol = 1e-12, 1e-12
+
+    assert_allclose(mixture.lpdf(np.array([0.0, 1.0])), [expected, expected], rtol=rtol, atol=atol)
+    assert_allclose(mixture.lpdf(0.5), expected, rtol=rtol, atol=atol)
+
+
+@pytest.mark.filterwarnings("error")
+def test_lpdf_all_components_neg_inf() -> None:
+    """Test LPDF is -inf, without NaN or warnings, where every component has zero density."""
+    comps = (
+        cast(ParametricFamilyDistribution, MockInfLpdfContinuousDistribution()),
+        cast(ParametricFamilyDistribution, MockInfLpdfContinuousDistribution()),
+    )
+    mixture = MixtureModel(comps)
+
+    assert np.all(np.isneginf(mixture.lpdf(np.array([-1.0, 0.0, 1.0]))))
+
+
+def test_component_lpdf_matrix_shape(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test the component log-density matrix has the component axis last."""
+    mixture = MixtureModel(mock_comps)
+    n_components = 2
+
+    assert mixture.component_lpdf_matrix(np.zeros(5)).shape == (5, n_components)
+    assert mixture.component_lpdf_matrix(0.5).shape == (n_components,)
+    assert mixture.component_lpdf_matrix(np.zeros((3, 4))).shape == (3, 4, n_components)
+
+
+def test_component_lpdf_matrix_values_exclude_weights() -> None:
+    """Test the matrix holds raw component log-densities, one column per component."""
+    comps = (
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-1.0)),
+        cast(ParametricFamilyDistribution, MockConstantLpdfContinuousDistribution(-3.0)),
+    )
+    mixture = MixtureModel(comps, weights=[0.25, 0.75])
+
+    matrix = mixture.component_lpdf_matrix(np.array([0.0, 1.0, 2.0]))
+
+    assert_allclose(matrix, np.tile([-1.0, -3.0], (3, 1)))
+
+
+def test_loglikelihood(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test log-likelihood computes the sum of lpdf correctly."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1, comp2], weights=[0.5, 0.5], dtype=floating_dtype)
-
-    X = np.array([1.0, 2.5, 3.1], dtype=floating_dtype)
+    mixture = MixtureModel(mock_comps, weights=[0.5, 0.5])
+    X = np.array([1.0, 2.5, 3.1])
 
     ll = mixture.loglikelihood(X)
-    expected_ll = np.sum(mixture.lpdf(X))
-
-    rtol, atol = get_tol(floating_dtype)
+    expected_ll = float(np.sum(mixture.lpdf(X)))
+    rtol, atol = 1e-5, 1e-8
     assert_allclose(ll, expected_ll, rtol=rtol, atol=atol)
 
 
-def test_generate(floating_dtype: type[np.floating]) -> None:
+def test_generate(mock_comp: ParametricFamilyDistribution) -> None:
     """Test random sample generation."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
+    mixture = MixtureModel([mock_comp])
 
-    # size=None
     sample_scalar = mixture.generate(size=None)
-    assert isinstance(sample_scalar, floating_dtype) or np.isscalar(sample_scalar)
+    assert np.isscalar(sample_scalar)
 
-    # size=int
     sample_1d = mixture.generate(size=5)
-    assert sample_1d.shape == (5,)
-    assert_dtype(sample_1d, floating_dtype)
+    assert cast(np.ndarray, sample_1d).shape == (5,)
 
-    # size=tuple
     sample_2d = mixture.generate(size=(3, 2))
-    assert sample_2d.shape == (3, 2)
-    assert_dtype(sample_2d, floating_dtype)
+    assert cast(np.ndarray, sample_2d).shape == (3, 2)
 
 
-def test_generate_zero_size(floating_dtype: type[np.floating]) -> None:
+def test_generate_is_reproducible_with_seed(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test the same seed gives the same sample, and a different seed gives a different one."""
+    mixture = MixtureModel(mock_comps)
+    seed, other_seed, size = 7, 8, 20
+
+    first = cast(np.ndarray, mixture.generate(size=size, random_state=seed))
+    second = cast(np.ndarray, mixture.generate(size=size, random_state=seed))
+    other = cast(np.ndarray, mixture.generate(size=size, random_state=other_seed))
+
+    assert_allclose(first, second)
+    assert not np.allclose(first, other)
+
+
+def test_generate_zero_size(mock_comp: ParametricFamilyDistribution) -> None:
     """Test generation with zero sizes."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
+    mixture = MixtureModel([mock_comp])
 
     res_int = mixture.generate(size=0)
-    assert res_int.shape == (0,)
-    assert_dtype(res_int, floating_dtype)
+    assert cast(np.ndarray, res_int).shape == (0,)
 
     res_tuple = mixture.generate(size=(0, 2))
-    assert res_tuple.shape == (0, 2)
-    assert_dtype(res_tuple, floating_dtype)
+    assert cast(np.ndarray, res_tuple).shape == (0, 2)
 
 
-def test_astype(floating_dtype: type[np.floating]) -> None:
-    """Test astype method converts dtype of mixture and components."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
-
-    target_dtype = np.float32 if floating_dtype != np.float32 else np.float64
-
-    new_mixture = mixture.astype(target_dtype)
-    assert new_mixture is not mixture
-    assert new_mixture.dtype == target_dtype
-    assert new_mixture.components[0].dtype == target_dtype
-
-    same_mixture = mixture.astype(floating_dtype)
-    assert same_mixture is mixture
-
-
-def test_dunder_methods(floating_dtype: type[np.floating]) -> None:
+def test_dunder_methods(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
     """Test __getitem__, __iter__, __copy__, __eq__ and __hash__."""
-    comp1 = MockContinuousDistribution(param1=1.0, dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(param1=2.0, dtype=floating_dtype)
-    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5], dtype=floating_dtype)
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
 
-    # __getitem__
     assert mixture1[0] is comp1
     assert mixture1[1] is comp2
 
-    # __iter__
     comps = list(mixture1)
     assert comps == [comp1, comp2]
 
-    # __copy__
     mixture2 = copy(mixture1)
     assert mixture2 is not mixture1
-    assert mixture2.components[0] is not comp1
+    assert mixture2.components[0] is comp1
     assert mixture2.weights is not mixture1.weights
 
-    # __eq__ and __hash__
     assert mixture1 == mixture2
     assert hash(mixture1) == hash(mixture2)
 
 
-def test_eq_unrelated_type(floating_dtype: type[np.floating]) -> None:
+def test_eq_unrelated_type(mock_comp: ParametricFamilyDistribution) -> None:
     """Test equality with an unrelated type."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
-
+    mixture = MixtureModel([mock_comp])
     assert mixture != "a string"
 
 
-def test_eq_different_length(floating_dtype: type[np.floating]) -> None:
+def test_eq_different_length(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
     """Test equality returns False when number of components differs."""
-    comp1 = MockContinuousDistribution(param1=1.0, dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(param1=2.0, dtype=floating_dtype)
-    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5], dtype=floating_dtype)
-    mixture2 = MixtureModel([comp1], dtype=floating_dtype)
-
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+    mixture2 = MixtureModel([comp1])
     assert mixture1 != mixture2
 
 
-def test_eq_different_dtype(floating_dtype: type[np.floating]) -> None:
-    """Test equality returns False when mixture dtypes differ."""
-    other_dtype = np.float32 if floating_dtype == np.float64 else np.float64
-
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture1 = MixtureModel([comp1], dtype=floating_dtype)
-
-    comp1_other = MockContinuousDistribution(dtype=other_dtype)
-    mixture2 = MixtureModel([comp1_other], dtype=other_dtype)
-
-    assert mixture1 != mixture2
+def test_eq_different_length_with_zero_weight(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test a zero-weight extra component does not make mixtures equal: the number of components must match."""
+    comp1, comp2, _ = param_comps
+    with_extra = MixtureModel([comp1, comp2], weights=[1.0, 0.0])
+    without_extra = MixtureModel([comp1])
+    assert with_extra != without_extra
+    assert without_extra != with_extra
 
 
-def test_eq_different_components(floating_dtype: type[np.floating]) -> None:
+def test_eq_is_independent_of_component_order(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test mixtures with the same (component, weight) pairs in a different order are equal."""
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.2, 0.8])
+    mixture2 = MixtureModel([comp2, comp1], weights=[0.8, 0.2])
+    assert mixture1 == mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_eq_equal_components_with_swapped_weights(mock_comp: ParametricFamilyDistribution) -> None:
+    """Test identical components with swapped weights give equal mixtures."""
+    other = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+    mixture1 = MixtureModel([mock_comp, other], weights=[0.2, 0.8])
+    mixture2 = MixtureModel([mock_comp, other], weights=[0.8, 0.2])
+    assert mixture1 == mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_eq_different_components(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
     """Test equality returns False when components differ."""
-    comp1 = MockContinuousDistribution(param1=1.0, dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(param1=2.0, dtype=floating_dtype)
-    comp3 = MockContinuousDistribution(param1=3.0, dtype=floating_dtype)
-
-    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5], dtype=floating_dtype)
-    mixture2 = MixtureModel([comp1, comp3], weights=[0.5, 0.5], dtype=floating_dtype)
-
+    comp1, comp2, comp3 = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+    mixture2 = MixtureModel([comp1, comp3], weights=[0.5, 0.5])
     assert mixture1 != mixture2
 
 
-def test_eq_different_weights(floating_dtype: type[np.floating]) -> None:
+def test_eq_different_weights(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
     """Test equality returns False when weights differ."""
-    comp1 = MockContinuousDistribution(param1=1.0, dtype=floating_dtype)
-    comp2 = MockContinuousDistribution(param1=2.0, dtype=floating_dtype)
-
-    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5], dtype=floating_dtype)
-    mixture2 = MixtureModel([comp1, comp2], weights=[0.2, 0.8], dtype=floating_dtype)
-
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+    mixture2 = MixtureModel([comp1, comp2], weights=[0.2, 0.8])
     assert mixture1 != mixture2
 
 
-def test_eq_cache_usage(floating_dtype: type[np.floating]) -> None:
+def test_eq_cache_usage(mock_comp: ParametricFamilyDistribution) -> None:
     """Test that multiple equality checks utilize the sorted pairs cache correctly."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture1 = MixtureModel([comp1], dtype=floating_dtype)
-    mixture2 = MixtureModel([comp1], dtype=floating_dtype)
-
-    # First check builds the cache
+    mixture1 = MixtureModel([mock_comp])
+    mixture2 = MixtureModel([mock_comp])
     assert mixture1 == mixture2
-    # Second check uses the _sorted_pairs_cache logic flow
     assert mixture1 == mixture2
 
 
-def test_hash_precision(floating_dtype: type[np.floating]) -> None:
-    """Test hashing precision works without crashing."""
-    comp1 = MockContinuousDistribution(dtype=floating_dtype)
-    mixture = MixtureModel([comp1], dtype=floating_dtype)
+def test_hash_agrees_with_eq_for_weights_within_tolerance(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test mixtures whose weights differ only by rounding are equal and have equal hashes."""
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.3, 0.7])
+    mixture2 = MixtureModel([comp1, comp2], weights=[0.3, 0.7])
+    mixture2.log_weights = mixture1.log_weights + np.array([1e-9, 0.0])
 
-    # Basic check that hash executes
-    assert isinstance(hash(mixture), int)
+    assert mixture1 == mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_hash_does_not_depend_on_weights(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test the hash ignores weights: they are compared with a tolerance, so they cannot be hashed consistently."""
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+    mixture2 = MixtureModel([comp1, comp2], weights=[0.2, 0.8])
+
+    assert mixture1 != mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_hash_differs_for_different_components(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test mixtures of different components get different hashes."""
+    comp1, comp2, comp3 = param_comps
+
+    assert hash(MixtureModel([comp1, comp2])) != hash(MixtureModel([comp1, comp3]))
+
+
+def test_log_weights_getter(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test that log_weights getter returns correct log weights."""
+
+    mixture = MixtureModel(mock_comps, weights=[0.3, 0.7])
+    expected = np.log(np.array([0.3, 0.7], dtype=np.float64) + np.finfo(np.float64).tiny)
+    assert_allclose(mixture.log_weights, expected)
+
+
+def test_setitem_out_of_bounds(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test that replacing a component with invalid index raises IndexError."""
+
+    mixture = MixtureModel(mock_comps)
+    comp = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+    # The index equal to the number of components is the closest invalid one.
+    for invalid_index in (len(mock_comps), 99):
+        with pytest.raises(IndexError, match=r"^Index of component must be between 0 and 1$"):
+            mixture[invalid_index] = comp
+
+
+# --- Details found by mutation testing ---
+
+
+def test_default_log_weights_are_normalized() -> None:
+    """Without weights the components are equally likely, and the log-weights are those of the equal weights."""
+    components = [cast(ParametricFamilyDistribution, MockContinuousDistribution()) for _ in range(3)]
+
+    mixture = MixtureModel(components)
+
+    assert_allclose(mixture.log_weights, np.log(np.full(3, 1.0 / 3.0)))
+
+
+def test_add_component_keeps_the_proportions_of_several_components(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    comp1, comp2, comp3 = param_comps
+    mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6])
+    mixture.add_component(comp3, weight=0.5)
+
+    assert_allclose(mixture.weights, [0.2, 0.3, 0.5])
+    assert_allclose(mixture.log_weights, np.log([0.2, 0.3, 0.5]))
+
+
+def test_remove_component_keeps_the_log_weights_normalized(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    mixture = MixtureModel(list(param_comps), weights=[0.2, 0.3, 0.5])
+
+    mixture.remove_component(1)
+
+    assert_allclose(mixture.log_weights, np.log([0.2 / 0.7, 0.5 / 0.7]))
+
+
+def test_pdf_returns_float64_scalar_for_a_scalar() -> None:
+    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
+
+    assert_is_scalar_type(mixture.pdf(1.0))
+    assert_is_array_type(mixture.pdf(np.array([1.0, 2.0])), (2,))
+
+
+def test_pdf_gives_float64_data_to_the_core_mixture(mock_finite_mixture: MagicMock) -> None:
+    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
+
+    mixture.pdf([1, 2, 3])
+
+    received = mock_finite_mixture.return_value.calculate_characteristic.call_args.args[1]
+    assert received.dtype == np.float64
+
+
+def test_pdf_returns_float64_even_if_the_core_mixture_does_not(mock_finite_mixture: MagicMock) -> None:
+    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
+    mock_finite_mixture.return_value.calculate_characteristic.side_effect = lambda name, X: np.ones(3, dtype=np.int32)
+
+    assert_is_array_type(mixture.pdf(np.zeros(3)), (3,))

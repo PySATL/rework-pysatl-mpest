@@ -10,11 +10,10 @@ from collections.abc import Callable
 import numpy as np
 from scipy.optimize import minimize
 
-from ..typings import FloatingType
 from .optimizer import Optimizer
 
 
-class ScipyNelderMead[FloatT: FloatingType](Optimizer[FloatT]):
+class ScipyNelderMead(Optimizer):
     """An optimizer that uses the Nelder-Mead simplex algorithm from SciPy.
 
     This class serves as a wrapper for the `scipy.optimize.minimize` function,
@@ -31,7 +30,7 @@ class ScipyNelderMead[FloatT: FloatingType](Optimizer[FloatT]):
         minimize
     """
 
-    def minimize(self, target: Callable, params: list[FloatT]) -> list[FloatT]:
+    def minimize(self, target: Callable, params: list[float]) -> list[float]:
         """Minimizes a target function using the Nelder-Mead algorithm.
 
         This method leverages the `scipy.optimize.minimize` function to find
@@ -43,17 +42,15 @@ class ScipyNelderMead[FloatT: FloatingType](Optimizer[FloatT]):
             The objective function to minimize. It must be a callable that
             accepts a list or NumPy array of parameters and returns a single
             scalar value.
-        params : list[FloatT]
+        params : list[float]
             A list of initial values for the parameters that serves as the
             starting point for the optimization.
 
         Returns
         -------
-        list[FloatT]
+        list[float]
             A list containing the set of parameters that minimizes the target
             function, as found by the Nelder-Mead algorithm.
         """
 
-        dtype = params[0].dtype
-
-        return list(np.asarray(minimize(target, params, method="Nelder-Mead").x, dtype=dtype))
+        return list(np.asarray(minimize(target, params, method="Nelder-Mead").x, dtype=np.float64))

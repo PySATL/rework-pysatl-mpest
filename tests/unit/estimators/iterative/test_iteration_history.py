@@ -7,9 +7,11 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
+from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import Exponential
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
+from tests.helpers.families import family
 
 # objects - 2-3  init(once_in =_iteration) (1,2,3)
 # record = IterationRecord(history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
@@ -22,8 +24,8 @@ from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord
 
 # functions to set up objects for tests
 @pytest.fixture
-def exponential_components() -> list[Exponential]:
-    return [Exponential(loc=0, rate=1), Exponential(loc=5, rate=2)]
+def exponential_components() -> list[ParametricFamilyDistribution]:
+    return [family(FamilyName.EXPONENTIAL)(lambda_=1.0), family(FamilyName.EXPONENTIAL)(lambda_=2.0)]
 
 
 @pytest.fixture

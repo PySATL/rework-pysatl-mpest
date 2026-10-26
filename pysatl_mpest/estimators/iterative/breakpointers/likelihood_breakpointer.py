@@ -6,12 +6,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from ....typings import FloatingType, Scalar
+from ....typings import Scalar
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
 
 
-class LikelihoodBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
+class LikelihoodBreakpointer(Breakpointer):
     """Stops the pipeline when the log-likelihood of the mixture converges.
 
     This breakpointer terminates the iterative estimation process when the
@@ -53,14 +53,14 @@ class LikelihoodBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
     def __init__(self, threshold: Scalar):
         self._validate(threshold)
         self.threshold = threshold
-        self._likelihood_old: FloatT | None = None
+        self._likelihood_old: float | None = None
 
     def _validate(self, threshold: Scalar):
         """Validates the threshold parameter."""
         if threshold <= 0.0:
             raise ValueError("The threshold must be greater than 0")
 
-    def check(self, state: PipelineState[FloatT]) -> bool:
+    def check(self, state: PipelineState) -> bool:
         """Checks if the log-likelihood has converged.
 
         Computes the current log-likelihood of the mixture on the data in
@@ -68,7 +68,7 @@ class LikelihoodBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
 
         Parameters
         ----------
-        state : PipelineState[FloatT]
+        state : PipelineState
             The current state of the pipeline, which must contain a valid
             `curr_mixture` and data `X`.
 
@@ -81,7 +81,7 @@ class LikelihoodBreakpointer[FloatT: FloatingType](Breakpointer[FloatT]):
             On the first call (no previous likelihood), returns False and
             initializes internal state.
         """
-        _likelihood_new: FloatT = state.curr_mixture.loglikelihood(state.X)
+        _likelihood_new = state.curr_mixture.loglikelihood(state.X)
 
         # First iteration: cannot compare, so just store and continue
         if self._likelihood_old is None:

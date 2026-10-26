@@ -9,10 +9,9 @@ from abc import ABC, abstractmethod
 from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
-from ..typings import FloatingType
 
 
-class BaseEstimator[FloatT: FloatingType](ABC):
+class BaseEstimator(ABC):
     """Abstract class for a mixture model parameter estimator.
 
     This class defines the interface for all estimator algorithms. Estimators are responsible for
@@ -36,7 +35,7 @@ class BaseEstimator[FloatT: FloatingType](ABC):
     """
 
     @abstractmethod
-    def fit(self, X: ArrayLike, mixture: MixtureModel[FloatT]) -> MixtureModel[FloatT]:
+    def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
         """Fits the mixture model to the provided data.
 
         This method estimates the parameters of the model's components and their
@@ -46,11 +45,11 @@ class BaseEstimator[FloatT: FloatingType](ABC):
         ----------
         X : ArrayLike
             The input data sample for fitting the model.
-        mixture : MixtureModel[FloatT]
+        mixture : MixtureModel
             The initial mixture model to be fitted.
 
         Returns
         -------
-        MixtureModel[FloatT]
+        MixtureModel
             The mixture model with estimated parameters.
         """

@@ -17,7 +17,6 @@ from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
-from ..typings import FloatingType
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
@@ -31,7 +30,7 @@ from .iterative import (
 from .iterative._iteration_history import IterationsHistory
 
 
-class ECM[FloatT: FloatingType](BaseEstimator[FloatT]):
+class ECM(BaseEstimator):
     """An estimator that implements the Expectation-Conditional Maximization (ECM) algorithm.
 
     This class encapsulates the logic for the ECM algorithm, a variant of the
@@ -42,34 +41,35 @@ class ECM[FloatT: FloatingType](BaseEstimator[FloatT]):
 
     The key feature of this ECM implementation is that the maximization (M-step)
     is partitioned into separate, smaller optimization problems—one for each
-    component in the mixture. For each component, all of its optimizable
-    (non-fixed) parameters are estimated simultaneously by maximizing the
-    Q-function. This component-wise update simplifies the optimization process.
+    component in the mixture. For each component, all of its free parameters
+    (those not fixed with ``family.view(...)``) are estimated simultaneously by
+    maximizing the Q-function. This component-wise update simplifies the
+    optimization process.
 
     The overall fitting process can be customized with stopping criteria,
     component pruning strategies, and a numerical optimizer.
 
     Parameters
     ----------
-    breakpointers : Sequence[Breakpointer[FloatT]]
+    breakpointers : Sequence[Breakpointer]
         A sequence of strategies that define the stopping conditions for the
         iterative process.
-    pruners : Sequence[Pruner[FloatT]]
+    pruners : Sequence[Pruner]
         A sequence of strategies for removing (pruning) components from the
         mixture model during fitting.
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         A numerical optimizer instance used in the maximization step to find
         the optimal parameters.
 
     Attributes
     ----------
-    breakpointers : list[Breakpointer[FloatT]]
+    breakpointers : list[Breakpointer]
         The list of objects that determine when the fitting process should
         terminate.
-    pruners : list[Pruner[FloatT]]
+    pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    optimizer : Optimizer[FloatT]
+    optimizer : Optimizer
         The numerical optimizer used for parameter estimation.
     history: IterationsHistory | None
         An object that collects information about each iteration.
@@ -86,17 +86,17 @@ class ECM[FloatT: FloatingType](BaseEstimator[FloatT]):
 
     def __init__(
         self,
-        breakpointers: Sequence[Breakpointer[FloatT]],
-        pruners: Sequence[Pruner[FloatT]],
-        optimizer: Optimizer[FloatT],
+        breakpointers: Sequence[Breakpointer],
+        pruners: Sequence[Pruner],
+        optimizer: Optimizer,
     ) -> None:
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners)
         self.optimizer = optimizer
-        self._history: IterationsHistory[FloatT] | None = None
+        self._history: IterationsHistory | None = None
 
     @property
-    def history(self) -> IterationsHistory[FloatT]:
+    def history(self) -> IterationsHistory:
         """An object that collects information about each iteration.
 
         Raises
@@ -109,7 +109,7 @@ class ECM[FloatT: FloatingType](BaseEstimator[FloatT]):
             raise AttributeError("History is not available. Call the 'fit' method first.")
         return self._history
 
-    def fit(self, X: ArrayLike, mixture: MixtureModel[FloatT], once_in_iterations: int = 1) -> MixtureModel[FloatT]:
+    def fit(self, X: ArrayLike, mixture: MixtureModel, once_in_iterations: int = 1) -> MixtureModel:
         """Fits the mixture model to the data using the ECM algorithm.
 
         This method sets up and runs an iterative pipeline to estimate the
@@ -121,7 +121,7 @@ class ECM[FloatT: FloatingType](BaseEstimator[FloatT]):
         ----------
         X : ArrayLike
             The input dataset for fitting the model.
-        mixture : MixtureModel[FloatT]
+        mixture : MixtureModel
             The initial mixture model to be fitted.
         once_in_iterations : int, optional
             The iteration recording frequency. A value of `n` means recording occurs every
@@ -129,16 +129,15 @@ class ECM[FloatT: FloatingType](BaseEstimator[FloatT]):
 
         Returns
         -------
-        MixtureModel[FloatT]
+        MixtureModel
             The mixture model with the estimated parameters.
         """
 
-        blocks = []
-        for i, comp in enumerate(mixture):
-            block = OptimizationBlock(i, comp.params_to_optimize, MaximizationStrategy.QFUNCTION)
-            blocks.append(block)
+        # No parameter names: every free parameter of a component is optimized, and the parameters
+        # fixed with ``family.view(...)`` keep their values.
+        blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(mixture.n_components)]
 
-        pipeline: Pipeline[FloatT] = Pipeline(
+        pipeline: Pipeline = Pipeline(
             [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,

@@ -51,7 +51,6 @@ class TestECME:
         # Mock mixture
         mock_mixture = mocker.MagicMock(spec=MixtureModel)
         mock_mixture.n_components = 1
-        mock_mixture.__iter__.return_value = iter([mocker.Mock()])
 
         # Call fit
         ecme_instance.fit(X=np.array([]), mixture=mock_mixture)
@@ -138,19 +137,8 @@ class TestECME:
         mock_pipeline_inst.fit.return_value = expected_result
 
         # --- Prepare Mixture (3 components) ---
-        comp0 = mocker.Mock()
-        comp0.params_to_optimize = {"p0"}
-        comp1 = mocker.Mock()
-        comp1.params_to_optimize = {"p1"}
-        comp2 = mocker.Mock()
-        comp2.params_to_optimize = {"p2"}
-
         mock_mixture = mocker.MagicMock(spec=MixtureModel)
         mock_mixture.n_components = 3
-        # Setup iteration over mixture
-        mock_mixture.__iter__.return_value = iter([comp0, comp1, comp2])
-        # Setup item access (for completeness, though logic uses iteration)
-        mock_mixture.__getitem__.side_effect = [comp0, comp1, comp2]
 
         # --- Execute fit ---
         # Scenario:
@@ -198,17 +186,17 @@ class TestECME:
 
         # Block 0: should be QFUNCTION
         assert blocks[0].component_id == 0
-        assert blocks[0].params_to_optimize == {"p0"}
+        assert blocks[0].params_to_optimize is None
         assert blocks[0].maximization_strategy == MaximizationStrategy.QFUNCTION
 
         # Block 1: should be ODL
         assert blocks[1].component_id == 1
-        assert blocks[1].params_to_optimize == {"p1"}
+        assert blocks[1].params_to_optimize is None
         assert blocks[1].maximization_strategy == MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
 
         # Block 2: should be Default -> ODL
         assert blocks[2].component_id == 2  # noqa: PLR2004
-        assert blocks[2].params_to_optimize == {"p2"}
+        assert blocks[2].params_to_optimize is None
         assert blocks[2].maximization_strategy == MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
 
         # 5. Verify pipeline.fit call
@@ -234,10 +222,8 @@ class TestECME:
         mocker.patch("pysatl_mpest.estimators.ecme.ExpectationStep")
 
         # Mixture with 1 component
-        comp0 = mocker.Mock()
         mock_mixture = mocker.MagicMock(spec=MixtureModel)
         mock_mixture.n_components = 1
-        mock_mixture.__iter__.return_value = iter([comp0])
 
         # Call fit without explicit indices
         ecme.fit(X=[], mixture=mock_mixture)

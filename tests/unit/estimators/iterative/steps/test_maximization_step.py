@@ -5,10 +5,12 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+from unittest.mock import call
+
 import numpy as np
 import pytest
+from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import ContinuousDistribution
 from pysatl_mpest.estimators.iterative import (
     ExpectationStep,
     MaximizationStep,
@@ -20,8 +22,6 @@ from pysatl_mpest.estimators.iterative import (
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
 
-DTYPES_TO_TEST = [np.float16, np.float32, np.float64]
-
 
 @pytest.fixture
 def mock_optimizer(mocker: MockerFixture) -> Optimizer:
@@ -30,29 +30,25 @@ def mock_optimizer(mocker: MockerFixture) -> Optimizer:
     return mocker.MagicMock(spec=Optimizer)
 
 
-@pytest.fixture(params=DTYPES_TO_TEST)
-def parametrized_state(request, mocker: MockerFixture) -> PipelineState:
+@pytest.fixture
+def parametrized_state(mocker: MockerFixture) -> PipelineState:
     """
-    Creates a parametrized PipelineState fixture for various dtypes.
+    Creates a PipelineState fixture for testing.
 
-    This fixture runs for each data type in DTYPES_TO_TEST, constructing a
-    mock MixtureModel and PipelineState where all relevant arrays (X, H) and
-    model attributes share the same parametrized dtype. This enables robust
-    testing of data type preservation.
+    This fixture constructs a mock MixtureModel and PipelineState where
+    all relevant arrays (X, H) and model attributes use np.float64.
     """
-    dtype = request.param
 
-    comp1 = mocker.MagicMock(spec=ContinuousDistribution)
-    comp2 = mocker.MagicMock(spec=ContinuousDistribution)
+    comp1 = mocker.MagicMock(spec=ParametricFamilyDistribution)
+    comp2 = mocker.MagicMock(spec=ParametricFamilyDistribution)
     mock_components = [comp1, comp2]
 
     mixture = mocker.MagicMock(spec=MixtureModel)
     mixture.__getitem__.side_effect = lambda i: mock_components[i]
     mixture.__iter__.return_value = iter(mock_components)
-    mixture.dtype = dtype
 
-    X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=dtype)
-    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=dtype)
+    X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=np.float64)
+    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=np.float64)
     return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mixture, error=None)
 
 
@@ -106,7 +102,7 @@ class TestMaximizationStep:
 
         assert result_state is state
         assert isinstance(result_state.error, ValueError)
-        assert "Responsibility matrix H is not computed" in str(result_state.error)
+        assert str(result_state.error) == "Responsibility matrix H is not computed."
 
     def test_run_calls_correct_strategy_and_updates_params(
         self,
@@ -119,7 +115,6 @@ class TestMaximizationStep:
         the correct arguments and that the component parameters are updated.
         """
         state = parametrized_state
-        dtype = state.curr_mixture.dtype
 
         block = OptimizationBlock(
             component_id=0,
@@ -130,12 +125,15 @@ class TestMaximizationStep:
 
         # Strategy patching
         mock_strategy = mocker.patch("pysatl_mpest.estimators.iterative.steps.maximization_step.q_function_strategy")
-        optimized_params = {"loc": dtype(1.5), "rate": dtype(2.5)}
+        optimized_params = {"loc": np.float64(1.5), "rate": np.float64(2.5)}
         mock_strategy.return_value = (0, optimized_params)
 
         # _strategies dict patching
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
+
+        updated_component = mocker.MagicMock(spec=ParametricFamilyDistribution)
+        update = mocker.patch.object(MaximizationStep, "_update_components_params", return_value=updated_component)
 
         target_component = state.curr_mixture[0]
 
@@ -143,16 +141,9 @@ class TestMaximizationStep:
 
         # mock_strategy was called once
         mock_strategy.assert_called_once_with(target_component, state, block, mock_optimizer)
-
-        # The component parameters were updated
-        # _update_components_params calls set_params_from_vector
-        param_names = list(optimized_params.keys())
-        param_values = list(optimized_params.values())
-        target_component.set_params_from_vector.assert_called_once_with(param_names, param_values)
-
-        # type correct
-        for value in param_values:
-            assert isinstance(value, dtype)
+        # the returned parameters were applied to the component, and the result replaced it in the mixture
+        update.assert_called_once_with(target_component, optimized_params)
+        state.curr_mixture.__setitem__.assert_called_once_with(0, updated_component)
 
     def test_run_updates_mixture_weights_correctly(
         self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
@@ -161,13 +152,12 @@ class TestMaximizationStep:
         Verifies the correct update of mixture weights.
         """
         state = parametrized_state
-        dtype = state.curr_mixture.dtype
 
         # Sum of responsibilities for component 0: 0.8 + 0.7 + 0.1 + 0.2 = 1.8
         # Sum of responsibilities for component 1: 0.2 + 0.3 + 0.9 + 0.8 = 2.2
         # New weights: [1.8/4, 2.2/4] = [0.45, 0.55]
-        expected_new_weights = np.array([0.45, 0.55], dtype=dtype)
-        expected_log_weights = np.log(expected_new_weights + 1e-30).astype(dtype)
+        expected_new_weights = np.array([0.45, 0.55], dtype=np.float64)
+        expected_log_weights = np.log(expected_new_weights + 1e-30).astype(np.float64)
 
         # `log_weigths` patching
         p = mocker.PropertyMock()
@@ -182,11 +172,7 @@ class TestMaximizationStep:
 
         # Check that `log_weigths` was set correctly
         actual_log_weights = p.call_args.args[0]
-        atol = 1e-4 if dtype == np.float16 else 1e-7
-        np.testing.assert_allclose(actual_log_weights, expected_log_weights, atol=atol)
-
-        # type correct
-        assert actual_log_weights.dtype == dtype
+        np.testing.assert_allclose(actual_log_weights, expected_log_weights, atol=1e-7)
 
     def test_run_processes_blocks_sequentially(
         self,
@@ -226,6 +212,9 @@ class TestMaximizationStep:
 
         new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
         mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
+        mocker.patch.object(
+            MaximizationStep, "_update_components_params", side_effect=lambda component, params: component
+        )
 
         # Act
         step.run(state)
@@ -243,9 +232,8 @@ class TestMaximizationStep:
         assert second_call_args[0] is component0
         assert second_call_args[2] is block0
 
-        # Assert that parameters were updated for both components
-        component1.set_params_from_vector.assert_called_once_with(["rate"], [1.1])
-        component0.set_params_from_vector.assert_called_once_with(["loc"], [2.2])
+        # Assert the results are applied to the mixture in the same order
+        state.curr_mixture.__setitem__.assert_has_calls([call(1, component1), call(0, component0)])
 
     def test_clear_after_prune_removes_blocks_for_pruned_components(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune removes optimization blocks for pruned components."""
@@ -359,3 +347,29 @@ class TestMaximizationStep:
         assert str(state.error) == "Fail"
         # Params update should NOT be called because we returned early
         spy.assert_not_called()
+
+
+class TestDetailsFoundByMutationTesting:
+    def test_run_keeps_the_log_weight_of_a_component_without_responsibility_finite(
+        self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
+    ):
+        """A component that has no responsibility gets a tiny weight, not a weight whose logarithm is undefined."""
+        state = parametrized_state
+        state.H = np.array([[1.0, 0.0]] * 4)
+        log_weights = mocker.PropertyMock()
+        type(state.curr_mixture).log_weights = log_weights
+
+        MaximizationStep(blocks=[], optimizer=mock_optimizer).run(state)
+
+        actual = log_weights.call_args.args[0]
+        assert np.all(np.isfinite(actual))
+        np.testing.assert_allclose(actual, [0.0, np.log(1e-30)], atol=1e-9)
+
+    def test_clear_after_prune_renumbers_all_blocks_after_the_removed_one(self, mock_optimizer: Optimizer):
+        """Removing the first of four components shifts every other block by one: 1 -> 0, 2 -> 1, 3 -> 2."""
+        blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(4)]
+        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
+
+        step.clear_after_prune([0])
+
+        assert [block.component_id for block in step.blocks] == [0, 1, 2]

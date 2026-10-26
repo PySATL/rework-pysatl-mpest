@@ -19,8 +19,6 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from ...core import MixtureModel
-from ...exceptions import NumericalStabilityError
-from ...typings import FloatingType
 from ..base_estimator import BaseEstimator
 from ._iteration_history import IterationRecord, IterationsHistory
 from .breakpointer import Breakpointer
@@ -29,7 +27,7 @@ from .pipeline_step import PipelineStep
 from .pruner import Pruner
 
 
-class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
+class Pipeline(BaseEstimator):
     """An estimator that fits a mixture model via a configurable iterative process.
 
     The pipeline executes a sequence of defined steps in a loop. After each full
@@ -46,13 +44,13 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
 
     Parameters
     ----------
-    steps : Sequence[PipelineStep[FloatT]]
+    steps : Sequence[PipelineStep]
         An ordered sequence of steps to be executed in each iteration of the
         pipeline.
-    breakpointers : Sequence[Breakpointer[FloatT]]
+    breakpointers : Sequence[Breakpointer]
         A sequence of strategies that define the stopping conditions for the
         iterative process. This list cannot be empty.
-    pruners : Sequence[Pruner[FloatT]] | None, optional
+    pruners : Sequence[Pruner] | None, optional
         A sequence of strategies for removing components from the mixture model
         during fitting. Defaults to None, meaning no pruning is performed.
     once_in_iterations: int, optional
@@ -61,15 +59,15 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
 
     Attributes
     ----------
-    steps : list[PipelineStep[FloatT]]
+    steps : list[PipelineStep]
         The ordered list of operations to be performed in each iteration.
-    breakpointers : list[Breakpointer[FloatT]]
+    breakpointers : list[Breakpointer]
         The list of objects that determine when the fitting process should
         terminate.
-    pruners : list[Pruner[FloatT]]
+    pruners : list[Pruner]
         The list of objects that may remove components from the mixture during
         the fitting process.
-    history : IterationsHistory[FloatT]
+    history : IterationsHistory
         object that collects comprehensive information about each
         iteration of a :class:`Pipeline` estimator.
     Raises
@@ -89,9 +87,9 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
 
     def __init__(
         self,
-        steps: Sequence[PipelineStep[FloatT]],
-        breakpointers: Sequence[Breakpointer[FloatT]],
-        pruners: Sequence[Pruner[FloatT]] | None = None,
+        steps: Sequence[PipelineStep],
+        breakpointers: Sequence[Breakpointer],
+        pruners: Sequence[Pruner] | None = None,
         once_in_iterations: int = 1,
     ):
         self._validate_steps(list(steps))
@@ -105,9 +103,9 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
         self.breakpointers = list(breakpointers)
         self.pruners = list(pruners) if pruners else []  # self.pruners will always be list
         self.steps = list(steps)
-        self.history = IterationsHistory[FloatT](once_in_iterations)
+        self.history = IterationsHistory(once_in_iterations)
 
-    def _validate_steps(self, steps: list[PipelineStep[FloatT]]):
+    def _validate_steps(self, steps: list[PipelineStep]):
         """Validates the sequence of pipeline steps.
 
         Checks if each step in the pipeline can legally be followed by the next
@@ -140,7 +138,7 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
                     f"available next steps:'{curr_step.available_next_steps}', but got '{next_step}'"
                 )
 
-    def fit(self, X: ArrayLike, mixture: MixtureModel[FloatT]) -> MixtureModel[FloatT]:
+    def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
         """Fits the mixture model to the data using the configured pipeline.
 
         This method initializes the pipeline's state and runs the main loop.
@@ -148,37 +146,38 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
         all :attr:`pruners`. This cycle repeats until any `breakpointers` indicate
         that the process should stop.
 
+        As soon as a pruner removes components, the corresponding columns are dropped
+        from the responsibility matrix and every step is told which components were
+        removed through :meth:`~.PipelineStep.clear_after_prune`, so the steps of the
+        next iteration already work with the pruned mixture. A pruner reports the indices
+        relative to the mixture it was given, so each pruner is handled separately.
+
         Parameters
         ----------
         X : ArrayLike
             The input data sample.
-        mixture : MixtureModel[FloatT]
+        mixture : MixtureModel
             The initial mixture model to be fitted. An internal copy of this
             model will be modified throughout the process.
 
         Returns
         -------
-        MixtureModel[FloatT]
+        MixtureModel
             The fitted mixture model after the pipeline has converged or been
             stopped.
         """
 
-        X = np.asarray(X, dtype=mixture.dtype)
+        X = np.asarray(X, dtype=np.float64)
         copied_mixture = copy(mixture)  # Copy to avoid modifying the original object
-        removed_indices: list[int] = []
         state = PipelineState(X, None, None, copied_mixture, None)
 
         while True:
             # Updating the state before starting an iteration
             state.prev_mixture = copy(state.curr_mixture)
-            # Update responsibility matrix H
-            if state.H is not None:
-                state.H = np.delete(state.H, removed_indices, axis=1)
 
             # Performing steps
             for step in self.steps:
                 result_state = step.run(state)
-                step.clear_after_prune(removed_indices)
                 if result_state.error:
                     if len(self.history) > 0:
                         self.history[-1].error = result_state.error
@@ -194,20 +193,6 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
                             )
                         )
 
-                    # Handle numerical stability errors by attempting a restart with higher precision
-                    if isinstance(result_state.error, NumericalStabilityError):
-                        new_dtype = np.promote_types(copied_mixture.dtype, np.float64).type
-                        if new_dtype is not copied_mixture.dtype:
-                            new_mixture = copied_mixture.astype(new_dtype)
-
-                            msg = (
-                                "Numerical stability issue detected. "
-                                f"Restarting pipeline with higher precision ({new_dtype.__name__})."
-                            )
-                            warnings.warn(msg, UserWarning)
-                            # Recursively call fit with the new, higher-precision model
-                            return self.fit(X, new_mixture)
-
                     warnings.warn(
                         f"Pipeline fitting stopped prematurely due to an error in step "
                         f"'{step.__class__.__name__}': {state.error}",
@@ -220,7 +205,7 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
             for pruner in self.pruners:
                 state, removed_components_indices = pruner.prune(state)
                 if len(removed_components_indices) != 0:
-                    removed_indices.extend(removed_components_indices)
+                    self._discard_pruned_components(state, removed_components_indices)
             # Save iteration record
             self.history.save_record(
                 IterationRecord(self.history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
@@ -231,3 +216,21 @@ class Pipeline[FloatT: FloatingType](BaseEstimator[FloatT]):
                 break
 
         return state.curr_mixture
+
+    def _discard_pruned_components(self, state: PipelineState, removed_components_indices: list[int]) -> None:
+        """Removes everything tied to the components that a pruner has just removed.
+
+        Parameters
+        ----------
+        state : PipelineState
+            The state returned by the pruner. Its responsibility matrix, if there is one,
+            still has a column for every removed component.
+        removed_components_indices : list[int]
+            The indices of the removed components relative to the mixture before this
+            pruning.
+        """
+
+        if state.H is not None:
+            state.H = np.delete(state.H, removed_components_indices, axis=1)
+        for step in self.steps:
+            step.clear_after_prune(removed_components_indices)

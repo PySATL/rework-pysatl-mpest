@@ -167,3 +167,9 @@ cython_debug/
 #test results
 */results/*.pkl
 */results/*.csv
+
+# local agent instructions
+AGENTS.md
+
+# mutation testing
+mutants/
