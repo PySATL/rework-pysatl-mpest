@@ -7,7 +7,5 @@ API Reference
    :caption: API
 
    core/index
-   distributions/index
    estimators/index
    optimizers/index
-   initializers/index

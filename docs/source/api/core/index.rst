@@ -16,5 +16,4 @@ Classes
    :nosignatures:
    :template: class.rst
 
-   ~Parameter
    ~MixtureModel
