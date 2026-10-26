@@ -41,9 +41,10 @@ class ECM(BaseEstimator):
 
     The key feature of this ECM implementation is that the maximization (M-step)
     is partitioned into separate, smaller optimization problems—one for each
-    component in the mixture. For each component, all of its optimizable
-    (non-fixed) parameters are estimated simultaneously by maximizing the
-    Q-function. This component-wise update simplifies the optimization process.
+    component in the mixture. For each component, all of its free parameters
+    (those not fixed with ``family.view(...)``) are estimated simultaneously by
+    maximizing the Q-function. This component-wise update simplifies the
+    optimization process.
 
     The overall fitting process can be customized with stopping criteria,
     component pruning strategies, and a numerical optimizer.
@@ -132,10 +133,9 @@ class ECM(BaseEstimator):
             The mixture model with the estimated parameters.
         """
 
-        blocks = []
-        for i, comp in enumerate(mixture):
-            block = OptimizationBlock(i, comp.params_to_optimize, MaximizationStrategy.QFUNCTION)
-            blocks.append(block)
+        # No parameter names: every free parameter of a component is optimized, and the parameters
+        # fixed with ``family.view(...)`` keep their values.
+        blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(mixture.n_components)]
 
         pipeline: Pipeline = Pipeline(
             [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],

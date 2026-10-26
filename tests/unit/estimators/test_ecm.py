@@ -7,8 +7,8 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.distributions import Exponential, Normal
 from pysatl_mpest.estimators import ECM
 from pysatl_mpest.estimators.iterative import (
     Breakpointer,
@@ -20,6 +20,7 @@ from pysatl_mpest.estimators.iterative import (
 )
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
+from tests.helpers.families import family
 
 # --- Mocks and Fixtures for testing ECM ---
 
@@ -62,9 +63,11 @@ def mock_pruners() -> list[Pruner]:
 def sample_mixture() -> MixtureModel:
     """Provides a mixture model with two components for testing."""
 
-    components = [Normal(0, 1), Exponential(1)]
-    # Fix a parameter in one component to test if `params_to_optimize` is correctly used.
-    components[1].fix_param("lambda_")
+    # The mean of the first component is fixed with a view, so only its free parameters are to be optimized.
+    components = [
+        family(FamilyName.NORMAL).view(mu=0.0)(sigma=1.0),
+        family(FamilyName.EXPONENTIAL)(lambda_=1.0),
+    ]
     return MixtureModel(components, weights=[0.4, 0.6])
 
 
@@ -176,8 +179,12 @@ class TestECMFit:
 
         for i, (block, component) in enumerate(zip(m_step.blocks, sample_mixture.components)):
             assert block.component_id == i
-            assert block.params_to_optimize == component.params_to_optimize
+            assert block.params_to_optimize is None
             assert block.maximization_strategy == MaximizationStrategy.QFUNCTION
+
+        # The blocks resolve to the free parameters of the components, not to the fixed ones.
+        assert m_step.blocks[0].params_to_update(sample_mixture[0]) == ["sigma"]
+        assert m_step.blocks[1].params_to_update(sample_mixture[1]) == ["lambda_"]
 
     def test_history_access_lifecycle(
         self,

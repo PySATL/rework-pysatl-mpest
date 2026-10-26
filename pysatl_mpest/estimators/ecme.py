@@ -44,7 +44,9 @@ class ECME(BaseEstimator):
     This implementation provides flexibility by allowing the user to specify
     maximization strategies per component. Some components can be optimized via
     the Q-function, while others can be optimized via ODL within the same
-    iterative process.
+    iterative process. Whichever strategy is used, all free parameters of a
+    component are estimated, and the parameters fixed with ``family.view(...)``
+    keep their values.
 
     Parameters
     ----------
@@ -236,7 +238,7 @@ class ECME(BaseEstimator):
             else MaximizationStrategy.QFUNCTION
         )
 
-        for i, comp in enumerate(mixture):
+        for i in range(n_components):
             if i in q_indices:
                 strategy = MaximizationStrategy.QFUNCTION
             elif i in odl_indices:
@@ -244,11 +246,9 @@ class ECME(BaseEstimator):
             else:
                 strategy = default_enum
 
-            blocks.append(
-                OptimizationBlock(
-                    component_id=i, params_to_optimize=comp.params_to_optimize, maximization_strategy=strategy
-                )
-            )
+            # No parameter names: every free parameter of a component is optimized, and the parameters
+            # fixed with ``family.view(...)`` keep their values.
+            blocks.append(OptimizationBlock(component_id=i, params_to_optimize=None, maximization_strategy=strategy))
 
         pipeline: Pipeline = Pipeline(
             [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
