@@ -235,6 +235,27 @@ To visually analyze which lines of your code are not covered, open the `htmlcov/
 
 
 
+#### Mutation Testing
+
+Code coverage only shows which lines the tests execute, not whether they would notice a wrong result. Mutation testing checks that: [`mutmut`](https://github.com/boxed/mutmut) makes a small change to the code (flips a comparison, removes an argument, alters a constant), runs the tests, and reports the change as *killed* if a test fails or as *survived* if every test still passes. A survivor is either a missing test or a change that does not alter the behaviour (an *equivalent* mutant).
+
+It is run by hand and is not part of CI. The modules that are mutated are listed in the `[tool.mutmut]` section of `pyproject.toml`: the mixture model, the component helpers, the strategies of the maximization step, both steps of the iterative pipeline, the optimization block and the pipeline itself. A run takes about two minutes.
+
+```bash
+poetry run mutmut run                       # generate and test the mutants
+poetry run mutmut results                   # list the survivors
+poetry run mutmut show <mutant name>        # show what a survivor changes
+```
+
+The results are stored in the `mutants/` directory, which is ignored by git. If you change which functions are decorated, or add modules, delete it (`rm -rf mutants`) before the next run: otherwise mutants of the new code can be reported as having no tests, because `mutmut` selects the tests for a function from statistics gathered earlier.
+
+For every survivor either add a test that kills it, or check that it is equivalent, that is, that the change cannot alter any behaviour (for example, it removes an argument that is equal to its default), and leave it. When you change a mutated module, run `mutmut` and make sure that you do not add survivors that are not equivalent.
+
+**Limitations of the tool that shape the code**
+
+- `mutmut` does not mutate functions that have a decorator. That is why the implementations of the strategies in `q_function.py` and `moments.py` are plain functions registered by a call (`q_function_strategy.register(...)(function)`) and not by `@...register(...)`. Keep it that way, otherwise the most important numerical code silently drops out of the check. Properties are not mutated either.
+- The thresholds of the analytical strategies (`NUMERICAL_TOLERANCE`) are tested exactly at the boundary by replacing the constant with `0.25`, which is exact in binary floating point (`tests/integration/estimators/test_strategy_thresholds.py`).
+
 ### 8. Create a Pull Request (PR)
 
 Once your branch with the changes is in your fork, you can create a Pull Request to propose your changes to the main repository.

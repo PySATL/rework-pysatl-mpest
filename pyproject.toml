@@ -30,6 +30,7 @@ ruff = "^0.9.6"
 mypy = "==1.13.0"
 hypothesis = "^6.131.7"
 pytest-cov = "^7.0.0"
+mutmut = "^3.8.0"
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^8.2.3"
@@ -75,3 +76,16 @@ addopts = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.mutmut]
+source_paths = ["pysatl_mpest"]
+only_mutate = [
+    "pysatl_mpest/core/mixture.py",
+    "pysatl_mpest/core/_components.py",
+    "pysatl_mpest/estimators/iterative/_strategies/*.py",
+    "pysatl_mpest/estimators/iterative/steps/*.py",
+    "pysatl_mpest/estimators/iterative/pipeline.py",
+]
+# Our default pytest options measure coverage and fail below a threshold, which mutmut does itself in another way.
+pytest_add_cli_args = ["-o", "addopts=", "-p", "no:cacheprovider"]
+pytest_add_cli_args_test_selection = ["tests"]
