@@ -473,7 +473,11 @@ class MixtureModel:
     def __hash__(self) -> int:
         """Computes a hash for the mixture model.
 
-        The hash is computed based on the set of (component, weight) pairs.
+        The hash is computed from the components only, not from the weights. Equality compares
+        the weights with a tolerance, and no hash of a float can agree with a tolerance
+        comparison: weights that are equal up to rounding would get different hashes.
+        Mixtures with the same components and different weights collide, which is allowed:
+        ``__eq__`` tells them apart.
 
         Returns
         -------
@@ -481,9 +485,7 @@ class MixtureModel:
             The hash value of the mixture model.
         """
 
-        decimals = np.finfo(np.float64).precision
-        hashable_pairs = tuple((key, round(weight, decimals)) for key, weight in self._get_sorted_pairs())
-        return hash(hashable_pairs)
+        return hash(tuple(key for key, _ in self._get_sorted_pairs()))
 
     def _invalidate_cache(self) -> None:
         self._cached_weights = None
@@ -519,7 +521,6 @@ class MixtureModel:
     def _get_sorted_pairs(self) -> list[tuple[_components.ComponentKey, float]]:
         """Internal helper to get (component key, weight) pairs, sorted so that component order does not matter."""
         if self._sorted_pairs_cache is None:
-            decimals = np.finfo(np.float64).precision
             pairs = [(_components.component_key(comp), float(w)) for comp, w in zip(self.components, self.weights)]
-            self._sorted_pairs_cache = sorted(pairs, key=lambda p: (p[0], round(p[1], decimals)))
+            self._sorted_pairs_cache = sorted(pairs)
         return self._sorted_pairs_cache

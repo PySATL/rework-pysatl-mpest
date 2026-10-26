@@ -451,11 +451,38 @@ def test_eq_cache_usage(mock_comp: ParametricFamilyDistribution) -> None:
     assert mixture1 == mixture2
 
 
-def test_hash_precision(mock_comp: ParametricFamilyDistribution) -> None:
-    """Test hashing precision works without crashing."""
+def test_hash_agrees_with_eq_for_weights_within_tolerance(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test mixtures whose weights differ only by rounding are equal and have equal hashes."""
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.3, 0.7])
+    mixture2 = MixtureModel([comp1, comp2], weights=[0.3, 0.7])
+    mixture2.log_weights = mixture1.log_weights + np.array([1e-9, 0.0])
 
-    mixture = MixtureModel([mock_comp])
-    assert isinstance(hash(mixture), int)
+    assert mixture1 == mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_hash_does_not_depend_on_weights(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test the hash ignores weights: they are compared with a tolerance, so they cannot be hashed consistently."""
+    comp1, comp2, _ = param_comps
+    mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+    mixture2 = MixtureModel([comp1, comp2], weights=[0.2, 0.8])
+
+    assert mixture1 != mixture2
+    assert hash(mixture1) == hash(mixture2)
+
+
+def test_hash_differs_for_different_components(
+    param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+) -> None:
+    """Test mixtures of different components get different hashes."""
+    comp1, comp2, comp3 = param_comps
+
+    assert hash(MixtureModel([comp1, comp2])) != hash(MixtureModel([comp1, comp3]))
 
 
 def test_log_weights_getter(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:

@@ -8,6 +8,8 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from copy import copy
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -81,6 +83,19 @@ def test_zero_weight_component_does_not_make_mixtures_equal() -> None:
     component, extra = _normal(0.0, 1.0), _normal(5.0, 1.0)
 
     assert MixtureModel([component, extra], weights=[1.0, 0.0]) != MixtureModel([component])
+
+
+def test_copy_with_arbitrary_weights_is_equal_and_hashes_equal() -> None:
+    """Copying passes the weights through ``log`` and ``softmax``, which changes them by about 1e-16."""
+    components = [_normal(0.0, 1.0), _normal_fixed_mu(3.0, 2.0), _exponential(2.0)]
+    rng = np.random.default_rng(0)
+
+    for weights in rng.dirichlet(np.ones(3), size=500):
+        mixture = MixtureModel(components, weights=weights)
+        duplicate = copy(mixture)
+
+        assert duplicate == mixture
+        assert hash(duplicate) == hash(mixture)
 
 
 def test_mixture_is_usable_as_dict_key() -> None:
