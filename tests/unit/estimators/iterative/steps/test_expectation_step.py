@@ -20,22 +20,16 @@ def initial_pipeline_state(mocker) -> PipelineState:
     Creates an initial PipelineState for use in tests.
 
     This fixture constructs a mock mixture model and a pipeline state where
-    all relevant components (lpdf return values, weights, input data X)
-    use np.float64.
+    the component log-densities, weights and input data X use np.float64.
     """
 
-    mock_component_1 = mocker.MagicMock()
-    mock_component_2 = mocker.MagicMock()
-
-    mock_component_1.lpdf.return_value = np.log([0.6, 0.8]).astype(np.float64)
-    mock_component_2.lpdf.return_value = np.log([0.1, 0.3]).astype(np.float64)
-
     mixture = mocker.create_autospec(MixtureModel, instance=True)
-    mixture.components = (mock_component_1, mock_component_2)
+    # Row i holds the log-densities of the components at the i-th point.
+    mixture.component_lpdf_matrix.return_value = np.log([[0.6, 0.1], [0.8, 0.3]]).astype(np.float64)
     mixture.log_weights = np.log([0.7, 0.3]).astype(np.float64)
 
     return PipelineState(
-        X=np.array([[1], [2]], dtype=np.float64),
+        X=np.array([1.0, 2.0], dtype=np.float64),
         H=None,
         prev_mixture=None,
         curr_mixture=mixture,
@@ -111,6 +105,18 @@ def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
         expected_h_hard,
         err_msg="Hard H matrix calculation is incorrect",
     )
+
+
+def test_run_uses_component_log_densities_of_the_data(initial_pipeline_state):
+    """
+    Verifies that the log-densities of the components are requested for the data of the state.
+    """
+
+    state = initial_pipeline_state
+
+    ExpectationStep().run(state)
+
+    state.curr_mixture.component_lpdf_matrix.assert_called_once_with(state.X)
 
 
 def test_run_returns_state_and_modifies_only_h(initial_pipeline_state):
