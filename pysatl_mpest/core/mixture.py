@@ -297,10 +297,14 @@ class MixtureModel:
         FloatArray
             An array of shape ``(*X.shape, n_components)`` whose last axis indexes
             the components. For a sample of ``n`` points this is an ``(n, n_components)`` matrix.
+            The log-densities of one component are contiguous in memory (the matrix is a view of a
+            ``(n_components, *X.shape)`` array), which makes reductions over the component axis,
+            such as ``logsumexp`` in the E-step, several times faster than on a row-major matrix.
         """
 
         X = np.asarray(X, dtype=np.float64)
-        return np.stack([_components.lpdf(component, X) for component in self.components], axis=-1)
+        stacked = np.stack([_components.lpdf(component, X) for component in self.components])
+        return np.moveaxis(stacked, 0, -1)
 
     def loglikelihood(self, X: ArrayLike) -> float:
         """Log-likelihood of the complete data :attr:`X`.

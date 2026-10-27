@@ -294,6 +294,19 @@ def test_component_lpdf_matrix_shape(mock_comps: tuple[ParametricFamilyDistribut
     assert mixture.component_lpdf_matrix(np.zeros((3, 4))).shape == (3, 4, n_components)
 
 
+def test_component_lpdf_matrix_columns_are_contiguous(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test each component's log-densities are contiguous in memory.
+
+    Reducing the short component axis (``logsumexp(axis=-1)`` in the E-step) is several times slower
+    on a row-major ``(n, k)`` matrix than on one whose columns are contiguous.
+    """
+    mixture = MixtureModel(mock_comps)
+
+    matrix = mixture.component_lpdf_matrix(np.zeros(5))
+
+    assert all(matrix[:, j].flags.c_contiguous for j in range(matrix.shape[1]))
+
+
 def test_component_lpdf_matrix_values_exclude_weights() -> None:
     """Test the matrix holds raw component log-densities, one column per component."""
     comps = (
