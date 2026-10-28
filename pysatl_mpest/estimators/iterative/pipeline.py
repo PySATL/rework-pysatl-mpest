@@ -165,6 +165,30 @@ class Pipeline(BaseEstimator):
         MixtureModel
             The fitted mixture model after the pipeline has converged or been
             stopped.
+
+        Raises
+        ------
+        ValueError
+            If a maximization block requests an unknown parameter or a parameter
+            fixed by a family view.
+        IndexError
+            If a maximization block's component index is at least the number of
+            mixture components.
+        NotImplementedError
+            If a maximization strategy is not implemented for the component's
+            family and parametrization.
+
+        Warns
+        -----
+        RuntimeWarning
+            If a step returns a state with :attr:`PipelineState.error` set, such as
+            when the responsibility matrix is missing. Fitting stops, the error is
+            saved in the iteration history, and the current mixture is returned.
+
+        Notes
+        -----
+        Exceptions raised directly by steps, including strategy and configuration
+        errors, propagate to the caller rather than becoming state errors or warnings.
         """
 
         X = np.asarray(X, dtype=np.float64)

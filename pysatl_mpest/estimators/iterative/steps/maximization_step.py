@@ -18,7 +18,7 @@ import bisect
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from types import MappingProxyType
-from typing import ClassVar, cast
+from typing import ClassVar
 
 import numpy as np
 from pysatl_core.families import ParametricFamilyDistribution
@@ -130,6 +130,24 @@ class MaximizationStep(PipelineStep):
             The updated pipeline state with the modified :attr:`curr_mixture`. If the
             :attr:`H` matrix is not available in the input state, the state is
             returned with an error set, and no modifications are made.
+
+        Raises
+        ------
+        ValueError
+            If a block requests an unknown parameter or a parameter fixed by a
+            family view.
+        IndexError
+            If a block's component index is at least the number of mixture components.
+        NotImplementedError
+            If the selected strategy is not implemented for the component's family
+            and parametrization.
+
+        Notes
+        -----
+        Strategy exceptions propagate directly to the caller. Component parameters
+        and weights are updated only after every strategy has returned successfully.
+        Missing responsibilities instead set :attr:`PipelineState.error`, which
+        :meth:`Pipeline.fit` reports as a ``RuntimeWarning``.
         """
 
         if state.H is None:
@@ -141,10 +159,8 @@ class MaximizationStep(PipelineStep):
         curr_mixture = state.curr_mixture
 
         for block in self.blocks:
-            strategy = cast(StrategyFunction, self._strategies[block.maximization_strategy])
+            strategy = self._strategies[block.maximization_strategy]
             component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
-            if state.error:
-                return state
             results.append((component_id, new_params))
 
         for component_id, params in results:
