@@ -277,6 +277,59 @@ class TestMaximizationStep:
         assert step.blocks[0].params_to_optimize == {"loc"}
         assert step.blocks[1].params_to_optimize == {"loc", "rate"}
 
+    def test_clear_after_prune_with_unoptimized_components_no_key_error(self, mock_optimizer: Optimizer) -> None:
+        """Reindex sparse blocks even when intermediate components have no blocks."""
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(4, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert [block.component_id for block in step.blocks] == [0, 3]
+
+    def test_clear_after_prune_with_multiple_blocks_per_component(self, mock_optimizer: Optimizer) -> None:
+        """Preserve block order and parameter selections when a component has multiple blocks."""
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"rate"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert [block.component_id for block in step.blocks] == [0, 0, 1]
+        assert [block.params_to_optimize for block in step.blocks] == [{"mu"}, {"sigma"}, {"rate"}]
+
+    def test_clear_after_prune_handles_duplicate_indices_and_multiple_removals(self, mock_optimizer: Optimizer) -> None:
+        """Count each removed component once when shifting sparse component indices."""
+        blocks = [OptimizationBlock(index, None, MaximizationStrategy.QFUNCTION) for index in [0, 2, 5]]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([3, 1, 3])
+
+        assert [block.component_id for block in step.blocks] == [0, 1, 3]
+
+    def test_clear_after_prune_does_not_modify_the_blocks_passed_by_the_caller(self, mock_optimizer: Optimizer) -> None:
+        """Replace surviving blocks without changing caller-owned configuration objects."""
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, None, MaximizationStrategy.MOMENTS),
+            OptimizationBlock(2, {"sigma"}, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert [block.component_id for block in blocks] == [0, 1, 2]
+        assert [block.component_id for block in step.blocks] == [0, 1]
+        for surviving, original in zip(step.blocks, [blocks[0], blocks[2]], strict=True):
+            assert surviving is not original
+            assert surviving.params_to_optimize is original.params_to_optimize
+            assert surviving.maximization_strategy is original.maximization_strategy
+
     def test_clear_after_prune_with_empty_removal(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune does nothing when no components are removed."""
 

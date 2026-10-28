@@ -14,7 +14,9 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+import bisect
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from types import MappingProxyType
 from typing import ClassVar, cast
 
@@ -157,28 +159,22 @@ class MaximizationStep(PipelineStep):
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
         """Updates optimization blocks after component pruning.
 
-        This method removes optimization blocks associated with pruned components
-        and updates the component_id in the remaining blocks to maintain consistency.
+        Removes blocks associated with pruned components and shifts component_id
+        for remaining blocks by the number of removed components before them.
+        Surviving blocks are replaced with updated copies, so the block objects
+        given to the constructor are not modified.
 
         Parameters
         ----------
-        state : PipelineState
-            The current pipeline state containing removed_components_indices
         removed_components_indices : list[int]
-            Tracks which component indices were removed during pruning.
+            Indices of components that were removed.
         """
-        if len(removed_components_indices) == 0 or self.blocks is None:
+        if not removed_components_indices or not self.blocks:
             return
-        removed_indices = set(removed_components_indices)
 
-        self.blocks = [block for block in self.blocks if block.component_id not in removed_indices]
-
-        old_to_new_mapping = {}
-        new_component_id = 0
-        for old_component_id in range(len(self.blocks) + len(removed_indices)):
-            if old_component_id not in removed_indices:
-                old_to_new_mapping[old_component_id] = new_component_id
-                new_component_id += 1
-
-        for block in self.blocks:
-            block.component_id = old_to_new_mapping[block.component_id]
+        removed = sorted(set(removed_components_indices))
+        self.blocks = [
+            replace(block, component_id=block.component_id - bisect.bisect_left(removed, block.component_id))
+            for block in self.blocks
+            if block.component_id not in removed
+        ]
