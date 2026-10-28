@@ -121,8 +121,8 @@ def test_target_of_a_single_component_mixture(optimizer: Optimizer) -> None:
     assert captured_target(optimizer)([1.0, 2.0]) == pytest.approx(-float(np.sum(stats.norm(1.0, 2.0).logpdf(X))))
 
 
-def test_target_uses_normalized_weights(mixture: MixtureModel, optimizer: Optimizer) -> None:
-    """The log-weights of a mixture need not be normalized; the likelihood uses the weights they define."""
+def test_target_uses_the_normalized_weights_of_the_mixture(mixture: MixtureModel, optimizer: Optimizer) -> None:
+    """The mixture setter normalizes log-weights; the likelihood uses these normalized weights."""
     mixture.log_weights = np.log([2.0, 6.0])
 
     observed_data_likelihood_strategy(mixture[1], make_state(X, None, mixture), odl_block(), optimizer)

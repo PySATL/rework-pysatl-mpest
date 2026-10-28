@@ -75,7 +75,7 @@ def observed_data_likelihood_strategy(
         return component_id, {}
 
     mixture = state.curr_mixture
-    log_weights = mixture.log_weights - logsumexp(mixture.log_weights)
+    log_weights = mixture.log_weights
 
     # Log of the contribution of the other components: the target component is masked out.
     joint = mixture.component_lpdf_matrix(X) + log_weights

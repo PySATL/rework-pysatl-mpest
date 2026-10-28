@@ -387,3 +387,15 @@ def test_ecme_prunes_a_component_with_a_negligible_weight(X: np.ndarray, default
     assert fitted.n_components == 2  # noqa: PLR2004
     assert_allclose(fitted_arrays(fitted)[0], [0.0, 6.0], atol=0.2)
     assert_allclose(fitted.weights, TRUE_WEIGHTS, atol=0.05)
+
+
+def test_fit_with_a_point_outside_the_support_keeps_pdf_equal_to_exp_lpdf() -> None:
+    """The M-step normalizes weights when observations outside the support contribute no mass."""
+    start = MixtureModel([exponential(1.0), exponential(3.0)])
+    data = np.array([-1.0, -2.0, 0.5, 1.0, 2.0, 0.1])
+
+    fitted = ecm_for(1).fit(data, start)
+
+    assert np.sum(np.exp(fitted.log_weights)) == pytest.approx(1.0)
+    on_support = data[2:]
+    assert fitted.pdf(on_support) == pytest.approx(np.exp(fitted.lpdf(on_support)))
