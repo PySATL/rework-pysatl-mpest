@@ -290,6 +290,33 @@ def test_ecme_with_observed_data_likelihood_improves_the_fit(
     assert len(ecme.history) == 25  # noqa: PLR2004
 
 
+def test_ecme_with_an_unsupported_point_matches_the_fit_on_clean_data() -> None:
+    """ODL recovers the same parameters when an unsupported outlier is added."""
+    truth = MixtureModel([exponential(1.5), exponential(6.0)], weights=[0.4, 0.6])
+    clean = np.asarray(truth.generate(size=600, random_state=42), dtype=np.float64)
+    start = MixtureModel([exponential(0.5), exponential(3.0)])
+
+    def estimator() -> ECME:
+        """Create a fresh estimator with independent stopping state."""
+        return ECME(
+            breakpointers=[StepBreakpointer(50)],
+            pruners=[],
+            optimizer=ScipyNelderMead(),
+            default_strategy="odl",
+        )
+
+    clean_fit = estimator().fit(clean, start)
+    outlier_fit = estimator().fit(np.append(clean, -0.5), start)
+
+    for actual, expected in zip(parameters(outlier_fit), parameters(clean_fit), strict=True):
+        assert actual == pytest.approx(expected, rel=1e-3)
+    assert_allclose(outlier_fit.weights, clean_fit.weights, rtol=1e-3)
+    assert not np.allclose(
+        [component["lambda_"] for component in parameters(outlier_fit)],
+        [component["lambda_"] for component in parameters(start)],
+    )
+
+
 # --- pruning ---
 
 PRUNING_THRESHOLD = 0.05

@@ -18,6 +18,9 @@ from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
 
+# Unsupported observations contribute a finite penalty instead of freezing the whole objective.
+LOG_FLOOR = -1e4
+
 
 def observed_data_likelihood_strategy(
     component: ParametricFamilyDistribution,
@@ -34,11 +37,12 @@ def observed_data_likelihood_strategy(
     Where C_i is the fixed contribution of all other components (background)
     calculated based on the current state.
 
-    Everything is computed with log-densities, so the likelihood stays accurate where the
-    densities themselves underflow to zero. The optimizer may try values that violate the
-    constraints of the parametrization (for example a negative standard deviation), and the
-    log-likelihood is zero where a point has zero density under every component. The target
-    is ``+inf`` in both cases, so such values are never chosen.
+    Computation uses log-densities, bounded below by ``LOG_FLOOR`` for each observation
+    under the mixture. An observation outside every component's support therefore adds
+    a finite penalty. Covering it can reduce that penalty when the support depends on
+    the optimized parameters. Log-densities below the floor have the same contribution.
+    Parameter values that violate the parametrization constraints (for example a negative
+    standard deviation), or produce a nonfinite bounded objective, give a target of ``+inf``.
 
     Only the parameters named by the block are optimized; the other parameters of the
     component, including those fixed with ``family.view(...)``, keep their values.
@@ -91,7 +95,9 @@ def observed_data_likelihood_strategy(
         except ValueError:
             return np.inf
         log_mixture = np.logaddexp(log_background, log_target_weight + _components.lpdf(candidate, X))
-        return float(-np.sum(log_mixture))
+        bounded_log_mixture = np.maximum(log_mixture, LOG_FLOOR)
+        value = float(-np.sum(bounded_log_mixture))
+        return value if np.isfinite(value) else np.inf
 
     new_params = optimizer.minimize(target, [current[name] for name in params_to_optimize])
     return component_id, {name: float(value) for name, value in zip(params_to_optimize, new_params)}
