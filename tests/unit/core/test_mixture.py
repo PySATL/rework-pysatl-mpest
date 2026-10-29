@@ -14,8 +14,10 @@ import pytest
 from numpy.testing import assert_allclose
 from numpy.typing import ArrayLike
 from pysatl_core.families import ParametricFamilyDistribution
-from pysatl_core.types import CharacteristicName
+from pysatl_core.transformations.operations.distributions.mixture import FiniteMixtureDistribution
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core.mixture import MixtureModel
+from tests.helpers.families import family
 from tests.helpers.math_assertions import (
     assert_computational_stability,
     assert_is_array_type,
@@ -54,22 +56,10 @@ def param_comps() -> tuple[ParametricFamilyDistribution, ParametricFamilyDistrib
     )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_finite_mixture() -> Iterator[MagicMock]:
-    """Mock the core finite_mixture function to avoid parsing our Mock distributions."""
+    """Observe construction of core mixtures without constructing one."""
     with patch("pysatl_mpest.core.mixture.finite_mixture") as mock_fm:
-        mock_core_dist = MagicMock()
-
-        def mock_calc_char(name: CharacteristicName, X: ArrayLike) -> np.ndarray:
-            X_arr = np.asarray(X, dtype=np.float64)
-            if name == CharacteristicName.LPDF:
-                return np.zeros_like(X_arr)
-            elif name == CharacteristicName.PDF:
-                return np.ones_like(X_arr)
-            return np.zeros_like(X_arr)
-
-        mock_core_dist.calculate_characteristic.side_effect = mock_calc_char
-        mock_fm.return_value = mock_core_dist
         yield mock_fm
 
 
@@ -135,7 +125,7 @@ def test_init_invalid_weights(mock_comps: tuple[ParametricFamilyDistribution, ..
 def test_log_weights_setter_invalid_length(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
     """Test that setting log_weights with incorrect length raises ValueError."""
     mixture = MixtureModel(mock_comps)
-    with pytest.raises(ValueError, match="length of the new logit vector does not match"):
+    with pytest.raises(ValueError, match="length of the new log-weights vector"):
         mixture.log_weights = np.array([0.0])
 
 
@@ -294,6 +284,19 @@ def test_component_lpdf_matrix_shape(mock_comps: tuple[ParametricFamilyDistribut
     assert mixture.component_lpdf_matrix(np.zeros((3, 4))).shape == (3, 4, n_components)
 
 
+def test_component_lpdf_matrix_columns_are_contiguous(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Test each component's log-densities are contiguous in memory.
+
+    Reducing the short component axis (``logsumexp(axis=-1)`` in the E-step) is several times slower
+    on a row-major ``(n, k)`` matrix than on one whose columns are contiguous.
+    """
+    mixture = MixtureModel(mock_comps)
+
+    matrix = mixture.component_lpdf_matrix(np.zeros(5))
+
+    assert all(matrix[:, j].flags.c_contiguous for j in range(matrix.shape[1]))
+
+
 def test_component_lpdf_matrix_values_exclude_weights() -> None:
     """Test the matrix holds raw component log-densities, one column per component."""
     comps = (
@@ -354,6 +357,29 @@ def test_generate_zero_size(mock_comp: ParametricFamilyDistribution) -> None:
 
     res_tuple = mixture.generate(size=(0, 2))
     assert cast(np.ndarray, res_tuple).shape == (0, 2)
+
+
+@pytest.mark.parametrize("size", [-1, (-2, 3), (-2, -3), (0, -2)])
+def test_generate_rejects_a_negative_size(mock_comp: ParametricFamilyDistribution, size: int | tuple[int, ...]) -> None:
+    """Reject every negative dimension, even when the product is nonnegative."""
+    mixture = MixtureModel([mock_comp])
+
+    with pytest.raises(ValueError, match="size must not contain negative dimensions"):
+        mixture.generate(size=size, random_state=42)
+
+
+def test_generate_zero_tuple_preserves_shape(mock_comp: ParametricFamilyDistribution) -> None:
+    """Preserve the shape of an empty multidimensional sample."""
+    mixture = MixtureModel([mock_comp])
+
+    assert_is_array_type(mixture.generate(size=(0, 5), random_state=42), (0, 5))
+
+
+def test_generate_accepts_numpy_integer_size(mock_comp: ParametricFamilyDistribution) -> None:
+    """Accept a NumPy integer as a sample size."""
+    mixture = MixtureModel([mock_comp])
+
+    assert_is_array_type(mixture.generate(size=np.int64(5), random_state=42), (5,))
 
 
 def test_dunder_methods(
@@ -546,17 +572,198 @@ def test_pdf_returns_float64_scalar_for_a_scalar() -> None:
     assert_is_array_type(mixture.pdf(np.array([1.0, 2.0])), (2,))
 
 
-def test_pdf_gives_float64_data_to_the_core_mixture(mock_finite_mixture: MagicMock) -> None:
+@pytest.mark.parametrize("data", [[1, 2, 3], np.array([1, 2, 3], dtype=np.int32)])
+def test_pdf_returns_float64_for_integer_input(data: ArrayLike) -> None:
+    """PDF evaluations return float64 arrays for lists and integer arrays."""
     mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
 
-    mixture.pdf([1, 2, 3])
-
-    received = mock_finite_mixture.return_value.calculate_characteristic.call_args.args[1]
-    assert received.dtype == np.float64
+    assert_is_array_type(mixture.pdf(data), (3,))
 
 
-def test_pdf_returns_float64_even_if_the_core_mixture_does_not(mock_finite_mixture: MagicMock) -> None:
-    mixture = MixtureModel([cast(ParametricFamilyDistribution, MockContinuousDistribution())])
-    mock_finite_mixture.return_value.calculate_characteristic.side_effect = lambda name, X: np.ones(3, dtype=np.int32)
+def test_log_weights_setter_normalizes_unnormalized_input(
+    mock_comps: tuple[ParametricFamilyDistribution, ...],
+) -> None:
+    """Assigned log-weights define normalized component probabilities."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = np.log([2.0, 6.0])
 
-    assert_is_array_type(mixture.pdf(np.zeros(3)), (3,))
+    assert mixture.log_weights == pytest.approx(np.log([0.25, 0.75]))
+    assert np.sum(np.exp(mixture.log_weights)) == pytest.approx(1.0, abs=1e-12)
+    assert mixture.weights == pytest.approx([0.25, 0.75])
+
+
+def test_init_normalizes_log_weights(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Constructor weights accepted within tolerance are normalized in log space."""
+    mixture = MixtureModel(mock_comps, weights=[0.3, 0.700001])
+
+    assert np.sum(np.exp(mixture.log_weights)) == pytest.approx(1.0, rel=0.0, abs=1e-12)
+
+
+@pytest.mark.parametrize("offset", [-1e100, 1e100])
+def test_log_weights_normalization_handles_large_common_offsets(
+    mock_comps: tuple[ParametricFamilyDistribution, ...], offset: float
+) -> None:
+    """A large common log-weight offset does not erase the normalization constant."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = [offset, offset]
+
+    assert mixture.log_weights == pytest.approx(np.log([0.5, 0.5]))
+    assert np.sum(np.exp(mixture.log_weights)) == pytest.approx(1.0, abs=1e-12)
+
+
+def test_log_weights_setter_copies_input_array(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Mutating the caller's array cannot change assigned log-weights."""
+    mixture = MixtureModel(mock_comps)
+    raw = np.array([0.0, 0.0])
+    mixture.log_weights = raw
+    before = mixture.log_weights.copy()
+
+    raw[0] = 999.0
+
+    assert np.array_equal(mixture.log_weights, before)
+
+
+def test_log_weights_getter_is_read_only(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """The public log-weight array cannot be modified in place."""
+    mixture = MixtureModel(mock_comps)
+    before = mixture.log_weights.copy()
+
+    with pytest.raises(ValueError, match="read-only"):
+        mixture.log_weights[0] = 0.0
+
+    assert np.array_equal(mixture.log_weights, before)
+
+
+@pytest.mark.parametrize("log_weights", [[-np.inf, -np.inf], [np.nan, 0.0], [np.inf, 0.0]])
+def test_log_weights_setter_rejects_values_that_cannot_be_normalized(
+    mock_comps: tuple[ParametricFamilyDistribution, ...], log_weights: list[float]
+) -> None:
+    """Invalid log-weights are rejected without changing the mixture."""
+    mixture = MixtureModel(mock_comps)
+    before = mixture.log_weights.copy()
+
+    with pytest.raises(ValueError, match="normalizable"):
+        mixture.log_weights = log_weights
+
+    assert np.array_equal(mixture.log_weights, before)
+
+
+def test_log_weights_setter_accepts_zero_weight(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """A negative infinite log-weight is valid when another component has finite mass."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = [-np.inf, 0.0]
+
+    assert np.array_equal(mixture.log_weights, [-np.inf, 0.0])
+    assert np.array_equal(mixture.weights, [0.0, 1.0])
+
+
+def test_copy_preserves_log_weights_exactly(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Copying preserves tiny log-weights and keeps component membership independent."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = [-800.0, 0.0]
+    copied = copy(mixture)
+
+    assert np.array_equal(copied.log_weights, mixture.log_weights)
+    assert copied.log_weights is not mixture.log_weights
+    assert copied.components == mixture.components
+    assert all(left is right for left, right in zip(copied.components, mixture.components))
+
+    copied.add_component(mock_comps[0], weight=0.5)
+
+    assert mixture.components == mock_comps
+    assert np.array_equal(mixture.log_weights, [-800.0, 0.0])
+    assert copied.n_components == mixture.n_components + 1
+
+
+def test_pdf_matches_exp_lpdf_exactly() -> None:
+    """Densities agree at the center, in the tail, and outside the support."""
+    exponential = family(FamilyName.EXPONENTIAL)
+    mixture = MixtureModel([exponential(lambda_=1.0), exponential(lambda_=3.0)])
+    mixture.log_weights = np.log([2.0, 6.0])
+    data = np.array([-1.0, 0.0, 0.5, 1.0, 800.0])
+
+    density = mixture.pdf(data)
+
+    assert np.array_equal(density, np.exp(mixture.lpdf(data)))
+    assert density[0] == density[-1] == 0.0
+    assert np.isneginf(mixture.lpdf(data[0]))
+    assert np.isfinite(mixture.lpdf(data[-1]))
+    assert isinstance(mixture.pdf(0.5), np.float64)
+    assert mixture.pdf(0.5) == np.exp(mixture.lpdf(0.5))
+    on_support = data[1:-1]
+    assert mixture.loglikelihood(on_support) == pytest.approx(np.sum(np.log(mixture.pdf(on_support))))
+
+
+def test_pdf_does_not_construct_core_mixture(
+    mock_comps: tuple[ParametricFamilyDistribution, ...], mock_finite_mixture: MagicMock
+) -> None:
+    """Evaluating a mixture density uses component log-densities directly."""
+    mixture = MixtureModel(mock_comps)
+
+    mixture.pdf([0.0, 1.0])
+
+    mock_finite_mixture.assert_not_called()
+
+
+def test_add_component_with_prior_unnormalized_weights(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Adding a component preserves the normalized proportions of assigned weights."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = np.log([2.0, 6.0])
+
+    mixture.add_component(mock_comps[0], weight=0.5)
+
+    assert mixture.weights == pytest.approx([0.125, 0.375, 0.5])
+    assert np.sum(np.exp(mixture.log_weights)) == pytest.approx(1.0, abs=1e-12)
+    assert not mixture.log_weights.flags.writeable
+
+
+def test_add_component_does_not_modify_the_array_given_to_the_setter(
+    mock_comps: tuple[ParametricFamilyDistribution, ...],
+) -> None:
+    """Adding a component cannot mutate the caller's original log-weight array."""
+    mixture = MixtureModel(mock_comps)
+    raw = np.log([0.5, 0.5])
+    before = raw.copy()
+    mixture.log_weights = raw
+
+    mixture.add_component(mock_comps[0], weight=0.5)
+
+    assert np.array_equal(raw, before)
+
+
+def test_remove_component_rejects_removal_of_all_remaining_mass(
+    mock_comps: tuple[ParametricFamilyDistribution, ...],
+) -> None:
+    """Removing the only positive weight is rejected before changing the mixture."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = [-np.inf, 0.0]
+
+    with pytest.raises(ValueError, match="positive weight"):
+        mixture.remove_component(1)
+
+    assert mixture.components == mock_comps
+    assert np.array_equal(mixture.log_weights, [-np.inf, 0.0])
+    assert np.array_equal(mixture.weights, [0.0, 1.0])
+
+
+def test_remove_component_keeps_log_weights_read_only(mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    """Removing zero-weight components preserves normalization and read-only storage."""
+    mixture = MixtureModel(mock_comps)
+    mixture.log_weights = [-np.inf, 0.0]
+
+    mixture.remove_component(0)
+
+    assert np.array_equal(mixture.log_weights, [0.0])
+    assert not mixture.log_weights.flags.writeable
+
+
+def test_to_core_mixture_exports_valid_distribution() -> None:
+    """An explicit export constructs a real core mixture with normalized weights."""
+    exponential = family(FamilyName.EXPONENTIAL)
+    mixture = MixtureModel([exponential(lambda_=1.0), exponential(lambda_=3.0)])
+    mixture.log_weights = np.log([2.0, 6.0])
+
+    exported = mixture.to_core_mixture()
+
+    assert isinstance(exported, FiniteMixtureDistribution)
+    assert exported.weights == pytest.approx([0.25, 0.75])

@@ -10,6 +10,7 @@ from unittest.mock import call
 import numpy as np
 import pytest
 from pysatl_core.families import ParametricFamilyDistribution
+from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators.iterative import (
     ExpectationStep,
@@ -21,6 +22,7 @@ from pysatl_mpest.estimators.iterative import (
 )
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
+from tests.helpers.families import family
 
 
 @pytest.fixture
@@ -50,6 +52,20 @@ def parametrized_state(mocker: MockerFixture) -> PipelineState:
     X = np.array([[1.0], [2.0], [3.0], [4.0]], dtype=np.float64)
     H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=np.float64)
     return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mixture, error=None)
+
+
+@pytest.fixture
+def real_state() -> PipelineState:
+    """Create a state with real Normal components and unequal responsibility sums."""
+    normal = family(FamilyName.NORMAL)
+    mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=2.0)])
+    return PipelineState(
+        X=np.array([1.0, 2.0, 3.0, 4.0]),
+        H=np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]]),
+        prev_mixture=None,
+        curr_mixture=mixture,
+        error=None,
+    )
 
 
 class TestMaximizationStep:
@@ -277,6 +293,59 @@ class TestMaximizationStep:
         assert step.blocks[0].params_to_optimize == {"loc"}
         assert step.blocks[1].params_to_optimize == {"loc", "rate"}
 
+    def test_clear_after_prune_with_unoptimized_components_no_key_error(self, mock_optimizer: Optimizer) -> None:
+        """Reindex sparse blocks even when intermediate components have no blocks."""
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(4, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert [block.component_id for block in step.blocks] == [0, 3]
+
+    def test_clear_after_prune_with_multiple_blocks_per_component(self, mock_optimizer: Optimizer) -> None:
+        """Preserve block order and parameter selections when a component has multiple blocks."""
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"rate"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert [block.component_id for block in step.blocks] == [0, 0, 1]
+        assert [block.params_to_optimize for block in step.blocks] == [{"mu"}, {"sigma"}, {"rate"}]
+
+    def test_clear_after_prune_handles_duplicate_indices_and_multiple_removals(self, mock_optimizer: Optimizer) -> None:
+        """Count each removed component once when shifting sparse component indices."""
+        blocks = [OptimizationBlock(index, None, MaximizationStrategy.QFUNCTION) for index in [0, 2, 5]]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([3, 1, 3])
+
+        assert [block.component_id for block in step.blocks] == [0, 1, 3]
+
+    def test_clear_after_prune_does_not_modify_the_blocks_passed_by_the_caller(self, mock_optimizer: Optimizer) -> None:
+        """Replace surviving blocks without changing caller-owned configuration objects."""
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, None, MaximizationStrategy.MOMENTS),
+            OptimizationBlock(2, {"sigma"}, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert [block.component_id for block in blocks] == [0, 1, 2]
+        assert [block.component_id for block in step.blocks] == [0, 1]
+        for surviving, original in zip(step.blocks, [blocks[0], blocks[2]], strict=True):
+            assert surviving is not original
+            assert surviving.params_to_optimize is original.params_to_optimize
+            assert surviving.maximization_strategy is original.maximization_strategy
+
     def test_clear_after_prune_with_empty_removal(self, mock_optimizer: Optimizer):
         """Tests that clear_after_prune does nothing when no components are removed."""
 
@@ -322,31 +391,67 @@ class TestMaximizationStep:
         assert step.blocks[0].params_to_optimize == {"loc"}
         assert step.blocks[1].params_to_optimize == {"scale"}
 
-    def test_run_aborts_if_error_occurs_in_strategy(self, mock_optimizer, parametrized_state, mocker):
-        """
-        Tests that if a strategy returns an error state, subsequent blocks are ignored.
-        """
-        state = parametrized_state
-        block1 = OptimizationBlock(0, {"loc"}, MaximizationStrategy.QFUNCTION)
-        block2 = OptimizationBlock(1, {"loc"}, MaximizationStrategy.QFUNCTION)
+    def test_run_propagates_not_implemented_error_from_strategy(
+        self, mock_optimizer: Optimizer, real_state: PipelineState
+    ) -> None:
+        """Propagate the real Moments strategy error for an unsupported parametrization."""
+        real_state.curr_mixture[0] = family(FamilyName.NORMAL)(parametrization_name="meanVar", mu=0.0, var=1.0)
+        step = MaximizationStep([OptimizationBlock(0, None, MaximizationStrategy.MOMENTS)], mock_optimizer)
 
-        step = MaximizationStep([block1, block2], mock_optimizer)
+        with pytest.raises(NotImplementedError, match="Moments strategy is not implemented for the 'meanVar'"):
+            step.run(real_state)
 
-        # Strategy that sets error on first call
-        def failing_strategy(*args):
-            state.error = ValueError("Fail")
-            return 0, {}
+        assert real_state.error is None
 
-        mocker.patch.object(MaximizationStep, "_strategies", {MaximizationStrategy.QFUNCTION: failing_strategy})
-        spy = mocker.spy(step, "_update_components_params")
+    def test_run_propagates_value_error_for_invalid_parameters(
+        self, mock_optimizer: Optimizer, real_state: PipelineState
+    ) -> None:
+        """Propagate parameter validation errors from a real analytical strategy."""
+        block = OptimizationBlock(0, {"invalid_param"}, MaximizationStrategy.QFUNCTION)
+        step = MaximizationStep([block], mock_optimizer)
 
-        result = step.run(state)
+        with pytest.raises(ValueError, match="invalid_param.*are not parameters"):
+            step.run(real_state)
 
-        # Should return state with error
-        assert isinstance(result, PipelineState)
-        assert str(state.error) == "Fail"
-        # Params update should NOT be called because we returned early
-        spy.assert_not_called()
+        assert real_state.error is None
+
+    def test_run_propagates_index_error_for_out_of_range_component_id(
+        self, mock_optimizer: Optimizer, real_state: PipelineState
+    ) -> None:
+        """Propagate indexing errors when a block refers past the last real component."""
+        block = OptimizationBlock(real_state.curr_mixture.n_components, None, MaximizationStrategy.QFUNCTION)
+        step = MaximizationStep([block], mock_optimizer)
+
+        with pytest.raises(IndexError, match="index out of range"):
+            step.run(real_state)
+
+        assert real_state.error is None
+
+    def test_run_does_not_update_anything_if_a_strategy_raises(
+        self, mock_optimizer: Optimizer, real_state: PipelineState, mocker: MockerFixture
+    ) -> None:
+        """Leave all components and weights untouched when a later strategy raises."""
+        state = real_state
+        mixture = state.curr_mixture
+        original_components = list(mixture)
+        original_log_weights = mixture.log_weights.copy()
+        blocks = [OptimizationBlock(index, {"mu"}, MaximizationStrategy.QFUNCTION) for index in range(2)]
+        step = MaximizationStep(blocks, mock_optimizer)
+        error = RuntimeError("Optimization diverged")
+        strategy = mocker.Mock(side_effect=[(0, {"mu": 10.0}), error])
+        mocker.patch.object(MaximizationStep, "_strategies", {MaximizationStrategy.QFUNCTION: strategy})
+        update = mocker.spy(step, "_update_components_params")
+
+        with pytest.raises(RuntimeError, match="Optimization diverged") as caught:
+            step.run(state)
+
+        assert caught.value is error
+        assert strategy.call_count == len(blocks)
+        update.assert_not_called()
+        assert state.curr_mixture is mixture
+        assert all(current is original for current, original in zip(mixture, original_components, strict=True))
+        np.testing.assert_array_equal(mixture.log_weights, original_log_weights)
+        assert state.error is None
 
 
 class TestDetailsFoundByMutationTesting:

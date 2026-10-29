@@ -24,9 +24,9 @@ class ExpectationStep(PipelineStep):
     ----------
     is_soft : bool, optional
         If True (default), performs a soft assignment where H contains probabilities.
-        If False, performs a hard assignment where each data point
+        If False, performs a hard assignment where each supported data point
         is assigned to the single most likely component (i.e., H contains
-        only 0s and 1s).
+        only 0s and 1s). Unsupported points retain zero responsibilities.
 
     Attributes
     ----------
@@ -64,7 +64,7 @@ class ExpectationStep(PipelineStep):
         component, incorporates the component weights, and normalizes to find
         the posterior probabilities (responsibilities). The resulting matrix H
         is then stored in the pipeline state. A data point that lies outside the
-        support of every component gets a row of zeros.
+        support of every component gets a row of zeros in both assignment modes.
 
         Parameters
         ----------
@@ -92,11 +92,11 @@ class ExpectationStep(PipelineStep):
         H_soft[np.isnan(H_soft)] = 0.0
 
         if not self.is_soft:
-            n_samples = X.shape[0]
             H_hard = np.zeros_like(H_soft, dtype=np.float64)
 
+            has_mass = np.any(H_soft > 0, axis=1)
             max_indices = np.argmax(H_soft, axis=1)
-            H_hard[np.arange(n_samples), max_indices] = 1.0
+            H_hard[np.flatnonzero(has_mass), max_indices[has_mass]] = 1.0
 
             state.H = H_hard
         else:

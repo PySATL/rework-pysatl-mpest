@@ -6,6 +6,11 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+import warnings
+
+import numpy as np
+from numpy.typing import NDArray
+
 from ....typings import Scalar
 from ..breakpointer import Breakpointer
 from ..pipeline_state import PipelineState
@@ -21,8 +26,15 @@ class LikelihoodBreakpointer(Breakpointer):
     .. math::
         |L_{t+1} - L_t| < threshold
 
-    It tracks the log-likelihood of the current mixture model on the observed
-    data at each iteration and compares it to the previous value.
+    Only observations whose mixture log-density is not ``-inf`` contribute to
+    the sum. Consecutive sums are compared only when the same observations
+    contribute; a changed support mask establishes a new comparison baseline.
+    Thus, this sum can be finite even when ``mixture.loglikelihood(X)`` is
+    ``-inf`` because that method includes observations outside the support.
+
+    An empty support or a non-finite sum emits a ``RuntimeWarning`` and stops
+    the pipeline. Both the stored sum and support mask are reset whenever this
+    breakpointer stops the pipeline, including ordinary convergence.
 
     Parameters
     ----------
@@ -50,21 +62,24 @@ class LikelihoodBreakpointer(Breakpointer):
 
     threshold: Scalar
 
-    def __init__(self, threshold: Scalar):
+    def __init__(self, threshold: Scalar) -> None:
         self._validate(threshold)
         self.threshold = threshold
         self._likelihood_old: float | None = None
+        self._support_mask_old: NDArray[np.bool_] | None = None
 
-    def _validate(self, threshold: Scalar):
+    def _validate(self, threshold: Scalar) -> None:
         """Validates the threshold parameter."""
         if threshold <= 0.0:
             raise ValueError("The threshold must be greater than 0")
 
     def check(self, state: PipelineState) -> bool:
-        """Checks if the log-likelihood has converged.
+        """Check convergence of the log-likelihood over supported observations.
 
-        Computes the current log-likelihood of the mixture on the data in
-        the pipeline state and compares it with the previous value.
+        Exclude only log-densities equal to ``-inf`` and compare sums only
+        when their observation masks match. Unlike ``loglikelihood(X)``, this
+        sum omits observations outside the mixture support. A changed mask
+        replaces the stored sum and mask without declaring convergence.
 
         Parameters
         ----------
@@ -75,22 +90,47 @@ class LikelihoodBreakpointer(Breakpointer):
         Returns
         -------
         bool
-            .. math::
-                \text{True if } |L_{\text{new}} - L_{\text{old}}| < \text{threshold, False otherwise}
+            True when comparable sums differ by less than ``threshold``, or
+            when the sum is non-finite or has no contributing observations.
+            Both stored values are reset on True. The first call and any
+            change of support return False and establish a new baseline.
 
-            On the first call (no previous likelihood), returns False and
-            initializes internal state.
+        Warns
+        -----
+        RuntimeWarning
+            If no observation is inside the support or the sum is non-finite,
+            including log-densities containing NaN or positive infinity.
         """
-        _likelihood_new = state.curr_mixture.loglikelihood(state.X)
+        lpdf = np.asarray(state.curr_mixture.lpdf(state.X), dtype=np.float64)
+        # Zero-density observations have no E-step responsibilities and do not contribute here.
+        support_mask = ~np.isneginf(lpdf)
+        in_support = lpdf[support_mask]
+        likelihood_new = float(np.sum(in_support))
 
-        # First iteration: cannot compare, so just store and continue
-        if self._likelihood_old is None:
-            self._likelihood_old = _likelihood_new
-            return False
-
-        if abs(_likelihood_new - self._likelihood_old) < self.threshold:
+        if in_support.size == 0 or not np.isfinite(likelihood_new):
+            warnings.warn(
+                "The log-likelihood cannot be evaluated: no data point is inside the support of the mixture "
+                "or the log-density is not finite. Stopping the pipeline.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             self._likelihood_old = None
+            self._support_mask_old = None
             return True
-        else:
-            self._likelihood_old = _likelihood_new
+
+        if (
+            self._likelihood_old is None
+            or self._support_mask_old is None
+            or not np.array_equal(support_mask, self._support_mask_old)
+        ):
+            self._likelihood_old = likelihood_new
+            self._support_mask_old = support_mask.copy()
             return False
+
+        if abs(likelihood_new - self._likelihood_old) < self.threshold:
+            self._likelihood_old = None
+            self._support_mask_old = None
+            return True
+
+        self._likelihood_old = likelihood_new
+        return False

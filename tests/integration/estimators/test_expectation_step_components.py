@@ -111,6 +111,31 @@ def test_hard_assignment_is_one_hot_at_the_most_responsible_component() -> None:
     assert_array_equal(H.argmax(axis=1), run_step(mixture, X).argmax(axis=1))
 
 
+def test_hard_assignment_point_outside_every_support_has_zero_responsibilities() -> None:
+    """An unsupported point stays unassigned while a supported point is assigned."""
+
+    exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
+    uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
+    mixture = MixtureModel([exponential, uniform], weights=[0.5, 0.5])
+
+    H = run_step(mixture, np.array([-1.0, 0.5]), is_soft=False)
+
+    assert_array_equal(H[0], [0.0, 0.0])
+    assert_array_equal(H[1], [0.0, 1.0])
+
+
+def test_hard_assignment_all_points_outside_support() -> None:
+    """A batch of unsupported points has only zero responsibilities."""
+
+    exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
+    uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
+    mixture = MixtureModel([exponential, uniform], weights=[0.5, 0.5])
+
+    H = run_step(mixture, np.array([-5.0, -2.0]), is_soft=False)
+
+    assert_array_equal(H, [[0.0, 0.0], [0.0, 0.0]])
+
+
 def test_weights_scale_the_responsibilities() -> None:
     """Identical components: the posterior equals the weights."""
 

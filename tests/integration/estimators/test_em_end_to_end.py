@@ -290,6 +290,33 @@ def test_ecme_with_observed_data_likelihood_improves_the_fit(
     assert len(ecme.history) == 25  # noqa: PLR2004
 
 
+def test_ecme_with_an_unsupported_point_matches_the_fit_on_clean_data() -> None:
+    """ODL recovers the same parameters when an unsupported outlier is added."""
+    truth = MixtureModel([exponential(1.5), exponential(6.0)], weights=[0.4, 0.6])
+    clean = np.asarray(truth.generate(size=600, random_state=42), dtype=np.float64)
+    start = MixtureModel([exponential(0.5), exponential(3.0)])
+
+    def estimator() -> ECME:
+        """Create a fresh estimator with independent stopping state."""
+        return ECME(
+            breakpointers=[StepBreakpointer(50)],
+            pruners=[],
+            optimizer=ScipyNelderMead(),
+            default_strategy="odl",
+        )
+
+    clean_fit = estimator().fit(clean, start)
+    outlier_fit = estimator().fit(np.append(clean, -0.5), start)
+
+    for actual, expected in zip(parameters(outlier_fit), parameters(clean_fit), strict=True):
+        assert actual == pytest.approx(expected, rel=1e-3)
+    assert_allclose(outlier_fit.weights, clean_fit.weights, rtol=1e-3)
+    assert not np.allclose(
+        [component["lambda_"] for component in parameters(outlier_fit)],
+        [component["lambda_"] for component in parameters(start)],
+    )
+
+
 # --- pruning ---
 
 PRUNING_THRESHOLD = 0.05
@@ -387,3 +414,35 @@ def test_ecme_prunes_a_component_with_a_negligible_weight(X: np.ndarray, default
     assert fitted.n_components == 2  # noqa: PLR2004
     assert_allclose(fitted_arrays(fitted)[0], [0.0, 6.0], atol=0.2)
     assert_allclose(fitted.weights, TRUE_WEIGHTS, atol=0.05)
+
+
+def test_fit_with_a_point_outside_the_support_keeps_pdf_equal_to_exp_lpdf() -> None:
+    """The M-step normalizes weights when observations outside the support contribute no mass."""
+    start = MixtureModel([exponential(1.0), exponential(3.0)])
+    data = np.array([-1.0, -2.0, 0.5, 1.0, 2.0, 0.1])
+
+    fitted = ecm_for(1).fit(data, start)
+
+    assert np.sum(np.exp(fitted.log_weights)) == pytest.approx(1.0)
+    on_support = data[2:]
+    assert fitted.pdf(on_support) == pytest.approx(np.exp(fitted.lpdf(on_support)))
+
+
+def test_likelihood_breakpointer_converges_with_an_unsupported_point() -> None:
+    """An unsupported observation does not prevent convergence on the remaining sample."""
+    truth = MixtureModel([exponential(1.5), exponential(6.0)], weights=[0.4, 0.6])
+    clean = np.asarray(truth.generate(size=600, random_state=42), dtype=np.float64)
+    start = MixtureModel([exponential(0.5), exponential(3.0)])
+    step_limit = 500
+    reference = ecm_for(step_limit, tolerance=1e-6)
+    with_outlier = ecm_for(step_limit, tolerance=1e-6)
+
+    clean_fit = reference.fit(clean, start)
+    outlier_fit = with_outlier.fit(np.append(clean, -0.5), start)
+
+    assert 1 < len(reference.history) < step_limit
+    assert len(with_outlier.history) == len(reference.history)
+    for actual, expected in zip(parameters(outlier_fit), parameters(clean_fit), strict=True):
+        assert actual == pytest.approx(expected, rel=1e-9)
+    assert_allclose(outlier_fit.weights, clean_fit.weights, rtol=1e-9)
+    assert np.isneginf(outlier_fit.loglikelihood(np.append(clean, -0.5)))

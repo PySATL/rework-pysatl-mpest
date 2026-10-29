@@ -107,6 +107,21 @@ def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
     )
 
 
+def test_run_hard_assignment_leaves_zeros_for_unsupported_points(initial_pipeline_state) -> None:
+    """Hard assignment leaves unsupported rows zero and assigns supported rows."""
+
+    state = initial_pipeline_state
+    state.X = np.array([1.0, -1.0, 2.0])
+    state.curr_mixture.component_lpdf_matrix.return_value = np.array(
+        [[np.log(0.6), np.log(0.1)], [-np.inf, -np.inf], [np.log(0.1), np.log(0.8)]]
+    )
+
+    result = ExpectationStep(is_soft=False).run(state)
+
+    assert result.H is not None
+    assert_array_equal(result.H, [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]])
+
+
 def test_run_uses_component_log_densities_of_the_data(initial_pipeline_state):
     """
     Verifies that the log-densities of the components are requested for the data of the state.

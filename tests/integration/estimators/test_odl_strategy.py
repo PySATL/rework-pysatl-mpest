@@ -18,6 +18,7 @@ from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock
 from pysatl_mpest.estimators.iterative._strategies import observed_data_likelihood_strategy
+from pysatl_mpest.estimators.iterative._strategies.observed_data_likelihood import LOG_FLOOR
 from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
 from pytest_mock import MockerFixture
 from scipy import stats
@@ -121,8 +122,8 @@ def test_target_of_a_single_component_mixture(optimizer: Optimizer) -> None:
     assert captured_target(optimizer)([1.0, 2.0]) == pytest.approx(-float(np.sum(stats.norm(1.0, 2.0).logpdf(X))))
 
 
-def test_target_uses_normalized_weights(mixture: MixtureModel, optimizer: Optimizer) -> None:
-    """The log-weights of a mixture need not be normalized; the likelihood uses the weights they define."""
+def test_target_uses_the_normalized_weights_of_the_mixture(mixture: MixtureModel, optimizer: Optimizer) -> None:
+    """The mixture setter normalizes log-weights; the likelihood uses these normalized weights."""
     mixture.log_weights = np.log([2.0, 6.0])
 
     observed_data_likelihood_strategy(mixture[1], make_state(X, None, mixture), odl_block(), optimizer)
@@ -144,6 +145,33 @@ def test_target_is_finite_and_exact_in_the_far_tail(mixture: MixtureModel, optim
     assert value == pytest.approx(negative_log_likelihood([0.4, 0.6], [(0.0, 1.0), (3.0, 2.0)], far), rel=1e-12)
 
 
+def test_target_clips_finite_log_densities_below_the_floor(optimizer: Optimizer) -> None:
+    """A finite log-density below the floor contributes the same bounded penalty."""
+    component = normal(0.0, 1.0)
+    mixture = MixtureModel([component])
+    data = np.array([200.0])
+    log_density = cc.lpdf(component, data)
+    assert np.all(np.isfinite(log_density))
+    assert np.all(log_density < LOG_FLOOR)
+
+    observed_data_likelihood_strategy(component, make_state(data, None, mixture), odl_block(component_id=0), optimizer)
+
+    assert captured_target(optimizer)([0.0, 1.0]) == -LOG_FLOOR
+
+
+def test_target_is_infinite_when_the_log_density_is_nan(optimizer: Optimizer) -> None:
+    """A NaN log-density is rejected instead of returning a NaN objective."""
+    component = normal(0.0, 1.0)
+    mixture = MixtureModel([component])
+    data = np.array([np.nan])
+    assert np.all(np.isnan(cc.lpdf(component, data)))
+
+    observed_data_likelihood_strategy(component, make_state(data, None, mixture), odl_block(component_id=0), optimizer)
+
+    with np.errstate(invalid="ignore"):
+        assert captured_target(optimizer)([0.0, 1.0]) == np.inf
+
+
 def test_target_of_a_component_with_zero_weight_does_not_depend_on_it(optimizer: Optimizer) -> None:
     mixture = MixtureModel([normal(0.0, 1.0), normal(3.0, 2.0)], weights=[1.0, 0.0])
 
@@ -160,8 +188,8 @@ def test_target_is_infinite_where_a_constraint_is_violated(mixture: MixtureModel
 
 
 @pytest.mark.filterwarnings("error")
-def test_target_is_infinite_where_no_component_has_density(optimizer: Optimizer) -> None:
-    """The likelihood is zero if a point is outside the support of every component."""
+def test_target_penalizes_points_outside_every_support(optimizer: Optimizer) -> None:
+    """An unsupported point adds the floor penalty to the objective."""
     exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
     uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
     mixture = MixtureModel([exponential, uniform])
@@ -170,7 +198,67 @@ def test_target_is_infinite_where_no_component_has_density(optimizer: Optimizer)
     observed_data_likelihood_strategy(uniform, state, odl_block(params={"upper_bound"}), optimizer)
     target = captured_target(optimizer)
 
-    assert target([2.0]) == np.inf
+    observed_data_likelihood_strategy(
+        uniform, make_state(np.array([0.5]), None, mixture), odl_block(params={"upper_bound"}), optimizer
+    )
+
+    assert target([2.0]) - captured_target(optimizer)([2.0]) == pytest.approx(-LOG_FLOOR)
+
+
+def test_target_is_finite_with_unsupported_outliers(optimizer: Optimizer) -> None:
+    """A negative observation does not make the entire exponential objective infinite."""
+    mixture = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=0.5), family(FamilyName.EXPONENTIAL)(lambda_=3.0)])
+    data = np.array([-0.5, 0.2, 1.0, 2.0])
+
+    observed_data_likelihood_strategy(mixture[1], make_state(data, None, mixture), odl_block(), optimizer)
+
+    assert np.isfinite(captured_target(optimizer)([3.0]))
+
+
+@pytest.mark.parametrize("rate", [1.0, 3.0])
+def test_unsupported_point_adds_a_constant_penalty(optimizer: Optimizer, rate: float) -> None:
+    """A fixed-support outlier adds the same penalty for different candidate rates."""
+    mixture = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=0.5), family(FamilyName.EXPONENTIAL)(lambda_=3.0)])
+    observed_data_likelihood_strategy(
+        mixture[1], make_state(np.array([-0.5, 0.2, 1.0, 2.0]), None, mixture), odl_block(), optimizer
+    )
+    target_with_outlier = captured_target(optimizer)
+    observed_data_likelihood_strategy(
+        mixture[1], make_state(np.array([0.2, 1.0, 2.0]), None, mixture), odl_block(), optimizer
+    )
+
+    assert target_with_outlier([rate]) - captured_target(optimizer)([rate]) == pytest.approx(-LOG_FLOOR)
+
+
+def test_recovers_the_parameters_in_presence_of_an_unsupported_point() -> None:
+    """A fixed-support outlier leaves the fitted rate unchanged."""
+    truth = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=0.5), family(FamilyName.EXPONENTIAL)(lambda_=1.5)])
+    sample = np.asarray(truth.generate(size=1000, random_state=42))
+    start = family(FamilyName.EXPONENTIAL)(lambda_=3.0)
+    mixture = MixtureModel([truth[0], start])
+    _, clean = observed_data_likelihood_strategy(
+        start, make_state(sample, None, mixture), odl_block(), ScipyNelderMead()
+    )
+    _, contaminated = observed_data_likelihood_strategy(
+        start, make_state(np.concatenate((sample, [-0.5])), None, mixture), odl_block(), ScipyNelderMead()
+    )
+
+    assert contaminated["lambda_"] == pytest.approx(clean["lambda_"], rel=1e-4)
+    assert contaminated["lambda_"] != pytest.approx(3.0)
+
+
+def test_uniform_component_extends_its_support_over_points_outside_it() -> None:
+    """The real optimizer can expand the uniform support over the seeded sample."""
+    sample = np.random.default_rng(42).uniform(0.0, 10.0, size=1000)
+    component = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=4.0, upper_bound=6.0)
+    mixture = MixtureModel([component])
+
+    _, fitted = observed_data_likelihood_strategy(
+        component, make_state(sample, None, mixture), odl_block(component_id=0), ScipyNelderMead()
+    )
+
+    assert fitted["lower_bound"] <= sample.min()
+    assert fitted["upper_bound"] >= sample.max()
 
 
 def test_background_may_contain_components_with_fixed_parameters(optimizer: Optimizer) -> None:

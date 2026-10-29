@@ -19,7 +19,7 @@ classifiers = [
 python = ">=3.12,<3.14"
 numpy = ">=2.2.3,<3.0.0"
 scipy = ">=1.15.2,<2.0.0"
-pysatl-core = "^0.1.0a0"
+pysatl-core = "0.1.0a0"
 
 
 [tool.poetry.group.dev.dependencies]
