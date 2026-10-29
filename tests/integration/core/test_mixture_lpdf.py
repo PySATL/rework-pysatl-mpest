@@ -76,31 +76,23 @@ X_GRID = np.linspace(-3.0, 6.0, 25)
 
 @cases
 def test_pdf_matches_reference(make_case: Callable[[], Case]) -> None:
-    """The density delegated to pysatl-core agrees with the scipy reference."""
-
     case = make_case()
     assert_allclose(case.mixture.pdf(X_GRID), case.reference_pdf(X_GRID), rtol=RTOL, atol=ATOL)
 
 
 @cases
 def test_lpdf_matches_reference(make_case: Callable[[], Case]) -> None:
-    """The log-density agrees with ``logaddexp(log w + scipy logpdf)``, including points outside some supports."""
-
     case = make_case()
     assert_allclose(case.mixture.lpdf(X_GRID), case.reference_lpdf(X_GRID), rtol=RTOL, atol=ATOL)
 
 
 @cases
 def test_pdf_is_exp_of_lpdf(make_case: Callable[[], Case]) -> None:
-    """``pdf`` and ``lpdf`` are consistent."""
-
     case = make_case()
     assert_allclose(case.mixture.pdf(X_GRID), np.exp(case.mixture.lpdf(X_GRID)), rtol=RTOL, atol=ATOL)
 
 
 def test_lpdf_far_tail_is_finite() -> None:
-    """Far in the tails ``pdf`` underflows to 0 while ``lpdf`` must stay finite and exact."""
-
     case = CASE_FACTORIES["normal+normal"]()
     x = np.array([-100.0, 100.0])
 
@@ -112,8 +104,6 @@ def test_lpdf_far_tail_is_finite() -> None:
 
 @pytest.mark.filterwarnings("error")
 def test_lpdf_outside_every_support_is_neg_inf() -> None:
-    """Where every component has zero density the log-density is ``-inf`` without NaN or warnings."""
-
     case = Case([_exponential(1.0), _uniform(0.0, 1.0)], [0.5, 0.5])
     lpdf = case.mixture.lpdf(np.array([-1.0, -0.5]))
 
@@ -122,8 +112,6 @@ def test_lpdf_outside_every_support_is_neg_inf() -> None:
 
 @cases
 def test_lpdf_return_types(make_case: Callable[[], Case]) -> None:
-    """A scalar input gives ``np.float64``; an array input gives a ``float64`` array of the same shape."""
-
     mixture = make_case().mixture
 
     assert_is_scalar_type(mixture.lpdf(0.5))
@@ -132,8 +120,6 @@ def test_lpdf_return_types(make_case: Callable[[], Case]) -> None:
 
 @cases
 def test_loglikelihood_is_sum_of_lpdf(make_case: Callable[[], Case]) -> None:
-    """``loglikelihood`` equals the sum of the reference log-densities."""
-
     case = make_case()
     x = np.linspace(0.1, 5.0, 40)
     assert_allclose(case.mixture.loglikelihood(x), np.sum(case.reference_lpdf(x)), rtol=RTOL, atol=ATOL)

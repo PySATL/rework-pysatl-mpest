@@ -89,7 +89,6 @@ def test_view_with_fixed_standard_deviation_updates_only_the_mean(state: Pipelin
 
 
 def test_standard_deviation_is_taken_around_the_fixed_mean(state: PipelineState) -> None:
-    """The mean is not optimized, so the spread is measured around its fixed value, not around the sample mean."""
     fixed_mu = family(FamilyName.NORMAL).view(mu=0.0)(sigma=1.0)
     _, std_around_fixed = weighted_moments(state, mu=0.0)
     _, std_around_mean = weighted_moments(state)
@@ -129,7 +128,6 @@ def test_rejects_unknown_parameters(state: PipelineState) -> None:
 
 
 def test_keeps_the_standard_deviation_if_the_variance_is_zero() -> None:
-    """All the data equal the fixed mean, so the variance is zero and the old standard deviation is kept."""
     state = make_state(X=np.array([10.0, 10.0]), H=np.array([[1.0, 0.0], [1.0, 0.0]]))
     fixed_mu = family(FamilyName.NORMAL).view(mu=10.0)(sigma=2.5)
 
@@ -156,7 +154,6 @@ def normal_sample(draw: st.DrawFn) -> tuple[np.ndarray, float, float]:
 @settings(max_examples=50, deadline=None)
 @given(data=normal_sample())
 def test_recovers_the_true_parameters_on_ideal_data(data: tuple[np.ndarray, float, float]) -> None:
-    """With responsibilities of 1.0 the closed-form estimates are the maximum likelihood ones."""
     X, true_mu, true_sigma = data
     H_j = np.ones_like(X)
     state = make_state(X=X, H=np.vstack([H_j, np.zeros_like(H_j)]).T)

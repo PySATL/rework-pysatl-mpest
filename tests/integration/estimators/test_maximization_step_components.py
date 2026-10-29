@@ -99,7 +99,6 @@ def test_weights_are_set_from_responsibilities(mocker: MockerFixture, mixture: M
 
 
 def test_the_cache_of_the_mixture_is_refreshed(mocker: MockerFixture, mixture: MixtureModel) -> None:
-    """``pdf`` is cached in the mixture; after the step it reflects the new components."""
     mixture.pdf(X)
     state = make_state(mixture)
 

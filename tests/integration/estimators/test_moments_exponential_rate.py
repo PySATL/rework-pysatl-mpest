@@ -54,7 +54,6 @@ def test_returns_the_inverse_of_the_weighted_mean(state: PipelineState) -> None:
 
 
 def test_agrees_with_the_q_function_estimate(state: PipelineState) -> None:
-    """For the exponential distribution the method of moments and maximum likelihood give the same rate."""
     _, by_moments = moments_strategy(exponential(1.0), state, moments_block(component_id=1), optimizer=None)  # type: ignore[arg-type]
     _, by_q_function = q_function_strategy(exponential(1.0), state, q_block(component_id=1), optimizer=None)  # type: ignore[arg-type]
 
@@ -82,7 +81,6 @@ def test_updates_nothing_for_negligible_responsibility(state: PipelineState) -> 
 
 @pytest.mark.parametrize("values", [[0.0, 0.0], [-1.0, -2.0]], ids=["zero mean", "negative mean"])
 def test_keeps_the_rate_if_the_weighted_mean_is_not_positive(values: list[float]) -> None:
-    """The estimate would be infinite or negative, and pysatl-core rejects a negative rate."""
     state = make_state(X=np.array(values), H=np.ones((2, 1)))
 
     _, new_params = moments_strategy(exponential(2.5), state, moments_block(), optimizer=None)  # type: ignore[arg-type]

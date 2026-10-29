@@ -86,7 +86,7 @@ def test_zero_weight_component_does_not_make_mixtures_equal() -> None:
 
 
 def test_copy_with_arbitrary_weights_is_equal_and_hashes_equal() -> None:
-    """Copying passes the weights through ``log`` and ``softmax``, which changes them by about 1e-16."""
+    # Log and softmax re-projection introduces numerical variation around 1e-16.
     components = [_normal(0.0, 1.0), _normal_fixed_mu(3.0, 2.0), _exponential(2.0)]
     rng = np.random.default_rng(0)
 
@@ -127,7 +127,6 @@ def test_generate_is_reproducible_with_seed(components: list[ParametricFamilyDis
 
 
 def test_generate_without_size_is_a_single_draw() -> None:
-    """A scalar sample uses exactly one draw, so it is the sample of size one."""
     mixture = MixtureModel([_normal(0.0, 1.0), _exponential(2.0)], weights=[0.5, 0.5])
 
     for seed in range(5):
@@ -144,7 +143,6 @@ def test_generate_shapes() -> None:
 
 
 def test_generate_follows_the_mixture() -> None:
-    """With well separated components and equal weights about half of the sample lies on each side."""
     mixture = MixtureModel([_normal(0.0, 1.0), _normal_fixed_mu(20.0, 1.0)], weights=[0.5, 0.5])
     size, boundary, tolerance = 20_000, 10.0, 0.02
 

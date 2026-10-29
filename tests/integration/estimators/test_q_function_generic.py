@@ -152,7 +152,6 @@ def test_fixed_parameters_cannot_be_requested(state: PipelineState, optimizer: O
 
 
 def test_points_with_zero_responsibility_do_not_matter(optimizer: Optimizer) -> None:
-    """The density is zero at 5.0, but the component is not responsible for that point, so the target stays finite."""
     uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
     state = make_state(X=np.array([0.5, 5.0]), H=np.array([[1.0, 0.0], [0.0, 1.0]]))
 
@@ -182,10 +181,7 @@ def test_recovers_the_parameters_of_a_sample(optimizer_class: type[Optimizer]) -
 
 @pytest.mark.parametrize("optimizer_class", [ScipyNelderMead, ScipyPowell])
 def test_survives_steps_outside_the_constraints(optimizer_class: type[Optimizer]) -> None:
-    """Starting far above a tiny variance, the search tries non-positive variances on its way down.
-
-    Without the infinite target such a step would raise ``ValueError`` from pysatl-core and abort the fit.
-    """
+    # Without the infinite target such a step would raise ValueError from pysatl-core.
     state = sample_state(true_mu=0.0, true_var=1e-4)
     start = family(FamilyName.NORMAL)(parametrization_name="meanVar", mu=0.0, var=1.0)
 

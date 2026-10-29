@@ -201,8 +201,6 @@ def test_likelihood_breakpointer_stops_before_the_step_limit(X: np.ndarray, star
 def test_ecm_with_numerical_strategy_matches_the_analytical_one(
     X: np.ndarray, start: MixtureModel, optimizer_class: type[Optimizer]
 ) -> None:
-    """The first component is given in the ``meanVar`` parametrization, which has no analytical solution."""
-
     mean_var = family(FamilyName.NORMAL)(parametrization_name="meanVar", mu=1.0, var=4.0)
     numerical_start = MixtureModel([mean_var, start[1]], weights=[0.5, 0.5])
     iterations = 15
@@ -291,7 +289,6 @@ def test_ecme_with_observed_data_likelihood_improves_the_fit(
 
 
 def test_ecme_with_an_unsupported_point_matches_the_fit_on_clean_data() -> None:
-    """ODL recovers the same parameters when an unsupported outlier is added."""
     truth = MixtureModel([exponential(1.5), exponential(6.0)], weights=[0.4, 0.6])
     clean = np.asarray(truth.generate(size=600, random_state=42), dtype=np.float64)
     start = MixtureModel([exponential(0.5), exponential(3.0)])
@@ -362,8 +359,6 @@ def test_ecm_prunes_several_components_at_once(X: np.ndarray, positions: tuple[i
 
 
 def test_ecm_with_pruning_continues_like_a_fit_of_the_pruned_mixture(X: np.ndarray) -> None:
-    """After the pruner removes a component the fit goes on exactly as it would for the smaller mixture."""
-
     start = stray_start((1,))
     after_first = ecm_for(1).fit(X, start)
     assert after_first.weights[1] < PRUNING_THRESHOLD
@@ -417,7 +412,6 @@ def test_ecme_prunes_a_component_with_a_negligible_weight(X: np.ndarray, default
 
 
 def test_fit_with_a_point_outside_the_support_keeps_pdf_equal_to_exp_lpdf() -> None:
-    """The M-step normalizes weights when observations outside the support contribute no mass."""
     start = MixtureModel([exponential(1.0), exponential(3.0)])
     data = np.array([-1.0, -2.0, 0.5, 1.0, 2.0, 0.1])
 
@@ -429,7 +423,6 @@ def test_fit_with_a_point_outside_the_support_keeps_pdf_equal_to_exp_lpdf() -> N
 
 
 def test_likelihood_breakpointer_converges_with_an_unsupported_point() -> None:
-    """An unsupported observation does not prevent convergence on the remaining sample."""
     truth = MixtureModel([exponential(1.5), exponential(6.0)], weights=[0.4, 0.6])
     clean = np.asarray(truth.generate(size=600, random_state=42), dtype=np.float64)
     start = MixtureModel([exponential(0.5), exponential(3.0)])

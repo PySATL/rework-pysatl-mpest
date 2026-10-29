@@ -21,7 +21,6 @@ def _bounded_objective(params: NDArray[np.float64]) -> float:
 @pytest.mark.filterwarnings("error::RuntimeWarning")
 @pytest.mark.parametrize("optimizer", [ScipyPowell(), ScipyNelderMead()])
 def test_optimizes_objective_with_infinite_boundary(optimizer: ScipyPowell | ScipyNelderMead) -> None:
-    """Find finite parameters near the minimum without runtime warnings."""
     result = optimizer.minimize(_bounded_objective, [0.5, 0.05])
 
     assert np.all(np.isfinite(result))

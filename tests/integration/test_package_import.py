@@ -11,10 +11,7 @@ import sys
 
 
 def test_import_registers_builtin_families() -> None:
-    """A fresh interpreter finds the built-in families right after ``import pysatl_mpest``.
-
-    A subprocess is used because the test session has already registered the families.
-    """
+    # A subprocess is used because the test session has already registered the families.
 
     script = (
         "import pysatl_mpest\n"

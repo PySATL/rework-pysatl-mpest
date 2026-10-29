@@ -50,8 +50,6 @@ def run(strategy, kind, component, X, H, params=None):
 
 @STRATEGIES
 class TestTotalResponsibility:
-    """A component whose total responsibility does not exceed the tolerance is left unchanged."""
-
     @pytest.mark.parametrize(
         "make_component", [lambda: exponential(2.5), lambda: normal(0.0, 2.0)], ids=["exp", "normal"]
     )
@@ -67,8 +65,6 @@ class TestTotalResponsibility:
 
 @STRATEGIES
 class TestExponentialMean:
-    """The rate is the inverse of the weighted mean, which must exceed the tolerance."""
-
     def test_at_the_tolerance_the_rate_is_kept(self, strategy, strategy_kind) -> None:
         assert run(strategy, strategy_kind, exponential(2.5), [TOLERANCE], [[1.0]]) == {"lambda_": 2.5}
 
@@ -78,8 +74,6 @@ class TestExponentialMean:
 
 @STRATEGIES
 class TestNormalVariance:
-    """The standard deviation is the root of the weighted variance, which must exceed the tolerance."""
-
     def test_at_the_tolerance_the_standard_deviation_is_kept(self, strategy, strategy_kind) -> None:
         # The mean is 0.5 and the variance is exactly 0.25.
         result = run(strategy, strategy_kind, normal(0.0, 2.0), [0.0, 1.0], [[0.5], [0.5]])
