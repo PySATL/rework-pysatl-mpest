@@ -1,9 +1,8 @@
-"""Tests for IterationHistory class"""
+"""Tests for IterationHistory class."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
-
 
 import numpy as np
 import pytest
@@ -13,16 +12,7 @@ from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
 from tests.helpers.families import family
 
-# objects - 2-3  init(once_in =_iteration) (1,2,3)
-# record = IterationRecord(history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
-# save_record(record) - 3 cases +
-# clear() - 1 case +
-# clear_records() - 1 case +
-# history[index] - 4-6 cases +
-# len() - 2-3 cases +
 
-
-# functions to set up objects for tests
 @pytest.fixture
 def exponential_components() -> list[ParametricFamilyDistribution]:
     return [family(FamilyName.EXPONENTIAL)(lambda_=1.0), family(FamilyName.EXPONENTIAL)(lambda_=2.0)]
@@ -73,7 +63,6 @@ def setup_for_records(request, exponential_components, responsibility_matrix):
     return history, once_in_iter, n
 
 
-# tests
 class TestIndex:
     @pytest.mark.parametrize(
         ("index", "expected"),
@@ -108,7 +97,6 @@ class TestIndex:
         ],
     )
     def test_getitem_negative_index_out_of_bounds(self, once_in_iterations, expected_msg):
-        """Tests the specific branch `once_in_iterations < 1` in __init__."""
         with pytest.raises(ValueError, match=expected_msg):
             IterationsHistory(once_in_iterations)
 
@@ -159,10 +147,10 @@ class TestClear:
 
     def test_reset(self, populated_history):
         history = populated_history
-        EXPECTED_LEN_OF_HISTORY = 3
+        expected_len_of_history = 3
 
-        assert len(history) == EXPECTED_LEN_OF_HISTORY
-        assert history._counter == EXPECTED_LEN_OF_HISTORY
+        assert len(history) == expected_len_of_history
+        assert history._counter == expected_len_of_history
 
         history.reset()
         assert len(history) == 0

@@ -1,13 +1,4 @@
-"""Provides the Maximization-step for an iterative estimation pipeline.
-
-This module defines the `MaximizationStep` class, a concrete implementation of
-:class:`~pysatl_mpest.estimators.iterative.pipeline_step.PipelineStep`.
-This step is responsible for performing the Maximization (M-step) in an
-Expectation-Maximization (EM) like algorithm. It updates the parameters of the
-mixture model components and their weights to maximize the expected
-log-likelihood, using the responsibilities computed in a preceding
-Expectation-step.
-"""
+"""Maximization step for iterative estimation pipelines."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -32,30 +23,24 @@ from .block import MaximizationStrategy, OptimizationBlock
 
 
 class MaximizationStep(PipelineStep):
-    """A pipeline step that performs the Maximization (M-step).
+    """Maximization step updating component parameters and mixture weights.
 
-    This step updates the parameters of each component in the mixture model,
-    as well as the mixture weights, based on the responsibility matrix :attr:`H`
-    calculated in the Expectation-step. The update process is configured
-    through a sequence of :class:`OptimizationBlock` objects, each defining
-    a specific optimization task.
+    Executes configured :class:`OptimizationBlock` tasks to update component parameters,
+    then updates mixture weights from responsibilities.
 
     Parameters
     ----------
     blocks : Sequence[OptimizationBlock]
-        A sequence of configuration blocks that define the optimization tasks.
-        Each block specifies a component, its parameters to optimize, and the
-        maximization strategy to use.
+        Optimization tasks specifying components, parameters, and strategies.
     optimizer : Optimizer
-        A numerical optimizer instance used to find the optimal parameters
-        when an analytical solution is not available for a given strategy.
+        Numerical optimizer for strategies requiring numerical search.
 
     Attributes
     ----------
     blocks : list[OptimizationBlock]
-        The list of optimization tasks to be performed.
+        Configured optimization tasks.
     optimizer : Optimizer
-        The numerical optimizer used for parameter estimation.
+        Numerical optimizer instance.
 
     Methods
     -------
@@ -79,12 +64,7 @@ class MaximizationStep(PipelineStep):
 
     @property
     def available_next_steps(self) -> list[type[PipelineStep]]:
-        """list[type[PipelineStep]]: Defines the valid subsequent steps.
-
-        Specifies that a :class:`MaximizationStep` should typically be
-        followed by an :class:`ExpectationStep` to complete one iteration of
-        the EM algorithm.
-        """
+        """list[type[PipelineStep]]: Steps permitted to follow MaximizationStep."""
 
         from pysatl_mpest.estimators.iterative.steps.expectation_step import ExpectationStep
 
@@ -93,61 +73,32 @@ class MaximizationStep(PipelineStep):
     def _update_components_params(
         self, component: ParametricFamilyDistribution, params: dict[str, float]
     ) -> ParametricFamilyDistribution:
-        """Helper method to update parameters for a single component.
-
-        Parameters
-        ----------
-        component : ParametricFamilyDistribution
-            The component whose parameters are to be updated.
-        params : dict[str, float]
-            A dictionary mapping parameter names to their new optimized values.
-
-        Returns
-        -------
-        ParametricFamilyDistribution
-            A new component with the updated parameters.
-        """
-
         return _components.with_parameters(component, **params)
 
     def run(self, state: PipelineState) -> PipelineState:
-        """Executes the M-step.
+        """Execute the M-step, updating component parameters and weights.
 
-        This method iterates through the configured optimization blocks,
-        updates the parameters for each specified component using the
-        appropriate strategy, and then recalculates the mixture weights based
-        on the sum of responsibilities.
+        Strategy exceptions propagate directly. Parameters and weights update only
+        after all strategy blocks succeed. Missing responsibilities set ``state.error``.
 
         Parameters
         ----------
         state : PipelineState
-            The current state of the pipeline. Must contain the responsibility
-            matrix :attr:`H` and the mixture model :attr:`curr_mixture`.
+            Current state containing responsibility matrix H and current mixture.
 
         Returns
         -------
         PipelineState
-            The updated pipeline state with the modified :attr:`curr_mixture`. If the
-            :attr:`H` matrix is not available in the input state, the state is
-            returned with an error set, and no modifications are made.
+            Updated state with modified mixture model.
 
         Raises
         ------
         ValueError
-            If a block requests an unknown parameter or a parameter fixed by a
-            family view.
+            If a block requests an unknown or fixed parameter.
         IndexError
-            If a block's component index is at least the number of mixture components.
+            If a block's component index is out of bounds.
         NotImplementedError
-            If the selected strategy is not implemented for the component's family
-            and parametrization.
-
-        Notes
-        -----
-        Strategy exceptions propagate directly to the caller. Component parameters
-        and weights are updated only after every strategy has returned successfully.
-        Missing responsibilities instead set :attr:`PipelineState.error`, which
-        :meth:`Pipeline.fit` reports as a ``RuntimeWarning``.
+            If a strategy is not implemented for the component's family.
         """
 
         if state.H is None:

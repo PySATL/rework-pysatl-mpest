@@ -1,9 +1,4 @@
-"""Defines the abstract base class for mixture pruning strategies.
-
-This module provides the `Pruner` abstract base class, which serves as an
-interface for implementing various strategies to remove components from a
-mixture model during an iterative estimation process.
-"""
+"""Abstract base class for mixture pruning strategies."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -17,48 +12,25 @@ from .pipeline_state import PipelineState
 class Pruner(ABC):
     """Abstract base class for component pruning strategies.
 
-    Pruner subclasses implement the logic for identifying and removing
-    redundant, insignificant, or degenerate components from a :class:`pysatl_mpest.core.MixtureModel`
-    within an iterative pipeline (:class:`Pipeline`).
-    Pruning is typically applied after a full iteration of the pipeline's steps to clean up the model
-    before the next iteration.
-
     Methods
     -------
-
     .. autosummary::
         :toctree: generated/
 
         prune
-
-    Notes
-    -----
-
-    Subclasses must implement the abstract method :meth:`prune` to define the
-    specific component removal logic.
     """
 
     @abstractmethod
     def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
-        """Analyzes the pipeline state and prunes components from the mixture.
-
-        This method is called by the :class:`Pipeline` to inspect the current mixture
-        model and decide whether to remove one or more components based on the
-        implemented strategy (e.g., if a component's weight falls below a
-        threshold).
+        """Identify and remove components from the mixture in pipeline state.
 
         Parameters
         ----------
         state : PipelineState
-            The current state of the pipeline, containing the data, mixture
-            model, and other relevant information.
+            Current pipeline state.
 
         Returns
         -------
-        PipelineState
-            The new pipeline state. If components were removed, this state
-            contains the updated mixture model. Otherwise, it returns the
-            original state.
-        removed_components_indices : list[int]
-            Tracks which component indices were removed during pruning.
+        tuple[PipelineState, list[int]]
+            Tuple of updated pipeline state and sorted indices of removed components.
         """

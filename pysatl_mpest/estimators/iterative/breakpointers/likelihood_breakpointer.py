@@ -1,5 +1,4 @@
-"""Module that provides a :class:`pysatl_mpest.estimators.iterative.Pipeline`
-stopping strategy based on when log-likelihood of the mixture converges"""
+"""Stopping strategy based on mixture log-likelihood convergence."""
 
 __author__ = "Maksim Pastukhov"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -69,7 +68,6 @@ class LikelihoodBreakpointer(Breakpointer):
         self._support_mask_old: NDArray[np.bool_] | None = None
 
     def _validate(self, threshold: Scalar) -> None:
-        """Validates the threshold parameter."""
         if threshold <= 0.0:
             raise ValueError("The threshold must be greater than 0")
 

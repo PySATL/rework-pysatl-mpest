@@ -26,76 +26,25 @@ type ComponentKey = tuple[str, str, tuple[tuple[str, float], ...]]
 
 
 def lpdf(component: ParametricFamilyDistribution, X: ArrayLike) -> np.float64 | FloatArray:
-    """Logarithm of the probability density function of a component.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The distribution whose log-density is evaluated.
-    X : ArrayLike
-        The points at which to evaluate the log-density.
-
-    Returns
-    -------
-    np.float64 | FloatArray
-        The log-density values with the same shape as :attr:`X`. Points outside
-        the support of the component give ``-inf``.
-    """
+    """Log-density of a component; points outside support evaluate to -inf."""
 
     return _evaluate(component, CharacteristicName.LPDF, X)
 
 
 def pdf(component: ParametricFamilyDistribution, X: ArrayLike) -> np.float64 | FloatArray:
-    """Probability density function of a component.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The distribution whose density is evaluated.
-    X : ArrayLike
-        The points at which to evaluate the density.
-
-    Returns
-    -------
-    np.float64 | FloatArray
-        The density values with the same shape as :attr:`X`.
-    """
+    """Probability density of a component."""
 
     return _evaluate(component, CharacteristicName.PDF, X)
 
 
 def free_parameters(component: ParametricFamilyDistribution) -> dict[str, float]:
-    """Parameters of a component that can be changed.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The component to inspect.
-
-    Returns
-    -------
-    dict[str, float]
-        Names and values of the free parameters, in the parametrization of the component.
-        For a component created without ``view`` these are all of its parameters.
-    """
+    """Free (optimizable) parameters of a component in its current parametrization."""
 
     return dict(component.parameters)
 
 
 def fixed_parameters(component: ParametricFamilyDistribution) -> dict[str, float]:
-    """Parameters of a component that were fixed with ``family.view(...)``.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The component to inspect.
-
-    Returns
-    -------
-    dict[str, float]
-        Names and values of the fixed parameters, in the parametrization of the component.
-        Empty for a component created without ``view``.
-    """
+    """Parameters fixed via family view, or empty if created without a view."""
 
     family = _family(component)
     if isinstance(family, PartialParametricFamily):
@@ -104,47 +53,13 @@ def fixed_parameters(component: ParametricFamilyDistribution) -> dict[str, float
 
 
 def all_parameters(component: ParametricFamilyDistribution) -> dict[str, float]:
-    """Fixed and free parameters of a component together.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The component to inspect.
-
-    Returns
-    -------
-    dict[str, float]
-        Names and values of all parameters of the component's parametrization.
-    """
+    """Combined fixed and free parameters of a component."""
 
     return {**fixed_parameters(component), **free_parameters(component)}
 
 
 def with_parameters(component: ParametricFamilyDistribution, **updates: float) -> ParametricFamilyDistribution:
-    """Rebuild a component with new values of some of its free parameters.
-
-    The result belongs to the same family and parametrization, and the parameters fixed with ``view``
-    keep their values. The component passed in is not changed. Sampling and computation strategies are
-    not carried over, because `pysatl-core` makes them unique for each distribution.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The component to take the other parameters from.
-    **updates : float
-        New values of free parameters, by name.
-
-    Returns
-    -------
-    ParametricFamilyDistribution
-        A new component with the updated parameters.
-
-    Raises
-    ------
-    ValueError
-        If a name in :attr:`updates` is not a free parameter of the component (it is unknown or fixed),
-        or if the new values violate the constraints of the parametrization.
-    """
+    """Rebuild component with updated free parameter values, leaving the original unchanged."""
 
     free = free_parameters(component)
     if unknown := set(updates) - set(free):
@@ -159,24 +74,7 @@ def with_parameters(component: ParametricFamilyDistribution, **updates: float) -
 
 
 def component_key(component: ParametricFamilyDistribution) -> ComponentKey:
-    """Hashable key identifying a component by its family, parametrization and parameter values.
-
-    Two components have the same key if they belong to the same family, use the same parametrization
-    and have equal values of all parameters, whether those are free or fixed with ``view``.
-    The key is not normalized across parametrizations: ``meanStd(sigma=2)`` and ``meanVar(var=4)``
-    have different keys.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The component to describe.
-
-    Returns
-    -------
-    ComponentKey
-        A tuple of the family name, the parametrization name and the sorted ``(name, value)`` pairs of
-        all parameters.
-    """
+    """Hashable key (family, parametrization, sorted parameter pairs) for equality and hashing."""
 
     return (
         component.family_name,

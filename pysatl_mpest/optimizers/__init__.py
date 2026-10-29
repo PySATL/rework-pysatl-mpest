@@ -1,4 +1,4 @@
-"""A module that provides optimizers for numerical methods"""
+"""Optimizers for numerical parameter estimation."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"

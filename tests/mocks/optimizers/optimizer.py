@@ -10,26 +10,7 @@ from pysatl_mpest.optimizers.optimizer import Optimizer
 
 
 class MockOptimizer(Optimizer):
-    """A minimal mock implementation of Optimizer.
-
-    This mock simply returns the input parameters without performing
-    any actual optimization.
-    """
+    """Minimal mock returning input parameters without optimization."""
 
     def minimize(self, target: Callable, params: list[float]) -> list[float]:
-        """Returns the input parameters unchanged.
-
-        Parameters
-        ----------
-        target : Callable
-            The objective function to minimize (ignored).
-        params : list[float]
-            A list of initial values for the parameters.
-
-        Returns
-        -------
-        list[float]
-            The unchanged input parameters.
-        """
-
         return params

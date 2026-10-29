@@ -1,5 +1,4 @@
-"""Module providing strategies for stopping the
-:class:`pysatl_mpest.estimators.iterative.Pipeline`"""
+"""Pipeline stopping criteria based on iterations and likelihood convergence."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"

@@ -40,29 +40,21 @@ class StopAfterOneIteration(Breakpointer):
 
 @pytest.fixture
 def mock_optimizer(mocker: MockerFixture) -> Optimizer:
-    """Provides a mock optimizer object using pytest-mock."""
-
     return mocker.Mock(spec=Optimizer)
 
 
 @pytest.fixture
 def mock_breakpointers() -> list[Breakpointer]:
-    """Provides a list with a single mock breakpointer."""
-
     return [StopAfterOneIteration()]
 
 
 @pytest.fixture
 def mock_pruners() -> list[Pruner]:
-    """Provides an empty list of pruners for simplicity."""
-
     return []
 
 
 @pytest.fixture
 def sample_mixture() -> MixtureModel:
-    """Provides a mixture model with two components for testing."""
-
     # The mean of the first component is fixed with a view, so only its free parameters are to be optimized.
     components = [
         family(FamilyName.NORMAL).view(mu=0.0)(sigma=1.0),
@@ -73,7 +65,6 @@ def sample_mixture() -> MixtureModel:
 
 @pytest.fixture
 def sample_data() -> np.ndarray:
-    """Provides a simple NumPy array of data."""
     return np.array([1, 2, 3, 11, 12, 13], dtype=np.float64)
 
 
@@ -81,16 +72,9 @@ def sample_data() -> np.ndarray:
 
 
 class TestECMInitialization:
-    """Tests for the constructor of the ECM class."""
-
     def test_init_stores_dependencies_correctly(
         self, mock_optimizer: Optimizer, mock_breakpointers: list[Breakpointer], mock_pruners: list[Pruner]
     ):
-        """
-        Tests that the constructor correctly assigns the provided breakpointers,
-        pruners, and optimizer to the instance attributes.
-        """
-
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
         assert ecm.breakpointers is not mock_breakpointers
@@ -102,8 +86,6 @@ class TestECMInitialization:
 
 
 class TestECMFit:
-    """Tests for the `fit` method of the ECM class."""
-
     def test_fit_creates_and_runs_pipeline(
         self,
         mocker: MockerFixture,
@@ -113,22 +95,14 @@ class TestECMFit:
         sample_mixture: MixtureModel,
         sample_data: np.ndarray,
     ):
-        """
-        Tests that `fit` correctly instantiates and calls the `fit` method of a Pipeline
-        with the right high-level arguments.
-        """
-
-        # Arrange
         MockPipeline = mocker.patch("pysatl_mpest.estimators.ecm.Pipeline")
         mock_pipeline_instance = MockPipeline.return_value
         mock_pipeline_instance.fit.return_value = sample_mixture
 
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
-        # Act
         result = ecm.fit(sample_data, sample_mixture)
 
-        # Assert
         MockPipeline.assert_called_once()
         mock_pipeline_instance.fit.assert_called_once_with(sample_data, sample_mixture)
         assert result is sample_mixture
@@ -142,21 +116,13 @@ class TestECMFit:
         sample_mixture: MixtureModel,
         sample_data: np.ndarray,
     ):
-        """
-        Verifies that the Pipeline created by ECM.fit has the correct structure:
-        an ExpectationStep followed by a correctly configured MaximizationStep.
-        """
-
-        # Arrange
         MockPipeline = mocker.patch("pysatl_mpest.estimators.ecm.Pipeline")
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
         record_frequency = 5
         num_of_steps = 2
 
-        # Act
         ecm.fit(sample_data, sample_mixture, once_in_iterations=record_frequency)
 
-        # Assert
         args, _ = MockPipeline.call_args
         pipeline_steps, pipeline_breakpointers, pipeline_pruners, pipeline_record_freq = (
             args[0],
@@ -194,24 +160,14 @@ class TestECMFit:
         sample_mixture: MixtureModel,
         sample_data: np.ndarray,
     ):
-        """
-        Tests the full lifecycle of the history property:
-        1. Raises AttributeError before `fit` is called.
-        2. Becomes accessible after the first `fit` call.
-        3. Is overwritten with a new object on a subsequent `fit` call.
-        """
-
-        # Arrange
         MockPipeline = mocker.patch("pysatl_mpest.estimators.ecm.Pipeline")
 
         breakpointers = [StopAfterOneIteration()]
         ecm = ECM(breakpointers=breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
 
-        # 1. Assert initial state: history access raises a specific error
         with pytest.raises(AttributeError, match="History is not available. Call the 'fit' method first."):
             _ = ecm.history
 
-        # 2. Act & Assert after first call
         mock_pipeline_instance_1 = MockPipeline.return_value
         mock_pipeline_instance_1.history = "first_history_object"
 
@@ -220,7 +176,6 @@ class TestECMFit:
         assert ecm.history == "first_history_object"
         first_history_id = id(ecm.history)
 
-        # 3. Act & Assert after second call
         mock_pipeline_instance_2 = MockPipeline.return_value
         mock_pipeline_instance_2.history = "second_history_object"
 

@@ -1,4 +1,4 @@
-"""A module that provides custom types for the project."""
+"""Type aliases for array shapes and scalar values."""
 
 __author__ = "Aleksandra Ri, Viktor Khanukaev, Totmyanin Danil"
 __copyright__ = "Copyright (c) 2025 PySATL project"

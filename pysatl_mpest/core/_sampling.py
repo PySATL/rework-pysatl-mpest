@@ -1,6 +1,4 @@
-"""
-Module providing the sampling strategy for deterministic sampling.
-"""
+"""Sampling strategy for deterministic sampling."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
@@ -15,28 +13,9 @@ from pysatl_core.types import CharacteristicName, NumericArray
 
 
 class DeterministicSampling(SamplingStrategy):
-    """
-    Sampling strategy that produces deterministic samples based on a random state.
-    """
+    """Deterministic sampling strategy using PPF inversion."""
 
     def sample(self, n: int, distr: Distribution, **options: Any) -> NumericArray:
-        """
-        Samples values from the distribution using the Percent Point Function (PPF).
-
-        Parameters
-        ----------
-        n : int
-            The number of samples to generate.
-        distr : Distribution
-            The distribution to sample from.
-        **options : Any
-            Additional options for sampling, such as 'random_state'.
-
-        Returns
-        -------
-        NumericArray
-            An array of generated samples.
-        """
         seed = options.get("random_state")
         rng = np.random.default_rng(seed)
 

@@ -1,9 +1,8 @@
-"""Tests for ExpectationStep"""
+"""Tests for ExpectationStep."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
-
 
 import numpy as np
 import pytest
@@ -11,20 +10,10 @@ from numpy.testing import assert_allclose, assert_array_equal
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators.iterative import ExpectationStep, MaximizationStep, PipelineState
 
-# --- Test Fixtures ---
-
 
 @pytest.fixture
 def initial_pipeline_state(mocker) -> PipelineState:
-    """
-    Creates an initial PipelineState for use in tests.
-
-    This fixture constructs a mock mixture model and a pipeline state where
-    the component log-densities, weights and input data X use np.float64.
-    """
-
     mixture = mocker.create_autospec(MixtureModel, instance=True)
-    # Row i holds the log-densities of the components at the i-th point.
     mixture.component_lpdf_matrix.return_value = np.log([[0.6, 0.1], [0.8, 0.3]]).astype(np.float64)
     mixture.log_weights = np.log([0.7, 0.3]).astype(np.float64)
 
@@ -37,44 +26,23 @@ def initial_pipeline_state(mocker) -> PipelineState:
     )
 
 
-# --- Tests ---
-
-
 def test_expectation_step_initialization():
-    """
-    Verifies the correct initialization of the `is_soft` flag.
-    """
-
-    # By default, is_soft should be True
     default_step = ExpectationStep()
     assert default_step.is_soft is True
 
-    # Explicitly set to True
     soft_step = ExpectationStep(is_soft=True)
     assert soft_step.is_soft is True
 
-    # Explicitly set to False
     hard_step = ExpectationStep(is_soft=False)
     assert hard_step.is_soft is False
 
 
 def test_available_next_steps_property():
-    """
-    Verifies that the `available_next_steps` property returns
-    the correct list of permissible subsequent steps.
-    """
-
     step = ExpectationStep()
-    assert step.available_next_steps == [MaximizationStep], "ExpectationStep should be followed by MaximizationStep"
+    assert step.available_next_steps == [MaximizationStep]
 
 
 def test_run_soft_assignment_calculates_h_correctly(initial_pipeline_state):
-    """
-    Verifies the correct calculation of the responsibility
-    matrix H in soft assignment mode.
-    """
-
-    # --- Arrange ---
     state = initial_pipeline_state
     step = ExpectationStep(is_soft=True)
 
@@ -87,11 +55,6 @@ def test_run_soft_assignment_calculates_h_correctly(initial_pipeline_state):
 
 
 def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
-    """
-    Verifies the correct calculation of the responsibility
-    matrix H in hard assignment mode (is_soft=False).
-    """
-
     state = initial_pipeline_state
     step = ExpectationStep(is_soft=False)
 
@@ -108,8 +71,6 @@ def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
 
 
 def test_run_hard_assignment_leaves_zeros_for_unsupported_points(initial_pipeline_state) -> None:
-    """Hard assignment leaves unsupported rows zero and assigns supported rows."""
-
     state = initial_pipeline_state
     state.X = np.array([1.0, -1.0, 2.0])
     state.curr_mixture.component_lpdf_matrix.return_value = np.array(
@@ -123,10 +84,6 @@ def test_run_hard_assignment_leaves_zeros_for_unsupported_points(initial_pipelin
 
 
 def test_run_uses_component_log_densities_of_the_data(initial_pipeline_state):
-    """
-    Verifies that the log-densities of the components are requested for the data of the state.
-    """
-
     state = initial_pipeline_state
 
     ExpectationStep().run(state)
@@ -135,11 +92,6 @@ def test_run_uses_component_log_densities_of_the_data(initial_pipeline_state):
 
 
 def test_run_returns_state_and_modifies_only_h(initial_pipeline_state):
-    """
-    Verifies that the `run` method returns the same state object,
-    modifying only its H attribute.
-    """
-
     state = initial_pipeline_state
     step = ExpectationStep(is_soft=False)
 
@@ -150,18 +102,12 @@ def test_run_returns_state_and_modifies_only_h(initial_pipeline_state):
 
     result_state = step.run(state)
 
-    # Check the type and identity of the returned object
-    assert isinstance(result_state, PipelineState), "The return type should be PipelineState"
-    assert result_state is state, "The method should return the same state object"
-
-    # Check that the H attribute was modified (from None to np.ndarray)
+    assert isinstance(result_state, PipelineState)
+    assert result_state is state
     assert state.H is not None
     assert isinstance(result_state.H, np.ndarray)
 
-    # Check that other attributes remain the exact same objects
-    assert result_state.X is original_x_ref, "Data X object reference should not be changed"
-    assert result_state.curr_mixture is original_mixture_ref, "`curr_mixture` object reference should not be changed"
-    assert result_state.prev_mixture is original_prev_mixture_ref, (
-        "`prev_mixture` object reference should not be changed"
-    )
-    assert result_state.error is original_error_ref, "`error` object reference should not be changed"
+    assert result_state.X is original_x_ref
+    assert result_state.curr_mixture is original_mixture_ref
+    assert result_state.prev_mixture is original_prev_mixture_ref
+    assert result_state.error is original_error_ref

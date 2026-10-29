@@ -116,15 +116,11 @@ class TestCheckLogic:
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.02)
 
-        # First cycle
         assert not bp.check(state)
         assert bp.check(state)
 
-        # After reset, should behave like new
         assert not bp.check(state)
         assert bp.check(state)
-
-        # Internal state reset
         assert bp._likelihood_old is None
 
 
@@ -133,7 +129,6 @@ class TestSupportFiltering:
     """Convergence compares sums over the same supported observations."""
 
     def test_points_outside_the_support_are_ignored(self, mock_mixture_with_log_densities, dummy_state_factory):
-        """An unsupported observation does not prevent finite-sum convergence."""
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0, -2.0], [-np.inf, -1.0, -2.00001]])
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.1)
@@ -144,7 +139,6 @@ class TestSupportFiltering:
     def test_change_in_the_supported_points_is_not_convergence(
         self, mock_mixture_with_log_densities, dummy_state_factory
     ):
-        """A newly supported observation establishes another baseline."""
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0], [-5.0, -1.0]])
         state = dummy_state_factory(mixture, X=np.array([1.0, 2.0]))
         bp = LikelihoodBreakpointer(0.1)
@@ -160,7 +154,6 @@ class TestSupportFiltering:
     def test_support_change_with_the_same_likelihood_is_not_convergence(
         self, mock_mixture_with_log_densities, dummy_state_factory, before, after
     ):
-        """Equal sums converge only after expanded or contracted support stabilizes."""
         mixture = mock_mixture_with_log_densities([before, after, after])
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.1)
@@ -172,7 +165,6 @@ class TestSupportFiltering:
     def test_supported_points_change_with_the_same_count_is_not_convergence(
         self, mock_mixture_with_log_densities, dummy_state_factory
     ):
-        """Equal support counts cannot substitute for identical observation masks."""
         mixture = mock_mixture_with_log_densities([[-1.0, -np.inf], [-np.inf, -1.0], [-np.inf, -1.0]])
         state = dummy_state_factory(mixture, X=np.array([1.0, 2.0]))
         bp = LikelihoodBreakpointer(0.1)
@@ -182,7 +174,6 @@ class TestSupportFiltering:
         assert bp.check(state)
 
     def test_support_change_updates_the_likelihood_baseline(self, mock_mixture_with_log_densities, dummy_state_factory):
-        """The next comparison uses the sum recorded with the changed support."""
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0], [0.0, -5.0], [0.0, -5.00001]])
         state = dummy_state_factory(mixture, X=np.array([1.0, 2.0]))
         bp = LikelihoodBreakpointer(0.1)
@@ -192,7 +183,6 @@ class TestSupportFiltering:
         assert bp.check(state)
 
     def test_support_mask_is_reset_after_convergence(self, mock_mixture_with_log_densities, dummy_state_factory):
-        """Convergence clears both fields and the next check records a baseline."""
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0]] * 3)
         state = dummy_state_factory(mixture, X=np.array([1.0, 2.0]))
         bp = LikelihoodBreakpointer(0.1)
@@ -213,7 +203,6 @@ class TestNonFiniteStops:
     def test_non_finite_log_density_stops_with_a_warning(
         self, mock_mixture_with_log_densities, dummy_state_factory, invalid
     ):
-        """NaN and positive infinity remain in the sum and trigger warning stops."""
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0, invalid]])
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.1)
@@ -228,7 +217,6 @@ class TestNonFiniteStops:
     def test_no_point_in_the_support_stops_with_a_warning(
         self, mock_mixture_with_log_densities, dummy_state_factory, log_densities
     ):
-        """An empty supported subset cannot establish a convergence baseline."""
         mixture = mock_mixture_with_log_densities([log_densities])
         state = dummy_state_factory(mixture, X=np.arange(len(log_densities), dtype=np.float64))
         bp = LikelihoodBreakpointer(0.1)
@@ -243,7 +231,6 @@ class TestNonFiniteStops:
     def test_state_is_reset_after_a_non_finite_stop(
         self, mock_mixture_with_log_densities, dummy_state_factory, invalid
     ):
-        """Warning stops clear an existing baseline and permit a fresh comparison."""
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0], invalid, [-np.inf, -1.0]])
         state = dummy_state_factory(mixture, X=np.array([1.0, 2.0]))
         bp = LikelihoodBreakpointer(0.1)

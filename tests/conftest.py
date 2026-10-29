@@ -12,7 +12,7 @@ from _pytest.fixtures import FixtureRequest
 from hypothesis import settings
 from tests.helpers.golden import GoldenDataComparator
 
-# Зафиксируем сид для Hypothesis, чтобы убрать рандом в генерации параметров
+# Fix seed for Hypothesis to ensure deterministic parameter generation
 settings.register_profile("deterministic", derandomize=True)
 settings.load_profile("deterministic")
 
