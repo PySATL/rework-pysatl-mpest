@@ -814,6 +814,15 @@ window.addEventListener("load", load);
 <section id="mixturemodel">
 <h3>MixtureModel<a class="headerlink" href="#mixturemodel" title="Link to this heading">#</a></h3>
 <p>Класс смеси распределений.</p>
+<p>Логарифмические веса нормализуются при создании смеси и каждом присваивании через
+<code class="docutils literal notranslate"><span class="pre">scipy.special.log_softmax</span></code>: сумма <code class="docutils literal notranslate"><span class="pre">exp(log_weights)</span></code> равна единице, в том числе при больших
+общих сдвигах входного вектора. Сеттер копирует входной массив и отклоняет NaN, положительную
+бесконечность и вектор только из отрицательных бесконечностей. Отдельные нулевые веса
+(<code class="docutils literal notranslate"><span class="pre">log_weights</span> <span class="pre">=</span> <span class="pre">-inf</span></code>) допустимы. Копирование смеси сохраняет малые веса непосредственно
+в логарифмическом пространстве.</p>
+<p>Плотность вычисляется как <code class="docutils literal notranslate"><span class="pre">pdf(X)</span> <span class="pre">=</span> <span class="pre">exp(lpdf(X))</span></code>, чтобы оба метода использовали одни
+нормализованные веса. Для вычисления <code class="docutils literal notranslate"><span class="pre">pdf</span></code> объект смеси ядра не создаётся и не кэшируется.
+<code class="docutils literal notranslate"><span class="pre">to_core_mixture()</span></code> остаётся явным экспортом в <code class="docutils literal notranslate"><span class="pre">pysatl-core</span></code> для работы с его характеристиками.</p>
 <ul>
 <li><p><strong>Атрибуты</strong></p>
 <ul>
@@ -824,10 +833,11 @@ window.addEventListener("load", load);
 <p>Компоненты смеси.</p>
 </li>
 <li><p><strong>+ weights: ndarray</strong></p>
-<p>Веса компонент.</p>
+<p>Нормализованные веса компонент, вычисленные через <code class="docutils literal notranslate"><span class="pre">softmax(log_weights)</span></code>.</p>
 </li>
-<li><p><strong>- logits: ndarray</strong></p>
-<p>Логиты. Необходимы для численной стабильности и соблюдения инварианта для весов. Можно оптимизировать их напрямую.</p>
+<li><p><strong>+ log_weights: ndarray</strong></p>
+<p>Нормализованные логарифмические веса. Массив доступен только для чтения; для изменения
+весов нужно присвоить новый вектор свойству целиком.</p>
 </li>
 </ul>
 </li>
@@ -837,13 +847,18 @@ window.addEventListener("load", load);
 <p>Добавляет новую компоненту и назначает ей выбранный вес. Остальные веса пересчитываются согласно их пропорциям.</p>
 </li>
 <li><p><strong>+ remove_component(component_idx: int)</strong></p>
-<p>Удаляет компоненту из смеси по ее индексу. Остальные веса пересчитываются согласно их пропорциям так, чтобы соблюдался инвариант.</p>
+<p>Удаляет компоненту из смеси по ее индексу. Остальные веса пересчитываются согласно их пропорциям так, чтобы соблюдался инвариант.
+Удаление последней компоненты или единственной компоненты с положительным весом вызывает
+<code class="docutils literal notranslate"><span class="pre">ValueError</span></code>, сохраняя состояние смеси.</p>
 </li>
 <li><p><strong>+ pdf(X: ArrayLike): ndarray</strong></p>
-<p>Функция плотности.</p>
+<p>Функция плотности, вычисляемая как <code class="docutils literal notranslate"><span class="pre">exp(lpdf(X))</span></code>.</p>
 </li>
 <li><p><strong>+ lpdf(X: ArrayLike): ndarray</strong></p>
 <p>Логарифм функции плотности.</p>
+</li>
+<li><p><strong>+ to_core_mixture(): FiniteMixtureDistribution</strong></p>
+<p>Явно создаёт смесь <code class="docutils literal notranslate"><span class="pre">pysatl-core</span></code> с текущими компонентами и нормализованными весами.</p>
 </li>
 <li><p><strong>+ loglikelihood(X: ArrayLike): ndarray</strong></p>
 <p>Логарифм правдоподобия.</p>

@@ -376,8 +376,14 @@ absolute difference between the current and previous log-likelihood values
 falls below a specified threshold:</p>
 <div class="math notranslate nohighlight">
 \[|L_{t+1} - L_t| &lt; threshold\]</div>
-<p>It tracks the log-likelihood of the current mixture model on the observed
-data at each iteration and compares it to the previous value.</p>
+<p>Only observations whose mixture log-density is not <code class="docutils literal notranslate"><span class="pre">-inf</span></code> contribute to
+the sum. Consecutive sums are compared only when the same observations
+contribute; a changed support mask establishes a new comparison baseline.
+Thus, this sum can be finite even when <code class="docutils literal notranslate"><span class="pre">mixture.loglikelihood(X)</span></code> is
+<code class="docutils literal notranslate"><span class="pre">-inf</span></code> because that method includes observations outside the support.</p>
+<p>An empty support or a non-finite sum emits a <code class="docutils literal notranslate"><span class="pre">RuntimeWarning</span></code> and stops
+the pipeline. Both the stored sum and support mask are reset whenever this
+breakpointer stops the pipeline, including ordinary convergence.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>threshold</strong> (<em>Scalar</em>) – The convergence threshold for the log-likelihood difference.
@@ -394,7 +400,7 @@ Must be a positive number.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check" title="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(state)</p></td>
-<td><p>Checks if the log-likelihood has converged.</p></td>
+<td><p>Check convergence of the log-likelihood over supported observations.</p></td>
 </tr>
 </tbody>
 </table>

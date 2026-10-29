@@ -334,7 +334,21 @@ returned with an error set, and no modifications are made.</p>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState">PipelineState</a></p>
 </dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If a block requests an unknown parameter or a parameter fixed by a
+    family view.</p></li>
+<li><p><strong>IndexError</strong> – If a block’s component index is at least the number of mixture components.</p></li>
+<li><p><strong>NotImplementedError</strong> – If the selected strategy is not implemented for the component’s family
+    and parametrization.</p></li>
+</ul>
+</dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>Strategy exceptions propagate directly to the caller. Component parameters
+and weights are updated only after every strategy has returned successfully.
+Missing responsibilities instead set <code class="xref py py-attr docutils literal notranslate"><span class="pre">PipelineState.error</span></code>, which
+<a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit" title="pysatl_mpest.estimators.iterative.Pipeline.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.fit()</span></code></a> reports as a <code class="docutils literal notranslate"><span class="pre">RuntimeWarning</span></code>.</p>
 </dd></dl>
 
 </section>

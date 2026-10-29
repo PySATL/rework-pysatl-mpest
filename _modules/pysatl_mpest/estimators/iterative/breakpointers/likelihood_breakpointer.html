@@ -722,6 +722,11 @@ window.addEventListener("load", load);
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">"SPDX-License-Identifier: MIT"</span>
 
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">....typings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Scalar</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..breakpointer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Breakpointer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
@@ -739,8 +744,15 @@ window.addEventListener("load", load);
 <span class="sd">    .. math::</span>
 <span class="sd">        |L_{t+1} - L_t| &lt; threshold</span>
 
-<span class="sd">    It tracks the log-likelihood of the current mixture model on the observed</span>
-<span class="sd">    data at each iteration and compares it to the previous value.</span>
+<span class="sd">    Only observations whose mixture log-density is not ``-inf`` contribute to</span>
+<span class="sd">    the sum. Consecutive sums are compared only when the same observations</span>
+<span class="sd">    contribute; a changed support mask establishes a new comparison baseline.</span>
+<span class="sd">    Thus, this sum can be finite even when ``mixture.loglikelihood(X)`` is</span>
+<span class="sd">    ``-inf`` because that method includes observations outside the support.</span>
+
+<span class="sd">    An empty support or a non-finite sum emits a ``RuntimeWarning`` and stops</span>
+<span class="sd">    the pipeline. Both the stored sum and support mask are reset whenever this</span>
+<span class="sd">    breakpointer stops the pipeline, including ordinary convergence.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -768,12 +780,13 @@ window.addEventListener("load", load);
 
     <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">threshold</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span> <span class="o">=</span> <span class="n">threshold</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Validates the threshold parameter."""</span>
         <span class="k">if</span> <span class="n">threshold</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The threshold must be greater than 0"</span><span class="p">)</span>
@@ -781,10 +794,12 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="LikelihoodBreakpointer.check">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Checks if the log-likelihood has converged.</span>
+<span class="w">        </span><span class="sd">"""Check convergence of the log-likelihood over supported observations.</span>
 
-<span class="sd">        Computes the current log-likelihood of the mixture on the data in</span>
-<span class="sd">        the pipeline state and compares it with the previous value.</span>
+<span class="sd">        Exclude only log-densities equal to ``-inf`` and compare sums only</span>
+<span class="sd">        when their observation masks match. Unlike ``loglikelihood(X)``, this</span>
+<span class="sd">        sum omits observations outside the mixture support. A changed mask</span>
+<span class="sd">        replaces the stored sum and mask without declaring convergence.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -795,25 +810,50 @@ window.addEventListener("load", load);
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        bool</span>
-<span class="sd">            .. math::</span>
-<span class="sd">                \text{True if } |L_{\text{new}} - L_{\text{old}}| &lt; \text{threshold, False otherwise}</span>
+<span class="sd">            True when comparable sums differ by less than ``threshold``, or</span>
+<span class="sd">            when the sum is non-finite or has no contributing observations.</span>
+<span class="sd">            Both stored values are reset on True. The first call and any</span>
+<span class="sd">            change of support return False and establish a new baseline.</span>
 
-<span class="sd">            On the first call (no previous likelihood), returns False and</span>
-<span class="sd">            initializes internal state.</span>
+<span class="sd">        Warns</span>
+<span class="sd">        -----</span>
+<span class="sd">        RuntimeWarning</span>
+<span class="sd">            If no observation is inside the support or the sum is non-finite,</span>
+<span class="sd">            including log-densities containing NaN or positive infinity.</span>
 <span class="sd">        """</span>
-        <span class="n">_likelihood_new</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="o">.</span><span class="n">loglikelihood</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">lpdf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="c1"># Zero-density observations have no E-step responsibilities and do not contribute here.</span>
+        <span class="n">support_mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isneginf</span><span class="p">(</span><span class="n">lpdf</span><span class="p">)</span>
+        <span class="n">in_support</span> <span class="o">=</span> <span class="n">lpdf</span><span class="p">[</span><span class="n">support_mask</span><span class="p">]</span>
+        <span class="n">likelihood_new</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">in_support</span><span class="p">))</span>
 
-        <span class="c1"># First iteration: cannot compare, so just store and continue</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="n">_likelihood_new</span>
+        <span class="k">if</span> <span class="n">in_support</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">likelihood_new</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">"The log-likelihood cannot be evaluated: no data point is inside the support of the mixture "</span>
+                <span class="s2">"or the log-density is not finite. Stopping the pipeline."</span><span class="p">,</span>
+                <span class="ne">RuntimeWarning</span><span class="p">,</span>
+                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">support_mask</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="n">likelihood_new</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="o">=</span> <span class="n">support_mask</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
             <span class="k">return</span> <span class="kc">False</span>
 
-        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">_likelihood_new</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">likelihood_new</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span> <span class="kc">True</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="n">_likelihood_new</span>
-            <span class="k">return</span> <span class="kc">False</span></div>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="n">likelihood_new</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
 </div>
 
 </pre></div>

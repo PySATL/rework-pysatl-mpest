@@ -323,19 +323,22 @@ process is repeated <cite>size</cite> times.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<em>int</em><em> | </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>...</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Defining number of random variates.
+<li><p><strong>size</strong> (<em>int</em><em> | </em><em>np.integer</em><em>[</em><em>np.typing.NBitBase</em><em>] </em><em>| </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>...</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Defining number of random variates.
 - If None (default), returns a single scalar.
-- If int, returns a 1D array of that length.
+- If int or np.integer, returns a 1D array of that length.
 - If tuple, returns an array of that shape.</p></li>
 <li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>np.random.Generator</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – A seed or random number generator to use for reproducible output.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A NumPy array containing the generated samples. Returns an
-empty array if <code class="xref py py-attr docutils literal notranslate"><span class="pre">size</span></code> is not positive.</p>
+<dd class="field-even"><p>A scalar if size is None, otherwise an array containing the
+generated samples. Returns an empty array if the number of samples is zero.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.float64 | FloatArray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If size contains a negative dimension.</p>
 </dd>
 </dl>
 </dd></dl>

@@ -317,8 +317,7 @@
 <dt class="sig sig-object py" id="pysatl_mpest.core.MixtureModel.pdf">
 <span class="sig-prename descclassname"><span class="pre">MixtureModel.</span></span><span class="sig-name descname"><span class="pre">pdf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/core/mixture.html#MixtureModel.pdf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.core.MixtureModel.pdf" title="Link to this definition">#</a></dt>
 <dd><p>Probability Density Function of the mixture.</p>
-<p>The PDF is computed as the weighted sum of the PDFs of its
-components.</p>
+<p>The PDF is computed as <code class="docutils literal notranslate"><span class="pre">exp(lpdf(X))</span></code> using the component log-densities.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>X</strong> (<em>ArrayLike</em>) – The input data points at which to evaluate the PDF.</p>

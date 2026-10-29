@@ -885,6 +885,30 @@ window.addEventListener("load", load);
 <span class="sd">        MixtureModel</span>
 <span class="sd">            The fitted mixture model after the pipeline has converged or been</span>
 <span class="sd">            stopped.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If a maximization block requests an unknown parameter or a parameter</span>
+<span class="sd">            fixed by a family view.</span>
+<span class="sd">        IndexError</span>
+<span class="sd">            If a maximization block's component index is at least the number of</span>
+<span class="sd">            mixture components.</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            If a maximization strategy is not implemented for the component's</span>
+<span class="sd">            family and parametrization.</span>
+
+<span class="sd">        Warns</span>
+<span class="sd">        -----</span>
+<span class="sd">        RuntimeWarning</span>
+<span class="sd">            If a step returns a state with :attr:`PipelineState.error` set, such as</span>
+<span class="sd">            when the responsibility matrix is missing. Fitting stops, the error is</span>
+<span class="sd">            saved in the iteration history, and the current mixture is returned.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Exceptions raised directly by steps, including strategy and configuration</span>
+<span class="sd">        errors, propagate to the caller rather than becoming state errors or warnings.</span>
 <span class="sd">        """</span>
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>

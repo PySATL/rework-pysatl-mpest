@@ -730,9 +730,11 @@ window.addEventListener("load", load);
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">"SPDX-License-Identifier: MIT"</span>
 
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">bisect</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span><span class="p">,</span> <span class="n">cast</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_core.families</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParametricFamilyDistribution</span>
@@ -848,6 +850,24 @@ window.addEventListener("load", load);
 <span class="sd">            The updated pipeline state with the modified :attr:`curr_mixture`. If the</span>
 <span class="sd">            :attr:`H` matrix is not available in the input state, the state is</span>
 <span class="sd">            returned with an error set, and no modifications are made.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If a block requests an unknown parameter or a parameter fixed by a</span>
+<span class="sd">            family view.</span>
+<span class="sd">        IndexError</span>
+<span class="sd">            If a block's component index is at least the number of mixture components.</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            If the selected strategy is not implemented for the component's family</span>
+<span class="sd">            and parametrization.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Strategy exceptions propagate directly to the caller. Component parameters</span>
+<span class="sd">        and weights are updated only after every strategy has returned successfully.</span>
+<span class="sd">        Missing responsibilities instead set :attr:`PipelineState.error`, which</span>
+<span class="sd">        :meth:`Pipeline.fit` reports as a ``RuntimeWarning``.</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -859,10 +879,8 @@ window.addEventListener("load", load);
         <span class="n">curr_mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>
 
         <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span>
-            <span class="n">strategy</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">StrategyFunction</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_strategies</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">maximization_strategy</span><span class="p">])</span>
+            <span class="n">strategy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_strategies</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">maximization_strategy</span><span class="p">]</span>
             <span class="n">component_id</span><span class="p">,</span> <span class="n">new_params</span> <span class="o">=</span> <span class="n">strategy</span><span class="p">(</span><span class="n">curr_mixture</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">],</span> <span class="n">state</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
-                <span class="k">return</span> <span class="n">state</span>
             <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">component_id</span><span class="p">,</span> <span class="n">new_params</span><span class="p">))</span>
 
         <span class="k">for</span> <span class="n">component_id</span><span class="p">,</span> <span class="n">params</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
@@ -880,31 +898,25 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">clear_after_prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Updates optimization blocks after component pruning.</span>
 
-<span class="sd">        This method removes optimization blocks associated with pruned components</span>
-<span class="sd">        and updates the component_id in the remaining blocks to maintain consistency.</span>
+<span class="sd">        Removes blocks associated with pruned components and shifts component_id</span>
+<span class="sd">        for remaining blocks by the number of removed components before them.</span>
+<span class="sd">        Surviving blocks are replaced with updated copies, so the block objects</span>
+<span class="sd">        given to the constructor are not modified.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        state : PipelineState</span>
-<span class="sd">            The current pipeline state containing removed_components_indices</span>
 <span class="sd">        removed_components_indices : list[int]</span>
-<span class="sd">            Tracks which component indices were removed during pruning.</span>
+<span class="sd">            Indices of components that were removed.</span>
 <span class="sd">        """</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">removed_components_indices</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">removed_components_indices</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="n">removed_indices</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">removed_components_indices</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">block</span> <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="k">if</span> <span class="n">block</span><span class="o">.</span><span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed_indices</span><span class="p">]</span>
-
-        <span class="n">old_to_new_mapping</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">new_component_id</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">old_component_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">removed_indices</span><span class="p">)):</span>
-            <span class="k">if</span> <span class="n">old_component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed_indices</span><span class="p">:</span>
-                <span class="n">old_to_new_mapping</span><span class="p">[</span><span class="n">old_component_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_component_id</span>
-                <span class="n">new_component_id</span> <span class="o">+=</span> <span class="mi">1</span>
-
-        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span>
-            <span class="n">block</span><span class="o">.</span><span class="n">component_id</span> <span class="o">=</span> <span class="n">old_to_new_mapping</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">]</span></div>
+        <span class="n">removed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">removed_components_indices</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">replace</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">component_id</span><span class="o">=</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span> <span class="o">-</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">removed</span><span class="p">,</span> <span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span>
+            <span class="k">if</span> <span class="n">block</span><span class="o">.</span><span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed</span>
+        <span class="p">]</span></div>
 </div>
 
 </pre></div>

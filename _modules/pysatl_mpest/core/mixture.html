@@ -729,8 +729,7 @@ window.addEventListener("load", load);
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_core.families</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParametricFamilyDistribution</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_core.transformations.operations.distributions.mixture</span><span class="w"> </span><span class="kn">import</span> <span class="n">FiniteMixtureDistribution</span><span class="p">,</span> <span class="n">finite_mixture</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_core.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">CharacteristicName</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.special</span><span class="w"> </span><span class="kn">import</span> <span class="n">logsumexp</span><span class="p">,</span> <span class="n">softmax</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.special</span><span class="w"> </span><span class="kn">import</span> <span class="n">log_softmax</span><span class="p">,</span> <span class="n">logsumexp</span><span class="p">,</span> <span class="n">softmax</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..typings</span><span class="w"> </span><span class="kn">import</span> <span class="n">FloatArray</span><span class="p">,</span> <span class="n">Scalar</span><span class="p">,</span> <span class="n">UnivariateFloatArray</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">_components</span>
@@ -772,7 +771,7 @@ window.addEventListener("load", load);
 <span class="sd">        A NumPy array of the normalized weights for each component. The sum</span>
 <span class="sd">        of weights is always 1.</span>
 <span class="sd">    log_weights : UnivariateFloatArray</span>
-<span class="sd">        A NumPy array of the natural logarithm of the component weights.</span>
+<span class="sd">        A read-only NumPy array of normalized logarithmic component weights.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -811,11 +810,9 @@ window.addEventListener("load", load);
             <span class="bp">self</span><span class="o">.</span><span class="n">_validate_weights</span><span class="p">(</span><span class="n">n_components</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_components</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">weights</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">tiny</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cached_weights</span><span class="p">:</span> <span class="n">UnivariateFloatArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_pairs_cache</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">_components</span><span class="o">.</span><span class="n">ComponentKey</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_core_mixture_cache</span><span class="p">:</span> <span class="n">FiniteMixtureDistribution</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">weights</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span><span class="o">.</span><span class="n">tiny</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">n_components</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -844,13 +841,13 @@ window.addEventListener("load", load);
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">log_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UnivariateFloatArray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""UnivariateFloatArray: The logarithm of the component weights."""</span>
+<span class="w">        </span><span class="sd">"""UnivariateFloatArray: Read-only normalized logarithmic component weights."""</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span>
 
     <span class="nd">@log_weights</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">log_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_log_weights</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Sets the log-weights for the components.</span>
+<span class="w">        </span><span class="sd">"""Copy and normalize the log-weights for the components.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -861,14 +858,23 @@ window.addEventListener("load", load);
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If the length of the new log-weights vector does not match the</span>
-<span class="sd">            number of components.</span>
+<span class="sd">            number of components, or the values cannot be normalized because</span>
+<span class="sd">            they are all negative infinity or contain NaN or positive infinity.</span>
 <span class="sd">        """</span>
 
-        <span class="n">new_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="n">new_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The length of the new logit vector does not match the number of components."</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">=</span> <span class="n">new_log_weights</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"The length of the new log-weights vector (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">)</span><span class="si">}</span><span class="s2">) "</span>
+                <span class="sa">f</span><span class="s2">"does not match the number of components (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="si">}</span><span class="s2">)."</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">logsumexp</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The log-weights must be normalizable: at least one finite value and no NaN or +inf."</span><span class="p">)</span>
+
+        <span class="n">normalized</span> <span class="o">=</span> <span class="n">log_softmax</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">)</span>
+        <span class="n">normalized</span><span class="o">.</span><span class="n">flags</span><span class="o">.</span><span class="n">writeable</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">=</span> <span class="n">normalized</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_cache</span><span class="p">()</span>
 
 <div class="viewcode-block" id="MixtureModel.add_component">
@@ -896,12 +902,9 @@ window.addEventListener("load", load);
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The weight of the new component must be in the range (0, 1)."</span><span class="p">)</span>
 
         <span class="n">d_weight</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">d_weight</span><span class="p">)</span>
-        <span class="n">new_log_weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">d_weight</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span><span class="p">,</span> <span class="n">new_log_weight</span><span class="p">)</span>
-
+        <span class="n">new_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">d_weight</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">d_weight</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_components</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">component</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_cache</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="n">new_log_weights</span></div>
 
 
 <div class="viewcode-block" id="MixtureModel.remove_component">
@@ -921,7 +924,8 @@ window.addEventListener("load", load);
 <span class="sd">        IndexError</span>
 <span class="sd">            If the component index is out of range.</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If an attempt is made to remove the last component.</span>
+<span class="sd">            If an attempt is made to remove the last component or the only</span>
+<span class="sd">            component with positive weight.</span>
 <span class="sd">        """</span>
 
         <span class="n">n_components</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span>
@@ -931,10 +935,12 @@ window.addEventListener("load", load);
         <span class="k">if</span> <span class="n">n_components</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The last component cannot be removed from the model."</span><span class="p">)</span>
 
+        <span class="n">new_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span><span class="p">,</span> <span class="n">component_idx</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Cannot remove the only component with positive weight."</span><span class="p">)</span>
+
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_components</span><span class="p">[</span><span class="n">component_idx</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span><span class="p">,</span> <span class="n">component_idx</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span> <span class="o">-=</span> <span class="n">logsumexp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_cache</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="n">new_log_weights</span></div>
 
 
 <div class="viewcode-block" id="MixtureModel.to_core_mixture">
@@ -952,21 +958,12 @@ window.addEventListener("load", load);
         <span class="k">return</span> <span class="n">finite_mixture</span><span class="p">(</span><span class="n">weighted_components</span><span class="p">)</span></div>
 
 
-    <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_core_mixture</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FiniteMixtureDistribution</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Lazy instantiation and caching of the pysatl-core FiniteMixtureDistribution."""</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_core_mixture_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_core_mixture_cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_core_mixture</span><span class="p">()</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_core_mixture_cache</span>
-
 <div class="viewcode-block" id="MixtureModel.pdf">
 <a class="viewcode-back" href="../../../api/core/generated/pysatl_mpest.core.MixtureModel.pdf.html#pysatl_mpest.core.MixtureModel.pdf">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">|</span> <span class="n">FloatArray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Probability Density Function of the mixture.</span>
 
-<span class="sd">        The PDF is computed as the weighted sum of the PDFs of its</span>
-<span class="sd">        components.</span>
+<span class="sd">        The PDF is computed as ``exp(lpdf(X))`` using the component log-densities.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -980,12 +977,7 @@ window.addEventListener("load", load);
 <span class="sd">            Return a scalar when given a scalar, and to return an array when given an array.</span>
 <span class="sd">        """</span>
 
-        <span class="n">is_scalar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
-        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_core_mixture</span><span class="o">.</span><span class="n">calculate_characteristic</span><span class="p">(</span><span class="n">CharacteristicName</span><span class="o">.</span><span class="n">PDF</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">is_scalar</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">result</span><span class="p">[()])</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="MixtureModel.lpdf">
@@ -1032,10 +1024,14 @@ window.addEventListener("load", load);
 <span class="sd">        FloatArray</span>
 <span class="sd">            An array of shape ``(*X.shape, n_components)`` whose last axis indexes</span>
 <span class="sd">            the components. For a sample of ``n`` points this is an ``(n, n_components)`` matrix.</span>
+<span class="sd">            The log-densities of one component are contiguous in memory (the matrix is a view of a</span>
+<span class="sd">            ``(n_components, *X.shape)`` array), which makes reductions over the component axis,</span>
+<span class="sd">            such as ``logsumexp`` in the E-step, several times faster than on a row-major matrix.</span>
 <span class="sd">        """</span>
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">_components</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">],</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span></div>
+        <span class="n">stacked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">_components</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> <span class="k">for</span> <span class="n">component</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">moveaxis</span><span class="p">(</span><span class="n">stacked</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MixtureModel.loglikelihood">
@@ -1065,7 +1061,7 @@ window.addEventListener("load", load);
 <a class="viewcode-back" href="../../../api/core/generated/pysatl_mpest.core.MixtureModel.generate.html#pysatl_mpest.core.MixtureModel.generate">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">generate</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NBitBase</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">Generator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">|</span> <span class="n">FloatArray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Generates random samples from the mixture model.</span>
@@ -1076,10 +1072,10 @@ window.addEventListener("load", load);
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        size : int | tuple[int, ...] | None, optional</span>
+<span class="sd">        size : int | np.integer[np.typing.NBitBase] | tuple[int, ...] | None, optional</span>
 <span class="sd">            Defining number of random variates.</span>
 <span class="sd">            - If None (default), returns a single scalar.</span>
-<span class="sd">            - If int, returns a 1D array of that length.</span>
+<span class="sd">            - If int or np.integer, returns a 1D array of that length.</span>
 <span class="sd">            - If tuple, returns an array of that shape.</span>
 <span class="sd">        random_state : int | np.random.Generator | None, optional</span>
 <span class="sd">            A seed or random number generator to use for reproducible output.</span>
@@ -1087,8 +1083,13 @@ window.addEventListener("load", load);
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        np.float64 | FloatArray</span>
-<span class="sd">            A NumPy array containing the generated samples. Returns an</span>
-<span class="sd">            empty array if :attr:`size` is not positive.</span>
+<span class="sd">            A scalar if size is None, otherwise an array containing the</span>
+<span class="sd">            generated samples. Returns an empty array if the number of samples is zero.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If size contains a negative dimension.</span>
 <span class="sd">        """</span>
 
         <span class="n">target_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
@@ -1096,7 +1097,9 @@ window.addEventListener("load", load);
             <span class="n">n_samples</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="n">target_shape</span> <span class="o">=</span> <span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">target_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">size</span><span class="p">,)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">else</span> <span class="n">size</span>
+            <span class="n">target_shape</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">size</span><span class="p">),)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">))</span> <span class="k">else</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="n">target_shape</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"size must not contain negative dimensions, got </span><span class="si">{</span><span class="n">size</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
             <span class="n">n_samples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">target_shape</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">n_samples</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">target_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -1178,7 +1181,9 @@ window.addEventListener("load", load);
 <span class="sd">        MixtureModel</span>
 <span class="sd">            A new instance of the distribution, identical to the original.</span>
 <span class="sd">        """</span>
-        <span class="k">return</span> <span class="n">MixtureModel</span><span class="p">(</span><span class="n">components</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_components</span><span class="p">),</span> <span class="n">weights</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="n">new_model</span> <span class="o">=</span> <span class="n">MixtureModel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_components</span><span class="p">)</span>
+        <span class="n">new_model</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span>
+        <span class="k">return</span> <span class="n">new_model</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Checks if two mixture models are equal.</span>
@@ -1232,7 +1237,6 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">_invalidate_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_cached_weights</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_pairs_cache</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_core_mixture_cache</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">UnivariateFloatArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Validates the component weights.</span>

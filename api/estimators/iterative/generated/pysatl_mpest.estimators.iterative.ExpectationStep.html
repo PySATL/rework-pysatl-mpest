@@ -376,9 +376,9 @@ mixture component. It can perform either a soft (probabilistic) or hard
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>is_soft</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True (default), performs a soft assignment where H contains probabilities.
-If False, performs a hard assignment where each data point
+If False, performs a hard assignment where each supported data point
 is assigned to the single most likely component (i.e., H contains
-only 0s and 1s).</p>
+only 0s and 1s). Unsupported points retain zero responsibilities.</p>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>is_soft</strong> (<em>bool</em>) – Flag indicating whether to perform soft or hard assignment.</p>

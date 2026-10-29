@@ -742,9 +742,9 @@ window.addEventListener("load", load);
 <span class="sd">    ----------</span>
 <span class="sd">    is_soft : bool, optional</span>
 <span class="sd">        If True (default), performs a soft assignment where H contains probabilities.</span>
-<span class="sd">        If False, performs a hard assignment where each data point</span>
+<span class="sd">        If False, performs a hard assignment where each supported data point</span>
 <span class="sd">        is assigned to the single most likely component (i.e., H contains</span>
-<span class="sd">        only 0s and 1s).</span>
+<span class="sd">        only 0s and 1s). Unsupported points retain zero responsibilities.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
@@ -784,7 +784,7 @@ window.addEventListener("load", load);
 <span class="sd">        component, incorporates the component weights, and normalizes to find</span>
 <span class="sd">        the posterior probabilities (responsibilities). The resulting matrix H</span>
 <span class="sd">        is then stored in the pipeline state. A data point that lies outside the</span>
-<span class="sd">        support of every component gets a row of zeros.</span>
+<span class="sd">        support of every component gets a row of zeros in both assignment modes.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -812,11 +812,11 @@ window.addEventListener("load", load);
         <span class="n">H_soft</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">H_soft</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.0</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_soft</span><span class="p">:</span>
-            <span class="n">n_samples</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">H_hard</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">H_soft</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
+            <span class="n">has_mass</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">H_soft</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
             <span class="n">max_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">H_soft</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">H_hard</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_samples</span><span class="p">),</span> <span class="n">max_indices</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="n">H_hard</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">flatnonzero</span><span class="p">(</span><span class="n">has_mass</span><span class="p">),</span> <span class="n">max_indices</span><span class="p">[</span><span class="n">has_mass</span><span class="p">]]</span> <span class="o">=</span> <span class="mf">1.0</span>
 
             <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="o">=</span> <span class="n">H_hard</span>
         <span class="k">else</span><span class="p">:</span>
