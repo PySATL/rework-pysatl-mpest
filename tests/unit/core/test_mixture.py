@@ -359,6 +359,29 @@ def test_generate_zero_size(mock_comp: ParametricFamilyDistribution) -> None:
     assert cast(np.ndarray, res_tuple).shape == (0, 2)
 
 
+@pytest.mark.parametrize("size", [-1, (-2, 3), (-2, -3), (0, -2)])
+def test_generate_rejects_a_negative_size(mock_comp: ParametricFamilyDistribution, size: int | tuple[int, ...]) -> None:
+    """Reject every negative dimension, even when the product is nonnegative."""
+    mixture = MixtureModel([mock_comp])
+
+    with pytest.raises(ValueError, match="size must not contain negative dimensions"):
+        mixture.generate(size=size, random_state=42)
+
+
+def test_generate_zero_tuple_preserves_shape(mock_comp: ParametricFamilyDistribution) -> None:
+    """Preserve the shape of an empty multidimensional sample."""
+    mixture = MixtureModel([mock_comp])
+
+    assert_is_array_type(mixture.generate(size=(0, 5), random_state=42), (0, 5))
+
+
+def test_generate_accepts_numpy_integer_size(mock_comp: ParametricFamilyDistribution) -> None:
+    """Accept a NumPy integer as a sample size."""
+    mixture = MixtureModel([mock_comp])
+
+    assert_is_array_type(mixture.generate(size=np.int64(5), random_state=42), (5,))
+
+
 def test_dunder_methods(
     param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
 ) -> None:

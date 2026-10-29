@@ -320,7 +320,7 @@ class MixtureModel:
 
     def generate(
         self,
-        size: int | tuple[int, ...] | None = None,
+        size: int | np.integer[np.typing.NBitBase] | tuple[int, ...] | None = None,
         random_state: int | np.random.Generator | None = None,
     ) -> np.float64 | FloatArray:
         """Generates random samples from the mixture model.
@@ -331,10 +331,10 @@ class MixtureModel:
 
         Parameters
         ----------
-        size : int | tuple[int, ...] | None, optional
+        size : int | np.integer[np.typing.NBitBase] | tuple[int, ...] | None, optional
             Defining number of random variates.
             - If None (default), returns a single scalar.
-            - If int, returns a 1D array of that length.
+            - If int or np.integer, returns a 1D array of that length.
             - If tuple, returns an array of that shape.
         random_state : int | np.random.Generator | None, optional
             A seed or random number generator to use for reproducible output.
@@ -342,8 +342,13 @@ class MixtureModel:
         Returns
         -------
         np.float64 | FloatArray
-            A NumPy array containing the generated samples. Returns an
-            empty array if :attr:`size` is not positive.
+            A scalar if size is None, otherwise an array containing the
+            generated samples. Returns an empty array if the number of samples is zero.
+
+        Raises
+        ------
+        ValueError
+            If size contains a negative dimension.
         """
 
         target_shape: tuple[int, ...]
@@ -351,7 +356,9 @@ class MixtureModel:
             n_samples = 1
             target_shape = ()
         else:
-            target_shape = (size,) if isinstance(size, int) else size
+            target_shape = (int(size),) if isinstance(size, (int, np.integer)) else tuple(size)
+            if any(dim < 0 for dim in target_shape):
+                raise ValueError(f"size must not contain negative dimensions, got {size}.")
             n_samples = int(np.prod(target_shape))
             if n_samples == 0:
                 return np.empty(target_shape, dtype=np.float64)
