@@ -31,7 +31,7 @@ class BaseEstimator(ABC):
         X : ArrayLike
             Input data sample.
         mixture : MixtureModel
-            Initial mixture model to fit.
+            Initial mixture model to fit; not modified in-place.
 
         Returns
         -------

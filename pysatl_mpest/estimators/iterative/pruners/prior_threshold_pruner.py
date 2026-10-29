@@ -50,6 +50,8 @@ class PriorThresholdPruner(Pruner):
     def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Remove components with weights below threshold, retaining at least one component.
 
+        If all weights fall below threshold, the component with the largest weight is retained.
+
         Parameters
         ----------
         state : PipelineState

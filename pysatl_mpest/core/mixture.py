@@ -108,7 +108,7 @@ class MixtureModel:
 
     @property
     def weights(self) -> UnivariateFloatArray:
-        """UnivariateFloatArray: Normalized component weights, cached from log-weights."""
+        """UnivariateFloatArray: Normalized component weights cached from log-weights; treated as read-only."""
 
         if self._cached_weights is None:
             self._cached_weights = softmax(self._log_weights)
@@ -123,7 +123,14 @@ class MixtureModel:
 
     @log_weights.setter
     def log_weights(self, new_log_weights: ArrayLike) -> None:
-        """Copy and normalize log-weights via log-softmax."""
+        """Copy and normalize log-weights via log-softmax.
+
+        Raises
+        ------
+        ValueError
+            If length differs from ``n_components`` or values cannot be normalized
+            (e.g. all ``-inf``, ``NaN``, or ``+inf``).
+        """
 
         new_log_weights = np.array(new_log_weights, dtype=np.float64)
 

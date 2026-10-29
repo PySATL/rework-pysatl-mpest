@@ -49,6 +49,9 @@ class PipelineStep(ABC):
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
         """Clean up step internal state for components removed during pruning.
 
+        Surviving components are renumbered contiguously starting from 0; step
+        state indexed by component must be re-indexed accordingly.
+
         Parameters
         ----------
         removed_components_indices : list[int]

@@ -56,6 +56,11 @@ class ECME(BaseEstimator):
     history : IterationsHistory
         Recorded iteration snapshots, accessible after calling :meth:`fit`.
 
+    Raises
+    ------
+    ValueError
+        If ``default_strategy`` is not ``'odl'`` or ``'q-func'``.
+
     Methods
     -------
     .. autosummary::

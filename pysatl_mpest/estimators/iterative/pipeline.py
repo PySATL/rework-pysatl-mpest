@@ -51,7 +51,9 @@ class Pipeline(BaseEstimator):
     Raises
     ------
     ValueError
-        If ``steps`` is empty or invalid, or if ``breakpointers`` is empty.
+        If ``steps`` is empty or cannot form a closed loop (each step, including
+        the last transitioning to the first, must permit the next in ``available_next_steps``),
+        or if ``breakpointers`` is empty.
 
     Methods
     -------
@@ -125,7 +127,8 @@ class Pipeline(BaseEstimator):
         Warns
         -----
         RuntimeWarning
-            If a step sets :attr:`PipelineState.error`, stopping the pipeline prematurely.
+            If a step sets :attr:`PipelineState.error`, stopping fitting prematurely
+            and returning the current mixture.
         """
 
         X = np.asarray(X, dtype=np.float64)
