@@ -15,6 +15,9 @@ class Breakpointer(ABC):
     Evaluated after pruning in each iteration; implementations must account for
     differing component counts between ``state.prev_mixture`` and ``state.curr_mixture``.
 
+    ``check`` may keep state between calls and is expected to be called once per iteration. The pipeline stops
+    at the first breakpointer that returns True, so the ones after it are not called in that iteration.
+
     Methods
     -------
     .. autosummary::

@@ -38,7 +38,7 @@ class MixtureModel:
         A sequence of distribution objects that will form the mixture.
     weights : ArrayLike | None, optional
         An array of initial weights for the components. The weights must be
-        positive and sum to 1. If None, components are assigned equal
+        non-negative and sum to 1. If None, components are assigned equal
         weights. Defaults to None.
 
     Attributes
@@ -51,7 +51,9 @@ class MixtureModel:
         A NumPy array of the normalized weights for each component. The sum
         of weights is always 1.
     log_weights : UnivariateFloatArray
-        A read-only NumPy array of normalized logarithmic component weights.
+        A read-only NumPy array of normalized logarithmic component weights. Assigning a new
+        value copies and normalizes it; a ``ValueError`` is raised if its length differs from
+        ``n_components`` or it cannot be normalized (all ``-inf``, ``NaN`` or ``+inf``).
 
     Raises
     ------
@@ -67,6 +69,7 @@ class MixtureModel:
 
         add_component
         remove_component
+        to_core_mixture
         pdf
         lpdf
         component_lpdf_matrix
@@ -150,8 +153,7 @@ class MixtureModel:
     def add_component(self, component: ParametricFamilyDistribution, weight: Scalar) -> None:
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
-        If :attr:`weight` is specified for the new component, the old component
-        weights are multiplied by `(1 - weight)`.
+        The old component weights are multiplied by ``1 - weight``.
 
         Parameters
         ----------
@@ -163,7 +165,7 @@ class MixtureModel:
         Raises
         ------
         ValueError
-            If the specified :attr:`weight` is outside the range (0, 1).
+            If ``weight`` is outside the range (0, 1).
         """
 
         if not (0 < weight < 1):
@@ -208,18 +210,28 @@ class MixtureModel:
         self.log_weights = new_log_weights
 
     def to_core_mixture(self) -> FiniteMixtureDistribution:
-        """Convert to a pysatl-core FiniteMixtureDistribution."""
+        """Convert to a pysatl-core FiniteMixtureDistribution.
+
+        The result is a snapshot: later changes to this model are not reflected in it.
+        """
 
         weighted_components = [(float(w), comp) for w, comp in zip(self.weights, self.components)]
         return finite_mixture(weighted_components)
 
     def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
-        """Probability Density Function of the mixture: ``exp(lpdf(X))``."""
+        """Probability Density Function of the mixture: ``exp(lpdf(X))``.
+
+        The shape of the result and the handling of scalar input follow :meth:`lpdf`.
+        """
 
         return np.exp(self.lpdf(X))
 
     def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
-        """Logarithm of the Probability Density Function, computed via logsumexp."""
+        """Logarithm of the Probability Density Function of the mixture.
+
+        The result has the shape of ``X``; a scalar ``X`` gives a ``np.float64``. Points outside the
+        support of every component evaluate to ``-inf``.
+        """
 
         is_scalar = np.isscalar(X)
         X = np.asarray(X, dtype=np.float64)
@@ -252,7 +264,10 @@ class MixtureModel:
         return np.moveaxis(stacked, 0, -1)
 
     def loglikelihood(self, X: ArrayLike) -> float:
-        """Sum of log-densities for all points in :attr:`X`."""
+        """Sum of log-densities for all points in ``X``.
+
+        The sum is ``-inf`` if any point is outside the support of every component.
+        """
 
         X = np.asarray(X, dtype=np.float64)
         return np.sum(self.lpdf(X))
@@ -317,7 +332,15 @@ class MixtureModel:
         return self.components[key]
 
     def __setitem__(self, key: int, value: ParametricFamilyDistribution) -> None:
-        """Replace component at index."""
+        """Replace component at index.
+
+        Raises
+        ------
+        IndexError
+            If ``key`` is outside ``[0, n_components - 1]``; unlike ``__getitem__``, negative
+            indices are not supported.
+        """
+
         if not (0 <= key <= self.n_components - 1):
             raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
 
@@ -330,7 +353,8 @@ class MixtureModel:
         return iter(self.components)
 
     def __copy__(self) -> "MixtureModel":
-        """Create a copy of the mixture model with identical components and weights."""
+        """Create a shallow copy: the component objects are shared, the weights are copied."""
+
         new_model = MixtureModel(self._components)
         new_model.log_weights = self._log_weights
         return new_model
@@ -373,7 +397,8 @@ class MixtureModel:
             raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
 
     def _get_sorted_pairs(self) -> list[tuple[_components.ComponentKey, float]]:
-        """Internal helper to get (component key, weight) pairs, sorted so that component order does not matter."""
+        """(Component key, weight) pairs sorted so that component order does not matter."""
+
         if self._sorted_pairs_cache is None:
             pairs = [(_components.component_key(comp), float(w)) for comp, w in zip(self.components, self.weights)]
             self._sorted_pairs_cache = sorted(pairs)

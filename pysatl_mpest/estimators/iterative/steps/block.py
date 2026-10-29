@@ -23,7 +23,9 @@ class MaximizationStrategy(Enum):
     OBSERVED_DATA_LIKELIHOOD
         Directly maximize observed-data log-likelihood of the mixture.
     MOMENTS
-        Method of Moments matching theoretical and empirical weighted moments.
+        Method of Moments matching theoretical and empirical weighted moments. Implemented only for
+        the Normal (``meanStd``) and Exponential (``rate``) families; other components raise
+        ``NotImplementedError``.
     """
 
     QFUNCTION = auto()

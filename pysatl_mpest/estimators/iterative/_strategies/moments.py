@@ -46,8 +46,8 @@ def _exponential_rate(
 ) -> tuple[int, dict[str, float]]:
     """Update Exponential rate parameter using weighted first moment.
 
-    If total component responsibility or sample mean is within NUMERICAL_TOLERANCE,
-    the parameter is left unchanged.
+    If total component responsibility is within NUMERICAL_TOLERANCE of zero, or the weighted
+    mean is <= NUMERICAL_TOLERANCE, the parameter is left unchanged.
     """
 
     if state.H is None:

@@ -1,4 +1,10 @@
-"""Maximization step strategies for updating mixture component parameters."""
+"""Maximization step strategies for updating mixture component parameters.
+
+A strategy is called as ``strategy(component, state, block, optimizer)`` for the component
+``block.component_id`` and returns ``(component_id, new_params)``. ``new_params`` maps the names of the
+free parameters to their new values; parameters it omits keep their values, so an empty dict means
+the component is left unchanged.
+"""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"

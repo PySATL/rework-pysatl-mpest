@@ -132,7 +132,7 @@ class ECME(BaseEstimator):
         X : ArrayLike
             Input data sample.
         mixture : MixtureModel
-            Initial mixture model to fit.
+            Initial mixture model to fit; not modified in-place.
         q_indices_raw : Sequence[int] | int | None, optional
             Component indices to optimize via Q-function maximization. Supports negative indexing.
         odl_indices_raw : Sequence[int] | int | None, optional

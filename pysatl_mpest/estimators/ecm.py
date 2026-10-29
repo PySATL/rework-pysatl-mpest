@@ -92,7 +92,7 @@ class ECM(BaseEstimator):
         X : ArrayLike
             Input data sample.
         mixture : MixtureModel
-            Initial mixture model to fit.
+            Initial mixture model to fit; not modified in-place.
         once_in_iterations : int, optional
             Iteration recording frequency in history. Defaults to 1.
 

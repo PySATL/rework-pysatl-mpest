@@ -1,4 +1,4 @@
-"""Tests for IterationHistory class."""
+"""Tests for IterationsHistory class."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"

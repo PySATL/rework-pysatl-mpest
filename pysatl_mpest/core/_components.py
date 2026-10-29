@@ -59,7 +59,17 @@ def all_parameters(component: ParametricFamilyDistribution) -> dict[str, float]:
 
 
 def with_parameters(component: ParametricFamilyDistribution, **updates: float) -> ParametricFamilyDistribution:
-    """Rebuild component with updated free parameter values, leaving the original unchanged."""
+    """Rebuild component with updated free parameter values, leaving the original unchanged.
+
+    The new component gets the default sampling and computation strategies, so custom ones of the original
+    are not carried over.
+
+    Raises
+    ------
+    ValueError
+        If a name in ``updates`` is not a free parameter of the component, or if the new values violate the
+        constraints of the parametrization. The M-step strategies treat the latter as an infeasible point.
+    """
 
     free = free_parameters(component)
     if unknown := set(updates) - set(free):

@@ -26,8 +26,8 @@ def observed_data_likelihood_strategy(
 ) -> tuple[int, dict[str, float]]:
     """Maximize observed data log-likelihood for a component with fixed background.
 
-    Log-densities are bounded below by ``LOG_FLOOR`` to assign a finite penalty
-    to unsupported observations instead of freezing the objective. Parameter
+    The mixture log-density of each observation is bounded below by ``LOG_FLOOR`` to assign a finite
+    penalty to unsupported observations instead of freezing the objective. Parameter
     constraint violations or non-finite objectives evaluate to ``+inf``. Only
     parameters specified by ``block`` are updated, preserving fixed view parameters.
     Posterior responsibilities (``state.H``) are not used.

@@ -1,3 +1,11 @@
+"""
+Tests for the ECME class, which acts as a facade for the Pipeline.
+"""
+
+__author__ = "Danil Totmyanin"
+__copyright__ = "Copyright (c) 2026 PySATL project"
+__license__ = "SPDX-License-Identifier: MIT"
+
 import numpy as np
 import pytest
 from pysatl_mpest.core.mixture import MixtureModel

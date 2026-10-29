@@ -34,6 +34,9 @@ class PipelineStep(ABC):
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the step on the given pipeline state and return the updated state.
 
+        The built-in steps modify ``state`` in place and return it. A step may report a failure by setting
+        ``state.error``, which stops the pipeline with a warning.
+
         Parameters
         ----------
         state : PipelineState
@@ -55,5 +58,5 @@ class PipelineStep(ABC):
         Parameters
         ----------
         removed_components_indices : list[int]
-            Ascending indices of removed components relative to the pre-pruning mixture.
+            Ascending indices of removed components relative to the mixture before this removal.
         """

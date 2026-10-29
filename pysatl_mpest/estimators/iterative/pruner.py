@@ -24,6 +24,10 @@ class Pruner(ABC):
     def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Identify and remove components from the mixture in pipeline state.
 
+        Implementations return the state to continue with and may build a new one instead of
+        modifying the given state. Removed indices refer to the mixture given to this call; the pipeline
+        drops the matching columns of ``state.H`` itself.
+
         Parameters
         ----------
         state : PipelineState

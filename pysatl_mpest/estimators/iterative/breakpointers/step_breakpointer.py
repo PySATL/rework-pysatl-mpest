@@ -12,7 +12,8 @@ from ..pipeline_state import PipelineState
 class StepBreakpointer(Breakpointer):
     """Stops the pipeline after a fixed number of iterations.
 
-    Counter resets to 0 when the limit is reached so the instance can be reused.
+    The counter resets to 0 only when this breakpointer reaches the limit. If the pipeline is stopped by
+    another breakpointer or by a step error first, the count carries over to the next use of the instance.
 
     Parameters
     ----------

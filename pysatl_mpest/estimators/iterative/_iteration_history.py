@@ -28,7 +28,8 @@ class IterationRecord:
     pruners_used : list[Pruner] | None
         Pruners executed during this iteration, or None if none were applied.
     error : Exception | None
-        Exception that occurred during the iteration, if any.
+        Exception raised by a step. The failed iteration has no record of its own unless it is the first
+        one, so an error from a later iteration is set on the last recorded one.
     """
 
     iteration: int
@@ -85,7 +86,7 @@ class IterationsHistory:
         self._counter += 1
 
     def reset(self) -> None:
-        """Clear recorded history and reset counter and frequency."""
+        """Clear recorded history, reset the counter and set the recording frequency back to 1."""
 
         self._history.clear()
         self._counter = 0

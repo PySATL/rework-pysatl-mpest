@@ -74,10 +74,7 @@ class LikelihoodBreakpointer(Breakpointer):
     def check(self, state: PipelineState) -> bool:
         """Check convergence of the log-likelihood over supported observations.
 
-        Exclude only log-densities equal to ``-inf`` and compare sums only
-        when their observation masks match. Unlike ``loglikelihood(X)``, this
-        sum omits observations outside the mixture support. A changed mask
-        replaces the stored sum and mask without declaring convergence.
+        See the class description for how the support mask and the baseline are handled.
 
         Parameters
         ----------
@@ -90,8 +87,7 @@ class LikelihoodBreakpointer(Breakpointer):
         bool
             True when comparable sums differ by less than ``threshold``, or
             when the sum is non-finite or has no contributing observations.
-            Both stored values are reset on True. The first call and any
-            change of support return False and establish a new baseline.
+            The first call and any change of support return False.
 
         Warns
         -----

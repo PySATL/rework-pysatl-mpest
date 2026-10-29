@@ -51,6 +51,9 @@ class ExpectationStep(PipelineStep):
     def run(self, state: PipelineState) -> PipelineState:
         """Compute responsibility matrix H and store it in pipeline state.
 
+        The state is modified in place. Rows of points outside the support of every component are zeros,
+        so they do not sum to 1.
+
         Parameters
         ----------
         state : PipelineState

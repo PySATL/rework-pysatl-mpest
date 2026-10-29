@@ -60,6 +60,8 @@ def _numerical_q_function(
         except ValueError:
             return np.inf
         lpdf_values = _components.lpdf(candidate, X)
+        # A point with zero responsibility must not contribute even where the density is zero:
+        # 0 * (-inf) is NaN.
         safe_lpdf = np.where(H_j == 0, 0.0, lpdf_values)
         return float(-np.dot(H_j, safe_lpdf))
 
@@ -72,7 +74,7 @@ def _exponential_rate(
 ) -> tuple[int, dict[str, float]]:
     """Analytical Q-function maximizer for Exponential distribution in rate parametrization.
 
-    If total responsibility or sample mean is <= NUMERICAL_TOLERANCE, parameter is unchanged.
+    If total responsibility or the weighted mean is <= NUMERICAL_TOLERANCE, parameter is unchanged.
     """
 
     if state.H is None:

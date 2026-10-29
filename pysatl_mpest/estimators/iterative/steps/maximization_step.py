@@ -79,7 +79,8 @@ class MaximizationStep(PipelineStep):
         """Execute the M-step, updating component parameters and weights.
 
         Strategy exceptions propagate directly. Parameters and weights update only
-        after all strategy blocks succeed. Missing responsibilities set ``state.error``.
+        after all strategy blocks succeed, and the current mixture is modified in place.
+        Missing responsibilities set ``state.error`` instead of raising.
 
         Parameters
         ----------
@@ -124,7 +125,7 @@ class MaximizationStep(PipelineStep):
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
-        """Updates optimization blocks after component pruning.
+        """Update optimization blocks after component pruning.
 
         Removes blocks associated with pruned components and shifts component_id
         for remaining blocks by the number of removed components before them.
@@ -136,6 +137,7 @@ class MaximizationStep(PipelineStep):
         removed_components_indices : list[int]
             Indices of components that were removed.
         """
+
         if not removed_components_indices or not self.blocks:
             return
 

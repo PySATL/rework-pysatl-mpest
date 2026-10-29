@@ -26,6 +26,9 @@ class Pipeline(BaseEstimator):
     Sequentially executes configured processing steps, applies pruners,
     and checks stopping criteria on each iteration until convergence.
 
+    Steps, breakpointers and pruners may be stateful and are reused as is by every call of :meth:`fit`.
+    ``history`` is not cleared between calls, so records of repeated fits accumulate.
+
     Parameters
     ----------
     steps : Sequence[PipelineStep]
