@@ -317,10 +317,7 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check">
 <span class="sig-prename descclassname"><span class="pre">LikelihoodBreakpointer.</span></span><span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/breakpointers/likelihood_breakpointer.html#LikelihoodBreakpointer.check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check" title="Link to this definition">#</a></dt>
 <dd><p>Check convergence of the log-likelihood over supported observations.</p>
-<p>Exclude only log-densities equal to <code class="docutils literal notranslate"><span class="pre">-inf</span></code> and compare sums only
-when their observation masks match. Unlike <code class="docutils literal notranslate"><span class="pre">loglikelihood(X)</span></code>, this
-sum omits observations outside the mixture support. A changed mask
-replaces the stored sum and mask without declaring convergence.</p>
+<p>See the class description for how the support mask and the baseline are handled.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – The current state of the pipeline, which must contain a valid
@@ -329,8 +326,7 @@ replaces the stored sum and mask without declaring convergence.</p>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>True when comparable sums differ by less than <code class="docutils literal notranslate"><span class="pre">threshold</span></code>, or
 when the sum is non-finite or has no contributing observations.
-Both stored values are reset on True. The first call and any
-change of support return False and establish a new baseline.</p>
+The first call and any change of support return False.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>bool</p>

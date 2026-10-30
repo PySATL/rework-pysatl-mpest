@@ -316,18 +316,16 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.BaseEstimator.fit">
 <em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">BaseEstimator.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mixture</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/base_estimator.html#BaseEstimator.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.BaseEstimator.fit" title="Link to this definition">#</a></dt>
-<dd><p>Fits the mixture model to the provided data.</p>
-<p>This method estimates the parameters of the model’s components and their
-corresponding weights based on the input data sample.</p>
+<dd><p>Fit mixture model parameters to input data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>X</strong> (<em>ArrayLike</em>) – The input data sample for fitting the model.</p></li>
-<li><p><strong>mixture</strong> (<a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – The initial mixture model to be fitted.</p></li>
+<li><p><strong>X</strong> (<em>ArrayLike</em>) – Input data sample.</p></li>
+<li><p><strong>mixture</strong> (<a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – Initial mixture model to fit; not modified in-place.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The mixture model with estimated parameters.</p>
+<dd class="field-even"><p>Fitted mixture model with estimated parameters.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel">MixtureModel</a></p>

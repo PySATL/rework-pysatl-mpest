@@ -316,37 +316,25 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.ECME.fit">
 <span class="sig-prename descclassname"><span class="pre">ECME.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mixture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q_indices_raw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odl_indices_raw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">once_in_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/ecme.html#ECME.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.ECME.fit" title="Link to this definition">#</a></dt>
-<dd><p>Fits the mixture model to the data using the ECME algorithm.</p>
-<p>This method configures and executes an iterative pipeline. It assigns
-a maximization strategy to each component in the mixture:
-1. Components in <code class="docutils literal notranslate"><span class="pre">q_indices_raw</span></code> use Q-function maximization.
-2. Components in <code class="docutils literal notranslate"><span class="pre">odl_indices_raw</span></code> use Observed Data Likelihood maximization.
-3. All other components use the <code class="docutils literal notranslate"><span class="pre">default_strategy</span></code> defined in <code class="docutils literal notranslate"><span class="pre">__init__</span></code>.</p>
+<dd><p>Fit mixture model parameters using the ECME algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>X</strong> (<em>ArrayLike</em>) – The input data sample to fit.</p></li>
-<li><p><strong>mixture</strong> (<a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – The initial mixture model configuration.</p></li>
-<li><p><strong>q_indices_raw</strong> (<em>Sequence</em><em>[</em><em>int</em><em>] </em><em>| </em><em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Indices of components that should be optimized by maximizing the
-Q-function. Can be a single integer, a sequence, or None.
-Supports negative indexing.</p></li>
-<li><p><strong>odl_indices_raw</strong> (<em>Sequence</em><em>[</em><em>int</em><em>] </em><em>| </em><em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Indices of components that should be optimized by directly maximizing
-the Observed Data Likelihood (ODL). Can be a single integer, a
-sequence, or None. Supports negative indexing.</p></li>
-<li><p><strong>once_in_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – The frequency of recording iterations in the history.
-Defaults to 1 (record every iteration).</p></li>
+<li><p><strong>X</strong> (<em>ArrayLike</em>) – Input data sample.</p></li>
+<li><p><strong>mixture</strong> (<a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – Initial mixture model to fit; not modified in-place.</p></li>
+<li><p><strong>q_indices_raw</strong> (<em>Sequence</em><em>[</em><em>int</em><em>] </em><em>| </em><em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Component indices to optimize via Q-function maximization. Supports negative indexing.</p></li>
+<li><p><strong>odl_indices_raw</strong> (<em>Sequence</em><em>[</em><em>int</em><em>] </em><em>| </em><em>int</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Component indices to optimize via ODL maximization. Supports negative indexing.</p></li>
+<li><p><strong>once_in_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – Iteration recording frequency in history. Defaults to 1.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The fitted mixture model with estimated parameters.</p>
+<dd class="field-even"><p>Fitted mixture model with estimated parameters.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel">MixtureModel</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If a component index is out of bounds for the given mixture,
-    or if the same index is present in both <code class="docutils literal notranslate"><span class="pre">q_indices_raw</span></code> and
-    <code class="docutils literal notranslate"><span class="pre">odl_indices_raw</span></code>.</p>
+<dd class="field-even"><p><strong>ValueError</strong> – If a component index is out of bounds or present in both strategy index sets.</p>
 </dd>
 </dl>
 </dd></dl>

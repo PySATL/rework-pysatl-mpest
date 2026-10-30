@@ -361,31 +361,22 @@
                   
   <section id="mpest-estimators-iterative">
 <span id="api-estimators-direct"></span><h1>mpest.estimators.iterative<a class="headerlink" href="#mpest-estimators-iterative" title="Link to this heading">#</a></h1>
-<p id="module-pysatl_mpest.estimators.iterative">Provides a flexible framework for building iterative algorithms.</p>
-<p>This package contains components for creating customizable iterative processes for
-estimating parameters of mixture models, such as the Expectation-Maximization (EM)
-algorithm and its variations.</p>
-<p>The core idea is to construct a <cite>Pipeline</cite> that consists of a sequence of
-<cite>PipelineStep`s. This pipeline cyclically executes the defined steps until one
-of the stopping conditions (`Breakpointer</cite>) is met. Additionally, after each
-iteration, <cite>Pruner</cite> strategies can be applied to remove insignificant components
-from the model. The state of the entire process at each iteration is stored in a
-<cite>PipelineState</cite> object.</p>
+<p id="module-pysatl_mpest.estimators.iterative">Iterative estimation pipeline, steps, stopping criteria, and pruners.</p>
 <section id="abstract-classes">
 <h2>Abstract Classes<a class="headerlink" href="#abstract-classes" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pipeline</span></code></a></p></td>
-<td><p>An estimator that fits a mixture model via a configurable iterative process.</p></td>
+<td><p>Iterative mixture model parameter estimator.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PipelineStep</span></code></a></p></td>
-<td><p>Abstract base class for a single step in a processing pipeline.</p></td>
+<td><p>Abstract base class for a single processing step in an iterative pipeline.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PipelineState</span></code></a></p></td>
-<td><p>Represents the state of a pipeline at a specific point in its execution.</p></td>
+<td><p>State container passed between pipeline steps and pruners.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Breakpointer</span></code></a></p></td>
-<td><p>Abstract base class for a pipeline stopping condition.</p></td>
+<td><p>Abstract base class for pipeline stopping conditions.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Pruner</span></code></a></p></td>
 <td><p>Abstract base class for component pruning strategies.</p></td>
@@ -402,10 +393,10 @@ building a pipeline, will be listed below.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.ExpectationStep.html#pysatl_mpest.estimators.iterative.ExpectationStep" title="pysatl_mpest.estimators.iterative.ExpectationStep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ExpectationStep</span></code></a></p></td>
-<td><p>A pipeline step that performs the Expectation (E-step).</p></td>
+<td><p>Expectation step computing component responsibility matrix H.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.MaximizationStep.html#pysatl_mpest.estimators.iterative.MaximizationStep" title="pysatl_mpest.estimators.iterative.MaximizationStep"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MaximizationStep</span></code></a></p></td>
-<td><p>A pipeline step that performs the Maximization (M-step).</p></td>
+<td><p>Maximization step updating component parameters and mixture weights.</p></td>
 </tr>
 </tbody>
 </table>
@@ -430,7 +421,7 @@ building a pipeline, will be listed below.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.iterative.PriorThresholdPruner.html#pysatl_mpest.estimators.iterative.PriorThresholdPruner" title="pysatl_mpest.estimators.iterative.PriorThresholdPruner"><code class="xref py py-obj docutils literal notranslate"><span class="pre">PriorThresholdPruner</span></code></a></p></td>
-<td><p>A pruner that removes mixture components based on a weight threshold.</p></td>
+<td><p>Component pruner based on a prior weight threshold.</p></td>
 </tr>
 </tbody>
 </table>

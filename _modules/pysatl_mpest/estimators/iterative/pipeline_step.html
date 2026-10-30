@@ -714,13 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.pipeline_step</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Provides an abstract base class for a step in an estimation pipeline.</span>
-
-<span class="sd">This module defines the `PipelineStep` abstract base class, which serves as a</span>
-<span class="sd">contract for all individual processing steps within a :class:`Pipeline` estimator.</span>
-<span class="sd">Each step takes the current state of the pipeline, performs an operation,</span>
-<span class="sd">and returns the updated state.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Abstract base class for iterative pipeline processing steps."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -734,18 +728,12 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="PipelineStep">
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PipelineStep</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Abstract base class for a single step in a processing pipeline.</span>
-
-<span class="sd">    This class defines the interface for an operation that can be executed as</span>
-<span class="sd">    part of an iterative estimation process managed by a :class:`Pipeline`.</span>
-
-<span class="sd">    Each step receives the current :class:`PipelineState`, performs a specific operation</span>
-<span class="sd">    (e.g., an E-step or M-step), and returns the updated state.</span>
+<span class="w">    </span><span class="sd">"""Abstract base class for a single processing step in an iterative pipeline.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    available_next_steps: list[type[PipelineStep]]</span>
-<span class="sd">        A list of step types that can legally follow this step in a pipeline.</span>
+<span class="sd">    available_next_steps : list[type[PipelineStep]]</span>
+<span class="sd">        Valid step types that may immediately follow this step.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
@@ -753,47 +741,31 @@ window.addEventListener("load", load);
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        run</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    Subclasses must implement the abstract property :attr:`available_next_steps` and</span>
-<span class="sd">    the abstract method :meth:`run`.</span>
 <span class="sd">    """</span>
 
     <span class="nd">@property</span>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_next_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">type</span><span class="p">[</span><span class="s2">"PipelineStep"</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""list[Type[PipelineStep]]: A list of step types that can follow this step.</span>
-
-<span class="sd">        This property is used by the :class:`Pipeline` to validate the sequence of</span>
-<span class="sd">        steps, ensuring a logical processing flow.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""list[type[PipelineStep]]: Step types permitted to immediately follow this step."""</span>
 
 <div class="viewcode-block" id="PipelineStep.run">
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.run.html#pysatl_mpest.estimators.iterative.PipelineStep.run">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineState</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Executes the logic of the pipeline step.</span>
+<span class="w">        </span><span class="sd">"""Execute the step on the given pipeline state and return the updated state.</span>
 
-<span class="sd">        This method processes the given pipeline state. Implementations can</span>
-<span class="sd">        either modify the `state` object in-place or create and return a new</span>
-<span class="sd">        :class:`PipelineState` instance.</span>
-
-<span class="sd">        To maintain a flexible and explicit API, this method must always return</span>
-<span class="sd">        a :class:`PipelineState` object. The calling code will use the returned value</span>
-<span class="sd">        as the new state.</span>
+<span class="sd">        The built-in steps modify ``state`` in place and return it. A step may report a failure by setting</span>
+<span class="sd">        ``state.error``, which stops the pipeline with a warning.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        state : PipelineState</span>
-<span class="sd">            The current state of the pipeline to be processed. Note that this</span>
-<span class="sd">            object can be mutated by the method.</span>
+<span class="sd">            Current pipeline state.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        PipelineState</span>
-<span class="sd">            The updated state of the pipeline. This can be the mutated input</span>
-<span class="sd">            `state` object or a completely new instance.</span>
+<span class="sd">            Updated pipeline state.</span>
 <span class="sd">        """</span></div>
 
 
@@ -801,31 +773,15 @@ window.addEventListener("load", load);
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear_after_prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""</span>
-<span class="sd">        Cleans up internal per-component state after pruning.</span>
+<span class="w">        </span><span class="sd">"""Clean up step internal state for components removed during pruning.</span>
 
-<span class="sd">        This method is called by the pipeline after a pruning step has removed</span>
-<span class="sd">        components from the mixture model. It receives the list of indices</span>
-<span class="sd">        (relative to the pre-pruning mixture) that were removed, and should</span>
-<span class="sd">        update or remove any internal data structures that are tied to those</span>
-<span class="sd">        components.</span>
-
-<span class="sd">        Common use cases include:</span>
-<span class="sd">        - Deleting cached values or buffers associated with pruned components</span>
-<span class="sd">        - Re-indexing remaining component-specific data to maintain contiguous</span>
-<span class="sd">          indexing</span>
-
-<span class="sd">        The implementation should ensure that after this method completes,</span>
-<span class="sd">        all internal state is consistent with the new (smaller) mixture model,</span>
-<span class="sd">        where component indices are renumbered contiguously starting from 0.</span>
+<span class="sd">        Surviving components are renumbered contiguously starting from 0; step</span>
+<span class="sd">        state indexed by component must be re-indexed accordingly.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        removed_components_indices : list[int]</span>
-<span class="sd">            A list of component indices that were removed during pruning.</span>
-<span class="sd">            These indices refer to positions in the mixture model **before**</span>
-<span class="sd">            pruning occurred. The list is guaranteed to be sorted in ascending</span>
-<span class="sd">            order and contain no duplicates.</span>
+<span class="sd">            Ascending indices of removed components relative to the mixture before this removal.</span>
 <span class="sd">        """</span></div>
 </div>
 

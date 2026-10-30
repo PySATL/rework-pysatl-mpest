@@ -714,14 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.ecme</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Implements the Expectation-Conditional Maximization Either (ECME) algorithm.</span>
-
-<span class="sd">This module provides the ``ECME`` class, a concrete implementation of the</span>
-<span class="sd">:class:`~rework_pysatl_mpest.estimators.base_estimator.BaseEstimator`.</span>
-<span class="sd">The ECME algorithm is an extension of the Expectation-Conditional Maximization (ECM)</span>
-<span class="sd">algorithm that allows switching between maximizing the Q-function and directly</span>
-<span class="sd">maximizing the Observed Data Likelihood (ODL) for different components.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Expectation-Conditional Maximization Either (ECME) estimator."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -751,50 +744,40 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="ECME">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.ECME.html#pysatl_mpest.estimators.ECME">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ECME</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""An estimator that implements the Expectation-Conditional Maximization Either (ECME) algorithm.</span>
+<span class="w">    </span><span class="sd">"""Expectation-Conditional Maximization Either (ECME) estimator.</span>
 
-<span class="sd">    ECME is a generalized iterative algorithm for maximum likelihood estimation.</span>
-<span class="sd">    Unlike standard ECM, which strictly maximizes the Q-function (conditional</span>
-<span class="sd">    expectation of the complete-data log-likelihood) during the maximization steps,</span>
-<span class="sd">    ECME allows replacing some or all of these steps with a direct maximization</span>
-<span class="sd">    of the actual Observed Data Likelihood (ODL).</span>
-
-<span class="sd">    This implementation provides flexibility by allowing the user to specify</span>
-<span class="sd">    maximization strategies per component. Some components can be optimized via</span>
-<span class="sd">    the Q-function, while others can be optimized via ODL within the same</span>
-<span class="sd">    iterative process. Whichever strategy is used, all free parameters of a</span>
-<span class="sd">    component are estimated, and the parameters fixed with ``family.view(...)``</span>
-<span class="sd">    keep their values.</span>
+<span class="sd">    Extends ECM by allowing components to be optimized by either maximizing the</span>
+<span class="sd">    Q-function or directly maximizing the Observed Data Likelihood (ODL).</span>
+<span class="sd">    All free parameters are estimated, preserving fixed view parameters.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    breakpointers : Sequence[Breakpointer]</span>
-<span class="sd">        A sequence of strategies that define the stopping conditions for the</span>
-<span class="sd">        iterative fitting process.</span>
+<span class="sd">        Stopping criteria for the iterative pipeline.</span>
 <span class="sd">    pruners : Sequence[Pruner]</span>
-<span class="sd">        A sequence of strategies for removing (pruning) components from the</span>
-<span class="sd">        mixture model during fitting.</span>
+<span class="sd">        Component pruning strategies applied during iterations.</span>
 <span class="sd">    optimizer : Optimizer</span>
-<span class="sd">        The numerical optimizer used to solve the maximization problems in the</span>
-<span class="sd">        M-step (or CM-steps).</span>
+<span class="sd">        Numerical optimizer used in maximization steps.</span>
 <span class="sd">    default_strategy : Literal["q-func", "odl"], optional</span>
-<span class="sd">        The default maximization strategy to apply to components that are not</span>
-<span class="sd">        explicitly assigned to a specific strategy in :meth:`fit`.</span>
-<span class="sd">        Defaults to "odl".</span>
+<span class="sd">        Default strategy for components not specified in :meth:`fit`. Defaults to "odl".</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    breakpointers : list[Breakpointer]</span>
-<span class="sd">        The list of stopping criteria used by the estimator.</span>
+<span class="sd">        Configured stopping criteria.</span>
 <span class="sd">    pruners : list[Pruner]</span>
-<span class="sd">        The list of pruning strategies used by the estimator.</span>
+<span class="sd">        Configured component pruning strategies.</span>
 <span class="sd">    optimizer : Optimizer</span>
-<span class="sd">        The numerical optimizer instance.</span>
+<span class="sd">        Numerical optimizer instance.</span>
 <span class="sd">    default_strategy_name : str</span>
-<span class="sd">        The name of the default strategy ("q-func" or "odl").</span>
+<span class="sd">        Name of the default strategy ("q-func" or "odl").</span>
 <span class="sd">    history : IterationsHistory</span>
-<span class="sd">        The history of the fitting process, containing snapshots of the model</span>
-<span class="sd">        and metrics for each iteration. Only available after :meth:`fit` is called.</span>
+<span class="sd">        Recorded iteration snapshots, accessible after calling :meth:`fit`.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If ``default_strategy`` is not ``'odl'`` or ``'q-func'``.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
@@ -824,14 +807,12 @@ window.addEventListener("load", load);
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IterationsHistory</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""IterationsHistory: The history of the last fitting process.</span>
-
-<span class="sd">        Returns the history of iterations recorded during the last call to :meth:`fit`.</span>
+<span class="w">        </span><span class="sd">"""IterationsHistory: Recorded history of pipeline iterations after fitting.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        AttributeError</span>
-<span class="sd">            If the :meth:`fit` method has not been called yet.</span>
+<span class="sd">            If accessed before ``fit`` has been called.</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -839,20 +820,6 @@ window.addEventListener("load", load);
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Normalizes the input indices into a set of integers.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        indices : Sequence[int] | int | None</span>
-<span class="sd">            The input indices, which can be a single integer, a sequence of</span>
-<span class="sd">            integers, or None.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        set[int]</span>
-<span class="sd">            A set containing the indices. Returns an empty set if input is None.</span>
-<span class="sd">        """</span>
-
         <span class="k">if</span> <span class="n">indices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
@@ -860,26 +827,6 @@ window.addEventListener("load", load);
         <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Resolves a component index, handling negative indexing.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        idx : int</span>
-<span class="sd">            The component index to resolve.</span>
-<span class="sd">        n_components : int</span>
-<span class="sd">            The total number of components in the mixture.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        int</span>
-<span class="sd">            The positive index in the range [0, n_components - 1].</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If the resolved index is out of bounds.</span>
-<span class="sd">        """</span>
-
         <span class="n">original_idx</span> <span class="o">=</span> <span class="n">idx</span>
         <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">idx</span> <span class="o">+=</span> <span class="n">n_components</span>
@@ -898,60 +845,43 @@ window.addEventListener("load", load);
         <span class="n">odl_indices_raw</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">once_in_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Fits the mixture model to the data using the ECME algorithm.</span>
-
-<span class="sd">        This method configures and executes an iterative pipeline. It assigns</span>
-<span class="sd">        a maximization strategy to each component in the mixture:</span>
-<span class="sd">        1. Components in ``q_indices_raw`` use Q-function maximization.</span>
-<span class="sd">        2. Components in ``odl_indices_raw`` use Observed Data Likelihood maximization.</span>
-<span class="sd">        3. All other components use the ``default_strategy`` defined in ``__init__``.</span>
+<span class="w">        </span><span class="sd">"""Fit mixture model parameters using the ECME algorithm.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data sample to fit.</span>
+<span class="sd">            Input data sample.</span>
 <span class="sd">        mixture : MixtureModel</span>
-<span class="sd">            The initial mixture model configuration.</span>
+<span class="sd">            Initial mixture model to fit; not modified in-place.</span>
 <span class="sd">        q_indices_raw : Sequence[int] | int | None, optional</span>
-<span class="sd">            Indices of components that should be optimized by maximizing the</span>
-<span class="sd">            Q-function. Can be a single integer, a sequence, or None.</span>
-<span class="sd">            Supports negative indexing.</span>
+<span class="sd">            Component indices to optimize via Q-function maximization. Supports negative indexing.</span>
 <span class="sd">        odl_indices_raw : Sequence[int] | int | None, optional</span>
-<span class="sd">            Indices of components that should be optimized by directly maximizing</span>
-<span class="sd">            the Observed Data Likelihood (ODL). Can be a single integer, a</span>
-<span class="sd">            sequence, or None. Supports negative indexing.</span>
+<span class="sd">            Component indices to optimize via ODL maximization. Supports negative indexing.</span>
 <span class="sd">        once_in_iterations : int, optional</span>
-<span class="sd">            The frequency of recording iterations in the history.</span>
-<span class="sd">            Defaults to 1 (record every iteration).</span>
+<span class="sd">            Iteration recording frequency in history. Defaults to 1.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        MixtureModel</span>
-<span class="sd">            The fitted mixture model with estimated parameters.</span>
+<span class="sd">            Fitted mixture model with estimated parameters.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a component index is out of bounds for the given mixture,</span>
-<span class="sd">            or if the same index is present in both ``q_indices_raw`` and</span>
-<span class="sd">            ``odl_indices_raw``.</span>
+<span class="sd">            If a component index is out of bounds or present in both strategy index sets.</span>
 <span class="sd">        """</span>
 
         <span class="n">n_components</span> <span class="o">=</span> <span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span>
 
-        <span class="c1"># 1. Resolve indices relative to the provided mixture</span>
         <span class="n">q_indices</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_index</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_indices</span><span class="p">(</span><span class="n">q_indices_raw</span><span class="p">)}</span>
         <span class="n">odl_indices</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_index</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_indices</span><span class="p">(</span><span class="n">odl_indices_raw</span><span class="p">)}</span>
 
-        <span class="c1"># 2. Validation</span>
         <span class="n">intersection</span> <span class="o">=</span> <span class="n">q_indices</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">odl_indices</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">intersection</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Indices </span><span class="si">{</span><span class="n">intersection</span><span class="si">}</span><span class="s2"> specified for both Q-function and ODL strategies."</span><span class="p">)</span>
 
-        <span class="c1"># 3. Build optimization blocks</span>
         <span class="n">blocks</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="c1"># Map string config to Enum</span>
         <span class="n">default_enum</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">OBSERVED_DATA_LIKELIHOOD</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_strategy_name</span> <span class="o">==</span> <span class="s2">"odl"</span>

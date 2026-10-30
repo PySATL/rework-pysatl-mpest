@@ -714,9 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.core.mixture</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""A module that provides the `MixtureModel` class, which allows for the creation,</span>
-<span class="sd">manipulation, and analysis of a finite mixture of continuous probability</span>
-<span class="sd">distributions."""</span>
+<span></span><span class="sd">"""Finite mixture of continuous probability distributions."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2026 PySATL project"</span>
@@ -758,7 +756,7 @@ window.addEventListener("load", load);
 <span class="sd">        A sequence of distribution objects that will form the mixture.</span>
 <span class="sd">    weights : ArrayLike | None, optional</span>
 <span class="sd">        An array of initial weights for the components. The weights must be</span>
-<span class="sd">        positive and sum to 1. If None, components are assigned equal</span>
+<span class="sd">        non-negative and sum to 1. If None, components are assigned equal</span>
 <span class="sd">        weights. Defaults to None.</span>
 
 <span class="sd">    Attributes</span>
@@ -771,7 +769,9 @@ window.addEventListener("load", load);
 <span class="sd">        A NumPy array of the normalized weights for each component. The sum</span>
 <span class="sd">        of weights is always 1.</span>
 <span class="sd">    log_weights : UnivariateFloatArray</span>
-<span class="sd">        A read-only NumPy array of normalized logarithmic component weights.</span>
+<span class="sd">        A read-only NumPy array of normalized logarithmic component weights. Assigning a new</span>
+<span class="sd">        value copies and normalizes it; a ``ValueError`` is raised if its length differs from</span>
+<span class="sd">        ``n_components`` or it cannot be normalized (all ``-inf``, ``NaN`` or ``+inf``).</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
@@ -787,6 +787,7 @@ window.addEventListener("load", load);
 
 <span class="sd">        add_component</span>
 <span class="sd">        remove_component</span>
+<span class="sd">        to_core_mixture</span>
 <span class="sd">        pdf</span>
 <span class="sd">        lpdf</span>
 <span class="sd">        component_lpdf_matrix</span>
@@ -816,23 +817,19 @@ window.addEventListener("load", load);
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">n_components</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""int: The number of components in the mixture model."""</span>
+<span class="w">        </span><span class="sd">"""int: Number of components in the mixture model."""</span>
 
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">components</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""tuple[ParametricFamilyDistribution, ...]: The components of the mixture."""</span>
+<span class="w">        </span><span class="sd">"""tuple[ParametricFamilyDistribution, ...]: Components of the mixture."""</span>
 
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_components</span><span class="p">)</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">weights</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">UnivariateFloatArray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""UnivariateFloatArray: The normalized weights of the components.</span>
-
-<span class="sd">        The weights are computed from the log-weights using the softmax</span>
-<span class="sd">        function and cached for efficiency.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""UnivariateFloatArray: Normalized component weights cached from log-weights; treated as read-only."""</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_cached_weights</span> <span class="o">=</span> <span class="n">softmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span><span class="p">)</span>
@@ -847,19 +844,13 @@ window.addEventListener("load", load);
 
     <span class="nd">@log_weights</span><span class="o">.</span><span class="n">setter</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">log_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_log_weights</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Copy and normalize the log-weights for the components.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        new_log_weights : ArrayLike</span>
-<span class="sd">            A 1D NumPy array of new log-weights.</span>
+<span class="w">        </span><span class="sd">"""Copy and normalize log-weights via log-softmax.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If the length of the new log-weights vector does not match the</span>
-<span class="sd">            number of components, or the values cannot be normalized because</span>
-<span class="sd">            they are all negative infinity or contain NaN or positive infinity.</span>
+<span class="sd">            If length differs from ``n_components`` or values cannot be normalized</span>
+<span class="sd">            (e.g. all ``-inf``, ``NaN``, or ``+inf``).</span>
 <span class="sd">        """</span>
 
         <span class="n">new_log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">new_log_weights</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -882,8 +873,7 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">add_component</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="n">ParametricFamilyDistribution</span><span class="p">,</span> <span class="n">weight</span><span class="p">:</span> <span class="n">Scalar</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Adds a new component to the mix, preserving the proportions of the existing component weights.</span>
 
-<span class="sd">        If :attr:`weight` is specified for the new component, the old component</span>
-<span class="sd">        weights are multiplied by `(1 - weight)`.</span>
+<span class="sd">        The old component weights are multiplied by ``1 - weight``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -895,7 +885,7 @@ window.addEventListener("load", load);
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If the specified :attr:`weight` is outside the range (0, 1).</span>
+<span class="sd">            If ``weight`` is outside the range (0, 1).</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;</span> <span class="n">weight</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
@@ -946,12 +936,9 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MixtureModel.to_core_mixture">
 <a class="viewcode-back" href="../../../api/core/generated/pysatl_mpest.core.MixtureModel.to_core_mixture.html#pysatl_mpest.core.MixtureModel.to_core_mixture">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">to_core_mixture</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FiniteMixtureDistribution</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Converts the model to a pysatl_core FiniteMixtureDistribution.</span>
+<span class="w">        </span><span class="sd">"""Convert to a pysatl-core FiniteMixtureDistribution.</span>
 
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        FiniteMixtureDistribution</span>
-<span class="sd">            The corresponding finite mixture distribution object.</span>
+<span class="sd">        The result is a snapshot: later changes to this model are not reflected in it.</span>
 <span class="sd">        """</span>
 
         <span class="n">weighted_components</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">float</span><span class="p">(</span><span class="n">w</span><span class="p">),</span> <span class="n">comp</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span><span class="p">,</span> <span class="n">comp</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">)]</span>
@@ -961,20 +948,9 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MixtureModel.pdf">
 <a class="viewcode-back" href="../../../api/core/generated/pysatl_mpest.core.MixtureModel.pdf.html#pysatl_mpest.core.MixtureModel.pdf">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">|</span> <span class="n">FloatArray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Probability Density Function of the mixture.</span>
+<span class="w">        </span><span class="sd">"""Probability Density Function of the mixture: ``exp(lpdf(X))``.</span>
 
-<span class="sd">        The PDF is computed as ``exp(lpdf(X))`` using the component log-densities.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data points at which to evaluate the PDF.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.float64 | FloatArray</span>
-<span class="sd">            The PDF values corresponding to each point in :attr:`X`.</span>
-<span class="sd">            Return a scalar when given a scalar, and to return an array when given an array.</span>
+<span class="sd">        The shape of the result and the handling of scalar input follow :meth:`lpdf`.</span>
 <span class="sd">        """</span>
 
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lpdf</span><span class="p">(</span><span class="n">X</span><span class="p">))</span></div>
@@ -983,21 +959,10 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MixtureModel.lpdf">
 <a class="viewcode-back" href="../../../api/core/generated/pysatl_mpest.core.MixtureModel.lpdf.html#pysatl_mpest.core.MixtureModel.lpdf">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">lpdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">|</span> <span class="n">FloatArray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Logarithms of the Probability Density Function.</span>
+<span class="w">        </span><span class="sd">"""Logarithm of the Probability Density Function of the mixture.</span>
 
-<span class="sd">        The log-density is computed as ``logsumexp(log_weights + component log-densities)``,</span>
-<span class="sd">        which stays finite where the density itself underflows to zero.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data points at which to evaluate the LPDF.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.float64 | FloatArray</span>
-<span class="sd">            The log-PDF values corresponding to each point in :attr:`X`.</span>
-<span class="sd">            Return a scalar when given a scalar, and to return an array when given an array.</span>
+<span class="sd">        The result has the shape of ``X``; a scalar ``X`` gives a ``np.float64``. Points outside the</span>
+<span class="sd">        support of every component evaluate to ``-inf``.</span>
 <span class="sd">        """</span>
 
         <span class="n">is_scalar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isscalar</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
@@ -1037,20 +1002,9 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MixtureModel.loglikelihood">
 <a class="viewcode-back" href="../../../api/core/generated/pysatl_mpest.core.MixtureModel.loglikelihood.html#pysatl_mpest.core.MixtureModel.loglikelihood">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">loglikelihood</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Log-likelihood of the complete data :attr:`X`.</span>
+<span class="w">        </span><span class="sd">"""Sum of log-densities for all points in ``X``.</span>
 
-<span class="sd">        The log-likelihood is the sum of the log-PDF values for all data</span>
-<span class="sd">        points.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data sample.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        float</span>
-<span class="sd">            The total log-likelihood value.</span>
+<span class="sd">        The sum is ``-inf`` if any point is outside the support of every component.</span>
 <span class="sd">        """</span>
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
@@ -1064,27 +1018,19 @@ window.addEventListener("load", load);
         <span class="n">size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">NBitBase</span><span class="p">]</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">Generator</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span> <span class="o">|</span> <span class="n">FloatArray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Generates random samples from the mixture model.</span>
-
-<span class="sd">        First, a component is chosen based on the mixture weights. Then, a</span>
-<span class="sd">        sample is drawn from the chosen component's distribution. This</span>
-<span class="sd">        process is repeated `size` times.</span>
+<span class="w">        </span><span class="sd">"""Sample random variates from the mixture distribution.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        size : int | np.integer[np.typing.NBitBase] | tuple[int, ...] | None, optional</span>
-<span class="sd">            Defining number of random variates.</span>
-<span class="sd">            - If None (default), returns a single scalar.</span>
-<span class="sd">            - If int or np.integer, returns a 1D array of that length.</span>
-<span class="sd">            - If tuple, returns an array of that shape.</span>
+<span class="sd">            Number or shape of random variates to generate. If None, returns a scalar.</span>
 <span class="sd">        random_state : int | np.random.Generator | None, optional</span>
-<span class="sd">            A seed or random number generator to use for reproducible output.</span>
+<span class="sd">            Seed or random number generator for reproducible sampling.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        np.float64 | FloatArray</span>
-<span class="sd">            A scalar if size is None, otherwise an array containing the</span>
-<span class="sd">            generated samples. Returns an empty array if the number of samples is zero.</span>
+<span class="sd">            Generated samples of requested shape, or empty array if sample size is zero.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
@@ -1123,36 +1069,20 @@ window.addEventListener("load", load);
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParametricFamilyDistribution</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Retrieves components by index.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        key : int</span>
-<span class="sd">            The index of the component.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        ParametricFamilyDistribution</span>
-<span class="sd">            A single component of the mixture</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""Retrieve component by index."""</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">ParametricFamilyDistribution</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Sets or replaces a component at a specific index.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        key : int</span>
-<span class="sd">            The index of the component to replace.</span>
-<span class="sd">        value : ParametricFamilyDistribution</span>
-<span class="sd">            The new distribution component to set.</span>
+<span class="w">        </span><span class="sd">"""Replace component at index.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        IndexError</span>
-<span class="sd">            If the index is out of bounds.</span>
+<span class="sd">            If ``key`` is outside ``[0, n_components - 1]``; unlike ``__getitem__``, negative</span>
+<span class="sd">            indices are not supported.</span>
 <span class="sd">        """</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">key</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_components</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Index of component must be between 0 and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_components</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
@@ -1160,47 +1090,19 @@ window.addEventListener("load", load);
         <span class="bp">self</span><span class="o">.</span><span class="n">_invalidate_cache</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">ParametricFamilyDistribution</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Returns an iterator over the mixture components.</span>
-
-<span class="sd">        This allows the `MixtureModel` instance to be used directly in</span>
-<span class="sd">        loops, such as a `for` loop, to iterate over its components.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        Iterator[ParametricFamilyDistribution]</span>
-<span class="sd">            An iterator that yields the components of the mixture model.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""Iterate over mixture components."""</span>
 
         <span class="k">return</span> <span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__copy__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"MixtureModel"</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Creates a copy of the mixture model instance.</span>
+<span class="w">        </span><span class="sd">"""Create a shallow copy: the component objects are shared, the weights are copied."""</span>
 
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        MixtureModel</span>
-<span class="sd">            A new instance of the distribution, identical to the original.</span>
-<span class="sd">        """</span>
         <span class="n">new_model</span> <span class="o">=</span> <span class="n">MixtureModel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_components</span><span class="p">)</span>
         <span class="n">new_model</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_weights</span>
         <span class="k">return</span> <span class="n">new_model</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Checks if two mixture models are equal.</span>
-
-<span class="sd">        Two mixture models are considered equal if they have the same number of</span>
-<span class="sd">        components and the same set of (component, weight) pairs.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        other : object</span>
-<span class="sd">            The object to compare against.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            True if the mixture models are equal, False otherwise.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""Check equality against another mixture, invariant to component ordering."""</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">MixtureModel</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
@@ -1218,19 +1120,7 @@ window.addEventListener("load", load);
         <span class="k">return</span> <span class="kc">True</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Computes a hash for the mixture model.</span>
-
-<span class="sd">        The hash is computed from the components only, not from the weights. Equality compares</span>
-<span class="sd">        the weights with a tolerance, and no hash of a float can agree with a tolerance</span>
-<span class="sd">        comparison: weights that are equal up to rounding would get different hashes.</span>
-<span class="sd">        Mixtures with the same components and different weights collide, which is allowed:</span>
-<span class="sd">        ``__eq__`` tells them apart.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        int</span>
-<span class="sd">            The hash value of the mixture model.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""Compute a hash from components only, ensuring consistency with tolerance-based equality."""</span>
 
         <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_sorted_pairs</span><span class="p">()))</span>
 
@@ -1239,22 +1129,6 @@ window.addEventListener("load", load);
         <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_pairs_cache</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate_weights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">UnivariateFloatArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Validates the component weights.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        n_components : int</span>
-<span class="sd">            The expected number of components.</span>
-<span class="sd">        weights : UnivariateFloatArray</span>
-<span class="sd">            The array of weights to validate.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If the number of weights does not match the number of components,</span>
-<span class="sd">            if any weight is negative, or if the weights do not sum to 1.</span>
-<span class="sd">        """</span>
-
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_components</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Components number (</span><span class="si">{</span><span class="n">n_components</span><span class="si">}</span><span class="s2">) must be equal to weights number (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span><span class="p">)</span>
 
@@ -1265,7 +1139,8 @@ window.addEventListener("load", load);
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Sum of the weights must be equal 1, but it equal </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_sorted_pairs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">_components</span><span class="o">.</span><span class="n">ComponentKey</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""Internal helper to get (component key, weight) pairs, sorted so that component order does not matter."""</span>
+<span class="w">        </span><span class="sd">"""(Component key, weight) pairs sorted so that component order does not matter."""</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_pairs_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">pairs</span> <span class="o">=</span> <span class="p">[(</span><span class="n">_components</span><span class="o">.</span><span class="n">component_key</span><span class="p">(</span><span class="n">comp</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">w</span><span class="p">))</span> <span class="k">for</span> <span class="n">comp</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">)]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_sorted_pairs_cache</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>

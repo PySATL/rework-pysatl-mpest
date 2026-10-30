@@ -365,41 +365,24 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.ECM">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ECM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">breakpointers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pruners</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/ecm.html#ECM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.ECM" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator" title="pysatl_mpest.estimators.base_estimator.BaseEstimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code></a></p>
-<p>An estimator that implements the Expectation-Conditional Maximization (ECM) algorithm.</p>
-<p>This class encapsulates the logic for the ECM algorithm, a variant of the
-classic Expectation-Maximization (EM) algorithm. It constructs and executes
-a <a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> consisting of an expectation step
-(<a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.html#pysatl_mpest.estimators.iterative.ExpectationStep" title="pysatl_mpest.estimators.iterative.ExpectationStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExpectationStep</span></code></a>) and a conditional maximization step
-(<a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html#pysatl_mpest.estimators.iterative.MaximizationStep" title="pysatl_mpest.estimators.iterative.MaximizationStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">MaximizationStep</span></code></a>).</p>
-<p>The key feature of this ECM implementation is that the maximization (M-step)
-is partitioned into separate, smaller optimization problems—one for each
-component in the mixture. For each component, all of its free parameters
-(those not fixed with <code class="docutils literal notranslate"><span class="pre">family.view(...)</span></code>) are estimated simultaneously by
-maximizing the Q-function. This component-wise update simplifies the
-optimization process.</p>
-<p>The overall fitting process can be customized with stopping criteria,
-component pruning strategies, and a numerical optimizer.</p>
+<p>Expectation-Conditional Maximization (ECM) estimator.</p>
+<p>Executes an iterative pipeline of Expectation and Conditional Maximization steps.
+Maximization is partitioned component-wise, updating all free parameters of each
+component by maximizing the Q-function.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>breakpointers</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – A sequence of strategies that define the stopping conditions for the
-iterative process.</p></li>
-<li><p><strong>pruners</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – A sequence of strategies for removing (pruning) components from the
-mixture model during fitting.</p></li>
-<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – A numerical optimizer instance used in the maximization step to find
-the optimal parameters.</p></li>
+<li><p><strong>breakpointers</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – Stopping criteria for the iterative pipeline.</p></li>
+<li><p><strong>pruners</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – Component pruning strategies applied during iterations.</p></li>
+<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer used in maximization steps.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>breakpointers</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – The list of objects that determine when the fitting process should
-terminate.</p></li>
-<li><p><strong>pruners</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – The list of objects that may remove components from the mixture during
-the fitting process.</p></li>
-<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – The numerical optimizer used for parameter estimation.</p></li>
-<li><p><strong>history</strong> (<em>IterationsHistory</em><em> | </em><em>None</em>) – An object that collects information about each iteration.
-This attribute is only available after the <a class="reference internal" href="pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit" title="pysatl_mpest.estimators.ECM.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a> method has been called.
-Accessing it beforehand will raise an <code class="xref py py-class docutils literal notranslate"><span class="pre">AttributeError</span></code>.</p></li>
+<li><p><strong>breakpointers</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – Configured stopping criteria.</p></li>
+<li><p><strong>pruners</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – Configured component pruning strategies.</p></li>
+<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer instance.</p></li>
+<li><p><strong>history</strong> (<em>IterationsHistory</em>) – Recorded iteration snapshots, accessible after calling <a class="reference internal" href="pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit" title="pysatl_mpest.estimators.ECM.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a>.</p></li>
 </ul>
 </dd>
 </dl>
@@ -407,7 +390,7 @@ Accessing it beforehand will raise an <code class="xref py py-class docutils lit
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit" title="pysatl_mpest.estimators.ECM.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(X, mixture[, once_in_iterations])</p></td>
-<td><p>Fits the mixture model to the data using the ECM algorithm.</p></td>
+<td><p>Fit mixture model parameters using the ECM algorithm.</p></td>
 </tr>
 </tbody>
 </table>

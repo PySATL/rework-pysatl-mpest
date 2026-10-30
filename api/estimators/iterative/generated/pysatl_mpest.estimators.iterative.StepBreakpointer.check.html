@@ -316,20 +316,13 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.StepBreakpointer.check">
 <span class="sig-prename descclassname"><span class="pre">StepBreakpointer.</span></span><span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/breakpointers/step_breakpointer.html#StepBreakpointer.check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.StepBreakpointer.check" title="Link to this definition">#</a></dt>
-<dd><p>Checks if the maximum number of iterations has been reached.</p>
-<p>This method increments the internal step counter and compares it with
-the <code class="xref py py-attr docutils literal notranslate"><span class="pre">max_steps</span></code> limit. If the limit is reached, it resets the
-counter for potential reuse and returns True.</p>
+<dd><p>Evaluate if the iteration limit has been reached, resetting counter on True.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – The current state of the pipeline. This parameter is unused in
-this specific breakpointer but required by the base class interface.</p>
+<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.pipeline_state.PipelineState"><em>PipelineState</em></a>)</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>True if the iteration limit is reached, False otherwise.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>bool</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>

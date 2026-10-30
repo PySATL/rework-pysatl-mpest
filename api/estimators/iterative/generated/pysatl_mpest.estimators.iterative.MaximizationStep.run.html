@@ -316,39 +316,28 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.MaximizationStep.run">
 <span class="sig-prename descclassname"><span class="pre">MaximizationStep.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/maximization_step.html#MaximizationStep.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.MaximizationStep.run" title="Link to this definition">#</a></dt>
-<dd><p>Executes the M-step.</p>
-<p>This method iterates through the configured optimization blocks,
-updates the parameters for each specified component using the
-appropriate strategy, and then recalculates the mixture weights based
-on the sum of responsibilities.</p>
+<dd><p>Execute the M-step, updating component parameters and weights.</p>
+<p>Strategy exceptions propagate directly. Parameters and weights update only
+after all strategy blocks succeed, and the current mixture is modified in place.
+Missing responsibilities set <code class="docutils literal notranslate"><span class="pre">state.error</span></code> instead of raising.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – The current state of the pipeline. Must contain the responsibility
-matrix <code class="xref py py-attr docutils literal notranslate"><span class="pre">H</span></code> and the mixture model <code class="xref py py-attr docutils literal notranslate"><span class="pre">curr_mixture</span></code>.</p>
+<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – Current state containing responsibility matrix H and current mixture.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The updated pipeline state with the modified <code class="xref py py-attr docutils literal notranslate"><span class="pre">curr_mixture</span></code>. If the
-<code class="xref py py-attr docutils literal notranslate"><span class="pre">H</span></code> matrix is not available in the input state, the state is
-returned with an error set, and no modifications are made.</p>
+<dd class="field-even"><p>Updated state with modified mixture model.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState">PipelineState</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – If a block requests an unknown parameter or a parameter fixed by a
-    family view.</p></li>
-<li><p><strong>IndexError</strong> – If a block’s component index is at least the number of mixture components.</p></li>
-<li><p><strong>NotImplementedError</strong> – If the selected strategy is not implemented for the component’s family
-    and parametrization.</p></li>
+<li><p><strong>ValueError</strong> – If a block requests an unknown or fixed parameter.</p></li>
+<li><p><strong>IndexError</strong> – If a block’s component index is out of bounds.</p></li>
+<li><p><strong>NotImplementedError</strong> – If a strategy is not implemented for the component’s family.</p></li>
 </ul>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>Strategy exceptions propagate directly to the caller. Component parameters
-and weights are updated only after every strategy has returned successfully.
-Missing responsibilities instead set <code class="xref py py-attr docutils literal notranslate"><span class="pre">PipelineState.error</span></code>, which
-<a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit" title="pysatl_mpest.estimators.iterative.Pipeline.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.fit()</span></code></a> reports as a <code class="docutils literal notranslate"><span class="pre">RuntimeWarning</span></code>.</p>
 </dd></dl>
 
 </section>

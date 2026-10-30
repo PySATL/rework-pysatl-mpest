@@ -316,21 +316,15 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.PipelineStep.run">
 <em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">PipelineStep.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pipeline_step.html#PipelineStep.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.PipelineStep.run" title="Link to this definition">#</a></dt>
-<dd><p>Executes the logic of the pipeline step.</p>
-<p>This method processes the given pipeline state. Implementations can
-either modify the <cite>state</cite> object in-place or create and return a new
-<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineState</span></code></a> instance.</p>
-<p>To maintain a flexible and explicit API, this method must always return
-a <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineState</span></code></a> object. The calling code will use the returned value
-as the new state.</p>
+<dd><p>Execute the step on the given pipeline state and return the updated state.</p>
+<p>The built-in steps modify <code class="docutils literal notranslate"><span class="pre">state</span></code> in place and return it. A step may report a failure by setting
+<code class="docutils literal notranslate"><span class="pre">state.error</span></code>, which stops the pipeline with a warning.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – The current state of the pipeline to be processed. Note that this
-object can be mutated by the method.</p>
+<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – Current pipeline state.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The updated state of the pipeline. This can be the mutated input
-<cite>state</cite> object or a completely new instance.</p>
+<dd class="field-even"><p>Updated pipeline state.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState">PipelineState</a></p>

@@ -714,13 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.pipeline_state</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Defines a data structure for managing the state of an iterative estimator.</span>
-
-<span class="sd">This module provides the `PipelineState` dataclass, which acts as a container</span>
-<span class="sd">for all data passed between different steps of a :class:`Pipeline`, such as</span>
-<span class="sd">:class:`PipelineStep` or :class:`Pruner`. It holds the input data, the mixture model being</span>
-<span class="sd">optimized, and other metadata required for the estimation process.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""State container for iterative estimation pipelines."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -736,33 +730,21 @@ window.addEventListener("load", load);
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">PipelineState</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">"""Represents the state of a pipeline at a specific point in its execution.</span>
+<span class="w">    </span><span class="sd">"""State container passed between pipeline steps and pruners.</span>
 
-<span class="sd">    This dataclass is a mutable container that centralizes all information</span>
-<span class="sd">    needed by the steps of a :class:`Pipeline`.</span>
-<span class="sd">    An instance of this class is created at the beginning of a pipeline run and</span>
-<span class="sd">    is then passed sequentially through each step, which can modify it.</span>
-
-<span class="sd">    Args</span>
+<span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    X : UnivariateFloatArray</span>
-<span class="sd">        The input data sample. This data is typically treated as read-only</span>
-<span class="sd">        throughout the pipeline's execution.</span>
+<span class="sd">        Input data sample.</span>
 <span class="sd">    H : MultivariateFloatArray | None</span>
-<span class="sd">        The responsibility matrix (posterior probabilities). `H[i, j]`</span>
-<span class="sd">        represents the probability that data point `i` belongs to component</span>
-<span class="sd">        `j`. It may not be computed at every step.</span>
+<span class="sd">        Responsibility matrix (posterior probabilities), where ``H[i, j]`` is</span>
+<span class="sd">        the probability that observation `i` belongs to component `j`.</span>
 <span class="sd">    prev_mixture : MixtureModel | None</span>
-<span class="sd">        A snapshot of the mixture model from the previous iteration. This is</span>
-<span class="sd">        useful for convergence checks, such as comparing log-likelihood values.</span>
-<span class="sd">        It is `None` at the start of the pipeline.</span>
+<span class="sd">        Mixture model snapshot from previous iteration for convergence evaluation.</span>
 <span class="sd">    curr_mixture : MixtureModel</span>
-<span class="sd">        The current state of the mixture model that is being actively</span>
-<span class="sd">        optimized by the pipeline steps.</span>
+<span class="sd">        Current mixture model being optimized.</span>
 <span class="sd">    error : Exception | None</span>
-<span class="sd">        A container for any exception that occurs during a pipeline step. If a</span>
-<span class="sd">        step encounters a non-fatal error, it can place an exception object</span>
-<span class="sd">        here to signal the pipeline to terminate gracefully.</span>
+<span class="sd">        Step failure indicator signaling premature termination.</span>
 <span class="sd">    """</span>
 
     <span class="n">X</span><span class="p">:</span> <span class="n">UnivariateFloatArray</span>

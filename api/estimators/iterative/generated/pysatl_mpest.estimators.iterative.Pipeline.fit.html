@@ -316,50 +316,34 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.Pipeline.fit">
 <span class="sig-prename descclassname"><span class="pre">Pipeline.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mixture</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pipeline.html#Pipeline.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.Pipeline.fit" title="Link to this definition">#</a></dt>
-<dd><p>Fits the mixture model to the data using the configured pipeline.</p>
-<p>This method initializes the pipeline’s state and runs the main loop.
-The loop consists of executing all <code class="xref py py-attr docutils literal notranslate"><span class="pre">steps</span></code> in order, followed by
-all <code class="xref py py-attr docutils literal notranslate"><span class="pre">pruners</span></code>. This cycle repeats until any <cite>breakpointers</cite> indicate
-that the process should stop.</p>
-<p>As soon as a pruner removes components, the corresponding columns are dropped
-from the responsibility matrix and every step is told which components were
-removed through <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune" title="pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune"><code class="xref py py-meth docutils literal notranslate"><span class="pre">clear_after_prune()</span></code></a>, so the steps of the
-next iteration already work with the pruned mixture. A pruner reports the indices
-relative to the mixture it was given, so each pruner is handled separately.</p>
+<dd><p>Fit mixture model parameters using the iterative pipeline.</p>
+<p>Pruned components are immediately removed from responsibilities and notified
+to steps via <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune" title="pysatl_mpest.estimators.iterative.PipelineStep.clear_after_prune"><code class="xref py py-meth docutils literal notranslate"><span class="pre">clear_after_prune()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>X</strong> (<em>ArrayLike</em>) – The input data sample.</p></li>
-<li><p><strong>mixture</strong> (<a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – The initial mixture model to be fitted. An internal copy of this
-model will be modified throughout the process.</p></li>
+<li><p><strong>X</strong> (<em>ArrayLike</em>) – Input data sample.</p></li>
+<li><p><strong>mixture</strong> (<a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – Initial mixture model to fit (not modified in-place).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The fitted mixture model after the pipeline has converged or been
-stopped.</p>
+<dd class="field-even"><p>Fitted mixture model.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel">MixtureModel</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – If a maximization block requests an unknown parameter or a parameter
-    fixed by a family view.</p></li>
-<li><p><strong>IndexError</strong> – If a maximization block’s component index is at least the number of
-    mixture components.</p></li>
-<li><p><strong>NotImplementedError</strong> – If a maximization strategy is not implemented for the component’s
-    family and parametrization.</p></li>
+<li><p><strong>ValueError</strong> – If a maximization block requests an unknown or fixed parameter.</p></li>
+<li><p><strong>IndexError</strong> – If a block’s component index is out of bounds.</p></li>
+<li><p><strong>NotImplementedError</strong> – If a maximization strategy is not implemented for the component’s family.</p></li>
 </ul>
 </dd>
 <dt class="field-odd">Warns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>RuntimeWarning</strong> – If a step returns a state with <code class="xref py py-attr docutils literal notranslate"><span class="pre">PipelineState.error</span></code> set, such as
-when the responsibility matrix is missing. Fitting stops, the error is
-saved in the iteration history, and the current mixture is returned.</p>
+<dd class="field-odd"><p><strong>RuntimeWarning</strong> – If a step sets <code class="xref py py-attr docutils literal notranslate"><span class="pre">PipelineState.error</span></code>, stopping fitting prematurely
+and returning the current mixture.</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>Exceptions raised directly by steps, including strategy and configuration
-errors, propagate to the caller rather than becoming state errors or warnings.</p>
 </dd></dl>
 
 </section>

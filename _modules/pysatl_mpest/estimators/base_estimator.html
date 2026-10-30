@@ -714,7 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.base_estimator</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""A module that provides an abstract class for implementing custom estimators."""</span>
+<span></span><span class="sd">"""Abstract base class for mixture model parameter estimators."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -730,48 +730,33 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="BaseEstimator">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">BaseEstimator</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Abstract class for a mixture model parameter estimator.</span>
-
-<span class="sd">    This class defines the interface for all estimator algorithms. Estimators are responsible for</span>
-<span class="sd">    fitting the parameters of a :class:`~pysatl_mpest.core.MixtureModel` to a given dataset.</span>
+<span class="w">    </span><span class="sd">"""Abstract base class for mixture model parameter estimators.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
-<span class="sd">    **Abstract methods**</span>
-
 <span class="sd">    .. autosummary::</span>
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        fit</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-<span class="sd">    **Implementation Requirements**</span>
-
-<span class="sd">    Subclasses must implement the abstract method :meth:`fit` to provide a specific</span>
-<span class="sd">    estimation strategy.</span>
 <span class="sd">    """</span>
 
 <div class="viewcode-block" id="BaseEstimator.fit">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.BaseEstimator.fit.html#pysatl_mpest.estimators.BaseEstimator.fit">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">mixture</span><span class="p">:</span> <span class="n">MixtureModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Fits the mixture model to the provided data.</span>
-
-<span class="sd">        This method estimates the parameters of the model's components and their</span>
-<span class="sd">        corresponding weights based on the input data sample.</span>
+<span class="w">        </span><span class="sd">"""Fit mixture model parameters to input data.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data sample for fitting the model.</span>
+<span class="sd">            Input data sample.</span>
 <span class="sd">        mixture : MixtureModel</span>
-<span class="sd">            The initial mixture model to be fitted.</span>
+<span class="sd">            Initial mixture model to fit; not modified in-place.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        MixtureModel</span>
-<span class="sd">            The mixture model with estimated parameters.</span>
+<span class="sd">            Fitted mixture model with estimated parameters.</span>
 <span class="sd">        """</span></div>
 </div>
 

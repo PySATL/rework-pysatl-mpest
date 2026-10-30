@@ -714,7 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.steps.expectation_step</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Provides the Expectation-step for an iterative estimation pipeline."""</span>
+<span></span><span class="sd">"""Expectation step for iterative estimation pipelines."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -731,29 +731,24 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="ExpectationStep">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.html#pysatl_mpest.estimators.iterative.ExpectationStep">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExpectationStep</span><span class="p">(</span><span class="n">PipelineStep</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""A pipeline step that performs the Expectation (E-step).</span>
+<span class="w">    </span><span class="sd">"""Expectation step computing component responsibility matrix H.</span>
 
-<span class="sd">    This step calculates the responsibility matrix H, where H[i, j] is</span>
-<span class="sd">    the posterior probability that the i-th data point belongs to the j-th</span>
-<span class="sd">    mixture component. It can perform either a soft (probabilistic) or hard</span>
-<span class="sd">    (winner-takes-all) assignment.</span>
+<span class="sd">    Supports soft (probabilistic) or hard (winner-takes-all) assignment.</span>
+<span class="sd">    Points outside the support of all components receive zero responsibilities.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    is_soft : bool, optional</span>
-<span class="sd">        If True (default), performs a soft assignment where H contains probabilities.</span>
-<span class="sd">        If False, performs a hard assignment where each supported data point</span>
-<span class="sd">        is assigned to the single most likely component (i.e., H contains</span>
-<span class="sd">        only 0s and 1s). Unsupported points retain zero responsibilities.</span>
+<span class="sd">        If True (default), computes posterior probabilities.</span>
+<span class="sd">        If False, assigns 1.0 to the most likely component and 0.0 otherwise.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    is_soft : bool</span>
-<span class="sd">        Flag indicating whether to perform soft or hard assignment.</span>
+<span class="sd">        Flag indicating soft or hard assignment.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
-
 <span class="sd">    .. autosummary::</span>
 <span class="sd">        :toctree: generated/</span>
 
@@ -765,11 +760,7 @@ window.addEventListener("load", load);
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_next_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">type</span><span class="p">[</span><span class="n">PipelineStep</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""list[type[PipelineStep]]: Defines the valid subsequent steps.</span>
-
-<span class="sd">        Specifies that an :class:`ExpectationStep` must be followed by a</span>
-<span class="sd">        :class:`MaximizationStep` to form a standard EM iteration.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""list[type[PipelineStep]]: Steps permitted to follow ExpectationStep."""</span>
 
         <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_mpest.estimators.iterative.steps.maximization_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaximizationStep</span>
 
@@ -778,24 +769,20 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="ExpectationStep.run">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.run.html#pysatl_mpest.estimators.iterative.ExpectationStep.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineState</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Executes the E-step by calculating the responsibility matrix H.</span>
+<span class="w">        </span><span class="sd">"""Compute responsibility matrix H and store it in pipeline state.</span>
 
-<span class="sd">        This method computes the log-likelihood of each data point under each</span>
-<span class="sd">        component, incorporates the component weights, and normalizes to find</span>
-<span class="sd">        the posterior probabilities (responsibilities). The resulting matrix H</span>
-<span class="sd">        is then stored in the pipeline state. A data point that lies outside the</span>
-<span class="sd">        support of every component gets a row of zeros in both assignment modes.</span>
+<span class="sd">        The state is modified in place. Rows of points outside the support of every component are zeros,</span>
+<span class="sd">        so they do not sum to 1.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        state : PipelineState</span>
-<span class="sd">            The current state of the pipeline, which must contain the input</span>
-<span class="sd">            data X and the current mixture model curr_mixture.</span>
+<span class="sd">            Current state containing observations X and mixture model.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        PipelineState</span>
-<span class="sd">            The updated pipeline state with the H attribute computed and set.</span>
+<span class="sd">            Updated state with computed responsibility matrix H.</span>
 <span class="sd">        """</span>
 
         <span class="n">X</span><span class="p">,</span> <span class="n">mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>

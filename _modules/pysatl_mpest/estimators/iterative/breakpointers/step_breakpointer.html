@@ -714,8 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.breakpointers.step_breakpointer</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Module that provides a :class:`pysatl_mpest.estimators.iterative.Pipeline`</span>
-<span class="sd">stopping strategy based on the number of iterations"""</span>
+<span></span><span class="sd">"""Stopping strategy based on maximum iteration count."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -731,32 +730,26 @@ window.addEventListener("load", load);
 <span class="k">class</span><span class="w"> </span><span class="nc">StepBreakpointer</span><span class="p">(</span><span class="n">Breakpointer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Stops the pipeline after a fixed number of iterations.</span>
 
-<span class="sd">    This breakpointer terminates the iterative process once a specified</span>
-<span class="sd">    maximum number of steps (iterations) has been completed. It maintains an</span>
-<span class="sd">    internal counter that increments each time its :meth:`check` method is called.</span>
+<span class="sd">    The counter resets to 0 only when this breakpointer reaches the limit. If the pipeline is stopped by</span>
+<span class="sd">    another breakpointer or by a step error first, the count carries over to the next use of the instance.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    max_steps : int</span>
-<span class="sd">        The maximum number of iterations to perform before stopping.</span>
-<span class="sd">        Must be a positive integer.</span>
+<span class="sd">        Maximum number of iterations before stopping. Must be &gt;= 1.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    max_steps : int</span>
-<span class="sd">        Stores the maximum number of steps.</span>
-<span class="sd">    _current_step : int</span>
-<span class="sd">        The current iteration counter. It is reset to 0 after the limit is</span>
-<span class="sd">        reached to allow the instance to be reused.</span>
+<span class="sd">        Maximum iteration limit.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If :attr:`max_steps` is less than or equal to 0.</span>
+<span class="sd">        If ``max_steps`` is &lt;= 0.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
-
 <span class="sd">    .. autosummary::</span>
 <span class="sd">        :toctree: generated/</span>
 
@@ -770,31 +763,13 @@ window.addEventListener("load", load);
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""Validates the max_steps parameter."""</span>
-
         <span class="k">if</span> <span class="n">max_steps</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The maximum number of steps must be greater than or equal to 1"</span><span class="p">)</span>
 
 <div class="viewcode-block" id="StepBreakpointer.check">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.check.html#pysatl_mpest.estimators.iterative.StepBreakpointer.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Checks if the maximum number of iterations has been reached.</span>
-
-<span class="sd">        This method increments the internal step counter and compares it with</span>
-<span class="sd">        the :attr:`max_steps` limit. If the limit is reached, it resets the</span>
-<span class="sd">        counter for potential reuse and returns True.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        state : PipelineState</span>
-<span class="sd">            The current state of the pipeline. This parameter is unused in</span>
-<span class="sd">            this specific breakpointer but required by the base class interface.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        bool</span>
-<span class="sd">            True if the iteration limit is reached, False otherwise.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""Evaluate if the iteration limit has been reached, resetting counter on True."""</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">+=</span> <span class="mi">1</span>
 

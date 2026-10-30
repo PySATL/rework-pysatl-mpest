@@ -366,16 +366,11 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Optimizer</span></span><a class="reference internal" href="../../../_modules/pysatl_mpest/optimizers/optimizer.html#Optimizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.optimizers.Optimizer" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
 <p>Abstract base class for numerical optimizers.</p>
-<p>This class defines the standard interface for all optimizer implementations.
-Its primary purpose is to find the parameters that minimize a given
-objective function, starting from an initial guess.</p>
-<p>Subclasses must implement the <a class="reference internal" href="pysatl_mpest.optimizers.Optimizer.minimize.html#pysatl_mpest.optimizers.Optimizer.minimize" title="pysatl_mpest.optimizers.Optimizer.minimize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">minimize()</span></code></a> method to provide a specific
-optimization algorithm.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.optimizers.Optimizer.minimize.html#pysatl_mpest.optimizers.Optimizer.minimize" title="pysatl_mpest.optimizers.Optimizer.minimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minimize</span></code></a>(target, params)</p></td>
-<td><p>Finds the parameters that minimize a target function.</p></td>
+<td><p>Find parameters that minimize a scalar objective function.</p></td>
 </tr>
 </tbody>
 </table>

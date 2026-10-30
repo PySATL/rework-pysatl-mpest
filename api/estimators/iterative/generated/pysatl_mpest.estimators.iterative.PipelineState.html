@@ -368,27 +368,16 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.PipelineState">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PipelineState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">H</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prev_mixture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">curr_mixture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">error</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pipeline_state.html#PipelineState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.PipelineState" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Represents the state of a pipeline at a specific point in its execution.</p>
-<p>This dataclass is a mutable container that centralizes all information
-needed by the steps of a <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>.
-An instance of this class is created at the beginning of a pipeline run and
-is then passed sequentially through each step, which can modify it.</p>
+<p>State container passed between pipeline steps and pruners.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>X</strong> (<em>UnivariateFloatArray</em>) – The input data sample. This data is typically treated as read-only
-throughout the pipeline’s execution.</p></li>
-<li><p><strong>H</strong> (<em>MultivariateFloatArray</em><em> | </em><em>None</em>) – The responsibility matrix (posterior probabilities). <cite>H[i, j]</cite>
-represents the probability that data point <cite>i</cite> belongs to component
-<cite>j</cite>. It may not be computed at every step.</p></li>
-<li><p><strong>prev_mixture</strong> (<a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a><em> | </em><em>None</em>) – A snapshot of the mixture model from the previous iteration. This is
-useful for convergence checks, such as comparing log-likelihood values.
-It is <cite>None</cite> at the start of the pipeline.</p></li>
-<li><p><strong>curr_mixture</strong> (<a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – The current state of the mixture model that is being actively
-optimized by the pipeline steps.</p></li>
-<li><p><strong>error</strong> (<em>Exception</em><em> | </em><em>None</em>) – A container for any exception that occurs during a pipeline step. If a
-step encounters a non-fatal error, it can place an exception object
-here to signal the pipeline to terminate gracefully.</p></li>
+<li><p><strong>X</strong> (<em>UnivariateFloatArray</em>) – Input data sample.</p></li>
+<li><p><strong>H</strong> (<em>MultivariateFloatArray</em><em> | </em><em>None</em>) – Responsibility matrix (posterior probabilities), where <code class="docutils literal notranslate"><span class="pre">H[i,</span> <span class="pre">j]</span></code> is
+the probability that observation <cite>i</cite> belongs to component <cite>j</cite>.</p></li>
+<li><p><strong>prev_mixture</strong> (<a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a><em> | </em><em>None</em>) – Mixture model snapshot from previous iteration for convergence evaluation.</p></li>
+<li><p><strong>curr_mixture</strong> (<a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – Current mixture model being optimized.</p></li>
+<li><p><strong>error</strong> (<em>Exception</em><em> | </em><em>None</em>) – Step failure indicator signaling premature termination.</p></li>
 </ul>
 </dd>
 </dl>

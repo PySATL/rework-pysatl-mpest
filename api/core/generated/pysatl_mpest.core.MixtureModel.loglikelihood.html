@@ -316,18 +316,14 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.core.MixtureModel.loglikelihood">
 <span class="sig-prename descclassname"><span class="pre">MixtureModel.</span></span><span class="sig-name descname"><span class="pre">loglikelihood</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/core/mixture.html#MixtureModel.loglikelihood"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.core.MixtureModel.loglikelihood" title="Link to this definition">#</a></dt>
-<dd><p>Log-likelihood of the complete data <code class="xref py py-attr docutils literal notranslate"><span class="pre">X</span></code>.</p>
-<p>The log-likelihood is the sum of the log-PDF values for all data
-points.</p>
+<dd><p>Sum of log-densities for all points in <code class="docutils literal notranslate"><span class="pre">X</span></code>.</p>
+<p>The sum is <code class="docutils literal notranslate"><span class="pre">-inf</span></code> if any point is outside the support of every component.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>X</strong> (<em>ArrayLike</em>) – The input data sample.</p>
+<dd class="field-odd"><p><strong>X</strong> (<em>ArrayLike</em>)</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The total log-likelihood value.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>float</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
 </dd>
 </dl>
 </dd></dl>

@@ -714,14 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.pruners.prior_threshold_pruner</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Provides a pruner for removing mixture components with small weights.</span>
-
-<span class="sd">This module contains the `PriorThresholdsPruner` class, a concrete</span>
-<span class="sd">implementation of the `Pruner` abstract base class. This pruner is designed</span>
-<span class="sd">to be used within a `Pipeline` to simplify a mixture model by removing</span>
-<span class="sd">components whose prior probabilities (weights) fall below a specified</span>
-<span class="sd">threshold.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Pruner for removing mixture components with small weights."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -738,33 +731,29 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="PriorThresholdPruner">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PriorThresholdPruner.html#pysatl_mpest.estimators.iterative.PriorThresholdPruner">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PriorThresholdPruner</span><span class="p">(</span><span class="n">Pruner</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""A pruner that removes mixture components based on a weight threshold.</span>
+<span class="w">    </span><span class="sd">"""Component pruner based on a prior weight threshold.</span>
 
-<span class="sd">    This pruner iterates through the components of a :class:`pysatl_mpest.core.MixtureModel`</span>
-<span class="sd">    after a pipeline iteration and removes any component whose weight is less than the</span>
-<span class="sd">    specified :attr:`threshold`. This helps to simplify the model and discard</span>
-<span class="sd">    insignificant components. The weights of the remaining components are</span>
-<span class="sd">    automatically renormalized.</span>
+<span class="sd">    Removes components whose weight is strictly below ``threshold``. Guarantees</span>
+<span class="sd">    that at least one component remains in the mixture. Remaining weights are</span>
+<span class="sd">    renormalized.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    threshold : Scalar</span>
-<span class="sd">        The minimum weight a component must have to be retained. This value</span>
-<span class="sd">        must be in the exclusive range (0, 1).</span>
+<span class="sd">        Minimum weight to retain a component. Must be strictly between 0 and 1.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    threshold : float</span>
-<span class="sd">        Stores the weight threshold used for pruning.</span>
+<span class="sd">        Configured weight threshold.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If :attr:`threshold` is not strictly between 0 and 1.</span>
+<span class="sd">        If ``threshold`` is not in the exclusive range (0, 1).</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
-
 <span class="sd">    .. autosummary::</span>
 <span class="sd">        :toctree: generated/</span>
 
@@ -779,32 +768,22 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="PriorThresholdPruner.prune">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune.html#pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PipelineState</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""Removes components from the mixture whose weights are below the threshold.</span>
+<span class="w">        </span><span class="sd">"""Remove components with weights below threshold, retaining at least one component.</span>
 
-<span class="sd">        This method inspects :attr:`state.curr_mixture` and removes any component</span>
-<span class="sd">        whose weight is less than :attr:`.threshold`. The pruning logic ensures</span>
-<span class="sd">        that at least one component always remains in the model. The weights of</span>
-<span class="sd">        the remaining components are automatically re-normalized by the</span>
-<span class="sd">        :class:`pysatl_mpest.core.MixtureModel`.</span>
+<span class="sd">        Candidates are removed in index order, at most ``n_components - 1`` of them. If every weight</span>
+<span class="sd">        falls below the threshold, the component with the highest index is retained, not the one with</span>
+<span class="sd">        the largest weight.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        state : PipelineState</span>
-<span class="sd">            The current state of the pipeline, containing the mixture model</span>
-<span class="sd">            to be pruned.</span>
+<span class="sd">            Current pipeline state.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        tuple[PipelineState, list[int]]</span>
-<span class="sd">        A tuple containing:</span>
-<span class="sd">        - The updated pipeline state. If components were removed,</span>
-<span class="sd">          :attr:`state.curr_mixture` will be a new,</span>
-<span class="sd">          smaller :class:`pysatl_mpest.core.MixtureModel` instance.</span>
-<span class="sd">          Otherwise, the original state object is returned unchanged.</span>
-<span class="sd">        - A list of the indices of components that were removed (sorted in increasing order).</span>
+<span class="sd">            Tuple of updated pipeline state and sorted list of removed component indices.</span>
 <span class="sd">        """</span>
-
-        <span class="c1"># TODO: Now this implementation replace mixture with new mixture, so logger will not log this.</span>
 
         <span class="n">mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>
         <span class="n">n</span> <span class="o">=</span> <span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span>
@@ -825,7 +804,6 @@ window.addEventListener("load", load);
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">to_remove</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
             <span class="n">new_mixture</span><span class="o">.</span><span class="n">remove_component</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-        <span class="c1"># Create a new PipelineState with the pruned mixture</span>
         <span class="n">new_state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span>
             <span class="n">X</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">prev_mixture</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span><span class="p">,</span> <span class="n">curr_mixture</span><span class="o">=</span><span class="n">new_mixture</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">error</span>
         <span class="p">)</span>

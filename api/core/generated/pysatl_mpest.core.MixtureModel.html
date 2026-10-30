@@ -377,7 +377,7 @@ components were added.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>components</strong> (<em>Sequence</em><em>[</em><em>ParametricFamilyDistribution</em><em>]</em>) – A sequence of distribution objects that will form the mixture.</p></li>
 <li><p><strong>weights</strong> (<em>ArrayLike</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – An array of initial weights for the components. The weights must be
-positive and sum to 1. If None, components are assigned equal
+non-negative and sum to 1. If None, components are assigned equal
 weights. Defaults to None.</p></li>
 </ul>
 </dd>
@@ -387,7 +387,9 @@ weights. Defaults to None.</p></li>
 <li><p><strong>n_components</strong> (<em>int</em>) – The number of components in the mixture.</p></li>
 <li><p><strong>weights</strong> (<em>UnivariateFloatArray</em>) – A NumPy array of the normalized weights for each component. The sum
 of weights is always 1.</p></li>
-<li><p><strong>log_weights</strong> (<em>UnivariateFloatArray</em>) – A read-only NumPy array of normalized logarithmic component weights.</p></li>
+<li><p><strong>log_weights</strong> (<em>UnivariateFloatArray</em>) – A read-only NumPy array of normalized logarithmic component weights. Assigning a new
+value copies and normalizes it; a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> is raised if its length differs from
+<code class="docutils literal notranslate"><span class="pre">n_components</span></code> or it cannot be normalized (all <code class="docutils literal notranslate"><span class="pre">-inf</span></code>, <code class="docutils literal notranslate"><span class="pre">NaN</span></code> or <code class="docutils literal notranslate"><span class="pre">+inf</span></code>).</p></li>
 </ul>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
@@ -404,20 +406,23 @@ of weights is always 1.</p></li>
 <tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.remove_component.html#pysatl_mpest.core.MixtureModel.remove_component" title="pysatl_mpest.core.MixtureModel.remove_component"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_component</span></code></a>(component_idx)</p></td>
 <td><p>Removes a component from the mixture by its index.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.pdf.html#pysatl_mpest.core.MixtureModel.pdf" title="pysatl_mpest.core.MixtureModel.pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pdf</span></code></a>(X)</p></td>
-<td><p>Probability Density Function of the mixture.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.to_core_mixture.html#pysatl_mpest.core.MixtureModel.to_core_mixture" title="pysatl_mpest.core.MixtureModel.to_core_mixture"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_core_mixture</span></code></a>()</p></td>
+<td><p>Convert to a pysatl-core FiniteMixtureDistribution.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.lpdf.html#pysatl_mpest.core.MixtureModel.lpdf" title="pysatl_mpest.core.MixtureModel.lpdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lpdf</span></code></a>(X)</p></td>
-<td><p>Logarithms of the Probability Density Function.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.pdf.html#pysatl_mpest.core.MixtureModel.pdf" title="pysatl_mpest.core.MixtureModel.pdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pdf</span></code></a>(X)</p></td>
+<td><p>Probability Density Function of the mixture: <code class="docutils literal notranslate"><span class="pre">exp(lpdf(X))</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.component_lpdf_matrix.html#pysatl_mpest.core.MixtureModel.component_lpdf_matrix" title="pysatl_mpest.core.MixtureModel.component_lpdf_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">component_lpdf_matrix</span></code></a>(X)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.lpdf.html#pysatl_mpest.core.MixtureModel.lpdf" title="pysatl_mpest.core.MixtureModel.lpdf"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lpdf</span></code></a>(X)</p></td>
+<td><p>Logarithm of the Probability Density Function of the mixture.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.component_lpdf_matrix.html#pysatl_mpest.core.MixtureModel.component_lpdf_matrix" title="pysatl_mpest.core.MixtureModel.component_lpdf_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">component_lpdf_matrix</span></code></a>(X)</p></td>
 <td><p>Log-densities of every component, without the mixture weights.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.loglikelihood.html#pysatl_mpest.core.MixtureModel.loglikelihood" title="pysatl_mpest.core.MixtureModel.loglikelihood"><code class="xref py py-obj docutils literal notranslate"><span class="pre">loglikelihood</span></code></a>(X)</p></td>
-<td><p>Log-likelihood of the complete data <code class="xref py py-attr docutils literal notranslate"><span class="pre">X</span></code>.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.loglikelihood.html#pysatl_mpest.core.MixtureModel.loglikelihood" title="pysatl_mpest.core.MixtureModel.loglikelihood"><code class="xref py py-obj docutils literal notranslate"><span class="pre">loglikelihood</span></code></a>(X)</p></td>
+<td><p>Sum of log-densities for all points in <code class="docutils literal notranslate"><span class="pre">X</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.generate.html#pysatl_mpest.core.MixtureModel.generate" title="pysatl_mpest.core.MixtureModel.generate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate</span></code></a>([size, random_state])</p></td>
-<td><p>Generates random samples from the mixture model.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.core.MixtureModel.generate.html#pysatl_mpest.core.MixtureModel.generate" title="pysatl_mpest.core.MixtureModel.generate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate</span></code></a>([size, random_state])</p></td>
+<td><p>Sample random variates from the mixture distribution.</p></td>
 </tr>
 </tbody>
 </table>

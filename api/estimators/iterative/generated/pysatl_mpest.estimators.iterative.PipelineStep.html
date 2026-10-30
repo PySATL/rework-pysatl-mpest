@@ -368,28 +368,21 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.PipelineStep">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PipelineStep</span></span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pipeline_step.html#PipelineStep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.PipelineStep" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
-<p>Abstract base class for a single step in a processing pipeline.</p>
-<p>This class defines the interface for an operation that can be executed as
-part of an iterative estimation process managed by a <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>.</p>
-<p>Each step receives the current <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineState</span></code></a>, performs a specific operation
-(e.g., an E-step or M-step), and returns the updated state.</p>
+<p>Abstract base class for a single processing step in an iterative pipeline.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Variables<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>available_next_steps</strong> (<em>list</em><em>[</em><em>type</em><em>[</em><a class="reference internal" href="#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><em>PipelineStep</em></a><em>]</em><em>]</em>) – A list of step types that can legally follow this step in a pipeline.</p>
+<dd class="field-odd"><p><strong>available_next_steps</strong> (<em>list</em><em>[</em><em>type</em><em>[</em><a class="reference internal" href="#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><em>PipelineStep</em></a><em>]</em><em>]</em>) – Valid step types that may immediately follow this step.</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.run.html#pysatl_mpest.estimators.iterative.PipelineStep.run" title="pysatl_mpest.estimators.iterative.PipelineStep.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>(state)</p></td>
-<td><p>Executes the logic of the pipeline step.</p></td>
+<td><p>Execute the step on the given pipeline state and return the updated state.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p class="rubric">Notes</p>
-<p>Subclasses must implement the abstract property <code class="xref py py-attr docutils literal notranslate"><span class="pre">available_next_steps</span></code> and
-the abstract method <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.run.html#pysatl_mpest.estimators.iterative.PipelineStep.run" title="pysatl_mpest.estimators.iterative.PipelineStep.run"><code class="xref py py-meth docutils literal notranslate"><span class="pre">run()</span></code></a>.</p>
 </dd></dl>
 
 </section>

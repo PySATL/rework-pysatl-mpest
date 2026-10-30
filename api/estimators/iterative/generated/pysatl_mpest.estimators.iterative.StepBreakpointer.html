@@ -369,30 +369,24 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">StepBreakpointer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/breakpointers/step_breakpointer.html#StepBreakpointer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.StepBreakpointer" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.breakpointer.Breakpointer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Breakpointer</span></code></a></p>
 <p>Stops the pipeline after a fixed number of iterations.</p>
-<p>This breakpointer terminates the iterative process once a specified
-maximum number of steps (iterations) has been completed. It maintains an
-internal counter that increments each time its <a class="reference internal" href="pysatl_mpest.estimators.iterative.StepBreakpointer.check.html#pysatl_mpest.estimators.iterative.StepBreakpointer.check" title="pysatl_mpest.estimators.iterative.StepBreakpointer.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> method is called.</p>
+<p>The counter resets to 0 only when this breakpointer reaches the limit. If the pipeline is stopped by
+another breakpointer or by a step error first, the count carries over to the next use of the instance.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>max_steps</strong> (<em>int</em>) – The maximum number of iterations to perform before stopping.
-Must be a positive integer.</p>
+<dd class="field-odd"><p><strong>max_steps</strong> (<em>int</em>) – Maximum number of iterations before stopping. Must be &gt;= 1.</p>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>max_steps</strong> (<em>int</em>) – Stores the maximum number of steps.</p></li>
-<li><p><strong>_current_step</strong> (<em>int</em>) – The current iteration counter. It is reset to 0 after the limit is
-reached to allow the instance to be reused.</p></li>
-</ul>
+<dd class="field-even"><p><strong>max_steps</strong> (<em>int</em>) – Maximum iteration limit.</p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="xref py py-attr docutils literal notranslate"><span class="pre">max_steps</span></code> is less than or equal to 0.</p>
+<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">max_steps</span></code> is &lt;= 0.</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.StepBreakpointer.check.html#pysatl_mpest.estimators.iterative.StepBreakpointer.check" title="pysatl_mpest.estimators.iterative.StepBreakpointer.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(state)</p></td>
-<td><p>Checks if the maximum number of iterations has been reached.</p></td>
+<td><p>Evaluate if the iteration limit has been reached, resetting counter on True.</p></td>
 </tr>
 </tbody>
 </table>

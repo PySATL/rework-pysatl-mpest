@@ -368,26 +368,20 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.MaximizationStep">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MaximizationStep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">blocks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/maximization_step.html#MaximizationStep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.MaximizationStep" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.pipeline_step.PipelineStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineStep</span></code></a></p>
-<p>A pipeline step that performs the Maximization (M-step).</p>
-<p>This step updates the parameters of each component in the mixture model,
-as well as the mixture weights, based on the responsibility matrix <code class="xref py py-attr docutils literal notranslate"><span class="pre">H</span></code>
-calculated in the Expectation-step. The update process is configured
-through a sequence of <code class="xref py py-class docutils literal notranslate"><span class="pre">OptimizationBlock</span></code> objects, each defining
-a specific optimization task.</p>
+<p>Maximization step updating component parameters and mixture weights.</p>
+<p>Executes configured <code class="xref py py-class docutils literal notranslate"><span class="pre">OptimizationBlock</span></code> tasks to update component parameters,
+then updates mixture weights from responsibilities.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>blocks</strong> (<em>Sequence</em><em>[</em><em>OptimizationBlock</em><em>]</em>) – A sequence of configuration blocks that define the optimization tasks.
-Each block specifies a component, its parameters to optimize, and the
-maximization strategy to use.</p></li>
-<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – A numerical optimizer instance used to find the optimal parameters
-when an analytical solution is not available for a given strategy.</p></li>
+<li><p><strong>blocks</strong> (<em>Sequence</em><em>[</em><em>OptimizationBlock</em><em>]</em>) – Optimization tasks specifying components, parameters, and strategies.</p></li>
+<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer for strategies requiring numerical search.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>blocks</strong> (<em>list</em><em>[</em><em>OptimizationBlock</em><em>]</em>) – The list of optimization tasks to be performed.</p></li>
-<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – The numerical optimizer used for parameter estimation.</p></li>
+<li><p><strong>blocks</strong> (<em>list</em><em>[</em><em>OptimizationBlock</em><em>]</em>) – Configured optimization tasks.</p></li>
+<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer instance.</p></li>
 </ul>
 </dd>
 </dl>
@@ -395,7 +389,7 @@ when an analytical solution is not available for a given strategy.</p></li>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.run.html#pysatl_mpest.estimators.iterative.MaximizationStep.run" title="pysatl_mpest.estimators.iterative.MaximizationStep.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>(state)</p></td>
-<td><p>Executes the M-step.</p></td>
+<td><p>Execute the M-step, updating component parameters and weights.</p></td>
 </tr>
 </tbody>
 </table>

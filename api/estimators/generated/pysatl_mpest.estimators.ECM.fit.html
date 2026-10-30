@@ -316,22 +316,17 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.ECM.fit">
 <span class="sig-prename descclassname"><span class="pre">ECM.</span></span><span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mixture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">once_in_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/ecm.html#ECM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.ECM.fit" title="Link to this definition">#</a></dt>
-<dd><p>Fits the mixture model to the data using the ECM algorithm.</p>
-<p>This method sets up and runs an iterative pipeline to estimate the
-parameters of a given mixture model based on the input data. At each
-iteration, it performs an E-step and an M-step. The process repeats
-until one of the stopping criteria is met.</p>
+<dd><p>Fit mixture model parameters using the ECM algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>X</strong> (<em>ArrayLike</em>) – The input dataset for fitting the model.</p></li>
-<li><p><strong>mixture</strong> (<a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – The initial mixture model to be fitted.</p></li>
-<li><p><strong>once_in_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – The iteration recording frequency. A value of <cite>n</cite> means recording occurs every
-<cite>n</cite> iterations. Defaults to 1.</p></li>
+<li><p><strong>X</strong> (<em>ArrayLike</em>) – Input data sample.</p></li>
+<li><p><strong>mixture</strong> (<a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><em>MixtureModel</em></a>) – Initial mixture model to fit; not modified in-place.</p></li>
+<li><p><strong>once_in_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – Iteration recording frequency in history. Defaults to 1.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The mixture model with the estimated parameters.</p>
+<dd class="field-even"><p>Fitted mixture model with estimated parameters.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel">MixtureModel</a></p>

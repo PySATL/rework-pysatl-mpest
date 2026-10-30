@@ -368,29 +368,26 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.PriorThresholdPruner">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PriorThresholdPruner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pruners/prior_threshold_pruner.html#PriorThresholdPruner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.PriorThresholdPruner" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.pruner.Pruner"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pruner</span></code></a></p>
-<p>A pruner that removes mixture components based on a weight threshold.</p>
-<p>This pruner iterates through the components of a <a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysatl_mpest.core.MixtureModel</span></code></a>
-after a pipeline iteration and removes any component whose weight is less than the
-specified <code class="xref py py-attr docutils literal notranslate"><span class="pre">threshold</span></code>. This helps to simplify the model and discard
-insignificant components. The weights of the remaining components are
-automatically renormalized.</p>
+<p>Component pruner based on a prior weight threshold.</p>
+<p>Removes components whose weight is strictly below <code class="docutils literal notranslate"><span class="pre">threshold</span></code>. Guarantees
+that at least one component remains in the mixture. Remaining weights are
+renormalized.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>threshold</strong> (<em>Scalar</em>) – The minimum weight a component must have to be retained. This value
-must be in the exclusive range (0, 1).</p>
+<dd class="field-odd"><p><strong>threshold</strong> (<em>Scalar</em>) – Minimum weight to retain a component. Must be strictly between 0 and 1.</p>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>threshold</strong> (<em>float</em>) – Stores the weight threshold used for pruning.</p>
+<dd class="field-even"><p><strong>threshold</strong> (<em>float</em>) – Configured weight threshold.</p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="xref py py-attr docutils literal notranslate"><span class="pre">threshold</span></code> is not strictly between 0 and 1.</p>
+<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">threshold</span></code> is not in the exclusive range (0, 1).</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune.html#pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune" title="pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prune</span></code></a>(state)</p></td>
-<td><p>Removes components from the mixture whose weights are below the threshold.</p></td>
+<td><p>Remove components with weights below threshold, retaining at least one component.</p></td>
 </tr>
 </tbody>
 </table>

@@ -365,17 +365,13 @@
 <dt class="sig sig-object py" id="pysatl_mpest.optimizers.ScipyNelderMead">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ScipyNelderMead</span></span><a class="reference internal" href="../../../_modules/pysatl_mpest/optimizers/scipy_nelder_mead.html#ScipyNelderMead"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.optimizers.ScipyNelderMead" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.optimizer.Optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Optimizer</span></code></a></p>
-<p>An optimizer that uses the Nelder-Mead simplex algorithm from SciPy.</p>
-<p>This class serves as a wrapper for the <cite>scipy.optimize.minimize</cite> function,
-specifically configured to use the ‘Nelder-Mead’ method. The Nelder-Mead
-algorithm is a direct search method that does not require gradient
-information, making it suitable for non-differentiable or noisy objective
-functions.</p>
+<p>Nelder-Mead simplex optimizer from SciPy.</p>
+<p>Derivative-free search method suitable for non-differentiable or noisy functions.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.optimizers.ScipyNelderMead.minimize.html#pysatl_mpest.optimizers.ScipyNelderMead.minimize" title="pysatl_mpest.optimizers.ScipyNelderMead.minimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minimize</span></code></a>(target, params)</p></td>
-<td><p>Minimizes a target function using the Nelder-Mead algorithm.</p></td>
+<td><p>Minimize target function using Nelder-Mead simplex algorithm.</p></td>
 </tr>
 </tbody>
 </table>

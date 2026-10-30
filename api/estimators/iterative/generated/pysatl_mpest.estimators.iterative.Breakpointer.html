@@ -368,22 +368,16 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.Breakpointer">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Breakpointer</span></span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/breakpointer.html#Breakpointer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.Breakpointer" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
-<p>Abstract base class for a pipeline stopping condition.</p>
-<p>A Breakpointer is responsible for inspecting the <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineState</span></code></a> after each
-full iteration of a <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> to determine whether the estimation process
-should terminate. Concrete implementations could check for convergence,
-maximum number of iterations, or other custom criteria.</p>
-<p>The logic of breakpointers comes after pruners, so it is necessary to
-take into account possible differences in the number of components in
-<code class="xref py py-attr docutils literal notranslate"><span class="pre">state.prev_mixture</span></code> and <code class="xref py py-attr docutils literal notranslate"><span class="pre">state.curr_mixture</span></code>.</p>
-<p class="rubric">Notes</p>
-<p>Subclasses must implement the abstract method <a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.check.html#pysatl_mpest.estimators.iterative.Breakpointer.check" title="pysatl_mpest.estimators.iterative.Breakpointer.check"><code class="xref py py-meth docutils literal notranslate"><span class="pre">check()</span></code></a> to define the
-specific stopping logic.</p>
+<p>Abstract base class for pipeline stopping conditions.</p>
+<p>Evaluated after pruning in each iteration; implementations must account for
+differing component counts between <code class="docutils literal notranslate"><span class="pre">state.prev_mixture</span></code> and <code class="docutils literal notranslate"><span class="pre">state.curr_mixture</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">check</span></code> may keep state between calls and is expected to be called once per iteration. The pipeline stops
+at the first breakpointer that returns True, so the ones after it are not called in that iteration.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.check.html#pysatl_mpest.estimators.iterative.Breakpointer.check" title="pysatl_mpest.estimators.iterative.Breakpointer.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(state)</p></td>
-<td><p>Evaluates the pipeline state to determine if it should stop.</p></td>
+<td><p>Evaluate whether pipeline execution should terminate.</p></td>
 </tr>
 </tbody>
 </table>

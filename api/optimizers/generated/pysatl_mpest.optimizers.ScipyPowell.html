@@ -364,17 +364,13 @@
 <dt class="sig sig-object py" id="pysatl_mpest.optimizers.ScipyPowell">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ScipyPowell</span></span><a class="reference internal" href="../../../_modules/pysatl_mpest/optimizers/scipy_powell.html#ScipyPowell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.optimizers.ScipyPowell" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.optimizer.Optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Optimizer</span></code></a></p>
-<p>An optimizer that uses Powell’s conjugate direction method from SciPy.</p>
-<p>This class serves as a wrapper for the <cite>scipy.optimize.minimize</cite> function,
-specifically configured to use the ‘Powell’ method. Powell’s method is a
-conjugate direction algorithm that does not require the computation of
-gradients, making it suitable for objective functions where derivatives are
-not available or are difficult to compute.</p>
+<p>Powell’s conjugate direction optimizer from SciPy.</p>
+<p>Derivative-free search method suitable for functions without available gradients.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.optimizers.ScipyPowell.minimize.html#pysatl_mpest.optimizers.ScipyPowell.minimize" title="pysatl_mpest.optimizers.ScipyPowell.minimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">minimize</span></code></a>(target, params)</p></td>
-<td><p>Minimizes a target function using Powell's method.</p></td>
+<td><p>Minimize target function using Powell's method.</p></td>
 </tr>
 </tbody>
 </table>

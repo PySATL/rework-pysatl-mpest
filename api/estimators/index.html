@@ -360,35 +360,17 @@
 <span id="api-estimators"></span><h1>mpest.estimators<a class="headerlink" href="#mpest-estimators" title="Link to this heading">#</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<p id="module-pysatl_mpest.estimators">Provides tools for estimating the parameters of mixture models.</p>
-<p>This package brings together various algorithms and tools for estimating the
-parameters of <cite>MixtureModel</cite> objects from a data sample. All estimation
-algorithms inherit from the abstract base class <cite>BaseEstimator</cite>, which defines a
-unified interface—the <cite>fit</cite> method.</p>
-<p>The package offers two main approaches to estimation:</p>
-<ol class="arabic simple">
-<li><p><strong>Iterative Algorithms</strong> (in the <a class="reference internal" href="iterative/index.html#module-pysatl_mpest.estimators.iterative" title="pysatl_mpest.estimators.iterative"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pysatl_mpest.estimators.iterative</span></code></a> submodule):
-A flexible module for building complex, multi-step algorithms like
-Expectation-Maximization (EM). It allows for fine-tuning each step,
-stopping conditions, and additional strategies.</p></li>
-<li><p><strong>Direct Algorithms</strong> (in the <a class="reference internal" href="direct/index.html#module-pysatl_mpest.estimators.direct" title="pysatl_mpest.estimators.direct"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pysatl_mpest.estimators.direct</span></code></a> submodule):
-Simpler methods that compute parameters in a single step, for example, by
-directly solving Maximum Likelihood Estimation (MLE) equations or using the
-Method of Moments (MoM).</p></li>
-</ol>
-<p>For ease of use, <strong>Facades</strong> are also provided. These are high-level classes
-that hide the complexity of configuration and offer ready-to-use, popular
-algorithms.</p>
+<p id="module-pysatl_mpest.estimators">Algorithms and facades for estimating mixture model parameters.</p>
 <hr class="docutils" />
 <section id="facades-high-level-api">
 <h2>Facades (High-Level API)<a class="headerlink" href="#facades-high-level-api" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.ECM.html#pysatl_mpest.estimators.ECM" title="pysatl_mpest.estimators.ECM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ECM</span></code></a></p></td>
-<td><p>An estimator that implements the Expectation-Conditional Maximization (ECM) algorithm.</p></td>
+<td><p>Expectation-Conditional Maximization (ECM) estimator.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.ECME.html#pysatl_mpest.estimators.ECME" title="pysatl_mpest.estimators.ECME"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ECME</span></code></a></p></td>
-<td><p>An estimator that implements the Expectation-Conditional Maximization Either (ECME) algorithm.</p></td>
+<td><p>Expectation-Conditional Maximization Either (ECME) estimator.</p></td>
 </tr>
 </tbody>
 </table>
@@ -398,7 +380,7 @@ algorithms.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator" title="pysatl_mpest.estimators.BaseEstimator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">BaseEstimator</span></code></a></p></td>
-<td><p>Abstract class for a mixture model parameter estimator.</p></td>
+<td><p>Abstract base class for mixture model parameter estimators.</p></td>
 </tr>
 </tbody>
 </table>

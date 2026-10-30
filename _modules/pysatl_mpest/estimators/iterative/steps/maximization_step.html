@@ -714,16 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.steps.maximization_step</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Provides the Maximization-step for an iterative estimation pipeline.</span>
-
-<span class="sd">This module defines the `MaximizationStep` class, a concrete implementation of</span>
-<span class="sd">:class:`~pysatl_mpest.estimators.iterative.pipeline_step.PipelineStep`.</span>
-<span class="sd">This step is responsible for performing the Maximization (M-step) in an</span>
-<span class="sd">Expectation-Maximization (EM) like algorithm. It updates the parameters of the</span>
-<span class="sd">mixture model components and their weights to maximize the expected</span>
-<span class="sd">log-likelihood, using the responsibilities computed in a preceding</span>
-<span class="sd">Expectation-step.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Maximization step for iterative estimation pipelines."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -750,30 +741,24 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MaximizationStep">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html#pysatl_mpest.estimators.iterative.MaximizationStep">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MaximizationStep</span><span class="p">(</span><span class="n">PipelineStep</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""A pipeline step that performs the Maximization (M-step).</span>
+<span class="w">    </span><span class="sd">"""Maximization step updating component parameters and mixture weights.</span>
 
-<span class="sd">    This step updates the parameters of each component in the mixture model,</span>
-<span class="sd">    as well as the mixture weights, based on the responsibility matrix :attr:`H`</span>
-<span class="sd">    calculated in the Expectation-step. The update process is configured</span>
-<span class="sd">    through a sequence of :class:`OptimizationBlock` objects, each defining</span>
-<span class="sd">    a specific optimization task.</span>
+<span class="sd">    Executes configured :class:`OptimizationBlock` tasks to update component parameters,</span>
+<span class="sd">    then updates mixture weights from responsibilities.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    blocks : Sequence[OptimizationBlock]</span>
-<span class="sd">        A sequence of configuration blocks that define the optimization tasks.</span>
-<span class="sd">        Each block specifies a component, its parameters to optimize, and the</span>
-<span class="sd">        maximization strategy to use.</span>
+<span class="sd">        Optimization tasks specifying components, parameters, and strategies.</span>
 <span class="sd">    optimizer : Optimizer</span>
-<span class="sd">        A numerical optimizer instance used to find the optimal parameters</span>
-<span class="sd">        when an analytical solution is not available for a given strategy.</span>
+<span class="sd">        Numerical optimizer for strategies requiring numerical search.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    blocks : list[OptimizationBlock]</span>
-<span class="sd">        The list of optimization tasks to be performed.</span>
+<span class="sd">        Configured optimization tasks.</span>
 <span class="sd">    optimizer : Optimizer</span>
-<span class="sd">        The numerical optimizer used for parameter estimation.</span>
+<span class="sd">        Numerical optimizer instance.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
@@ -797,12 +782,7 @@ window.addEventListener("load", load);
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">available_next_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">type</span><span class="p">[</span><span class="n">PipelineStep</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""list[type[PipelineStep]]: Defines the valid subsequent steps.</span>
-
-<span class="sd">        Specifies that a :class:`MaximizationStep` should typically be</span>
-<span class="sd">        followed by an :class:`ExpectationStep` to complete one iteration of</span>
-<span class="sd">        the EM algorithm.</span>
-<span class="sd">        """</span>
+<span class="w">        </span><span class="sd">"""list[type[PipelineStep]]: Steps permitted to follow MaximizationStep."""</span>
 
         <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_mpest.estimators.iterative.steps.expectation_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExpectationStep</span>
 
@@ -811,63 +791,35 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_components_params</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="n">ParametricFamilyDistribution</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParametricFamilyDistribution</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Helper method to update parameters for a single component.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        component : ParametricFamilyDistribution</span>
-<span class="sd">            The component whose parameters are to be updated.</span>
-<span class="sd">        params : dict[str, float]</span>
-<span class="sd">            A dictionary mapping parameter names to their new optimized values.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        ParametricFamilyDistribution</span>
-<span class="sd">            A new component with the updated parameters.</span>
-<span class="sd">        """</span>
-
         <span class="k">return</span> <span class="n">_components</span><span class="o">.</span><span class="n">with_parameters</span><span class="p">(</span><span class="n">component</span><span class="p">,</span> <span class="o">**</span><span class="n">params</span><span class="p">)</span>
 
 <div class="viewcode-block" id="MaximizationStep.run">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.run.html#pysatl_mpest.estimators.iterative.MaximizationStep.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineState</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Executes the M-step.</span>
+<span class="w">        </span><span class="sd">"""Execute the M-step, updating component parameters and weights.</span>
 
-<span class="sd">        This method iterates through the configured optimization blocks,</span>
-<span class="sd">        updates the parameters for each specified component using the</span>
-<span class="sd">        appropriate strategy, and then recalculates the mixture weights based</span>
-<span class="sd">        on the sum of responsibilities.</span>
+<span class="sd">        Strategy exceptions propagate directly. Parameters and weights update only</span>
+<span class="sd">        after all strategy blocks succeed, and the current mixture is modified in place.</span>
+<span class="sd">        Missing responsibilities set ``state.error`` instead of raising.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        state : PipelineState</span>
-<span class="sd">            The current state of the pipeline. Must contain the responsibility</span>
-<span class="sd">            matrix :attr:`H` and the mixture model :attr:`curr_mixture`.</span>
+<span class="sd">            Current state containing responsibility matrix H and current mixture.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        PipelineState</span>
-<span class="sd">            The updated pipeline state with the modified :attr:`curr_mixture`. If the</span>
-<span class="sd">            :attr:`H` matrix is not available in the input state, the state is</span>
-<span class="sd">            returned with an error set, and no modifications are made.</span>
+<span class="sd">            Updated state with modified mixture model.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a block requests an unknown parameter or a parameter fixed by a</span>
-<span class="sd">            family view.</span>
+<span class="sd">            If a block requests an unknown or fixed parameter.</span>
 <span class="sd">        IndexError</span>
-<span class="sd">            If a block's component index is at least the number of mixture components.</span>
+<span class="sd">            If a block's component index is out of bounds.</span>
 <span class="sd">        NotImplementedError</span>
-<span class="sd">            If the selected strategy is not implemented for the component's family</span>
-<span class="sd">            and parametrization.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Strategy exceptions propagate directly to the caller. Component parameters</span>
-<span class="sd">        and weights are updated only after every strategy has returned successfully.</span>
-<span class="sd">        Missing responsibilities instead set :attr:`PipelineState.error`, which</span>
-<span class="sd">        :meth:`Pipeline.fit` reports as a ``RuntimeWarning``.</span>
+<span class="sd">            If a strategy is not implemented for the component's family.</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -896,7 +848,7 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MaximizationStep.clear_after_prune">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear_after_prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Updates optimization blocks after component pruning.</span>
+<span class="w">        </span><span class="sd">"""Update optimization blocks after component pruning.</span>
 
 <span class="sd">        Removes blocks associated with pruned components and shifts component_id</span>
 <span class="sd">        for remaining blocks by the number of removed components before them.</span>
@@ -908,6 +860,7 @@ window.addEventListener("load", load);
 <span class="sd">        removed_components_indices : list[int]</span>
 <span class="sd">            Indices of components that were removed.</span>
 <span class="sd">        """</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">removed_components_indices</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span>
             <span class="k">return</span>
 

@@ -714,14 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.pipeline</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Provides a configurable, iterative estimator for mixture models.</span>
-
-<span class="sd">This module defines the `Pipeline` class, which orchestrates an iterative</span>
-<span class="sd">estimation process by executing a sequence of processing steps. It allows for</span>
-<span class="sd">the flexible construction of algorithms like Expectation-Maximization (EM) by</span>
-<span class="sd">combining different steps (:class:`PipelineStep`), stopping criteria (:class:`Breakpointer`),</span>
-<span class="sd">and component pruning strategies (:class:`Pruner`).</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Configurable iterative pipeline estimator for mixture models."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -746,54 +739,42 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="Pipeline">
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Pipeline</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""An estimator that fits a mixture model via a configurable iterative process.</span>
+<span class="w">    </span><span class="sd">"""Iterative mixture model parameter estimator.</span>
 
-<span class="sd">    The pipeline executes a sequence of defined steps in a loop. After each full</span>
-<span class="sd">    sequence of steps, pruning strategies are applied, and stopping conditions</span>
-<span class="sd">    are checked. The loop continues until a breakpointer signals to stop.</span>
-<span class="sd">    This allows for building complex, multi-stage estimation algorithms,</span>
-<span class="sd">    such as variants of the EM algorithm.</span>
+<span class="sd">    Sequentially executes configured processing steps, applies pruners,</span>
+<span class="sd">    and checks stopping criteria on each iteration until convergence.</span>
 
-<span class="sd">    The core components used for configuration are:</span>
-
-<span class="sd">    - :class:`.PipelineStep`</span>
-<span class="sd">    - :class:`Breakpointer`</span>
-<span class="sd">    - :class:`Pruner`</span>
+<span class="sd">    Steps, breakpointers and pruners may be stateful and are reused as is by every call of :meth:`fit`.</span>
+<span class="sd">    ``history`` is not cleared between calls, so records of repeated fits accumulate.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    steps : Sequence[PipelineStep]</span>
-<span class="sd">        An ordered sequence of steps to be executed in each iteration of the</span>
-<span class="sd">        pipeline.</span>
+<span class="sd">        Ordered sequence of steps executed in each iteration.</span>
 <span class="sd">    breakpointers : Sequence[Breakpointer]</span>
-<span class="sd">        A sequence of strategies that define the stopping conditions for the</span>
-<span class="sd">        iterative process. This list cannot be empty.</span>
+<span class="sd">        Stopping criteria defining termination conditions. Must not be empty.</span>
 <span class="sd">    pruners : Sequence[Pruner] | None, optional</span>
-<span class="sd">        A sequence of strategies for removing components from the mixture model</span>
-<span class="sd">        during fitting. Defaults to None, meaning no pruning is performed.</span>
-<span class="sd">    once_in_iterations: int, optional</span>
-<span class="sd">        The iteration recording frequency. A value of `n` means recording occurs every</span>
-<span class="sd">        `n` iterations. Defaults to 1 (record every iteration).</span>
+<span class="sd">        Component pruning strategies applied after step execution. Defaults to None.</span>
+<span class="sd">    once_in_iterations : int, optional</span>
+<span class="sd">        Iteration snapshot recording frequency in history. Defaults to 1.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    steps : list[PipelineStep]</span>
-<span class="sd">        The ordered list of operations to be performed in each iteration.</span>
+<span class="sd">        Ordered list of iteration steps.</span>
 <span class="sd">    breakpointers : list[Breakpointer]</span>
-<span class="sd">        The list of objects that determine when the fitting process should</span>
-<span class="sd">        terminate.</span>
+<span class="sd">        Configured stopping criteria.</span>
 <span class="sd">    pruners : list[Pruner]</span>
-<span class="sd">        The list of objects that may remove components from the mixture during</span>
-<span class="sd">        the fitting process.</span>
+<span class="sd">        Configured component pruners.</span>
 <span class="sd">    history : IterationsHistory</span>
-<span class="sd">        object that collects comprehensive information about each</span>
-<span class="sd">        iteration of a :class:`Pipeline` estimator.</span>
+<span class="sd">        Recorded iteration snapshots.</span>
+
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the sequence of :attr:`steps` is empty or invalid (i.e., a step is</span>
-<span class="sd">        followed by a step not listed in its :attr:`available_next_steps`), or if</span>
-<span class="sd">        the sequence of :attr:`breakpointers` is empty.</span>
+<span class="sd">        If ``steps`` is empty or cannot form a closed loop (each step, including</span>
+<span class="sd">        the last transitioning to the first, must permit the next in ``available_next_steps``),</span>
+<span class="sd">        or if ``breakpointers`` is empty.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
@@ -819,30 +800,11 @@ window.addEventListener("load", load);
             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">breakpointers</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pruners</span><span class="p">)</span> <span class="k">if</span> <span class="n">pruners</span> <span class="k">else</span> <span class="p">[]</span>  <span class="c1"># self.pruners will always be list</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pruners</span><span class="p">)</span> <span class="k">if</span> <span class="n">pruners</span> <span class="k">else</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">steps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">steps</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">history</span> <span class="o">=</span> <span class="n">IterationsHistory</span><span class="p">(</span><span class="n">once_in_iterations</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PipelineStep</span><span class="p">]):</span>
-<span class="w">        </span><span class="sd">"""Validates the sequence of pipeline steps.</span>
-
-<span class="sd">        Checks if each step in the pipeline can legally be followed by the next</span>
-<span class="sd">        one, based on the :attr:`available_next_steps` property of each step. It also</span>
-<span class="sd">        checks that the pipeline can be run in a loop (the last step must be</span>
-<span class="sd">        compatible with the first step).</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        steps : list[PipelineStep]</span>
-<span class="sd">            The sequence of steps to validate.</span>
-
-<span class="sd">        Raises</span>
-<span class="sd">        ------</span>
-<span class="sd">        ValueError</span>
-<span class="sd">            If the :attr:`steps` list is empty or if the pipeline configuration is</span>
-<span class="sd">            invalid, meaning a step is followed by an incompatible one.</span>
-<span class="sd">        """</span>
-
         <span class="k">if</span> <span class="ow">not</span> <span class="n">steps</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The 'steps' list cannot be empty for a Pipeline."</span><span class="p">)</span>
 
@@ -859,67 +821,46 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="Pipeline.fit">
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">mixture</span><span class="p">:</span> <span class="n">MixtureModel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Fits the mixture model to the data using the configured pipeline.</span>
+<span class="w">        </span><span class="sd">"""Fit mixture model parameters using the iterative pipeline.</span>
 
-<span class="sd">        This method initializes the pipeline's state and runs the main loop.</span>
-<span class="sd">        The loop consists of executing all :attr:`steps` in order, followed by</span>
-<span class="sd">        all :attr:`pruners`. This cycle repeats until any `breakpointers` indicate</span>
-<span class="sd">        that the process should stop.</span>
-
-<span class="sd">        As soon as a pruner removes components, the corresponding columns are dropped</span>
-<span class="sd">        from the responsibility matrix and every step is told which components were</span>
-<span class="sd">        removed through :meth:`~.PipelineStep.clear_after_prune`, so the steps of the</span>
-<span class="sd">        next iteration already work with the pruned mixture. A pruner reports the indices</span>
-<span class="sd">        relative to the mixture it was given, so each pruner is handled separately.</span>
+<span class="sd">        Pruned components are immediately removed from responsibilities and notified</span>
+<span class="sd">        to steps via :meth:`~PipelineStep.clear_after_prune`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input data sample.</span>
+<span class="sd">            Input data sample.</span>
 <span class="sd">        mixture : MixtureModel</span>
-<span class="sd">            The initial mixture model to be fitted. An internal copy of this</span>
-<span class="sd">            model will be modified throughout the process.</span>
+<span class="sd">            Initial mixture model to fit (not modified in-place).</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        MixtureModel</span>
-<span class="sd">            The fitted mixture model after the pipeline has converged or been</span>
-<span class="sd">            stopped.</span>
+<span class="sd">            Fitted mixture model.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a maximization block requests an unknown parameter or a parameter</span>
-<span class="sd">            fixed by a family view.</span>
+<span class="sd">            If a maximization block requests an unknown or fixed parameter.</span>
 <span class="sd">        IndexError</span>
-<span class="sd">            If a maximization block's component index is at least the number of</span>
-<span class="sd">            mixture components.</span>
+<span class="sd">            If a block's component index is out of bounds.</span>
 <span class="sd">        NotImplementedError</span>
-<span class="sd">            If a maximization strategy is not implemented for the component's</span>
-<span class="sd">            family and parametrization.</span>
+<span class="sd">            If a maximization strategy is not implemented for the component's family.</span>
 
 <span class="sd">        Warns</span>
 <span class="sd">        -----</span>
 <span class="sd">        RuntimeWarning</span>
-<span class="sd">            If a step returns a state with :attr:`PipelineState.error` set, such as</span>
-<span class="sd">            when the responsibility matrix is missing. Fitting stops, the error is</span>
-<span class="sd">            saved in the iteration history, and the current mixture is returned.</span>
-
-<span class="sd">        Notes</span>
-<span class="sd">        -----</span>
-<span class="sd">        Exceptions raised directly by steps, including strategy and configuration</span>
-<span class="sd">        errors, propagate to the caller rather than becoming state errors or warnings.</span>
+<span class="sd">            If a step sets :attr:`PipelineState.error`, stopping fitting prematurely</span>
+<span class="sd">            and returning the current mixture.</span>
 <span class="sd">        """</span>
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">copied_mixture</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">mixture</span><span class="p">)</span>  <span class="c1"># Copy to avoid modifying the original object</span>
+        <span class="n">copied_mixture</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">mixture</span><span class="p">)</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">copied_mixture</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="c1"># Updating the state before starting an iteration</span>
             <span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">)</span>
 
-            <span class="c1"># Performing steps</span>
             <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
                 <span class="n">result_state</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">result_state</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
@@ -945,17 +886,15 @@ window.addEventListener("load", load);
                     <span class="k">return</span> <span class="n">result_state</span><span class="o">.</span><span class="n">curr_mixture</span>
                 <span class="n">state</span> <span class="o">=</span> <span class="n">result_state</span>
 
-            <span class="c1"># Pruning</span>
             <span class="k">for</span> <span class="n">pruner</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">:</span>
                 <span class="n">state</span><span class="p">,</span> <span class="n">removed_components_indices</span> <span class="o">=</span> <span class="n">pruner</span><span class="o">.</span><span class="n">prune</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">removed_components_indices</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_discard_pruned_components</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">)</span>
-            <span class="c1"># Save iteration record</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">save_record</span><span class="p">(</span>
                 <span class="n">IterationRecord</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">_counter</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">error</span><span class="p">)</span>
             <span class="p">)</span>
 
-            <span class="c1"># Checking stopping criteria</span>
             <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">breakpointer</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="k">for</span> <span class="n">breakpointer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span><span class="p">):</span>
                 <span class="k">break</span>
 
@@ -963,18 +902,6 @@ window.addEventListener("load", load);
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_discard_pruned_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Removes everything tied to the components that a pruner has just removed.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        state : PipelineState</span>
-<span class="sd">            The state returned by the pruner. Its responsibility matrix, if there is one,</span>
-<span class="sd">            still has a column for every removed component.</span>
-<span class="sd">        removed_components_indices : list[int]</span>
-<span class="sd">            The indices of the removed components relative to the mixture before this</span>
-<span class="sd">            pruning.</span>
-<span class="sd">        """</span>
-
         <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>

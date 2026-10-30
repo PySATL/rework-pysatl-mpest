@@ -316,19 +316,15 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.ExpectationStep.run">
 <span class="sig-prename descclassname"><span class="pre">ExpectationStep.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/expectation_step.html#ExpectationStep.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.ExpectationStep.run" title="Link to this definition">#</a></dt>
-<dd><p>Executes the E-step by calculating the responsibility matrix H.</p>
-<p>This method computes the log-likelihood of each data point under each
-component, incorporates the component weights, and normalizes to find
-the posterior probabilities (responsibilities). The resulting matrix H
-is then stored in the pipeline state. A data point that lies outside the
-support of every component gets a row of zeros in both assignment modes.</p>
+<dd><p>Compute responsibility matrix H and store it in pipeline state.</p>
+<p>The state is modified in place. Rows of points outside the support of every component are zeros,
+so they do not sum to 1.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – The current state of the pipeline, which must contain the input
-data X and the current mixture model curr_mixture.</p>
+<dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – Current state containing observations X and mixture model.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The updated pipeline state with the H attribute computed and set.</p>
+<dd class="field-even"><p>Updated state with computed responsibility matrix H.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState">PipelineState</a></p>

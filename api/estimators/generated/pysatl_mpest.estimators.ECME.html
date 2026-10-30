@@ -365,48 +365,37 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.ECME">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ECME</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">breakpointers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pruners</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_strategy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'odl'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/ecme.html#ECME"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.ECME" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator" title="pysatl_mpest.estimators.base_estimator.BaseEstimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code></a></p>
-<p>An estimator that implements the Expectation-Conditional Maximization Either (ECME) algorithm.</p>
-<p>ECME is a generalized iterative algorithm for maximum likelihood estimation.
-Unlike standard ECM, which strictly maximizes the Q-function (conditional
-expectation of the complete-data log-likelihood) during the maximization steps,
-ECME allows replacing some or all of these steps with a direct maximization
-of the actual Observed Data Likelihood (ODL).</p>
-<p>This implementation provides flexibility by allowing the user to specify
-maximization strategies per component. Some components can be optimized via
-the Q-function, while others can be optimized via ODL within the same
-iterative process. Whichever strategy is used, all free parameters of a
-component are estimated, and the parameters fixed with <code class="docutils literal notranslate"><span class="pre">family.view(...)</span></code>
-keep their values.</p>
+<p>Expectation-Conditional Maximization Either (ECME) estimator.</p>
+<p>Extends ECM by allowing components to be optimized by either maximizing the
+Q-function or directly maximizing the Observed Data Likelihood (ODL).
+All free parameters are estimated, preserving fixed view parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>breakpointers</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – A sequence of strategies that define the stopping conditions for the
-iterative fitting process.</p></li>
-<li><p><strong>pruners</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – A sequence of strategies for removing (pruning) components from the
-mixture model during fitting.</p></li>
-<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – The numerical optimizer used to solve the maximization problems in the
-M-step (or CM-steps).</p></li>
-<li><p><strong>default_strategy</strong> (<em>Literal</em><em>[</em><em>&quot;q-func&quot;</em><em>, </em><em>&quot;odl&quot;</em><em>]</em><em>, </em><em>optional</em>) – The default maximization strategy to apply to components that are not
-explicitly assigned to a specific strategy in <a class="reference internal" href="pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit" title="pysatl_mpest.estimators.ECME.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a>.
-Defaults to “odl”.</p></li>
+<li><p><strong>breakpointers</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – Stopping criteria for the iterative pipeline.</p></li>
+<li><p><strong>pruners</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – Component pruning strategies applied during iterations.</p></li>
+<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer used in maximization steps.</p></li>
+<li><p><strong>default_strategy</strong> (<em>Literal</em><em>[</em><em>&quot;q-func&quot;</em><em>, </em><em>&quot;odl&quot;</em><em>]</em><em>, </em><em>optional</em>) – Default strategy for components not specified in <a class="reference internal" href="pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit" title="pysatl_mpest.estimators.ECME.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a>. Defaults to “odl”.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>breakpointers</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – The list of stopping criteria used by the estimator.</p></li>
-<li><p><strong>pruners</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – The list of pruning strategies used by the estimator.</p></li>
-<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – The numerical optimizer instance.</p></li>
-<li><p><strong>default_strategy_name</strong> (<em>str</em>) – The name of the default strategy (“q-func” or “odl”).</p></li>
-<li><p><strong>history</strong> (<em>IterationsHistory</em>) – The history of the fitting process, containing snapshots of the model
-and metrics for each iteration. Only available after <a class="reference internal" href="pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit" title="pysatl_mpest.estimators.ECME.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a> is called.</p></li>
+<li><p><strong>breakpointers</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – Configured stopping criteria.</p></li>
+<li><p><strong>pruners</strong> (<em>list</em><em>[</em><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – Configured component pruning strategies.</p></li>
+<li><p><strong>optimizer</strong> (<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer instance.</p></li>
+<li><p><strong>default_strategy_name</strong> (<em>str</em>) – Name of the default strategy (“q-func” or “odl”).</p></li>
+<li><p><strong>history</strong> (<em>IterationsHistory</em>) – Recorded iteration snapshots, accessible after calling <a class="reference internal" href="pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit" title="pysatl_mpest.estimators.ECME.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a>.</p></li>
 </ul>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">default_strategy</span></code> is not <code class="docutils literal notranslate"><span class="pre">'odl'</span></code> or <code class="docutils literal notranslate"><span class="pre">'q-func'</span></code>.</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit" title="pysatl_mpest.estimators.ECME.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(X, mixture[, q_indices_raw, ...])</p></td>
-<td><p>Fits the mixture model to the data using the ECME algorithm.</p></td>
+<td><p>Fit mixture model parameters using the ECME algorithm.</p></td>
 </tr>
 </tbody>
 </table>

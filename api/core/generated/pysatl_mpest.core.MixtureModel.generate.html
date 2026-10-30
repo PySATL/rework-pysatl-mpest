@@ -316,23 +316,16 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.core.MixtureModel.generate">
 <span class="sig-prename descclassname"><span class="pre">MixtureModel.</span></span><span class="sig-name descname"><span class="pre">generate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/core/mixture.html#MixtureModel.generate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.core.MixtureModel.generate" title="Link to this definition">#</a></dt>
-<dd><p>Generates random samples from the mixture model.</p>
-<p>First, a component is chosen based on the mixture weights. Then, a
-sample is drawn from the chosen component’s distribution. This
-process is repeated <cite>size</cite> times.</p>
+<dd><p>Sample random variates from the mixture distribution.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<em>int</em><em> | </em><em>np.integer</em><em>[</em><em>np.typing.NBitBase</em><em>] </em><em>| </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>...</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Defining number of random variates.
-- If None (default), returns a single scalar.
-- If int or np.integer, returns a 1D array of that length.
-- If tuple, returns an array of that shape.</p></li>
-<li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>np.random.Generator</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – A seed or random number generator to use for reproducible output.</p></li>
+<li><p><strong>size</strong> (<em>int</em><em> | </em><em>np.integer</em><em>[</em><em>np.typing.NBitBase</em><em>] </em><em>| </em><em>tuple</em><em>[</em><em>int</em><em>, </em><em>...</em><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Number or shape of random variates to generate. If None, returns a scalar.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>np.random.Generator</em><em> | </em><em>None</em><em>, </em><em>optional</em>) – Seed or random number generator for reproducible sampling.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A scalar if size is None, otherwise an array containing the
-generated samples. Returns an empty array if the number of samples is zero.</p>
+<dd class="field-even"><p>Generated samples of requested shape, or empty array if sample size is zero.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.float64 | FloatArray</p>

@@ -714,12 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.optimizers.optimizer</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""A module that provides an abstract base class for optimizers.</span>
-
-<span class="sd">This module defines the :class:`Optimizer` abstract class, which serves as a contract</span>
-<span class="sd">for implementing various optimization algorithms. Any concrete optimizer should</span>
-<span class="sd">inherit from this class and implement the :meth:`minimize` method.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Abstract base class for numerical optimizers."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -735,13 +730,6 @@ window.addEventListener("load", load);
 <span class="k">class</span><span class="w"> </span><span class="nc">Optimizer</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Abstract base class for numerical optimizers.</span>
 
-<span class="sd">    This class defines the standard interface for all optimizer implementations.</span>
-<span class="sd">    Its primary purpose is to find the parameters that minimize a given</span>
-<span class="sd">    objective function, starting from an initial guess.</span>
-
-<span class="sd">    Subclasses must implement the :meth:`minimize` method to provide a specific</span>
-<span class="sd">    optimization algorithm.</span>
-
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
 <span class="sd">    .. autosummary::</span>
@@ -754,26 +742,23 @@ window.addEventListener("load", load);
 <a class="viewcode-back" href="../../../api/optimizers/generated/pysatl_mpest.optimizers.Optimizer.minimize.html#pysatl_mpest.optimizers.Optimizer.minimize">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">minimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">"""Finds the parameters that minimize a target function.</span>
+<span class="w">        </span><span class="sd">"""Find parameters that minimize a scalar objective function.</span>
 
-<span class="sd">        This abstract method must be implemented by subclasses to perform the</span>
-<span class="sd">        actual optimization.</span>
+<span class="sd">        The M-step strategies pass an unconstrained objective that returns ``+inf`` at infeasible</span>
+<span class="sd">        parameters, so implementations must tolerate it. Failure to converge is not reported: the best</span>
+<span class="sd">        point found is returned.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        target : Callable</span>
-<span class="sd">            The objective function to minimize. It must be a callable that</span>
-<span class="sd">            accepts a list or NumPy array of parameters and returns a single</span>
-<span class="sd">            scalar value.</span>
+<span class="sd">            Objective function accepting a vector of parameter values and returning a scalar.</span>
 <span class="sd">        params : list[float]</span>
-<span class="sd">            A list of initial values for the parameters to be optimized. This</span>
-<span class="sd">            serves as the starting point for the optimization algorithm.</span>
+<span class="sd">            Initial parameter guess.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        list[float]</span>
-<span class="sd">            A list containing the set of parameters that minimizes the</span>
-<span class="sd">            target function.</span>
+<span class="sd">            Optimized parameter values.</span>
 <span class="sd">        """</span></div>
 </div>
 

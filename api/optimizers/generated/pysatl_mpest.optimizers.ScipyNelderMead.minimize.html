@@ -316,22 +316,16 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.optimizers.ScipyNelderMead.minimize">
 <span class="sig-prename descclassname"><span class="pre">ScipyNelderMead.</span></span><span class="sig-name descname"><span class="pre">minimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/optimizers/scipy_nelder_mead.html#ScipyNelderMead.minimize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.optimizers.ScipyNelderMead.minimize" title="Link to this definition">#</a></dt>
-<dd><p>Minimizes a target function using the Nelder-Mead algorithm.</p>
-<p>This method leverages the <cite>scipy.optimize.minimize</cite> function to find
-the parameters that minimize the provided objective function.</p>
+<dd><p>Minimize target function using Nelder-Mead simplex algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>target</strong> (<em>Callable</em>) – The objective function to minimize. It must be a callable that
-accepts a list or NumPy array of parameters and returns a single
-scalar value.</p></li>
-<li><p><strong>params</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – A list of initial values for the parameters that serves as the
-starting point for the optimization.</p></li>
+<li><p><strong>target</strong> (<em>Callable</em>) – Objective function accepting parameter values and returning a scalar.</p></li>
+<li><p><strong>params</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – Initial parameter guess.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A list containing the set of parameters that minimizes the target
-function, as found by the Nelder-Mead algorithm.</p>
+<dd class="field-even"><p>Optimized parameter values.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>list[float]</p>

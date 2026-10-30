@@ -365,23 +365,16 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.BaseEstimator">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BaseEstimator</span></span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/base_estimator.html#BaseEstimator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.BaseEstimator" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
-<p>Abstract class for a mixture model parameter estimator.</p>
-<p>This class defines the interface for all estimator algorithms. Estimators are responsible for
-fitting the parameters of a <a class="reference internal" href="../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">MixtureModel</span></code></a> to a given dataset.</p>
+<p>Abstract base class for mixture model parameter estimators.</p>
 <p class="rubric">Methods</p>
-<p><strong>Abstract methods</strong></p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.BaseEstimator.fit.html#pysatl_mpest.estimators.BaseEstimator.fit" title="pysatl_mpest.estimators.BaseEstimator.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(X, mixture)</p></td>
-<td><p>Fits the mixture model to the provided data.</p></td>
+<td><p>Fit mixture model parameters to input data.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p class="rubric">Notes</p>
-<p><strong>Implementation Requirements</strong></p>
-<p>Subclasses must implement the abstract method <a class="reference internal" href="pysatl_mpest.estimators.BaseEstimator.fit.html#pysatl_mpest.estimators.BaseEstimator.fit" title="pysatl_mpest.estimators.BaseEstimator.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a> to provide a specific
-estimation strategy.</p>
 </dd></dl>
 
 </section>

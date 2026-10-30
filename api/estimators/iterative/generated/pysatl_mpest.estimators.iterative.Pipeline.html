@@ -368,53 +368,39 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.Pipeline">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">breakpointers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pruners</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">once_in_iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pipeline.html#Pipeline"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.Pipeline" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="../../generated/pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator" title="pysatl_mpest.estimators.base_estimator.BaseEstimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code></a></p>
-<p>An estimator that fits a mixture model via a configurable iterative process.</p>
-<p>The pipeline executes a sequence of defined steps in a loop. After each full
-sequence of steps, pruning strategies are applied, and stopping conditions
-are checked. The loop continues until a breakpointer signals to stop.
-This allows for building complex, multi-stage estimation algorithms,
-such as variants of the EM algorithm.</p>
-<p>The core components used for configuration are:</p>
-<ul class="simple">
-<li><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineStep</span></code></a></p></li>
-<li><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Breakpointer</span></code></a></p></li>
-<li><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pruner</span></code></a></p></li>
-</ul>
+<p>Iterative mixture model parameter estimator.</p>
+<p>Sequentially executes configured processing steps, applies pruners,
+and checks stopping criteria on each iteration until convergence.</p>
+<p>Steps, breakpointers and pruners may be stateful and are reused as is by every call of <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit" title="pysatl_mpest.estimators.iterative.Pipeline.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a>.
+<code class="docutils literal notranslate"><span class="pre">history</span></code> is not cleared between calls, so records of repeated fits accumulate.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>steps</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><em>PipelineStep</em></a><em>]</em>) – An ordered sequence of steps to be executed in each iteration of the
-pipeline.</p></li>
-<li><p><strong>breakpointers</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – A sequence of strategies that define the stopping conditions for the
-iterative process. This list cannot be empty.</p></li>
-<li><p><strong>pruners</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – A sequence of strategies for removing components from the mixture model
-during fitting. Defaults to None, meaning no pruning is performed.</p></li>
-<li><p><strong>once_in_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – The iteration recording frequency. A value of <cite>n</cite> means recording occurs every
-<cite>n</cite> iterations. Defaults to 1 (record every iteration).</p></li>
+<li><p><strong>steps</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><em>PipelineStep</em></a><em>]</em>) – Ordered sequence of steps executed in each iteration.</p></li>
+<li><p><strong>breakpointers</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – Stopping criteria defining termination conditions. Must not be empty.</p></li>
+<li><p><strong>pruners</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>] </em><em>| </em><em>None</em><em>, </em><em>optional</em>) – Component pruning strategies applied after step execution. Defaults to None.</p></li>
+<li><p><strong>once_in_iterations</strong> (<em>int</em><em>, </em><em>optional</em>) – Iteration snapshot recording frequency in history. Defaults to 1.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>steps</strong> (<em>list</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><em>PipelineStep</em></a><em>]</em>) – The ordered list of operations to be performed in each iteration.</p></li>
-<li><p><strong>breakpointers</strong> (<em>list</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – The list of objects that determine when the fitting process should
-terminate.</p></li>
-<li><p><strong>pruners</strong> (<em>list</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – The list of objects that may remove components from the mixture during
-the fitting process.</p></li>
-<li><p><strong>history</strong> (<em>IterationsHistory</em>) – object that collects comprehensive information about each
-iteration of a <a class="reference internal" href="#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a> estimator.</p></li>
+<li><p><strong>steps</strong> (<em>list</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.PipelineStep"><em>PipelineStep</em></a><em>]</em>) – Ordered list of iteration steps.</p></li>
+<li><p><strong>breakpointers</strong> (<em>list</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html#pysatl_mpest.estimators.iterative.Breakpointer" title="pysatl_mpest.estimators.iterative.Breakpointer"><em>Breakpointer</em></a><em>]</em>) – Configured stopping criteria.</p></li>
+<li><p><strong>pruners</strong> (<em>list</em><em>[</em><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html#pysatl_mpest.estimators.iterative.Pruner" title="pysatl_mpest.estimators.iterative.Pruner"><em>Pruner</em></a><em>]</em>) – Configured component pruners.</p></li>
+<li><p><strong>history</strong> (<em>IterationsHistory</em>) – Recorded iteration snapshots.</p></li>
 </ul>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>ValueError</strong> – If the sequence of <code class="xref py py-attr docutils literal notranslate"><span class="pre">steps</span></code> is empty or invalid (i.e., a step is
-    followed by a step not listed in its <code class="xref py py-attr docutils literal notranslate"><span class="pre">available_next_steps</span></code>), or if
-    the sequence of <code class="xref py py-attr docutils literal notranslate"><span class="pre">breakpointers</span></code> is empty.</p>
+<dd class="field-odd"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">steps</span></code> is empty or cannot form a closed loop (each step, including
+    the last transitioning to the first, must permit the next in <code class="docutils literal notranslate"><span class="pre">available_next_steps</span></code>),
+    or if <code class="docutils literal notranslate"><span class="pre">breakpointers</span></code> is empty.</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit" title="pysatl_mpest.estimators.iterative.Pipeline.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(X, mixture)</p></td>
-<td><p>Fits the mixture model to the data using the configured pipeline.</p></td>
+<td><p>Fit mixture model parameters using the iterative pipeline.</p></td>
 </tr>
 </tbody>
 </table>

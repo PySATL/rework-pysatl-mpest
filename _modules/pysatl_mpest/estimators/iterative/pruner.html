@@ -714,12 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.pruner</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Defines the abstract base class for mixture pruning strategies.</span>
-
-<span class="sd">This module provides the `Pruner` abstract base class, which serves as an</span>
-<span class="sd">interface for implementing various strategies to remove components from a</span>
-<span class="sd">mixture model during an iterative estimation process.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Abstract base class for mixture pruning strategies."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -735,52 +730,33 @@ window.addEventListener("load", load);
 <span class="k">class</span><span class="w"> </span><span class="nc">Pruner</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Abstract base class for component pruning strategies.</span>
 
-<span class="sd">    Pruner subclasses implement the logic for identifying and removing</span>
-<span class="sd">    redundant, insignificant, or degenerate components from a :class:`pysatl_mpest.core.MixtureModel`</span>
-<span class="sd">    within an iterative pipeline (:class:`Pipeline`).</span>
-<span class="sd">    Pruning is typically applied after a full iteration of the pipeline's steps to clean up the model</span>
-<span class="sd">    before the next iteration.</span>
-
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
-
 <span class="sd">    .. autosummary::</span>
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        prune</span>
-
-<span class="sd">    Notes</span>
-<span class="sd">    -----</span>
-
-<span class="sd">    Subclasses must implement the abstract method :meth:`prune` to define the</span>
-<span class="sd">    specific component removal logic.</span>
 <span class="sd">    """</span>
 
 <div class="viewcode-block" id="Pruner.prune">
 <a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Pruner.prune.html#pysatl_mpest.estimators.iterative.Pruner.prune">[docs]</a>
     <span class="nd">@abstractmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PipelineState</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
-<span class="w">        </span><span class="sd">"""Analyzes the pipeline state and prunes components from the mixture.</span>
+<span class="w">        </span><span class="sd">"""Identify and remove components from the mixture in pipeline state.</span>
 
-<span class="sd">        This method is called by the :class:`Pipeline` to inspect the current mixture</span>
-<span class="sd">        model and decide whether to remove one or more components based on the</span>
-<span class="sd">        implemented strategy (e.g., if a component's weight falls below a</span>
-<span class="sd">        threshold).</span>
+<span class="sd">        Implementations return the state to continue with and may build a new one instead of</span>
+<span class="sd">        modifying the given state. Removed indices refer to the mixture given to this call; the pipeline</span>
+<span class="sd">        drops the matching columns of ``state.H`` itself.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        state : PipelineState</span>
-<span class="sd">            The current state of the pipeline, containing the data, mixture</span>
-<span class="sd">            model, and other relevant information.</span>
+<span class="sd">            Current pipeline state.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        PipelineState</span>
-<span class="sd">            The new pipeline state. If components were removed, this state</span>
-<span class="sd">            contains the updated mixture model. Otherwise, it returns the</span>
-<span class="sd">            original state.</span>
-<span class="sd">        removed_components_indices : list[int]</span>
-<span class="sd">            Tracks which component indices were removed during pruning.</span>
+<span class="sd">        tuple[PipelineState, list[int]]</span>
+<span class="sd">            Tuple of updated pipeline state and sorted indices of removed components.</span>
 <span class="sd">        """</span></div>
 </div>
 

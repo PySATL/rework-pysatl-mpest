@@ -714,8 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.iterative.breakpointers.likelihood_breakpointer</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Module that provides a :class:`pysatl_mpest.estimators.iterative.Pipeline`</span>
-<span class="sd">stopping strategy based on when log-likelihood of the mixture converges"""</span>
+<span></span><span class="sd">"""Stopping strategy based on mixture log-likelihood convergence."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Maksim Pastukhov"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -787,7 +786,6 @@ window.addEventListener("load", load);
         <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Validates the threshold parameter."""</span>
         <span class="k">if</span> <span class="n">threshold</span> <span class="o">&lt;=</span> <span class="mf">0.0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The threshold must be greater than 0"</span><span class="p">)</span>
 
@@ -796,10 +794,7 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Check convergence of the log-likelihood over supported observations.</span>
 
-<span class="sd">        Exclude only log-densities equal to ``-inf`` and compare sums only</span>
-<span class="sd">        when their observation masks match. Unlike ``loglikelihood(X)``, this</span>
-<span class="sd">        sum omits observations outside the mixture support. A changed mask</span>
-<span class="sd">        replaces the stored sum and mask without declaring convergence.</span>
+<span class="sd">        See the class description for how the support mask and the baseline are handled.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -812,8 +807,7 @@ window.addEventListener("load", load);
 <span class="sd">        bool</span>
 <span class="sd">            True when comparable sums differ by less than ``threshold``, or</span>
 <span class="sd">            when the sum is non-finite or has no contributing observations.</span>
-<span class="sd">            Both stored values are reset on True. The first call and any</span>
-<span class="sd">            change of support return False and establish a new baseline.</span>
+<span class="sd">            The first call and any change of support return False.</span>
 
 <span class="sd">        Warns</span>
 <span class="sd">        -----</span>

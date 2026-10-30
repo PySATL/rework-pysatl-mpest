@@ -368,27 +368,23 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.ExpectationStep">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ExpectationStep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">is_soft</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/expectation_step.html#ExpectationStep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.ExpectationStep" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.pipeline_step.PipelineStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineStep</span></code></a></p>
-<p>A pipeline step that performs the Expectation (E-step).</p>
-<p>This step calculates the responsibility matrix H, where H[i, j] is
-the posterior probability that the i-th data point belongs to the j-th
-mixture component. It can perform either a soft (probabilistic) or hard
-(winner-takes-all) assignment.</p>
+<p>Expectation step computing component responsibility matrix H.</p>
+<p>Supports soft (probabilistic) or hard (winner-takes-all) assignment.
+Points outside the support of all components receive zero responsibilities.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>is_soft</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True (default), performs a soft assignment where H contains probabilities.
-If False, performs a hard assignment where each supported data point
-is assigned to the single most likely component (i.e., H contains
-only 0s and 1s). Unsupported points retain zero responsibilities.</p>
+<dd class="field-odd"><p><strong>is_soft</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True (default), computes posterior probabilities.
+If False, assigns 1.0 to the most likely component and 0.0 otherwise.</p>
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>is_soft</strong> (<em>bool</em>) – Flag indicating whether to perform soft or hard assignment.</p>
+<dd class="field-even"><p><strong>is_soft</strong> (<em>bool</em>) – Flag indicating soft or hard assignment.</p>
 </dd>
 </dl>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.ExpectationStep.run.html#pysatl_mpest.estimators.iterative.ExpectationStep.run" title="pysatl_mpest.estimators.iterative.ExpectationStep.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>(state)</p></td>
-<td><p>Executes the E-step by calculating the responsibility matrix H.</p></td>
+<td><p>Compute responsibility matrix H and store it in pipeline state.</p></td>
 </tr>
 </tbody>
 </table>

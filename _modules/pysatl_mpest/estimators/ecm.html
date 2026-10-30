@@ -714,13 +714,7 @@ window.addEventListener("load", load);
                 <article class="bd-article">
                   
   <h1>Source code for pysatl_mpest.estimators.ecm</h1><div class="highlight"><pre>
-<span></span><span class="sd">"""Implements the Expectation-Conditional Maximization (ECM) algorithm.</span>
-
-<span class="sd">This module provides the ``ECM`` class, which is a concrete</span>
-<span class="sd">implementation of the :class:`~pysatl_mpest.estimators.base_estimator.BaseEstimator`.</span>
-<span class="sd">It uses a pipeline architecture (:class:`~pysatl_mpest.estimators.iterative.pipeline.Pipeline`)</span>
-<span class="sd">to fit the parameters of a mixture model to data.</span>
-<span class="sd">"""</span>
+<span></span><span class="sd">"""Expectation-Conditional Maximization (ECM) estimator."""</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">"Danil Totmyanin, Aleksandra Ri"</span>
 <span class="n">__copyright__</span> <span class="o">=</span> <span class="s2">"Copyright (c) 2025 PySATL project"</span>
@@ -749,50 +743,31 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="ECM">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.ECM.html#pysatl_mpest.estimators.ECM">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ECM</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""An estimator that implements the Expectation-Conditional Maximization (ECM) algorithm.</span>
+<span class="w">    </span><span class="sd">"""Expectation-Conditional Maximization (ECM) estimator.</span>
 
-<span class="sd">    This class encapsulates the logic for the ECM algorithm, a variant of the</span>
-<span class="sd">    classic Expectation-Maximization (EM) algorithm. It constructs and executes</span>
-<span class="sd">    a :class:`~.Pipeline` consisting of an expectation step</span>
-<span class="sd">    (:class:`~.ExpectationStep`) and a conditional maximization step</span>
-<span class="sd">    (:class:`~.MaximizationStep`).</span>
-
-<span class="sd">    The key feature of this ECM implementation is that the maximization (M-step)</span>
-<span class="sd">    is partitioned into separate, smaller optimization problems—one for each</span>
-<span class="sd">    component in the mixture. For each component, all of its free parameters</span>
-<span class="sd">    (those not fixed with ``family.view(...)``) are estimated simultaneously by</span>
-<span class="sd">    maximizing the Q-function. This component-wise update simplifies the</span>
-<span class="sd">    optimization process.</span>
-
-<span class="sd">    The overall fitting process can be customized with stopping criteria,</span>
-<span class="sd">    component pruning strategies, and a numerical optimizer.</span>
+<span class="sd">    Executes an iterative pipeline of Expectation and Conditional Maximization steps.</span>
+<span class="sd">    Maximization is partitioned component-wise, updating all free parameters of each</span>
+<span class="sd">    component by maximizing the Q-function.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    breakpointers : Sequence[Breakpointer]</span>
-<span class="sd">        A sequence of strategies that define the stopping conditions for the</span>
-<span class="sd">        iterative process.</span>
+<span class="sd">        Stopping criteria for the iterative pipeline.</span>
 <span class="sd">    pruners : Sequence[Pruner]</span>
-<span class="sd">        A sequence of strategies for removing (pruning) components from the</span>
-<span class="sd">        mixture model during fitting.</span>
+<span class="sd">        Component pruning strategies applied during iterations.</span>
 <span class="sd">    optimizer : Optimizer</span>
-<span class="sd">        A numerical optimizer instance used in the maximization step to find</span>
-<span class="sd">        the optimal parameters.</span>
+<span class="sd">        Numerical optimizer used in maximization steps.</span>
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
 <span class="sd">    breakpointers : list[Breakpointer]</span>
-<span class="sd">        The list of objects that determine when the fitting process should</span>
-<span class="sd">        terminate.</span>
+<span class="sd">        Configured stopping criteria.</span>
 <span class="sd">    pruners : list[Pruner]</span>
-<span class="sd">        The list of objects that may remove components from the mixture during</span>
-<span class="sd">        the fitting process.</span>
+<span class="sd">        Configured component pruning strategies.</span>
 <span class="sd">    optimizer : Optimizer</span>
-<span class="sd">        The numerical optimizer used for parameter estimation.</span>
-<span class="sd">    history: IterationsHistory | None</span>
-<span class="sd">        An object that collects information about each iteration.</span>
-<span class="sd">        This attribute is only available after the :meth:`fit` method has been called.</span>
-<span class="sd">        Accessing it beforehand will raise an :class:`AttributeError`.</span>
+<span class="sd">        Numerical optimizer instance.</span>
+<span class="sd">    history : IterationsHistory</span>
+<span class="sd">        Recorded iteration snapshots, accessible after calling :meth:`fit`.</span>
 
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
@@ -815,12 +790,12 @@ window.addEventListener("load", load);
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IterationsHistory</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""An object that collects information about each iteration.</span>
+<span class="w">        </span><span class="sd">"""IterationsHistory: Recorded history of pipeline iterations after fitting.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        AttributeError</span>
-<span class="sd">            If accessed before the `fit` method has been called at least once.</span>
+<span class="sd">            If accessed before ``fit`` has been called.</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -830,27 +805,21 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="ECM.fit">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">mixture</span><span class="p">:</span> <span class="n">MixtureModel</span><span class="p">,</span> <span class="n">once_in_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Fits the mixture model to the data using the ECM algorithm.</span>
-
-<span class="sd">        This method sets up and runs an iterative pipeline to estimate the</span>
-<span class="sd">        parameters of a given mixture model based on the input data. At each</span>
-<span class="sd">        iteration, it performs an E-step and an M-step. The process repeats</span>
-<span class="sd">        until one of the stopping criteria is met.</span>
+<span class="w">        </span><span class="sd">"""Fit mixture model parameters using the ECM algorithm.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        X : ArrayLike</span>
-<span class="sd">            The input dataset for fitting the model.</span>
+<span class="sd">            Input data sample.</span>
 <span class="sd">        mixture : MixtureModel</span>
-<span class="sd">            The initial mixture model to be fitted.</span>
+<span class="sd">            Initial mixture model to fit; not modified in-place.</span>
 <span class="sd">        once_in_iterations : int, optional</span>
-<span class="sd">            The iteration recording frequency. A value of `n` means recording occurs every</span>
-<span class="sd">            `n` iterations. Defaults to 1.</span>
+<span class="sd">            Iteration recording frequency in history. Defaults to 1.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        MixtureModel</span>
-<span class="sd">            The mixture model with the estimated parameters.</span>
+<span class="sd">            Fitted mixture model with estimated parameters.</span>
 <span class="sd">        """</span>
 
         <span class="c1"># No parameter names: every free parameter of a component is optimized, and the parameters</span>

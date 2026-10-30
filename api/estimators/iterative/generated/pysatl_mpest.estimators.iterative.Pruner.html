@@ -369,23 +369,15 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Pruner</span></span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pruner.html#Pruner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.Pruner" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
 <p>Abstract base class for component pruning strategies.</p>
-<p>Pruner subclasses implement the logic for identifying and removing
-redundant, insignificant, or degenerate components from a <a class="reference internal" href="../../../core/generated/pysatl_mpest.core.MixtureModel.html#pysatl_mpest.core.MixtureModel" title="pysatl_mpest.core.MixtureModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">pysatl_mpest.core.MixtureModel</span></code></a>
-within an iterative pipeline (<a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.html#pysatl_mpest.estimators.iterative.Pipeline" title="pysatl_mpest.estimators.iterative.Pipeline"><code class="xref py py-class docutils literal notranslate"><span class="pre">Pipeline</span></code></a>).
-Pruning is typically applied after a full iteration of the pipeline’s steps to clean up the model
-before the next iteration.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.prune.html#pysatl_mpest.estimators.iterative.Pruner.prune" title="pysatl_mpest.estimators.iterative.Pruner.prune"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prune</span></code></a>(state)</p></td>
-<td><p>Analyzes the pipeline state and prunes components from the mixture.</p></td>
+<td><p>Identify and remove components from the mixture in pipeline state.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<p class="rubric">Notes</p>
-<p>Subclasses must implement the abstract method <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.prune.html#pysatl_mpest.estimators.iterative.Pruner.prune" title="pysatl_mpest.estimators.iterative.Pruner.prune"><code class="xref py py-meth docutils literal notranslate"><span class="pre">prune()</span></code></a> to define the
-specific component removal logic.</p>
 </dd></dl>
 
 </section>
