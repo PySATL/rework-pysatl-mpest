@@ -1,8 +1,4 @@
-"""Provides strategy for the Maximization-step based on the observed data likelihood.
-
-This module implements the logic for updating component parameters by directly
-maximizing the log-likelihood of the observed data.
-"""
+"""Observed data log-likelihood maximization strategy."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -28,47 +24,18 @@ def observed_data_likelihood_strategy(
     block: OptimizationBlock,
     optimizer: Optimizer,
 ) -> tuple[int, dict[str, float]]:
-    """Generic strategy that calculates optimized parameters by maximizing observed data log-likelihood.
+    """Maximize observed data log-likelihood for a component with fixed background.
 
-    This function calculates the new parameters for a component by directly
-    maximizing the log-likelihood of the mixture model:
-        L(θ_q) = Σ ln( C_i + w_q * f_q(x_i | θ_q) )
-
-    Where C_i is the fixed contribution of all other components (background)
-    calculated based on the current state.
-
-    Computation uses log-densities, bounded below by ``LOG_FLOOR`` for each observation
-    under the mixture. An observation outside every component's support therefore adds
-    a finite penalty. Covering it can reduce that penalty when the support depends on
-    the optimized parameters. Log-densities below the floor have the same contribution.
-    Parameter values that violate the parametrization constraints (for example a negative
-    standard deviation), or produce a nonfinite bounded objective, give a target of ``+inf``.
-
-    Only the parameters named by the block are optimized; the other parameters of the
-    component, including those fixed with ``family.view(...)``, keep their values.
-
-    Parameters
-    ----------
-    component : ParametricFamilyDistribution
-        The distribution component whose parameters are to be optimized.
-    state : PipelineState
-        The current state containing data X and the current mixture, whose weights and other
-        components define the background.
-        (Note: Responsibilities H are not used in this strategy).
-    block : OptimizationBlock
-        Configuration defining which parameters to optimize (component_id and param names).
-    optimizer : Optimizer
-        Numerical optimizer instance.
-
-    Returns
-    -------
-    tuple[int, dict[str, float]]
-        Component ID and a dictionary of the optimized parameters.
+    The mixture log-density of each observation is bounded below by ``LOG_FLOOR`` to assign a finite
+    penalty to unsupported observations instead of freezing the objective. Parameter
+    constraint violations or non-finite objectives evaluate to ``+inf``. Only
+    parameters specified by ``block`` are updated, preserving fixed view parameters.
+    Posterior responsibilities (``state.H``) are not used.
 
     Raises
     ------
     ValueError
-        If the block names parameters that are not free parameters of the component.
+        If ``block`` specifies parameters that are not free parameters of the component.
     """
 
     X = state.X

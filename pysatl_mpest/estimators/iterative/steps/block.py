@@ -1,11 +1,4 @@
-"""Defines configuration structures for the maximization step in a pipeline.
-
-This module provides data structures used to configure and control the
-maximization of an iterative estimation process, such as the one
-implemented by :class:`MaximizationStep`.
-It includes an enumeration of possible optimization strategies and a dataclass
-to define a specific optimization task for a component's parameters.
-"""
+"""Maximization step strategies and optimization block configurations."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -21,22 +14,18 @@ from ....core import _components
 
 
 class MaximizationStrategy(Enum):
-    """Enumerates the available strategies for the :class:`MaximizationStep`.
-
-    This enumeration defines the objective functions that can be used to
-    update the parameters of mixture components during the maximization step.
+    """Available parameter update strategies for :class:`MaximizationStep`.
 
     Attributes
     ----------
     QFUNCTION
-        Indicates that the optimization should maximize the Q-function,
-        which is the expected value of the complete-data log-likelihood.
+        Maximize conditional expectation of complete-data log-likelihood (Q-function).
     OBSERVED_DATA_LIKELIHOOD
-        Indicates that the optimization should maximize the observed-data likelihood
-        of the mixture.
+        Directly maximize observed-data log-likelihood of the mixture.
     MOMENTS
-        Indicates that the optimization should use the Method of Moments,
-        matching theoretical moments to empirical weighted moments.
+        Method of Moments matching theoretical and empirical weighted moments. Implemented only for
+        the Normal (``meanStd``) and Exponential (``rate``) families; other components raise
+        ``NotImplementedError``.
     """
 
     QFUNCTION = auto()
@@ -46,25 +35,17 @@ class MaximizationStrategy(Enum):
 
 @dataclass
 class OptimizationBlock:
-    """A configuration block for optimizing a specific component's parameters.
-
-    This dataclass specifies a single optimization task within a :class:`~MaximizationStep`.
-    It defines which component to update, which of its parameters to optimize,
-    and which objective function (strategy) to use for the optimization.
+    """Configuration task for optimizing a mixture component in :class:`MaximizationStep`.
 
     Parameters
     ----------
     component_id : int
-        The zero-based index of the component within the
-        :class:`~pysatl_mpest.core.MixtureModel` to be optimized.
+        Zero-based index of the component to update.
     params_to_optimize : set[str] | None
-        A set of parameter names (as strings) for the specified component
-        that should be included in the optimization, or ``None`` to optimize
-        all of its free parameters. Parameters fixed with ``family.view(...)``
-        are never free, so they cannot be listed here.
+        Parameter names to optimize, or None to optimize all free parameters.
+        Parameters fixed via ``family.view(...)`` cannot be listed here.
     maximization_strategy : MaximizationStrategy
-        The optimization strategy to apply, chosen from the
-        :class:`MaximizationStrategy` enum.
+        Objective strategy to apply.
     """
 
     component_id: int
@@ -72,25 +53,22 @@ class OptimizationBlock:
     maximization_strategy: MaximizationStrategy
 
     def params_to_update(self, component: ParametricFamilyDistribution) -> list[str]:
-        """Names of the parameters of a component that this block optimizes.
+        """Return sorted names of free parameters to optimize for the component.
 
         Parameters
         ----------
         component : ParametricFamilyDistribution
-            The component the block refers to.
+            Target component.
 
         Returns
         -------
         list[str]
-            The sorted names of the parameters to optimize: all free parameters of the
-            component if :attr:`params_to_optimize` is ``None``, otherwise the requested ones.
+            Sorted parameter names to update.
 
         Raises
         ------
         ValueError
-            If :attr:`params_to_optimize` contains a name that is not a free parameter of
-            the component: either the parametrization of the component has no such parameter
-            or it was fixed with ``family.view(...)``.
+            If any parameter is unknown or fixed by a view.
         """
 
         free = set(_components.free_parameters(component))

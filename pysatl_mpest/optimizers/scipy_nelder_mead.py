@@ -1,4 +1,4 @@
-"""A module that provides a Nelder-Mead optimizer using the SciPy library."""
+"""Nelder-Mead optimizer wrapper using SciPy."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -14,13 +14,9 @@ from .optimizer import Optimizer
 
 
 class ScipyNelderMead(Optimizer):
-    """An optimizer that uses the Nelder-Mead simplex algorithm from SciPy.
+    """Nelder-Mead simplex optimizer from SciPy.
 
-    This class serves as a wrapper for the `scipy.optimize.minimize` function,
-    specifically configured to use the 'Nelder-Mead' method. The Nelder-Mead
-    algorithm is a direct search method that does not require gradient
-    information, making it suitable for non-differentiable or noisy objective
-    functions.
+    Derivative-free search method suitable for non-differentiable or noisy functions.
 
     Methods
     -------
@@ -31,26 +27,19 @@ class ScipyNelderMead(Optimizer):
     """
 
     def minimize(self, target: Callable, params: list[float]) -> list[float]:
-        """Minimizes a target function using the Nelder-Mead algorithm.
-
-        This method leverages the `scipy.optimize.minimize` function to find
-        the parameters that minimize the provided objective function.
+        """Minimize target function using Nelder-Mead simplex algorithm.
 
         Parameters
         ----------
         target : Callable
-            The objective function to minimize. It must be a callable that
-            accepts a list or NumPy array of parameters and returns a single
-            scalar value.
+            Objective function accepting parameter values and returning a scalar.
         params : list[float]
-            A list of initial values for the parameters that serves as the
-            starting point for the optimization.
+            Initial parameter guess.
 
         Returns
         -------
         list[float]
-            A list containing the set of parameters that minimizes the target
-            function, as found by the Nelder-Mead algorithm.
+            Optimized parameter values.
         """
 
         return list(np.asarray(minimize(target, params, method="Nelder-Mead").x, dtype=np.float64))

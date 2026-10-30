@@ -1,6 +1,4 @@
-"""A module that provides the `MixtureModel` class, which allows for the creation,
-manipulation, and analysis of a finite mixture of continuous probability
-distributions."""
+"""Finite mixture of continuous probability distributions."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2026 PySATL project"
@@ -40,7 +38,7 @@ class MixtureModel:
         A sequence of distribution objects that will form the mixture.
     weights : ArrayLike | None, optional
         An array of initial weights for the components. The weights must be
-        positive and sum to 1. If None, components are assigned equal
+        non-negative and sum to 1. If None, components are assigned equal
         weights. Defaults to None.
 
     Attributes
@@ -53,7 +51,9 @@ class MixtureModel:
         A NumPy array of the normalized weights for each component. The sum
         of weights is always 1.
     log_weights : UnivariateFloatArray
-        A read-only NumPy array of normalized logarithmic component weights.
+        A read-only NumPy array of normalized logarithmic component weights. Assigning a new
+        value copies and normalizes it; a ``ValueError`` is raised if its length differs from
+        ``n_components`` or it cannot be normalized (all ``-inf``, ``NaN`` or ``+inf``).
 
     Raises
     ------
@@ -69,6 +69,7 @@ class MixtureModel:
 
         add_component
         remove_component
+        to_core_mixture
         pdf
         lpdf
         component_lpdf_matrix
@@ -98,23 +99,19 @@ class MixtureModel:
 
     @property
     def n_components(self):
-        """int: The number of components in the mixture model."""
+        """int: Number of components in the mixture model."""
 
         return len(self.components)
 
     @property
     def components(self):
-        """tuple[ParametricFamilyDistribution, ...]: The components of the mixture."""
+        """tuple[ParametricFamilyDistribution, ...]: Components of the mixture."""
 
         return tuple(self._components)
 
     @property
     def weights(self) -> UnivariateFloatArray:
-        """UnivariateFloatArray: The normalized weights of the components.
-
-        The weights are computed from the log-weights using the softmax
-        function and cached for efficiency.
-        """
+        """UnivariateFloatArray: Normalized component weights cached from log-weights; treated as read-only."""
 
         if self._cached_weights is None:
             self._cached_weights = softmax(self._log_weights)
@@ -129,19 +126,13 @@ class MixtureModel:
 
     @log_weights.setter
     def log_weights(self, new_log_weights: ArrayLike) -> None:
-        """Copy and normalize the log-weights for the components.
-
-        Parameters
-        ----------
-        new_log_weights : ArrayLike
-            A 1D NumPy array of new log-weights.
+        """Copy and normalize log-weights via log-softmax.
 
         Raises
         ------
         ValueError
-            If the length of the new log-weights vector does not match the
-            number of components, or the values cannot be normalized because
-            they are all negative infinity or contain NaN or positive infinity.
+            If length differs from ``n_components`` or values cannot be normalized
+            (e.g. all ``-inf``, ``NaN``, or ``+inf``).
         """
 
         new_log_weights = np.array(new_log_weights, dtype=np.float64)
@@ -162,8 +153,7 @@ class MixtureModel:
     def add_component(self, component: ParametricFamilyDistribution, weight: Scalar) -> None:
         """Adds a new component to the mix, preserving the proportions of the existing component weights.
 
-        If :attr:`weight` is specified for the new component, the old component
-        weights are multiplied by `(1 - weight)`.
+        The old component weights are multiplied by ``1 - weight``.
 
         Parameters
         ----------
@@ -175,7 +165,7 @@ class MixtureModel:
         Raises
         ------
         ValueError
-            If the specified :attr:`weight` is outside the range (0, 1).
+            If ``weight`` is outside the range (0, 1).
         """
 
         if not (0 < weight < 1):
@@ -220,52 +210,27 @@ class MixtureModel:
         self.log_weights = new_log_weights
 
     def to_core_mixture(self) -> FiniteMixtureDistribution:
-        """Converts the model to a pysatl_core FiniteMixtureDistribution.
+        """Convert to a pysatl-core FiniteMixtureDistribution.
 
-        Returns
-        -------
-        FiniteMixtureDistribution
-            The corresponding finite mixture distribution object.
+        The result is a snapshot: later changes to this model are not reflected in it.
         """
 
         weighted_components = [(float(w), comp) for w, comp in zip(self.weights, self.components)]
         return finite_mixture(weighted_components)
 
     def pdf(self, X: ArrayLike) -> np.float64 | FloatArray:
-        """Probability Density Function of the mixture.
+        """Probability Density Function of the mixture: ``exp(lpdf(X))``.
 
-        The PDF is computed as ``exp(lpdf(X))`` using the component log-densities.
-
-        Parameters
-        ----------
-        X : ArrayLike
-            The input data points at which to evaluate the PDF.
-
-        Returns
-        -------
-        np.float64 | FloatArray
-            The PDF values corresponding to each point in :attr:`X`.
-            Return a scalar when given a scalar, and to return an array when given an array.
+        The shape of the result and the handling of scalar input follow :meth:`lpdf`.
         """
 
         return np.exp(self.lpdf(X))
 
     def lpdf(self, X: ArrayLike) -> np.float64 | FloatArray:
-        """Logarithms of the Probability Density Function.
+        """Logarithm of the Probability Density Function of the mixture.
 
-        The log-density is computed as ``logsumexp(log_weights + component log-densities)``,
-        which stays finite where the density itself underflows to zero.
-
-        Parameters
-        ----------
-        X : ArrayLike
-            The input data points at which to evaluate the LPDF.
-
-        Returns
-        -------
-        np.float64 | FloatArray
-            The log-PDF values corresponding to each point in :attr:`X`.
-            Return a scalar when given a scalar, and to return an array when given an array.
+        The result has the shape of ``X``; a scalar ``X`` gives a ``np.float64``. Points outside the
+        support of every component evaluate to ``-inf``.
         """
 
         is_scalar = np.isscalar(X)
@@ -299,20 +264,9 @@ class MixtureModel:
         return np.moveaxis(stacked, 0, -1)
 
     def loglikelihood(self, X: ArrayLike) -> float:
-        """Log-likelihood of the complete data :attr:`X`.
+        """Sum of log-densities for all points in ``X``.
 
-        The log-likelihood is the sum of the log-PDF values for all data
-        points.
-
-        Parameters
-        ----------
-        X : ArrayLike
-            The input data sample.
-
-        Returns
-        -------
-        float
-            The total log-likelihood value.
+        The sum is ``-inf`` if any point is outside the support of every component.
         """
 
         X = np.asarray(X, dtype=np.float64)
@@ -323,27 +277,19 @@ class MixtureModel:
         size: int | np.integer[np.typing.NBitBase] | tuple[int, ...] | None = None,
         random_state: int | np.random.Generator | None = None,
     ) -> np.float64 | FloatArray:
-        """Generates random samples from the mixture model.
-
-        First, a component is chosen based on the mixture weights. Then, a
-        sample is drawn from the chosen component's distribution. This
-        process is repeated `size` times.
+        """Sample random variates from the mixture distribution.
 
         Parameters
         ----------
         size : int | np.integer[np.typing.NBitBase] | tuple[int, ...] | None, optional
-            Defining number of random variates.
-            - If None (default), returns a single scalar.
-            - If int or np.integer, returns a 1D array of that length.
-            - If tuple, returns an array of that shape.
+            Number or shape of random variates to generate. If None, returns a scalar.
         random_state : int | np.random.Generator | None, optional
-            A seed or random number generator to use for reproducible output.
+            Seed or random number generator for reproducible sampling.
 
         Returns
         -------
         np.float64 | FloatArray
-            A scalar if size is None, otherwise an array containing the
-            generated samples. Returns an empty array if the number of samples is zero.
+            Generated samples of requested shape, or empty array if sample size is zero.
 
         Raises
         ------
@@ -381,36 +327,20 @@ class MixtureModel:
         return samples.reshape(target_shape)
 
     def __getitem__(self, key: int) -> ParametricFamilyDistribution:
-        """Retrieves components by index.
-
-        Parameters
-        ----------
-        key : int
-            The index of the component.
-
-        Returns
-        -------
-        ParametricFamilyDistribution
-            A single component of the mixture
-        """
+        """Retrieve component by index."""
 
         return self.components[key]
 
     def __setitem__(self, key: int, value: ParametricFamilyDistribution) -> None:
-        """Sets or replaces a component at a specific index.
-
-        Parameters
-        ----------
-        key : int
-            The index of the component to replace.
-        value : ParametricFamilyDistribution
-            The new distribution component to set.
+        """Replace component at index.
 
         Raises
         ------
         IndexError
-            If the index is out of bounds.
+            If ``key`` is outside ``[0, n_components - 1]``; unlike ``__getitem__``, negative
+            indices are not supported.
         """
+
         if not (0 <= key <= self.n_components - 1):
             raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
 
@@ -418,47 +348,19 @@ class MixtureModel:
         self._invalidate_cache()
 
     def __iter__(self) -> Iterator[ParametricFamilyDistribution]:
-        """Returns an iterator over the mixture components.
-
-        This allows the `MixtureModel` instance to be used directly in
-        loops, such as a `for` loop, to iterate over its components.
-
-        Returns
-        -------
-        Iterator[ParametricFamilyDistribution]
-            An iterator that yields the components of the mixture model.
-        """
+        """Iterate over mixture components."""
 
         return iter(self.components)
 
     def __copy__(self) -> "MixtureModel":
-        """Creates a copy of the mixture model instance.
+        """Create a shallow copy: the component objects are shared, the weights are copied."""
 
-        Returns
-        -------
-        MixtureModel
-            A new instance of the distribution, identical to the original.
-        """
         new_model = MixtureModel(self._components)
         new_model.log_weights = self._log_weights
         return new_model
 
     def __eq__(self, other: object) -> bool:
-        """Checks if two mixture models are equal.
-
-        Two mixture models are considered equal if they have the same number of
-        components and the same set of (component, weight) pairs.
-
-        Parameters
-        ----------
-        other : object
-            The object to compare against.
-
-        Returns
-        -------
-        bool
-            True if the mixture models are equal, False otherwise.
-        """
+        """Check equality against another mixture, invariant to component ordering."""
 
         if not isinstance(other, MixtureModel):
             return NotImplemented
@@ -476,19 +378,7 @@ class MixtureModel:
         return True
 
     def __hash__(self) -> int:
-        """Computes a hash for the mixture model.
-
-        The hash is computed from the components only, not from the weights. Equality compares
-        the weights with a tolerance, and no hash of a float can agree with a tolerance
-        comparison: weights that are equal up to rounding would get different hashes.
-        Mixtures with the same components and different weights collide, which is allowed:
-        ``__eq__`` tells them apart.
-
-        Returns
-        -------
-        int
-            The hash value of the mixture model.
-        """
+        """Compute a hash from components only, ensuring consistency with tolerance-based equality."""
 
         return hash(tuple(key for key, _ in self._get_sorted_pairs()))
 
@@ -497,22 +387,6 @@ class MixtureModel:
         self._sorted_pairs_cache = None
 
     def _validate_weights(self, n_components: int, weights: UnivariateFloatArray) -> None:
-        """Validates the component weights.
-
-        Parameters
-        ----------
-        n_components : int
-            The expected number of components.
-        weights : UnivariateFloatArray
-            The array of weights to validate.
-
-        Raises
-        ------
-        ValueError
-            If the number of weights does not match the number of components,
-            if any weight is negative, or if the weights do not sum to 1.
-        """
-
         if len(weights) != n_components:
             raise ValueError(f"Components number ({n_components}) must be equal to weights number ({len(weights)}).")
 
@@ -523,7 +397,8 @@ class MixtureModel:
             raise ValueError(f"Sum of the weights must be equal 1, but it equal {np.sum(weights)}.")
 
     def _get_sorted_pairs(self) -> list[tuple[_components.ComponentKey, float]]:
-        """Internal helper to get (component key, weight) pairs, sorted so that component order does not matter."""
+        """(Component key, weight) pairs sorted so that component order does not matter."""
+
         if self._sorted_pairs_cache is None:
             pairs = [(_components.component_key(comp), float(w)) for comp, w in zip(self.components, self.weights)]
             self._sorted_pairs_cache = sorted(pairs)

@@ -123,7 +123,6 @@ def test_target_of_a_single_component_mixture(optimizer: Optimizer) -> None:
 
 
 def test_target_uses_the_normalized_weights_of_the_mixture(mixture: MixtureModel, optimizer: Optimizer) -> None:
-    """The mixture setter normalizes log-weights; the likelihood uses these normalized weights."""
     mixture.log_weights = np.log([2.0, 6.0])
 
     observed_data_likelihood_strategy(mixture[1], make_state(X, None, mixture), odl_block(), optimizer)
@@ -134,7 +133,6 @@ def test_target_uses_the_normalized_weights_of_the_mixture(mixture: MixtureModel
 
 
 def test_target_is_finite_and_exact_in_the_far_tail(mixture: MixtureModel, optimizer: Optimizer) -> None:
-    """The densities underflow to zero at these points, but the log-likelihood does not."""
     far = np.array([-100.0, 100.0])
     assert np.all(mixture.pdf(far) == 0.0)
 
@@ -146,7 +144,6 @@ def test_target_is_finite_and_exact_in_the_far_tail(mixture: MixtureModel, optim
 
 
 def test_target_clips_finite_log_densities_below_the_floor(optimizer: Optimizer) -> None:
-    """A finite log-density below the floor contributes the same bounded penalty."""
     component = normal(0.0, 1.0)
     mixture = MixtureModel([component])
     data = np.array([200.0])
@@ -160,7 +157,6 @@ def test_target_clips_finite_log_densities_below_the_floor(optimizer: Optimizer)
 
 
 def test_target_is_infinite_when_the_log_density_is_nan(optimizer: Optimizer) -> None:
-    """A NaN log-density is rejected instead of returning a NaN objective."""
     component = normal(0.0, 1.0)
     mixture = MixtureModel([component])
     data = np.array([np.nan])
@@ -189,7 +185,6 @@ def test_target_is_infinite_where_a_constraint_is_violated(mixture: MixtureModel
 
 @pytest.mark.filterwarnings("error")
 def test_target_penalizes_points_outside_every_support(optimizer: Optimizer) -> None:
-    """An unsupported point adds the floor penalty to the objective."""
     exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
     uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
     mixture = MixtureModel([exponential, uniform])
@@ -206,7 +201,6 @@ def test_target_penalizes_points_outside_every_support(optimizer: Optimizer) -> 
 
 
 def test_target_is_finite_with_unsupported_outliers(optimizer: Optimizer) -> None:
-    """A negative observation does not make the entire exponential objective infinite."""
     mixture = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=0.5), family(FamilyName.EXPONENTIAL)(lambda_=3.0)])
     data = np.array([-0.5, 0.2, 1.0, 2.0])
 
@@ -217,7 +211,6 @@ def test_target_is_finite_with_unsupported_outliers(optimizer: Optimizer) -> Non
 
 @pytest.mark.parametrize("rate", [1.0, 3.0])
 def test_unsupported_point_adds_a_constant_penalty(optimizer: Optimizer, rate: float) -> None:
-    """A fixed-support outlier adds the same penalty for different candidate rates."""
     mixture = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=0.5), family(FamilyName.EXPONENTIAL)(lambda_=3.0)])
     observed_data_likelihood_strategy(
         mixture[1], make_state(np.array([-0.5, 0.2, 1.0, 2.0]), None, mixture), odl_block(), optimizer
@@ -231,7 +224,6 @@ def test_unsupported_point_adds_a_constant_penalty(optimizer: Optimizer, rate: f
 
 
 def test_recovers_the_parameters_in_presence_of_an_unsupported_point() -> None:
-    """A fixed-support outlier leaves the fitted rate unchanged."""
     truth = MixtureModel([family(FamilyName.EXPONENTIAL)(lambda_=0.5), family(FamilyName.EXPONENTIAL)(lambda_=1.5)])
     sample = np.asarray(truth.generate(size=1000, random_state=42))
     start = family(FamilyName.EXPONENTIAL)(lambda_=3.0)
@@ -248,7 +240,6 @@ def test_recovers_the_parameters_in_presence_of_an_unsupported_point() -> None:
 
 
 def test_uniform_component_extends_its_support_over_points_outside_it() -> None:
-    """The real optimizer can expand the uniform support over the seeded sample."""
     sample = np.random.default_rng(42).uniform(0.0, 10.0, size=1000)
     component = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=4.0, upper_bound=6.0)
     mixture = MixtureModel([component])

@@ -75,7 +75,6 @@ def test_rejects_unknown_parameters(state: PipelineState) -> None:
 
 
 def test_keeps_the_rate_if_the_weighted_mean_is_zero() -> None:
-    """The mean of the data is zero, so the rate would be infinite; the current one is kept."""
     state = make_state(X=np.array([0.0]), H=np.array([[1.0, 0.0]]))
 
     _, new_params = q_function_strategy(exponential(2.5), state, q_block(), optimizer=None)  # type: ignore[arg-type]
@@ -100,7 +99,6 @@ def exponential_sample(draw: st.DrawFn) -> tuple[np.ndarray, float]:
 @settings(max_examples=50)
 @given(data=exponential_sample())
 def test_recovers_the_true_rate_on_ideal_data(data: tuple[np.ndarray, float]) -> None:
-    """With responsibilities of 1.0 the closed-form estimate is the maximum likelihood one."""
     X, true_rate = data
     H_j = np.ones_like(X)
     state = make_state(X=X, H=np.vstack([H_j, np.zeros_like(H_j)]).T)

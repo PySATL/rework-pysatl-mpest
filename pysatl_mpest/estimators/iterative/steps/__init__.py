@@ -1,4 +1,4 @@
-"""A module that provides steps of the algorithm for configuring a Pipeline."""
+"""Expectation and Maximization steps and configuration blocks for pipelines."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"

@@ -1,11 +1,4 @@
-"""Provides a configurable, iterative estimator for mixture models.
-
-This module defines the `Pipeline` class, which orchestrates an iterative
-estimation process by executing a sequence of processing steps. It allows for
-the flexible construction of algorithms like Expectation-Maximization (EM) by
-combining different steps (:class:`PipelineStep`), stopping criteria (:class:`Breakpointer`),
-and component pruning strategies (:class:`Pruner`).
-"""
+"""Configurable iterative pipeline estimator for mixture models."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -28,54 +21,42 @@ from .pruner import Pruner
 
 
 class Pipeline(BaseEstimator):
-    """An estimator that fits a mixture model via a configurable iterative process.
+    """Iterative mixture model parameter estimator.
 
-    The pipeline executes a sequence of defined steps in a loop. After each full
-    sequence of steps, pruning strategies are applied, and stopping conditions
-    are checked. The loop continues until a breakpointer signals to stop.
-    This allows for building complex, multi-stage estimation algorithms,
-    such as variants of the EM algorithm.
+    Sequentially executes configured processing steps, applies pruners,
+    and checks stopping criteria on each iteration until convergence.
 
-    The core components used for configuration are:
-
-    - :class:`.PipelineStep`
-    - :class:`Breakpointer`
-    - :class:`Pruner`
+    Steps, breakpointers and pruners may be stateful and are reused as is by every call of :meth:`fit`.
+    ``history`` is not cleared between calls, so records of repeated fits accumulate.
 
     Parameters
     ----------
     steps : Sequence[PipelineStep]
-        An ordered sequence of steps to be executed in each iteration of the
-        pipeline.
+        Ordered sequence of steps executed in each iteration.
     breakpointers : Sequence[Breakpointer]
-        A sequence of strategies that define the stopping conditions for the
-        iterative process. This list cannot be empty.
+        Stopping criteria defining termination conditions. Must not be empty.
     pruners : Sequence[Pruner] | None, optional
-        A sequence of strategies for removing components from the mixture model
-        during fitting. Defaults to None, meaning no pruning is performed.
-    once_in_iterations: int, optional
-        The iteration recording frequency. A value of `n` means recording occurs every
-        `n` iterations. Defaults to 1 (record every iteration).
+        Component pruning strategies applied after step execution. Defaults to None.
+    once_in_iterations : int, optional
+        Iteration snapshot recording frequency in history. Defaults to 1.
 
     Attributes
     ----------
     steps : list[PipelineStep]
-        The ordered list of operations to be performed in each iteration.
+        Ordered list of iteration steps.
     breakpointers : list[Breakpointer]
-        The list of objects that determine when the fitting process should
-        terminate.
+        Configured stopping criteria.
     pruners : list[Pruner]
-        The list of objects that may remove components from the mixture during
-        the fitting process.
+        Configured component pruners.
     history : IterationsHistory
-        object that collects comprehensive information about each
-        iteration of a :class:`Pipeline` estimator.
+        Recorded iteration snapshots.
+
     Raises
     ------
     ValueError
-        If the sequence of :attr:`steps` is empty or invalid (i.e., a step is
-        followed by a step not listed in its :attr:`available_next_steps`), or if
-        the sequence of :attr:`breakpointers` is empty.
+        If ``steps`` is empty or cannot form a closed loop (each step, including
+        the last transitioning to the first, must permit the next in ``available_next_steps``),
+        or if ``breakpointers`` is empty.
 
     Methods
     -------
@@ -101,30 +82,11 @@ class Pipeline(BaseEstimator):
             )
 
         self.breakpointers = list(breakpointers)
-        self.pruners = list(pruners) if pruners else []  # self.pruners will always be list
+        self.pruners = list(pruners) if pruners else []
         self.steps = list(steps)
         self.history = IterationsHistory(once_in_iterations)
 
     def _validate_steps(self, steps: list[PipelineStep]):
-        """Validates the sequence of pipeline steps.
-
-        Checks if each step in the pipeline can legally be followed by the next
-        one, based on the :attr:`available_next_steps` property of each step. It also
-        checks that the pipeline can be run in a loop (the last step must be
-        compatible with the first step).
-
-        Parameters
-        ----------
-        steps : list[PipelineStep]
-            The sequence of steps to validate.
-
-        Raises
-        ------
-        ValueError
-            If the :attr:`steps` list is empty or if the pipeline configuration is
-            invalid, meaning a step is followed by an incompatible one.
-        """
-
         if not steps:
             raise ValueError("The 'steps' list cannot be empty for a Pipeline.")
 
@@ -139,67 +101,46 @@ class Pipeline(BaseEstimator):
                 )
 
     def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
-        """Fits the mixture model to the data using the configured pipeline.
+        """Fit mixture model parameters using the iterative pipeline.
 
-        This method initializes the pipeline's state and runs the main loop.
-        The loop consists of executing all :attr:`steps` in order, followed by
-        all :attr:`pruners`. This cycle repeats until any `breakpointers` indicate
-        that the process should stop.
-
-        As soon as a pruner removes components, the corresponding columns are dropped
-        from the responsibility matrix and every step is told which components were
-        removed through :meth:`~.PipelineStep.clear_after_prune`, so the steps of the
-        next iteration already work with the pruned mixture. A pruner reports the indices
-        relative to the mixture it was given, so each pruner is handled separately.
+        Pruned components are immediately removed from responsibilities and notified
+        to steps via :meth:`~PipelineStep.clear_after_prune`.
 
         Parameters
         ----------
         X : ArrayLike
-            The input data sample.
+            Input data sample.
         mixture : MixtureModel
-            The initial mixture model to be fitted. An internal copy of this
-            model will be modified throughout the process.
+            Initial mixture model to fit (not modified in-place).
 
         Returns
         -------
         MixtureModel
-            The fitted mixture model after the pipeline has converged or been
-            stopped.
+            Fitted mixture model.
 
         Raises
         ------
         ValueError
-            If a maximization block requests an unknown parameter or a parameter
-            fixed by a family view.
+            If a maximization block requests an unknown or fixed parameter.
         IndexError
-            If a maximization block's component index is at least the number of
-            mixture components.
+            If a block's component index is out of bounds.
         NotImplementedError
-            If a maximization strategy is not implemented for the component's
-            family and parametrization.
+            If a maximization strategy is not implemented for the component's family.
 
         Warns
         -----
         RuntimeWarning
-            If a step returns a state with :attr:`PipelineState.error` set, such as
-            when the responsibility matrix is missing. Fitting stops, the error is
-            saved in the iteration history, and the current mixture is returned.
-
-        Notes
-        -----
-        Exceptions raised directly by steps, including strategy and configuration
-        errors, propagate to the caller rather than becoming state errors or warnings.
+            If a step sets :attr:`PipelineState.error`, stopping fitting prematurely
+            and returning the current mixture.
         """
 
         X = np.asarray(X, dtype=np.float64)
-        copied_mixture = copy(mixture)  # Copy to avoid modifying the original object
+        copied_mixture = copy(mixture)
         state = PipelineState(X, None, None, copied_mixture, None)
 
         while True:
-            # Updating the state before starting an iteration
             state.prev_mixture = copy(state.curr_mixture)
 
-            # Performing steps
             for step in self.steps:
                 result_state = step.run(state)
                 if result_state.error:
@@ -225,35 +166,21 @@ class Pipeline(BaseEstimator):
                     return result_state.curr_mixture
                 state = result_state
 
-            # Pruning
             for pruner in self.pruners:
                 state, removed_components_indices = pruner.prune(state)
                 if len(removed_components_indices) != 0:
                     self._discard_pruned_components(state, removed_components_indices)
-            # Save iteration record
+
             self.history.save_record(
                 IterationRecord(self.history._counter, state.curr_mixture, state.X, state.H, self.pruners, state.error)
             )
 
-            # Checking stopping criteria
             if any(breakpointer.check(state) for breakpointer in self.breakpointers):
                 break
 
         return state.curr_mixture
 
     def _discard_pruned_components(self, state: PipelineState, removed_components_indices: list[int]) -> None:
-        """Removes everything tied to the components that a pruner has just removed.
-
-        Parameters
-        ----------
-        state : PipelineState
-            The state returned by the pruner. Its responsibility matrix, if there is one,
-            still has a column for every removed component.
-        removed_components_indices : list[int]
-            The indices of the removed components relative to the mixture before this
-            pruning.
-        """
-
         if state.H is not None:
             state.H = np.delete(state.H, removed_components_indices, axis=1)
         for step in self.steps:

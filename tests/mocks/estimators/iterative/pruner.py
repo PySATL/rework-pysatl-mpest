@@ -9,15 +9,7 @@ from pysatl_mpest.estimators.iterative.pruner import Pruner
 
 
 class MockPruner(Pruner):
-    """A mock pruner that removes specific components at a specific iteration.
-
-    Parameters
-    ----------
-    components_to_remove : list[int]
-        The indices of the components to remove.
-    iteration_to_prune : int
-        The exact iteration number at which the pruning should occur.
-    """
+    """Mock pruner that removes specific components at a specific iteration."""
 
     def __init__(self, components_to_remove: list[int], iteration_to_prune: int) -> None:
         self.components_to_remove = components_to_remove
@@ -25,21 +17,6 @@ class MockPruner(Pruner):
         self._current_iteration = 0
 
     def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
-        """Removes specified components if the current iteration matches the target.
-
-        Parameters
-        ----------
-        state : PipelineState
-            The current pipeline state.
-
-        Returns
-        -------
-        PipelineState
-            The modified (or unmodified) pipeline state.
-        list[int]
-            The list of removed component indices.
-        """
-
         self._current_iteration += 1
 
         if self._current_iteration == self.iteration_to_prune and self.components_to_remove:
@@ -50,8 +27,6 @@ class MockPruner(Pruner):
                 if 0 <= idx < state.curr_mixture.n_components:
                     state.curr_mixture.remove_component(idx)
                     removed_indices.append(idx)
-
-            # Return in original order as requested, sorted ascending for standard pipeline
             return state, sorted(removed_indices)
 
         return state, []

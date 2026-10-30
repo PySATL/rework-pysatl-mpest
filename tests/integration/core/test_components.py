@@ -143,7 +143,6 @@ def test_component_key_equal_for_independent_views() -> None:
 
 
 def test_component_key_view_equals_full_component(normal_fixed_mu: ParametricFamilyDistribution) -> None:
-    """A view component and a full component with the same values are the same distribution."""
     full = family(FamilyName.NORMAL)(mu=1.0, sigma=2.0)
 
     assert cc.component_key(normal_fixed_mu) == cc.component_key(full)

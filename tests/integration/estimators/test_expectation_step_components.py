@@ -63,8 +63,6 @@ def test_soft_assignment_of_view_components() -> None:
 
 
 def test_far_tail_responsibilities_are_finite_and_exact() -> None:
-    """Both densities underflow to zero here, but the log-densities still give the right posterior."""
-
     mixture = MixtureModel([normal(0.0, 1.0), normal(3.0, 2.0)], weights=[0.5, 0.5])
     X = np.array([-100.0, 100.0])
     log_densities = np.column_stack([stats.norm(0.0, 1.0).logpdf(X), stats.norm(3.0, 2.0).logpdf(X)])
@@ -77,8 +75,6 @@ def test_far_tail_responsibilities_are_finite_and_exact() -> None:
 
 
 def test_component_with_zero_density_gets_zero_responsibility() -> None:
-    """Outside the support of the exponential component only the normal one can have generated the point."""
-
     mixture = MixtureModel([normal(0.0, 1.0), family(FamilyName.EXPONENTIAL)(lambda_=1.0)], weights=[0.5, 0.5])
 
     H = run_step(mixture, np.array([-2.0, -0.5]))
@@ -88,8 +84,6 @@ def test_component_with_zero_density_gets_zero_responsibility() -> None:
 
 @pytest.mark.filterwarnings("error")
 def test_point_outside_every_support_has_zero_responsibilities() -> None:
-    """Zero density under every component gives a row of zeros, not NaN, and no warnings."""
-
     exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
     uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
     mixture = MixtureModel([exponential, uniform], weights=[0.5, 0.5])
@@ -112,8 +106,6 @@ def test_hard_assignment_is_one_hot_at_the_most_responsible_component() -> None:
 
 
 def test_hard_assignment_point_outside_every_support_has_zero_responsibilities() -> None:
-    """An unsupported point stays unassigned while a supported point is assigned."""
-
     exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
     uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
     mixture = MixtureModel([exponential, uniform], weights=[0.5, 0.5])
@@ -125,8 +117,6 @@ def test_hard_assignment_point_outside_every_support_has_zero_responsibilities()
 
 
 def test_hard_assignment_all_points_outside_support() -> None:
-    """A batch of unsupported points has only zero responsibilities."""
-
     exponential = family(FamilyName.EXPONENTIAL)(lambda_=1.0)
     uniform = family(FamilyName.CONTINUOUS_UNIFORM)(lower_bound=0.0, upper_bound=1.0)
     mixture = MixtureModel([exponential, uniform], weights=[0.5, 0.5])
@@ -137,8 +127,6 @@ def test_hard_assignment_all_points_outside_support() -> None:
 
 
 def test_weights_scale_the_responsibilities() -> None:
-    """Identical components: the posterior equals the weights."""
-
     mixture = MixtureModel([normal(0.0, 1.0), normal(0.0, 1.0)], weights=[0.3, 0.7])
 
     H = run_step(mixture, np.array([0.0, 1.5]))

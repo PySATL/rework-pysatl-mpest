@@ -1,10 +1,4 @@
-"""Implements the Expectation-Conditional Maximization (ECM) algorithm.
-
-This module provides the ``ECM`` class, which is a concrete
-implementation of the :class:`~pysatl_mpest.estimators.base_estimator.BaseEstimator`.
-It uses a pipeline architecture (:class:`~pysatl_mpest.estimators.iterative.pipeline.Pipeline`)
-to fit the parameters of a mixture model to data.
-"""
+"""Expectation-Conditional Maximization (ECM) estimator."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -31,50 +25,31 @@ from .iterative._iteration_history import IterationsHistory
 
 
 class ECM(BaseEstimator):
-    """An estimator that implements the Expectation-Conditional Maximization (ECM) algorithm.
+    """Expectation-Conditional Maximization (ECM) estimator.
 
-    This class encapsulates the logic for the ECM algorithm, a variant of the
-    classic Expectation-Maximization (EM) algorithm. It constructs and executes
-    a :class:`~.Pipeline` consisting of an expectation step
-    (:class:`~.ExpectationStep`) and a conditional maximization step
-    (:class:`~.MaximizationStep`).
-
-    The key feature of this ECM implementation is that the maximization (M-step)
-    is partitioned into separate, smaller optimization problems—one for each
-    component in the mixture. For each component, all of its free parameters
-    (those not fixed with ``family.view(...)``) are estimated simultaneously by
-    maximizing the Q-function. This component-wise update simplifies the
-    optimization process.
-
-    The overall fitting process can be customized with stopping criteria,
-    component pruning strategies, and a numerical optimizer.
+    Executes an iterative pipeline of Expectation and Conditional Maximization steps.
+    Maximization is partitioned component-wise, updating all free parameters of each
+    component by maximizing the Q-function.
 
     Parameters
     ----------
     breakpointers : Sequence[Breakpointer]
-        A sequence of strategies that define the stopping conditions for the
-        iterative process.
+        Stopping criteria for the iterative pipeline.
     pruners : Sequence[Pruner]
-        A sequence of strategies for removing (pruning) components from the
-        mixture model during fitting.
+        Component pruning strategies applied during iterations.
     optimizer : Optimizer
-        A numerical optimizer instance used in the maximization step to find
-        the optimal parameters.
+        Numerical optimizer used in maximization steps.
 
     Attributes
     ----------
     breakpointers : list[Breakpointer]
-        The list of objects that determine when the fitting process should
-        terminate.
+        Configured stopping criteria.
     pruners : list[Pruner]
-        The list of objects that may remove components from the mixture during
-        the fitting process.
+        Configured component pruning strategies.
     optimizer : Optimizer
-        The numerical optimizer used for parameter estimation.
-    history: IterationsHistory | None
-        An object that collects information about each iteration.
-        This attribute is only available after the :meth:`fit` method has been called.
-        Accessing it beforehand will raise an :class:`AttributeError`.
+        Numerical optimizer instance.
+    history : IterationsHistory
+        Recorded iteration snapshots, accessible after calling :meth:`fit`.
 
     Methods
     -------
@@ -97,12 +72,12 @@ class ECM(BaseEstimator):
 
     @property
     def history(self) -> IterationsHistory:
-        """An object that collects information about each iteration.
+        """IterationsHistory: Recorded history of pipeline iterations after fitting.
 
         Raises
         ------
         AttributeError
-            If accessed before the `fit` method has been called at least once.
+            If accessed before ``fit`` has been called.
         """
 
         if self._history is None:
@@ -110,27 +85,21 @@ class ECM(BaseEstimator):
         return self._history
 
     def fit(self, X: ArrayLike, mixture: MixtureModel, once_in_iterations: int = 1) -> MixtureModel:
-        """Fits the mixture model to the data using the ECM algorithm.
-
-        This method sets up and runs an iterative pipeline to estimate the
-        parameters of a given mixture model based on the input data. At each
-        iteration, it performs an E-step and an M-step. The process repeats
-        until one of the stopping criteria is met.
+        """Fit mixture model parameters using the ECM algorithm.
 
         Parameters
         ----------
         X : ArrayLike
-            The input dataset for fitting the model.
+            Input data sample.
         mixture : MixtureModel
-            The initial mixture model to be fitted.
+            Initial mixture model to fit; not modified in-place.
         once_in_iterations : int, optional
-            The iteration recording frequency. A value of `n` means recording occurs every
-            `n` iterations. Defaults to 1.
+            Iteration recording frequency in history. Defaults to 1.
 
         Returns
         -------
         MixtureModel
-            The mixture model with the estimated parameters.
+            Fitted mixture model with estimated parameters.
         """
 
         # No parameter names: every free parameter of a component is optimized, and the parameters

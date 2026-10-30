@@ -1,11 +1,4 @@
-"""Implements the Expectation-Conditional Maximization Either (ECME) algorithm.
-
-This module provides the ``ECME`` class, a concrete implementation of the
-:class:`~rework_pysatl_mpest.estimators.base_estimator.BaseEstimator`.
-The ECME algorithm is an extension of the Expectation-Conditional Maximization (ECM)
-algorithm that allows switching between maximizing the Q-function and directly
-maximizing the Observed Data Likelihood (ODL) for different components.
-"""
+"""Expectation-Conditional Maximization Either (ECME) estimator."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -33,50 +26,40 @@ from .iterative._iteration_history import IterationsHistory
 
 
 class ECME(BaseEstimator):
-    """An estimator that implements the Expectation-Conditional Maximization Either (ECME) algorithm.
+    """Expectation-Conditional Maximization Either (ECME) estimator.
 
-    ECME is a generalized iterative algorithm for maximum likelihood estimation.
-    Unlike standard ECM, which strictly maximizes the Q-function (conditional
-    expectation of the complete-data log-likelihood) during the maximization steps,
-    ECME allows replacing some or all of these steps with a direct maximization
-    of the actual Observed Data Likelihood (ODL).
-
-    This implementation provides flexibility by allowing the user to specify
-    maximization strategies per component. Some components can be optimized via
-    the Q-function, while others can be optimized via ODL within the same
-    iterative process. Whichever strategy is used, all free parameters of a
-    component are estimated, and the parameters fixed with ``family.view(...)``
-    keep their values.
+    Extends ECM by allowing components to be optimized by either maximizing the
+    Q-function or directly maximizing the Observed Data Likelihood (ODL).
+    All free parameters are estimated, preserving fixed view parameters.
 
     Parameters
     ----------
     breakpointers : Sequence[Breakpointer]
-        A sequence of strategies that define the stopping conditions for the
-        iterative fitting process.
+        Stopping criteria for the iterative pipeline.
     pruners : Sequence[Pruner]
-        A sequence of strategies for removing (pruning) components from the
-        mixture model during fitting.
+        Component pruning strategies applied during iterations.
     optimizer : Optimizer
-        The numerical optimizer used to solve the maximization problems in the
-        M-step (or CM-steps).
+        Numerical optimizer used in maximization steps.
     default_strategy : Literal["q-func", "odl"], optional
-        The default maximization strategy to apply to components that are not
-        explicitly assigned to a specific strategy in :meth:`fit`.
-        Defaults to "odl".
+        Default strategy for components not specified in :meth:`fit`. Defaults to "odl".
 
     Attributes
     ----------
     breakpointers : list[Breakpointer]
-        The list of stopping criteria used by the estimator.
+        Configured stopping criteria.
     pruners : list[Pruner]
-        The list of pruning strategies used by the estimator.
+        Configured component pruning strategies.
     optimizer : Optimizer
-        The numerical optimizer instance.
+        Numerical optimizer instance.
     default_strategy_name : str
-        The name of the default strategy ("q-func" or "odl").
+        Name of the default strategy ("q-func" or "odl").
     history : IterationsHistory
-        The history of the fitting process, containing snapshots of the model
-        and metrics for each iteration. Only available after :meth:`fit` is called.
+        Recorded iteration snapshots, accessible after calling :meth:`fit`.
+
+    Raises
+    ------
+    ValueError
+        If ``default_strategy`` is not ``'odl'`` or ``'q-func'``.
 
     Methods
     -------
@@ -106,14 +89,12 @@ class ECME(BaseEstimator):
 
     @property
     def history(self) -> IterationsHistory:
-        """IterationsHistory: The history of the last fitting process.
-
-        Returns the history of iterations recorded during the last call to :meth:`fit`.
+        """IterationsHistory: Recorded history of pipeline iterations after fitting.
 
         Raises
         ------
         AttributeError
-            If the :meth:`fit` method has not been called yet.
+            If accessed before ``fit`` has been called.
         """
 
         if self._history is None:
@@ -121,20 +102,6 @@ class ECME(BaseEstimator):
         return self._history
 
     def _normalize_indices(self, indices: Sequence[int] | int | None) -> set[int]:
-        """Normalizes the input indices into a set of integers.
-
-        Parameters
-        ----------
-        indices : Sequence[int] | int | None
-            The input indices, which can be a single integer, a sequence of
-            integers, or None.
-
-        Returns
-        -------
-        set[int]
-            A set containing the indices. Returns an empty set if input is None.
-        """
-
         if indices is None:
             return set()
         if isinstance(indices, int):
@@ -142,26 +109,6 @@ class ECME(BaseEstimator):
         return set(indices)
 
     def _resolve_index(self, idx: int, n_components: int) -> int:
-        """Resolves a component index, handling negative indexing.
-
-        Parameters
-        ----------
-        idx : int
-            The component index to resolve.
-        n_components : int
-            The total number of components in the mixture.
-
-        Returns
-        -------
-        int
-            The positive index in the range [0, n_components - 1].
-
-        Raises
-        ------
-        ValueError
-            If the resolved index is out of bounds.
-        """
-
         original_idx = idx
         if idx < 0:
             idx += n_components
@@ -178,60 +125,43 @@ class ECME(BaseEstimator):
         odl_indices_raw: Sequence[int] | int | None = None,
         once_in_iterations: int = 1,
     ) -> MixtureModel:
-        """Fits the mixture model to the data using the ECME algorithm.
-
-        This method configures and executes an iterative pipeline. It assigns
-        a maximization strategy to each component in the mixture:
-        1. Components in ``q_indices_raw`` use Q-function maximization.
-        2. Components in ``odl_indices_raw`` use Observed Data Likelihood maximization.
-        3. All other components use the ``default_strategy`` defined in ``__init__``.
+        """Fit mixture model parameters using the ECME algorithm.
 
         Parameters
         ----------
         X : ArrayLike
-            The input data sample to fit.
+            Input data sample.
         mixture : MixtureModel
-            The initial mixture model configuration.
+            Initial mixture model to fit; not modified in-place.
         q_indices_raw : Sequence[int] | int | None, optional
-            Indices of components that should be optimized by maximizing the
-            Q-function. Can be a single integer, a sequence, or None.
-            Supports negative indexing.
+            Component indices to optimize via Q-function maximization. Supports negative indexing.
         odl_indices_raw : Sequence[int] | int | None, optional
-            Indices of components that should be optimized by directly maximizing
-            the Observed Data Likelihood (ODL). Can be a single integer, a
-            sequence, or None. Supports negative indexing.
+            Component indices to optimize via ODL maximization. Supports negative indexing.
         once_in_iterations : int, optional
-            The frequency of recording iterations in the history.
-            Defaults to 1 (record every iteration).
+            Iteration recording frequency in history. Defaults to 1.
 
         Returns
         -------
         MixtureModel
-            The fitted mixture model with estimated parameters.
+            Fitted mixture model with estimated parameters.
 
         Raises
         ------
         ValueError
-            If a component index is out of bounds for the given mixture,
-            or if the same index is present in both ``q_indices_raw`` and
-            ``odl_indices_raw``.
+            If a component index is out of bounds or present in both strategy index sets.
         """
 
         n_components = mixture.n_components
 
-        # 1. Resolve indices relative to the provided mixture
         q_indices = {self._resolve_index(i, n_components) for i in self._normalize_indices(q_indices_raw)}
         odl_indices = {self._resolve_index(i, n_components) for i in self._normalize_indices(odl_indices_raw)}
 
-        # 2. Validation
         intersection = q_indices.intersection(odl_indices)
         if intersection:
             raise ValueError(f"Indices {intersection} specified for both Q-function and ODL strategies.")
 
-        # 3. Build optimization blocks
         blocks = []
 
-        # Map string config to Enum
         default_enum = (
             MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
             if self.default_strategy_name == "odl"

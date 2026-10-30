@@ -43,7 +43,6 @@ def test_raises_if_h_is_not_computed() -> None:
 
 
 def test_weighted_mean_and_standard_deviation_of_a_simple_sample() -> None:
-    """Data 10 and 20 with weights 0.2 and 0.8: the mean is 18, the variance is 0.2 * 64 + 0.8 * 4 = 16."""
     state = make_state(X=np.array([10.0, 20.0]), H=np.array([[0.2], [0.8]]))
 
     component_id, new_params = moments_strategy(normal(0.0, 1.0), state, moments_block(), optimizer=None)  # type: ignore[arg-type]
@@ -55,7 +54,6 @@ def test_weighted_mean_and_standard_deviation_of_a_simple_sample() -> None:
 
 @pytest.mark.parametrize("component_id", [0, 1])
 def test_agrees_with_the_q_function_estimate(state: PipelineState, component_id: int) -> None:
-    """For the normal distribution the method of moments and maximum likelihood give the same estimates."""
     _, by_moments = moments_strategy(normal(0.0, 1.0), state, moments_block(component_id), optimizer=None)  # type: ignore[arg-type]
     _, by_q_function = q_function_strategy(normal(0.0, 1.0), state, q_block(component_id), optimizer=None)  # type: ignore[arg-type]
 
@@ -123,7 +121,6 @@ def test_updates_nothing_for_negligible_responsibility(state: PipelineState) -> 
 
 
 def test_keeps_the_standard_deviation_if_all_the_data_coincide() -> None:
-    """The variance is zero, which pysatl-core would reject as a standard deviation, so the old value is kept."""
     state = make_state(X=np.array([10.0, 10.0, 10.0]), H=np.ones((3, 2)))
 
     _, new_params = moments_strategy(normal(0.0, 2.5), state, moments_block(), optimizer=None)  # type: ignore[arg-type]
@@ -175,7 +172,6 @@ def normal_sample_with_random_weights(draw: st.DrawFn) -> tuple[np.ndarray, np.n
 def test_converges_to_the_true_parameters_with_random_weights(
     data: tuple[np.ndarray, np.ndarray, float, float],
 ) -> None:
-    """Weights independent of the data do not bias the weighted moments."""
     X, weights, true_mu, true_sigma = data
     state = make_state(X=X, H=np.vstack([weights, np.zeros_like(weights)]).T)
 

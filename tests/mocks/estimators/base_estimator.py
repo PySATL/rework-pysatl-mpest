@@ -12,26 +12,7 @@ from pysatl_mpest.estimators.base_estimator import BaseEstimator
 
 
 class MockBaseEstimator(BaseEstimator):
-    """A minimal mock implementation of BaseEstimator.
-
-    This mock simply returns a copy of the input mixture model without performing
-    any actual estimation. It is used to verify the abstract interface signature.
-    """
+    """Minimal mock returning an unmodified copy of the mixture."""
 
     def fit(self, X: ArrayLike, mixture: MixtureModel) -> MixtureModel:
-        """Returns a copy of the mixture model without modifications.
-
-        Parameters
-        ----------
-        X : ArrayLike
-            The input dataset (ignored).
-        mixture : MixtureModel
-            The initial mixture model.
-
-        Returns
-        -------
-        MixtureModel
-            A copy of the input mixture model.
-        """
-
         return copy(mixture)

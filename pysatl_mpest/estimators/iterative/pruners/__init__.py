@@ -1,4 +1,4 @@
-"""A module providing strategies for pruning mixture."""
+"""Strategies for pruning components from mixture models."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2025 PySATL project"

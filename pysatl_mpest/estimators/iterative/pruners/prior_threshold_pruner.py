@@ -1,11 +1,4 @@
-"""Provides a pruner for removing mixture components with small weights.
-
-This module contains the `PriorThresholdsPruner` class, a concrete
-implementation of the `Pruner` abstract base class. This pruner is designed
-to be used within a `Pipeline` to simplify a mixture model by removing
-components whose prior probabilities (weights) fall below a specified
-threshold.
-"""
+"""Pruner for removing mixture components with small weights."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -20,33 +13,29 @@ from ..pruner import Pruner
 
 
 class PriorThresholdPruner(Pruner):
-    """A pruner that removes mixture components based on a weight threshold.
+    """Component pruner based on a prior weight threshold.
 
-    This pruner iterates through the components of a :class:`pysatl_mpest.core.MixtureModel`
-    after a pipeline iteration and removes any component whose weight is less than the
-    specified :attr:`threshold`. This helps to simplify the model and discard
-    insignificant components. The weights of the remaining components are
-    automatically renormalized.
+    Removes components whose weight is strictly below ``threshold``. Guarantees
+    that at least one component remains in the mixture. Remaining weights are
+    renormalized.
 
     Parameters
     ----------
     threshold : Scalar
-        The minimum weight a component must have to be retained. This value
-        must be in the exclusive range (0, 1).
+        Minimum weight to retain a component. Must be strictly between 0 and 1.
 
     Attributes
     ----------
     threshold : float
-        Stores the weight threshold used for pruning.
+        Configured weight threshold.
 
     Raises
     ------
     ValueError
-        If :attr:`threshold` is not strictly between 0 and 1.
+        If ``threshold`` is not in the exclusive range (0, 1).
 
     Methods
     -------
-
     .. autosummary::
         :toctree: generated/
 
@@ -59,32 +48,22 @@ class PriorThresholdPruner(Pruner):
             raise ValueError("Threshold must be between 0 and 1.")
 
     def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
-        """Removes components from the mixture whose weights are below the threshold.
+        """Remove components with weights below threshold, retaining at least one component.
 
-        This method inspects :attr:`state.curr_mixture` and removes any component
-        whose weight is less than :attr:`.threshold`. The pruning logic ensures
-        that at least one component always remains in the model. The weights of
-        the remaining components are automatically re-normalized by the
-        :class:`pysatl_mpest.core.MixtureModel`.
+        Candidates are removed in index order, at most ``n_components - 1`` of them. If every weight
+        falls below the threshold, the component with the highest index is retained, not the one with
+        the largest weight.
 
         Parameters
         ----------
         state : PipelineState
-            The current state of the pipeline, containing the mixture model
-            to be pruned.
+            Current pipeline state.
 
         Returns
         -------
         tuple[PipelineState, list[int]]
-        A tuple containing:
-        - The updated pipeline state. If components were removed,
-          :attr:`state.curr_mixture` will be a new,
-          smaller :class:`pysatl_mpest.core.MixtureModel` instance.
-          Otherwise, the original state object is returned unchanged.
-        - A list of the indices of components that were removed (sorted in increasing order).
+            Tuple of updated pipeline state and sorted list of removed component indices.
         """
-
-        # TODO: Now this implementation replace mixture with new mixture, so logger will not log this.
 
         mixture = state.curr_mixture
         n = mixture.n_components
@@ -105,7 +84,6 @@ class PriorThresholdPruner(Pruner):
         for i in sorted(to_remove, reverse=True):
             new_mixture.remove_component(i)
 
-        # Create a new PipelineState with the pruned mixture
         new_state = PipelineState(
             X=state.X, H=state.H, prev_mixture=state.prev_mixture, curr_mixture=new_mixture, error=state.error
         )

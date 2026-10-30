@@ -1,4 +1,4 @@
-"""Provides the Expectation-step for an iterative estimation pipeline."""
+"""Expectation step for iterative estimation pipelines."""
 
 __author__ = "Danil Totmyanin, Aleksandra Ri"
 __copyright__ = "Copyright (c) 2025 PySATL project"
@@ -13,29 +13,24 @@ from ..pipeline_step import PipelineStep
 
 
 class ExpectationStep(PipelineStep):
-    """A pipeline step that performs the Expectation (E-step).
+    """Expectation step computing component responsibility matrix H.
 
-    This step calculates the responsibility matrix H, where H[i, j] is
-    the posterior probability that the i-th data point belongs to the j-th
-    mixture component. It can perform either a soft (probabilistic) or hard
-    (winner-takes-all) assignment.
+    Supports soft (probabilistic) or hard (winner-takes-all) assignment.
+    Points outside the support of all components receive zero responsibilities.
 
     Parameters
     ----------
     is_soft : bool, optional
-        If True (default), performs a soft assignment where H contains probabilities.
-        If False, performs a hard assignment where each supported data point
-        is assigned to the single most likely component (i.e., H contains
-        only 0s and 1s). Unsupported points retain zero responsibilities.
+        If True (default), computes posterior probabilities.
+        If False, assigns 1.0 to the most likely component and 0.0 otherwise.
 
     Attributes
     ----------
     is_soft : bool
-        Flag indicating whether to perform soft or hard assignment.
+        Flag indicating soft or hard assignment.
 
     Methods
     -------
-
     .. autosummary::
         :toctree: generated/
 
@@ -47,35 +42,27 @@ class ExpectationStep(PipelineStep):
 
     @property
     def available_next_steps(self) -> list[type[PipelineStep]]:
-        """list[type[PipelineStep]]: Defines the valid subsequent steps.
-
-        Specifies that an :class:`ExpectationStep` must be followed by a
-        :class:`MaximizationStep` to form a standard EM iteration.
-        """
+        """list[type[PipelineStep]]: Steps permitted to follow ExpectationStep."""
 
         from pysatl_mpest.estimators.iterative.steps.maximization_step import MaximizationStep
 
         return [MaximizationStep]
 
     def run(self, state: PipelineState) -> PipelineState:
-        """Executes the E-step by calculating the responsibility matrix H.
+        """Compute responsibility matrix H and store it in pipeline state.
 
-        This method computes the log-likelihood of each data point under each
-        component, incorporates the component weights, and normalizes to find
-        the posterior probabilities (responsibilities). The resulting matrix H
-        is then stored in the pipeline state. A data point that lies outside the
-        support of every component gets a row of zeros in both assignment modes.
+        The state is modified in place. Rows of points outside the support of every component are zeros,
+        so they do not sum to 1.
 
         Parameters
         ----------
         state : PipelineState
-            The current state of the pipeline, which must contain the input
-            data X and the current mixture model curr_mixture.
+            Current state containing observations X and mixture model.
 
         Returns
         -------
         PipelineState
-            The updated pipeline state with the H attribute computed and set.
+            Updated state with computed responsibility matrix H.
         """
 
         X, mixture = state.X, state.curr_mixture
