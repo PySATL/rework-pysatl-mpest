@@ -14,6 +14,7 @@ from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators.iterative import PipelineState, PriorThresholdPruner
+
 from tests.helpers.families import family
 
 

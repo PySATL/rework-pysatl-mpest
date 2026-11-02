@@ -16,6 +16,7 @@ from numpy.typing import ArrayLike
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import CharacteristicName
 from pysatl_mpest.core import _components as cc
+
 from tests.helpers.math_assertions import assert_is_array_type, assert_is_scalar_type
 
 

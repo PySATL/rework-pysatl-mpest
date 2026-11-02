@@ -22,6 +22,7 @@ from pysatl_mpest.estimators.iterative import (
 )
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
+
 from tests.helpers.families import family
 
 

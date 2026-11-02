@@ -25,6 +25,7 @@ from pysatl_mpest.estimators.iterative import (
 )
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
+
 from tests.helpers.families import family
 
 X = np.array([-1.0, 0.0, 0.5, 2.0])

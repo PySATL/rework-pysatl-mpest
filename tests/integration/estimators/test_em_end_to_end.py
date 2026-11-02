@@ -24,6 +24,7 @@ from pysatl_mpest.estimators.iterative import LikelihoodBreakpointer, PriorThres
 from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead, ScipyPowell
 from scipy import stats
 from scipy.special import logsumexp
+
 from tests.helpers.families import family
 
 N_SAMPLES = 2000

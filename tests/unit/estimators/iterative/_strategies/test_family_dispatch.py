@@ -12,6 +12,7 @@ import pytest
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 from pysatl_mpest.estimators.iterative._strategies._dispatch import FamilyDispatch, family_dispatch
+
 from tests.mocks.distributions import MockContinuousDistribution
 
 

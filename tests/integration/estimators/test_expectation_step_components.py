@@ -17,6 +17,7 @@ from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators.iterative import ExpectationStep, PipelineState
 from scipy import stats
 from scipy.special import logsumexp
+
 from tests.helpers.families import family
 
 RTOL, ATOL = 1e-10, 1e-12

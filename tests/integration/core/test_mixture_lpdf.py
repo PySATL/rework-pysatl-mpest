@@ -19,6 +19,7 @@ from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from scipy import stats
+
 from tests.helpers.families import family
 from tests.helpers.math_assertions import assert_is_array_type, assert_is_scalar_type
 

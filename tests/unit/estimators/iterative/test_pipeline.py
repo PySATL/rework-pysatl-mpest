@@ -28,6 +28,7 @@ from pysatl_mpest.estimators.iterative import (
 )
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
 from pysatl_mpest.optimizers import ScipyNelderMead
+
 from tests.helpers.families import family
 
 # --- Mock objects for isolated testing ---

@@ -14,6 +14,7 @@ from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 from pysatl_mpest.estimators.iterative import PipelineState
 from pysatl_mpest.estimators.iterative._strategies import q_function_strategy
+
 from tests.helpers.families import family
 from tests.helpers.moments import weighted_moments
 from tests.helpers.pipeline import make_state, q_block

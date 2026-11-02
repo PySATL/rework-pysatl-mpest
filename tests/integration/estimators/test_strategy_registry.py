@@ -17,6 +17,7 @@ from pysatl_core.types import FamilyName
 from pysatl_mpest.estimators.iterative._strategies._dispatch import FamilyDispatch
 from pysatl_mpest.estimators.iterative._strategies.moments import moments_strategy
 from pysatl_mpest.estimators.iterative._strategies.q_function import q_function_strategy
+
 from tests.helpers.families import family
 
 ANALYTICAL = [

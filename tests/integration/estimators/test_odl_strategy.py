@@ -23,6 +23,7 @@ from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
 from pytest_mock import MockerFixture
 from scipy import stats
 from scipy.special import logsumexp
+
 from tests.helpers.families import family
 from tests.helpers.pipeline import make_state
 

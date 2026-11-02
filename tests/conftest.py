@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from _pytest.fixtures import FixtureRequest
 from hypothesis import settings
+
 from tests.helpers.golden import GoldenDataComparator
 
 # Fix seed for Hypothesis to ensure deterministic parameter generation

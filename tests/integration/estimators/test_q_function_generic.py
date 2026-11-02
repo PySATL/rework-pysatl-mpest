@@ -21,6 +21,7 @@ from pysatl_mpest.estimators.iterative._strategies import q_function_strategy
 from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead, ScipyPowell
 from pytest_mock import MockerFixture
 from scipy import stats
+
 from tests.helpers.families import family
 from tests.helpers.pipeline import make_state, q_block
 

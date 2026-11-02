@@ -17,6 +17,7 @@ from pysatl_mpest.estimators.iterative import MaximizationStrategy, Optimization
 from pysatl_mpest.estimators.iterative._strategies import moments as moments_module
 from pysatl_mpest.estimators.iterative._strategies import moments_strategy, q_function_strategy
 from pysatl_mpest.estimators.iterative._strategies import q_function as q_function_module
+
 from tests.helpers.families import family
 from tests.helpers.pipeline import make_state
 

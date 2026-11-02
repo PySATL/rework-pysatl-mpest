@@ -10,6 +10,7 @@ import pytest
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 from pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock
+
 from tests.helpers.families import family
 
 
