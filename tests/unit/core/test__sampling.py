@@ -12,7 +12,7 @@ from pysatl_core.types import CharacteristicName
 from pysatl_mpest.core._sampling import DeterministicSampling
 
 
-def test_sampling_calls_ppf_characteristic() -> None:
+def test_passes_uniform_draws_to_ppf_and_returns_its_result() -> None:
     sampler = DeterministicSampling()
     distr_mock = unittest.mock.MagicMock()
     distr_mock.calculate_characteristic.return_value = np.array([2.0, 4.0, 6.0, 8.0, 10.0])
@@ -32,7 +32,7 @@ def test_sampling_calls_ppf_characteristic() -> None:
     assert np.all((random_array >= 0.0) & (random_array < 1.0))
 
 
-def test_sampling_with_random_state_integer() -> None:
+def test_integer_seed_reproduces_sample() -> None:
     sampler = DeterministicSampling()
     distr_mock = unittest.mock.MagicMock()
     distr_mock.calculate_characteristic.side_effect = lambda char, arr: arr
@@ -46,7 +46,7 @@ def test_sampling_with_random_state_integer() -> None:
     np.testing.assert_array_equal(result1, result2)
 
 
-def test_sampling_with_random_state_rng_instance() -> None:
+def test_generator_supplies_uniform_draws() -> None:
     sampler = DeterministicSampling()
     distr_mock = unittest.mock.MagicMock()
     distr_mock.calculate_characteristic.side_effect = lambda char, arr: arr
@@ -63,7 +63,7 @@ def test_sampling_with_random_state_rng_instance() -> None:
     np.testing.assert_array_equal(result, expected)
 
 
-def test_sampling_without_random_state() -> None:
+def test_default_random_state_produces_distinct_samples() -> None:
     sampler = DeterministicSampling()
     distr_mock = unittest.mock.MagicMock()
     distr_mock.calculate_characteristic.side_effect = lambda char, arr: arr

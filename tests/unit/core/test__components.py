@@ -38,40 +38,54 @@ def component_returning(result: ArrayLike) -> tuple[ParametricFamilyDistribution
     return cast(ParametricFamilyDistribution, stub), stub
 
 
-@pytest.mark.parametrize(
+evaluation_cases = pytest.mark.parametrize(
     ("helper", "name"),
     [(cc.lpdf, CharacteristicName.LPDF), (cc.pdf, CharacteristicName.PDF)],
     ids=["lpdf", "pdf"],
 )
-class TestEvaluation:
-    def test_asks_for_the_right_characteristic(self, helper, name) -> None:
-        component, stub = component_returning(np.zeros(2))
 
-        helper(component, [1.0, 2.0])
 
-        assert stub.received_name == name
+@evaluation_cases
+def test_asks_for_the_right_characteristic(helper, name) -> None:
+    component, stub = component_returning(np.zeros(2))
 
-    @pytest.mark.parametrize("data", [[1, 2], np.array([1, 2], dtype=np.int32), np.array([1, 2], dtype=np.float32)])
-    def test_gives_float64_data_to_the_component(self, helper, name, data) -> None:
-        component, stub = component_returning(np.zeros(2))
+    helper(component, [1.0, 2.0])
 
-        helper(component, data)
+    assert stub.received_name == name
 
-        assert stub.received_data is not None
-        assert stub.received_data.dtype == np.float64
 
-    @pytest.mark.parametrize("dtype", [np.int32, np.float32])
-    def test_returns_float64_whatever_the_component_returns(self, helper, name, dtype) -> None:
-        component, _ = component_returning(np.array([1, 2], dtype=dtype))
+@evaluation_cases
+@pytest.mark.parametrize(
+    "data",
+    [[1, 2], np.array([1, 2], dtype=np.int32), np.array([1, 2], dtype=np.float32)],
+    ids=["list", "int32", "float32"],
+)
+def test_gives_float64_data_to_the_component(helper, name, data) -> None:
+    component, stub = component_returning(np.zeros(2))
 
-        assert_is_array_type(helper(component, [1.0, 2.0]), (2,))
+    helper(component, data)
 
-    def test_returns_a_float64_scalar_for_a_scalar_result(self, helper, name) -> None:
-        component, _ = component_returning(np.float32(0.5))
+    assert stub.received_data is not None
+    assert stub.received_data.dtype == np.float64
 
-        assert_is_scalar_type(helper(component, 1.0))
 
-    def test_returns_an_array_for_a_one_element_array(self, helper, name) -> None:
-        component, _ = component_returning(np.array([0.5]))
+@evaluation_cases
+@pytest.mark.parametrize("dtype", [np.int32, np.float32], ids=["int32", "float32"])
+def test_returns_float64_whatever_the_component_returns(helper, name, dtype) -> None:
+    component, _ = component_returning(np.array([1, 2], dtype=dtype))
 
-        assert_is_array_type(helper(component, [1.0]), (1,))
+    assert_is_array_type(helper(component, [1.0, 2.0]), (2,))
+
+
+@evaluation_cases
+def test_returns_a_float64_scalar_for_a_scalar_result(helper, name) -> None:
+    component, _ = component_returning(np.float32(0.5))
+
+    assert_is_scalar_type(helper(component, 1.0))
+
+
+@evaluation_cases
+def test_returns_an_array_for_a_one_element_array(helper, name) -> None:
+    component, _ = component_returning(np.array([0.5]))
+
+    assert_is_array_type(helper(component, [1.0]), (1,))
