@@ -224,10 +224,10 @@ The level of a test is defined by its dependencies, not by the size of the teste
 
 The layout of `tests/unit/` and `tests/integration/` mirrors the layout of `pysatl_mpest/`.
 
-- **One file per module that has its own behaviour**, named `test_<module>.py`; the underscore of a private module is kept (`core/_sampling.py` is tested in `core/test__sampling.py`). Abstract base classes, re-exports in `__init__.py`, `typings.py` and empty or reserved packages have no test file: their contract is checked through the concrete implementations.
+- **One file per module that has its own behaviour**, named `test_<module>.py`; the underscore of a private module is kept (`core/_sampling.py` is tested in `core/test__sampling.py`). Abstract base classes, re-exports in `__init__.py`, `typings.py` and empty or reserved packages have no test file: their contract is checked through the concrete implementations. The root `pysatl_mpest/__init__.py` is an exception: it registers the built-in families, so it is tested in `tests/integration/test___init__.py`.
 - **Every behaviour has one owner**, the module that implements it, and is specified in the tests of that module. Other tests only check how the owner is used. For example, shifting the indices of the optimization blocks after pruning is specified in the tests of `MaximizationStep`; the tests of `Pipeline` check only that every step is notified about the removed components. Likewise, the equality of mixtures is specified in the tests of `MixtureModel`. The unit tests of the owner specify the whole contract; an integration test may confirm it on real components (for example, that a mixture of plain components equals a mixture of the same components with fixed parameters), but does not repeat the full table of cases.
 - **An integration test is placed by the entry point of the chain** it exercises (for example, a complete fit with `ECM` belongs to the tests of `ECM`). If a scenario has several entry points, choose the main one and mention the others in a comment.
-- **`PipelineState` has no test file of its own.** It is checked through the steps and the `Pipeline` that use it. Repeated `fit` of the same object is checked on the state of the `Pipeline`, plus one end-to-end scenario in the tests of `ECM` and `ECME`.
+- **`PipelineState` has no test file of its own.** It is checked through the steps and the `Pipeline` that use it. Tests of a repeated `fit` of the same object belong to the tests of `Pipeline` (its state), with at most one end-to-end scenario in the tests of `ECM` and of `ECME`; what such a `fit` must reset is not settled yet (see Contested Contracts).
 
 To find an existing check, find the module that owns the behaviour, open its test file at the same relative path under `tests/unit/` or `tests/integration/`, and look for a test whose name states that behaviour.
 
@@ -257,8 +257,8 @@ Contracts that depend on the support or the tails of a distribution are parametr
 #### Fixtures, Helpers and Test Doubles
 
 - **Share doubles and assertion helpers only when two test files use them.** A test double goes to `tests/mocks/`, and an assertion helper to `tests/helpers/`, only if at least two test files use it. A double or helper with one user stays in that file. Remove shared code that nobody uses.
-- **Factories and fixtures follow the same idea.** One that a single file needs stays in that file; one that several files need goes to `tests/helpers/` (a factory function) or to the nearest `conftest.py` (a fixture).
-- **Name local doubles by what they do** (`RemovingFirstComponentPruner`, `StopAfterSecondCheck`), and never reuse the name of a shared double.
+- **Factories and fixtures follow the same idea.** One that a single file needs stays in that file; one that several files need goes to `tests/helpers/` (a factory function) or to the nearest `conftest.py` (a fixture), for example the sample and the starting mixture shared by the integration tests of `ECM` and `ECME` in `tests/integration/estimators/conftest.py`.
+- **Name local doubles by what they do** (`RemovingFirstComponentPruner`, `StopOnCheck`), and never reuse the name of a shared double.
 - **Keep doubles close to the real API.** A double implements the part of the interface the test needs, with the same signatures and return types as the real class. A double may subclass the real class, be created with `create_autospec`, or implement the used part of the interface by hand.
 - **Fixtures** have function scope and are requested explicitly by the test. `autouse` is for the settings of the whole environment that do not change a mathematical result (the global seed in `tests/conftest.py`); it must not hide a substitution of a constant or an object under test.
 - **Randomness.** The global fixture fixes the seed to 42, and Hypothesis runs with `derandomize=True`. Create random data in a test with an explicit generator, for example `rng = np.random.default_rng(42)`.
@@ -266,9 +266,11 @@ Contracts that depend on the support or the tails of a distribution are parametr
 
 #### Naming
 
-- A test name states a behaviour: `test_clear_after_prune_shifts_remaining_component_ids`, not `test_step` or `test_case_1`.
+- A test name states a behaviour: `test_rejects_removal_of_last_component`, not `test_step` or `test_case_1`.
 - Give parametrized cases readable `ids` (`normal`, `uniform`).
 - Keep tests as module-level functions. If a file covers three or more separate topics (a topic is a group of related contracts, for example construction, `fit`, pruning), you may group the tests of each topic in a `Test<Topic>` class named after the topic. Do not use classes for one or two topics.
+- Put every test in the class of its own topic, and do not repeat the topic in the test name: `TestClearAfterPrune::test_shifts_blocks_after_removed_component`, not `TestClearAfterPrune::test_clear_after_prune_shifts_blocks`.
+- Keep Hypothesis tests (`@given`) as module-level functions, also in a file with classes; place such a test right after the class of its topic. Hypothesis fails a `@given` method that is called from different instances of its class (`HealthCheck.differing_executors`), and this happens when `mutmut` runs the suite several times in one process.
 
 #### Adding or Changing a Test
 
