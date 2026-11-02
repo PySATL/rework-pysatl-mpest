@@ -12,24 +12,60 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.transformations.operations.distributions.mixture import FiniteMixtureDistribution
-from pysatl_core.types import FamilyName
+from pysatl_core.types import CharacteristicName, FamilyName
 from pysatl_mpest.core.mixture import MixtureModel
+from pysatl_mpest.typings import FloatArray
 
 from tests.helpers.families import family
-from tests.helpers.math_assertions import (
-    assert_computational_stability,
-    assert_is_array_type,
-    assert_is_scalar_type,
-    assert_probabilities_sum_to_one,
-)
-from tests.mocks.distributions import (
-    MockConstantLpdfContinuousDistribution,
-    MockContinuousDistribution,
-    MockInfLpdfContinuousDistribution,
-)
+from tests.helpers.math_assertions import assert_is_array_type, assert_is_scalar_type
+from tests.mocks.distributions import MockContinuousDistribution
+
+
+def assert_probabilities_sum_to_one(weights: FloatArray, rtol: float = 1e-5, atol: float = 1e-8) -> None:
+    """
+    Asserts that the elements of the probability (or weights) array sum to one.
+    If the array is multi-dimensional, the sum is checked along the last axis (axis=-1).
+    """
+
+    np.testing.assert_allclose(np.sum(weights, axis=-1), 1.0, rtol=rtol, atol=atol)
+
+
+def assert_computational_stability(log_probs: FloatArray) -> None:
+    """
+    Asserts the computational stability of a log-probabilities (lpdf) tensor.
+    Ensures no NaN values are present. For Inf, only -Inf is allowed
+    (in case of log(0)), but +Inf is strictly forbidden.
+    """
+
+    assert not np.isnan(log_probs).any(), "Log-probabilities array contains NaN"
+    assert not np.isposinf(log_probs).any(), "Log-probabilities array contains +Inf"
+
+
+class MockConstantLpdfContinuousDistribution(MockContinuousDistribution):
+    """Mock distribution with constant log-PDF."""
+
+    def __init__(self, log_density: float) -> None:
+        super().__init__(param1=log_density)
+        self.log_density = log_density
+
+    def calculate_characteristic(self, name: CharacteristicName, X: ArrayLike) -> NDArray[np.float64]:
+        X_arr = np.asarray(X, dtype=np.float64)
+        if name == CharacteristicName.LPDF:
+            return np.full_like(X_arr, self.log_density)
+        raise NotImplementedError
+
+
+class MockInfLpdfContinuousDistribution(MockContinuousDistribution):
+    """Mock distribution with negative infinite log-PDF."""
+
+    def calculate_characteristic(self, name: CharacteristicName, X: ArrayLike) -> NDArray[np.float64]:
+        X_arr = np.asarray(X, dtype=np.float64)
+        if name == CharacteristicName.LPDF:
+            return np.full_like(X_arr, -np.inf)
+        raise NotImplementedError
 
 
 @pytest.fixture

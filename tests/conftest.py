@@ -8,10 +8,7 @@ import random
 
 import numpy as np
 import pytest
-from _pytest.fixtures import FixtureRequest
 from hypothesis import settings
-
-from tests.helpers.golden import GoldenDataComparator
 
 # Fix seed for Hypothesis to ensure deterministic parameter generation
 settings.register_profile("deterministic", derandomize=True)
@@ -23,21 +20,3 @@ def set_random_seeds():
     """Sets random seeds for reproducible tests across the suite."""
     random.seed(42)
     np.random.seed(42)
-
-
-def pytest_addoption(parser: pytest.Parser) -> None:
-    """Register custom flags for pytest."""
-
-    parser.addoption(
-        "--update-golden",
-        action="store_true",
-        default=False,
-        help="Update or create golden data files",
-    )
-
-
-@pytest.fixture
-def golden(request: FixtureRequest) -> GoldenDataComparator:
-    """Fixture to use Golden Tests."""
-
-    return GoldenDataComparator(request)
