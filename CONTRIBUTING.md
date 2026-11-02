@@ -215,16 +215,17 @@ To maintain code quality and prevent regressions, all contributions must be acco
 
 The level of a test is defined by its dependencies, not by the size of the tested component.
 
-- **Unit tests** (`tests/unit/`) check one class or function. Its behavioural dependencies (pipeline steps, optimizers, strategies, pruners, breakpointers) are replaced with test doubles. Real `MixtureModel` objects, `pysatl-core` distributions and `PipelineState` are allowed as input data, as long as the test does not execute their behaviour as part of what it checks.
+- **Unit tests** (`tests/unit/`) check one class or function. Its behavioural dependencies (pipeline steps, optimizers, strategies, pruners, breakpointers) are replaced with test doubles. Real `MixtureModel` objects, `pysatl-core` distributions and `PipelineState` are allowed as input data, as long as the test does not execute their behaviour as part of what it checks. A real mixture may also be written to by the class under test; then assert what the class under test did and do not re-check behaviour of the mixture itself (for example, the normalization of weights), which is specified in the tests of `MixtureModel`.
 - **Integration tests** (`tests/integration/`) check that real components of `pysatl_mpest` and `pysatl-core` work together. They contain **no mocks, spies or scripted replacements** of components.
 - Replacing a numeric constant with `monkeypatch` (for example, a threshold set to `0.25` to test a boundary exactly) is a test parameter, not a mock, and does not change the level of the test. Pass such a value explicitly, through a parameter or an explicitly requested fixture, and never through a hidden `autouse` fixture.
+- A value that a strategy hands to the optimizer, for example the objective function of the Q-function or the likelihood strategy, can be observed only through an optimizer double, so such a test is a unit test. Integration tests of strategies check the final result with a real optimizer.
 
 #### Where Tests Live
 
 The layout of `tests/unit/` and `tests/integration/` mirrors the layout of `pysatl_mpest/`.
 
 - **One file per module that has its own behaviour**, named `test_<module>.py`; the underscore of a private module is kept (`core/_sampling.py` is tested in `core/test__sampling.py`). Abstract base classes, re-exports in `__init__.py`, `typings.py` and empty or reserved packages have no test file: their contract is checked through the concrete implementations.
-- **Every behaviour has one owner**, the module that implements it, and is specified in the tests of that module. Other tests only check how the owner is used. For example, shifting the indices of the optimization blocks after pruning is specified in the tests of `MaximizationStep`; the tests of `Pipeline` check only that every step is notified about the removed components. Likewise, the equality of mixtures is specified in the tests of `MixtureModel`.
+- **Every behaviour has one owner**, the module that implements it, and is specified in the tests of that module. Other tests only check how the owner is used. For example, shifting the indices of the optimization blocks after pruning is specified in the tests of `MaximizationStep`; the tests of `Pipeline` check only that every step is notified about the removed components. Likewise, the equality of mixtures is specified in the tests of `MixtureModel`. The unit tests of the owner specify the whole contract; an integration test may confirm it on real components (for example, that a mixture of plain components equals a mixture of the same components with fixed parameters), but does not repeat the full table of cases.
 - **An integration test is placed by the entry point of the chain** it exercises (for example, a complete fit with `ECM` belongs to the tests of `ECM`). If a scenario has several entry points, choose the main one and mention the others in a comment.
 - **`PipelineState` has no test file of its own.** It is checked through the steps and the `Pipeline` that use it. Repeated `fit` of the same object is checked on the state of the `Pipeline`, plus one end-to-end scenario in the tests of `ECM` and `ECME`.
 
@@ -249,15 +250,16 @@ Contracts that depend on the support or the tails of a distribution are parametr
 | Finite support | `uniform` | not applicable |
 
 - Parametrize over the cells that have a representative. Do not create fake distributions for the empty cells; when `pysatl-core` gets a suitable family, add it to its cell.
-- Contracts of this kind are, for example, points outside the support in the E-step, the penalty in the observed-data likelihood, the numerical Q-function, and `lpdf` and `generate` at the boundary of the support.
+- Contracts of this kind are, for example, points outside the support in the E-step, the penalty in the observed-data likelihood, the numerical Q-function, and `lpdf` and `generate` at the boundary of the support. Use a cell only where the contract makes sense for it: a point outside the support exists for `exponential` and `uniform` but not for `normal`, where a point far in the tail takes its place.
 - A closed-form formula (`normal` with `meanStd`, `exponential` with `rate`) is tested by its own tests for the pair of the family and the parametrization it is registered for.
-- A contract common to all strategies (for example, `ValueError` when `H` is `None`, or which parameters are returned) is parametrized over all registered pairs of a family and a parametrization.
+- A contract common to the strategies of one dispatcher is parametrized over all pairs of a family and a parametrization registered in it. For example, the Q-function and moments strategies raise `ValueError` when `H` is `None`, while the observed-data likelihood does not use `H`.
 
 #### Fixtures, Helpers and Test Doubles
 
-- **Share only what has two users.** A test double goes to `tests/mocks/`, and an assertion helper to `tests/helpers/`, only if at least two test files use it. A double or helper with one user stays in that file. Remove shared code that nobody uses.
+- **Share doubles and assertion helpers only when two test files use them.** A test double goes to `tests/mocks/`, and an assertion helper to `tests/helpers/`, only if at least two test files use it. A double or helper with one user stays in that file. Remove shared code that nobody uses.
+- **Factories and fixtures follow the same idea.** One that a single file needs stays in that file; one that several files need goes to `tests/helpers/` (a factory function) or to the nearest `conftest.py` (a fixture).
 - **Name local doubles by what they do** (`RemovingFirstComponentPruner`, `StopAfterSecondCheck`), and never reuse the name of a shared double.
-- **Keep doubles close to the real API.** A double implements the part of the interface the test needs, with the same signatures and return types as the real class.
+- **Keep doubles close to the real API.** A double implements the part of the interface the test needs, with the same signatures and return types as the real class. A double may subclass the real class, be created with `create_autospec`, or implement the used part of the interface by hand.
 - **Fixtures** have function scope and are requested explicitly by the test. `autouse` is for the settings of the whole environment that do not change a mathematical result (the global seed in `tests/conftest.py`); it must not hide a substitution of a constant or an object under test.
 - **Randomness.** The global fixture fixes the seed to 42, and Hypothesis runs with `derandomize=True`. Create random data in a test with an explicit generator, for example `rng = np.random.default_rng(42)`.
 - **Helpers create valid objects.** A helper must return an object that satisfies the production type annotations; do not pass `None` with `# type: ignore` where a mixture is required, and do not pass `optimizer=None` to a strategy. Pass a double in a unit test and a real optimizer in an integration test.
@@ -266,7 +268,7 @@ Contracts that depend on the support or the tails of a distribution are parametr
 
 - A test name states a behaviour: `test_clear_after_prune_shifts_remaining_component_ids`, not `test_step` or `test_case_1`.
 - Give parametrized cases readable `ids` (`normal`, `uniform`).
-- Keep tests as module-level functions. Group them in a `Test<Feature>` class only if the file covers more than two separate topics.
+- Keep tests as module-level functions. If a file covers three or more separate topics (a topic is a group of related contracts, for example construction, `fit`, pruning), you may group the tests of each topic in a `Test<Topic>` class named after the topic. Do not use classes for one or two topics.
 
 #### Adding or Changing a Test
 
@@ -281,7 +283,7 @@ Contracts that depend on the support or the tails of a distribution are parametr
 
 #### Contested Contracts
 
-If the behaviour of the code looks doubtful or is not documented, do not fix your assumption in a test. Describe it in an issue or in the description of your pull request and agree on it with the maintainers first. When a test checks an error, assert the exception class and a substring of the message (`pytest.raises(ValueError, match="...")`); assert the exact text only if the docstring declares it.
+If the behaviour of the code looks doubtful or is not documented, do not fix your assumption in a test. Describe it in an issue or in the description of your pull request and agree on it with the maintainers first. When a test checks an error, assert the exception class and a substring of the message (`pytest.raises(ValueError, match="...")`); assert the exact text only if the docstring declares it. For example, what a repeated `fit` of the same estimator must reset (the history, the optimization blocks, the state of the breakpointers) is not settled; check only the parts that are documented.
 
 #### Running Tests and Checking Coverage
 
@@ -330,7 +332,7 @@ For every survivor either add a test that kills it, or check that it is equivale
 **Limitations of the tool that shape the code**
 
 - `mutmut` does not mutate functions that have a decorator. That is why the implementations of the strategies in `q_function.py` and `moments.py` are plain functions registered by a call (`q_function_strategy.register(...)(function)`) and not by `@...register(...)`. Keep it that way, otherwise the most important numerical code silently drops out of the check. Properties are not mutated either.
-- The thresholds of the analytical strategies (`NUMERICAL_TOLERANCE`) are tested exactly at the boundary by replacing the constant with `0.25`, which is exact in binary floating point (`tests/integration/estimators/test_strategy_thresholds.py`).
+- The thresholds of the analytical strategies (`NUMERICAL_TOLERANCE`) are tested exactly at the boundary by replacing the constant with `0.25`, which is exact in binary floating point (in the integration tests of the strategies, with the constant replaced explicitly).
 
 ### 8. Create a Pull Request (PR)
 
