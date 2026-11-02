@@ -166,7 +166,7 @@ class TestStopping:
 
 
 class TestNumericalOptimization:
-    @pytest.mark.parametrize("optimizer_class", [ScipyNelderMead, ScipyPowell])
+    @pytest.mark.parametrize("optimizer_class", [ScipyNelderMead, ScipyPowell], ids=["nelder-mead", "powell"])
     def test_with_numerical_strategy_matches_the_analytical_one(
         self, X: np.ndarray, start: MixtureModel, optimizer_class: type[Optimizer]
     ) -> None:

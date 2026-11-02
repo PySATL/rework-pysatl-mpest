@@ -70,7 +70,7 @@ def dummy_state_factory():
 
 class TestInitialization:
     @pytest.mark.parametrize("threshold", [0.01, 0.5, 10.0], ids=["small", "moderate", "large"])
-    def test_initialization_stores_threshold_and_clears_likelihood_state(self, threshold):
+    def test_stores_threshold_and_clears_likelihood_state(self, threshold):
         bp = LikelihoodBreakpointer(threshold)
         assert bp.threshold == threshold
         assert bp._likelihood_old is None

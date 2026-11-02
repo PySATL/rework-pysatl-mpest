@@ -77,7 +77,7 @@ class TestIndex:
         ],
         ids=["negative-first", "negative-last", "first", "last"],
     )
-    def test_index_returns_the_expected_record(self, setup_history_for_index, index: int, expected, request):
+    def test_returns_the_expected_record(self, setup_history_for_index, index: int, expected, request):
         expected_record = request.getfixturevalue(expected)
         actual = setup_history_for_index[index]
 
@@ -91,7 +91,7 @@ class TestIndex:
         ],
         ids=["too-large", "too-negative"],
     )
-    def test_index_raises_for_out_of_range_values(self, setup_history_for_index, index, expected):
+    def test_raises_for_out_of_range_values(self, setup_history_for_index, index, expected):
         with pytest.raises(IndexError, match=expected):
             _ = setup_history_for_index[index]
 

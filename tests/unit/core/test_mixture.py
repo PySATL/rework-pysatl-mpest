@@ -678,7 +678,7 @@ class TestEquality:
 
 
 class TestCopy:
-    def test_copy_preserves_components_and_copies_weights(
+    def test_preserves_components_and_copies_weights(
         self,
         param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
     ) -> None:
@@ -690,7 +690,7 @@ class TestCopy:
         assert mixture2.components[0] is comp1
         assert mixture2.weights is not mixture1.weights
 
-    def test_copy_preserves_log_weights_exactly(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+    def test_preserves_log_weights_exactly(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
         mixture = MixtureModel(mock_comps)
         mixture.log_weights = [-800.0, 0.0]
         copied = copy(mixture)
