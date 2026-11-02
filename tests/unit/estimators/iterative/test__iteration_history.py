@@ -1,7 +1,7 @@
-"""Tests for IterationsHistory class."""
+"""Tests for iteration history indexing, recording, and reset behavior."""
 
 __author__ = "Danil Totmyanin"
-__copyright__ = "Copyright (c) 2025 PySATL project"
+__copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
@@ -46,7 +46,9 @@ def setup_history_for_index(sample_record_0, sample_record_1) -> IterationsHisto
     return history
 
 
-@pytest.fixture(params=[(1, 5), (2, 8), (3, 10)])
+@pytest.fixture(
+    params=[(1, 5), (2, 8), (3, 10)], ids=["record-every-iteration", "record-every-two", "record-every-three"]
+)
 def setup_for_records(request, exponential_components, responsibility_matrix):
     once_in_iter, n = request.param
     history = IterationsHistory(once_in_iter)
@@ -73,8 +75,9 @@ class TestIndex:
             (0, "sample_record_0"),
             (1, "sample_record_1"),
         ],
+        ids=["negative-first", "negative-last", "first", "last"],
     )
-    def test_valid_index(self, setup_history_for_index, index: int, expected, request):
+    def test_index_returns_the_expected_record(self, setup_history_for_index, index: int, expected, request):
         expected_record = request.getfixturevalue(expected)
         actual = setup_history_for_index[index]
 
@@ -86,25 +89,33 @@ class TestIndex:
             (4, "Index 4 out of range for container containing 2 elements"),
             (-4, "Index -4 out of range for container containing 2 elements"),
         ],
+        ids=["too-large", "too-negative"],
     )
-    def test_invalid_index(self, setup_history_for_index, index, expected):
+    def test_index_raises_for_out_of_range_values(self, setup_history_for_index, index, expected):
         with pytest.raises(IndexError, match=expected):
             _ = setup_history_for_index[index]
 
+
+class TestRecordingAndLen:
     @pytest.mark.parametrize(
         ("once_in_iterations", "expected_msg"),
         [
             (0, "once_in_iterations must be a positive integer"),
         ],
+        ids=["zero-interval"],
     )
-    def test_getitem_negative_index_out_of_bounds(self, once_in_iterations, expected_msg):
+    def test_non_positive_recording_interval_is_rejected(self, once_in_iterations, expected_msg):
         with pytest.raises(ValueError, match=expected_msg):
             IterationsHistory(once_in_iterations)
 
-
-class TestRecordingAndLen:
-    @pytest.mark.parametrize(("once_in_iter", "n", "expected"), [(1, 5, 5), (2, 8, 4), (3, 10, 4)])
-    def test_len(self, once_in_iter: int, n: int, expected: int, exponential_components, responsibility_matrix):
+    @pytest.mark.parametrize(
+        ("once_in_iter", "n", "expected"),
+        [(1, 5, 5), (2, 8, 4), (3, 10, 4)],
+        ids=["every-iteration", "every-two-iterations", "every-three-iterations"],
+    )
+    def test_length_matches_number_of_saved_records(
+        self, once_in_iter: int, n: int, expected: int, exponential_components, responsibility_matrix
+    ):
         history = IterationsHistory(once_in_iter)
 
         for i in range(n):
@@ -120,7 +131,9 @@ class TestRecordingAndLen:
 
         assert len(history) == expected
 
-    def test_recording_content(self, setup_for_records, exponential_components, responsibility_matrix):
+    def test_recording_keeps_expected_iteration_numbers_and_samples(
+        self, setup_for_records, exponential_components, responsibility_matrix
+    ):
         history, once_in_iter, n = setup_for_records
         iteration_numbers = [i for i in range(0, n, once_in_iter)]
 
@@ -146,7 +159,7 @@ class TestClear:
         history.save_record(sample_record_0)
         return history
 
-    def test_reset(self, populated_history):
+    def test_reset_clears_records_and_counter(self, populated_history):
         history = populated_history
         expected_len_of_history = 3
 

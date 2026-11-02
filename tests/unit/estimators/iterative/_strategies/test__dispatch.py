@@ -1,6 +1,4 @@
-"""
-Unit tests for the dispatch of M-step strategies on the family and parametrization of a component.
-"""
+"""Tests for family and parametrization dispatch behavior."""
 
 __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"

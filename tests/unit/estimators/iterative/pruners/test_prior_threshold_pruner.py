@@ -1,7 +1,7 @@
-"""Tests for PriorThresholdPruner"""
+"""Tests for prior threshold pruning behavior."""
 
-__author__ = "Danil Totmyanin, Aleksandra Ri"
-__copyright__ = "Copyright (c) 2025 PySATL project"
+__author__ = "Danil Totmyanin"
+__copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from copy import copy
@@ -37,7 +37,7 @@ def dummy_components() -> list[ParametricFamilyDistribution]:
 # --- Tests for __init__ ---
 
 
-def test_init_successful_with_valid_threshold():
+def test_initialization_stores_configured_threshold():
     threshold = 0.1
     pruner = PriorThresholdPruner(threshold)
     assert pruner.threshold == threshold
@@ -73,7 +73,7 @@ def test_init_raises_value_error_for_invalid_threshold(invalid_threshold):
         "weight_equals_threshold",
     ],
 )
-def test_prune_removes_correct_components(
+def test_pruning_removes_subthreshold_components_and_keeps_threshold_equal_weights(
     dummy_components,
     threshold,
     initial_weights,
@@ -162,7 +162,7 @@ def test_prune_does_not_modify_original_mixture_object(dummy_components):
     weights_list=st.lists(st.floats(min_value=1e-6, max_value=1.0, allow_nan=False), min_size=1, max_size=10),
     threshold=st.floats(min_value=1e-6, max_value=1.0 - 1e-6, allow_nan=False),
 )
-def test_prune_with_hypothesis_generated_data(weights_list, threshold):
+def test_pruning_preserves_valid_mixture_invariants_for_generated_weights(weights_list, threshold):
     weights_sum = sum(weights_list)
     if weights_sum == 0:
         return

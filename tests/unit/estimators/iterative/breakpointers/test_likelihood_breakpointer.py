@@ -69,14 +69,14 @@ def dummy_state_factory():
 
 
 class TestInitialization:
-    @pytest.mark.parametrize("threshold", [0.01, 0.5, 10.0])
-    def test_initialization_with_valid_threshold(self, threshold):
+    @pytest.mark.parametrize("threshold", [0.01, 0.5, 10.0], ids=["small", "moderate", "large"])
+    def test_initialization_stores_threshold_and_clears_likelihood_state(self, threshold):
         bp = LikelihoodBreakpointer(threshold)
         assert bp.threshold == threshold
         assert bp._likelihood_old is None
         assert bp._support_mask_old is None
 
-    def test_initialization_rejects_non_positive_threshold(self):
+    def test_rejects_non_positive_threshold(self):
         with pytest.raises(ValueError, match="The threshold must be greater than 0"):
             LikelihoodBreakpointer(0.0)
         with pytest.raises(ValueError, match="The threshold must be greater than 0"):
@@ -95,7 +95,7 @@ class TestCheckLogic:
         assert not bp.check(state)
         assert bp._likelihood_old == FIRST_CALL
 
-    def test_convergence_detected(self, mock_mixture_with_likelihood, dummy_state_factory):
+    def test_stops_when_likelihood_change_is_within_threshold(self, mock_mixture_with_likelihood, dummy_state_factory):
         mixture = mock_mixture_with_likelihood([10.0, 10.05])
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.1)
@@ -103,7 +103,9 @@ class TestCheckLogic:
         assert not bp.check(state)
         assert bp.check(state)
 
-    def test_no_convergence_continues(self, mock_mixture_with_likelihood, dummy_state_factory):
+    def test_continues_when_likelihood_change_exceeds_threshold(
+        self, mock_mixture_with_likelihood, dummy_state_factory
+    ):
         mixture = mock_mixture_with_likelihood([5.0, 6.0])
         state = dummy_state_factory(mixture)
         bp = LikelihoodBreakpointer(0.5)
@@ -227,7 +229,9 @@ class TestNonFiniteStops:
         assert bp._likelihood_old is None
         assert bp._support_mask_old is None
 
-    @pytest.mark.parametrize("invalid", [[np.nan, -1.0], [np.inf, -1.0], [-np.inf, -np.inf]])
+    @pytest.mark.parametrize(
+        "invalid", [[np.nan, -1.0], [np.inf, -1.0], [-np.inf, -np.inf]], ids=["nan", "positive-infinity", "no-support"]
+    )
     def test_state_is_reset_after_a_non_finite_stop(
         self, mock_mixture_with_log_densities, dummy_state_factory, invalid
     ):
