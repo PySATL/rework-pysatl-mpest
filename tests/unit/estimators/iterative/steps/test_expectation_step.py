@@ -26,88 +26,89 @@ def initial_pipeline_state(mocker) -> PipelineState:
     )
 
 
-def test_expectation_step_initialization():
-    default_step = ExpectationStep()
-    assert default_step.is_soft is True
+class TestConstruction:
+    def test_defaults_to_soft_and_accepts_hard_assignment(self):
+        default_step = ExpectationStep()
+        assert default_step.is_soft is True
 
-    soft_step = ExpectationStep(is_soft=True)
-    assert soft_step.is_soft is True
+        soft_step = ExpectationStep(is_soft=True)
+        assert soft_step.is_soft is True
 
-    hard_step = ExpectationStep(is_soft=False)
-    assert hard_step.is_soft is False
-
-
-def test_available_next_steps_property():
-    step = ExpectationStep()
-    assert step.available_next_steps == [MaximizationStep]
+        hard_step = ExpectationStep(is_soft=False)
+        assert hard_step.is_soft is False
 
 
-def test_run_soft_assignment_calculates_h_correctly(initial_pipeline_state):
-    state = initial_pipeline_state
-    step = ExpectationStep(is_soft=True)
-
-    expected_h = np.array([[0.42 / 0.45, 0.03 / 0.45], [0.56 / 0.65, 0.09 / 0.65]], dtype=np.float64)
-
-    result_state = step.run(state)
-
-    assert result_state.H is not None
-    assert_allclose(result_state.H, expected_h, rtol=1e-6, atol=1e-6, err_msg="Soft H matrix calculation is incorrect")
+class TestNextSteps:
+    def test_allows_maximization_as_the_next_step(self):
+        step = ExpectationStep()
+        assert step.available_next_steps == [MaximizationStep]
 
 
-def test_run_hard_assignment_calculates_h_correctly(initial_pipeline_state):
-    state = initial_pipeline_state
-    step = ExpectationStep(is_soft=False)
+class TestRun:
+    def test_soft_assignment_computes_responsibilities(self, initial_pipeline_state):
+        state = initial_pipeline_state
+        step = ExpectationStep(is_soft=True)
 
-    expected_h_hard = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=np.float64)
+        expected_h = np.array([[0.42 / 0.45, 0.03 / 0.45], [0.56 / 0.65, 0.09 / 0.65]], dtype=np.float64)
 
-    result_state = step.run(state)
+        result_state = step.run(state)
 
-    assert result_state.H is not None
-    assert_array_equal(
-        result_state.H,
-        expected_h_hard,
-        err_msg="Hard H matrix calculation is incorrect",
-    )
+        assert result_state.H is not None
+        assert_allclose(
+            result_state.H, expected_h, rtol=1e-6, atol=1e-6, err_msg="Soft H matrix calculation is incorrect"
+        )
 
+    def test_hard_assignment_computes_responsibilities(self, initial_pipeline_state):
+        state = initial_pipeline_state
+        step = ExpectationStep(is_soft=False)
 
-def test_run_hard_assignment_leaves_zeros_for_unsupported_points(initial_pipeline_state) -> None:
-    state = initial_pipeline_state
-    state.X = np.array([1.0, -1.0, 2.0])
-    state.curr_mixture.component_lpdf_matrix.return_value = np.array(
-        [[np.log(0.6), np.log(0.1)], [-np.inf, -np.inf], [np.log(0.1), np.log(0.8)]]
-    )
+        expected_h_hard = np.array([[1.0, 0.0], [1.0, 0.0]], dtype=np.float64)
 
-    result = ExpectationStep(is_soft=False).run(state)
+        result_state = step.run(state)
 
-    assert result.H is not None
-    assert_array_equal(result.H, [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]])
+        assert result_state.H is not None
+        assert_array_equal(
+            result_state.H,
+            expected_h_hard,
+            err_msg="Hard H matrix calculation is incorrect",
+        )
 
+    def test_hard_assignment_leaves_zeros_for_unsupported_points(self, initial_pipeline_state) -> None:
+        state = initial_pipeline_state
+        state.X = np.array([1.0, -1.0, 2.0])
+        state.curr_mixture.component_lpdf_matrix.return_value = np.array(
+            [[np.log(0.6), np.log(0.1)], [-np.inf, -np.inf], [np.log(0.1), np.log(0.8)]]
+        )
 
-def test_run_uses_component_log_densities_of_the_data(initial_pipeline_state):
-    state = initial_pipeline_state
+        result = ExpectationStep(is_soft=False).run(state)
 
-    ExpectationStep().run(state)
+        assert result.H is not None
+        assert_array_equal(result.H, [[1.0, 0.0], [0.0, 0.0], [0.0, 1.0]])
 
-    state.curr_mixture.component_lpdf_matrix.assert_called_once_with(state.X)
+    def test_uses_component_log_densities_of_the_data(self, initial_pipeline_state):
+        state = initial_pipeline_state
 
+        ExpectationStep().run(state)
 
-def test_run_returns_state_and_modifies_only_h(initial_pipeline_state):
-    state = initial_pipeline_state
-    step = ExpectationStep(is_soft=False)
+        state.curr_mixture.component_lpdf_matrix.assert_called_once_with(state.X)
 
-    original_x_ref = state.X
-    original_mixture_ref = state.curr_mixture
-    original_prev_mixture_ref = state.prev_mixture
-    original_error_ref = state.error
+    def test_returns_state_and_modifies_only_h(self, initial_pipeline_state):
+        state = initial_pipeline_state
+        step = ExpectationStep(is_soft=False)
 
-    result_state = step.run(state)
+        original_x_ref = state.X
+        original_mixture_ref = state.curr_mixture
+        original_prev_mixture_ref = state.prev_mixture
+        original_error_ref = state.error
 
-    assert isinstance(result_state, PipelineState)
-    assert result_state is state
-    assert state.H is not None
-    assert isinstance(result_state.H, np.ndarray)
+        result_state = step.run(state)
 
-    assert result_state.X is original_x_ref
-    assert result_state.curr_mixture is original_mixture_ref
-    assert result_state.prev_mixture is original_prev_mixture_ref
-    assert result_state.error is original_error_ref
+        assert isinstance(result_state, PipelineState)
+        assert result_state is state
+        assert state.H is not None
+        assert isinstance(result_state.H, np.ndarray)
+
+        assert result_state.X is original_x_ref
+        assert result_state.curr_mixture is original_mixture_ref
+        assert result_state.prev_mixture is original_prev_mixture_ref
+        assert result_state.error is original_error_ref
