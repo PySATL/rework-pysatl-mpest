@@ -10,32 +10,36 @@ import numpy as np
 import pytest
 from pysatl_mpest.core.mixture import MixtureModel
 from pysatl_mpest.estimators.ecme import ECME
+from pysatl_mpest.estimators.iterative import Breakpointer, Pruner
 from pysatl_mpest.estimators.iterative.steps.block import MaximizationStrategy
+from pysatl_mpest.optimizers import Optimizer
 
 
-class TestECME:
-    @pytest.fixture
-    def mock_deps(self, mocker):
-        return {
-            "breakpointers": [mocker.Mock()],
-            "pruners": [mocker.Mock()],
-            "optimizer": mocker.Mock(),
-        }
+@pytest.fixture
+def mock_deps(mocker):
+    return {
+        "breakpointers": [mocker.Mock(spec=Breakpointer)],
+        "pruners": [mocker.Mock(spec=Pruner)],
+        "optimizer": mocker.Mock(spec=Optimizer),
+    }
 
-    @pytest.fixture
-    def ecme_instance(self, mock_deps):
-        return ECME(
-            breakpointers=mock_deps["breakpointers"],
-            pruners=mock_deps["pruners"],
-            optimizer=mock_deps["optimizer"],
-            default_strategy="odl",
-        )
 
-    def test_history_raises_attribute_error_before_fit(self, ecme_instance):
+@pytest.fixture
+def ecme_instance(mock_deps):
+    return ECME(
+        breakpointers=mock_deps["breakpointers"],
+        pruners=mock_deps["pruners"],
+        optimizer=mock_deps["optimizer"],
+        default_strategy="odl",
+    )
+
+
+class TestHistory:
+    def test_raises_attribute_error_before_fit(self, ecme_instance):
         with pytest.raises(AttributeError, match="Call the 'fit' method first"):
             _ = ecme_instance.history
 
-    def test_history_returns_pipeline_history_after_fit(self, ecme_instance, mocker):
+    def test_returns_pipeline_history_after_fit(self, ecme_instance, mocker):
         mock_pipeline_cls = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         mock_pipeline_instance = mock_pipeline_cls.return_value
 
@@ -49,6 +53,8 @@ class TestECME:
 
         assert ecme_instance.history is expected_history
 
+
+class TestIndices:
     @pytest.mark.parametrize(
         "input_val, expected",
         [
@@ -58,8 +64,9 @@ class TestECME:
             ((0, 5), {0, 5}),
             (np.array([1]), {1}),
         ],
+        ids=["none", "integer", "list", "tuple", "array"],
     )
-    def test_normalize_indices(self, ecme_instance, input_val, expected):
+    def test_normalization_returns_a_set(self, ecme_instance, input_val, expected):
         result = ecme_instance._normalize_indices(input_val)
         assert result == expected
         assert isinstance(result, set)
@@ -72,8 +79,9 @@ class TestECME:
             (-1, 5, 4),
             (-5, 5, 0),
         ],
+        ids=["first", "last", "negative-last", "negative-first"],
     )
-    def test_resolve_index_valid(self, ecme_instance, idx, n_components, expected):
+    def test_valid_index_resolves_to_a_nonnegative_index(self, ecme_instance, idx, n_components, expected):
         assert ecme_instance._resolve_index(idx, n_components) == expected
 
     @pytest.mark.parametrize(
@@ -83,19 +91,22 @@ class TestECME:
             (10, 5),
             (-6, 5),
         ],
+        ids=["upper-bound", "above-bound", "below-bound"],
     )
-    def test_resolve_index_out_of_bounds(self, ecme_instance, idx, n_components):
+    def test_out_of_bounds_index_raises_value_error(self, ecme_instance, idx, n_components):
         with pytest.raises(ValueError, match="out of bounds"):
             ecme_instance._resolve_index(idx, n_components)
 
-    def test_fit_indices_intersection_error(self, ecme_instance, mocker):
+    def test_overlapping_strategy_indices_raise_value_error(self, ecme_instance, mocker):
         mock_mixture = mocker.MagicMock(spec=MixtureModel)
         mock_mixture.n_components = 3
 
         with pytest.raises(ValueError, match="specified for both"):
             ecme_instance.fit(X=[], mixture=mock_mixture, q_indices_raw=[1], odl_indices_raw=[-2])
 
-    def test_fit_strategy_assignment_and_execution(self, ecme_instance, mocker):
+
+class TestPipeline:
+    def test_assigns_strategies_and_executes(self, ecme_instance, mock_deps, mocker):
         mock_pipeline_cls = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         mock_max_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.MaximizationStep")
         mock_exp_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.ExpectationStep")
@@ -121,8 +132,8 @@ class TestECME:
         mock_pipeline_cls.assert_called_once()
         pipeline_args = mock_pipeline_cls.call_args
 
-        assert pipeline_args[0][1] == ecme_instance.breakpointers
-        assert pipeline_args[0][2] == ecme_instance.pruners
+        assert pipeline_args[0][1] == mock_deps["breakpointers"]
+        assert pipeline_args[0][2] == mock_deps["pruners"]
         assert pipeline_args[0][3] == expected_once_in_iterations
 
         steps_arg = pipeline_args[0][0]
@@ -151,11 +162,11 @@ class TestECME:
 
         mock_pipeline_inst.fit.assert_called_once_with(X_dummy, mock_mixture)
 
-    def test_fit_default_strategy_q_func(self, mocker):
+    def test_uses_q_function_as_default_strategy(self, mocker):
         deps = {
-            "breakpointers": [mocker.Mock()],
+            "breakpointers": [mocker.Mock(spec=Breakpointer)],
             "pruners": [],
-            "optimizer": mocker.Mock(),
+            "optimizer": mocker.Mock(spec=Optimizer),
         }
         ecme = ECME(**deps, default_strategy="q-func")
 

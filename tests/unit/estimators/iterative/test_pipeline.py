@@ -15,19 +15,13 @@ from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators.iterative import (
     Breakpointer,
-    ExpectationStep,
-    MaximizationStep,
-    MaximizationStrategy,
-    OptimizationBlock,
     Pipeline,
     PipelineState,
     PipelineStep,
-    PriorThresholdPruner,
     Pruner,
-    StepBreakpointer,
 )
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
-from pysatl_mpest.optimizers import ScipyNelderMead
+
 from tests.helpers.families import family
 
 # --- Mock objects for isolated testing ---
@@ -154,29 +148,32 @@ class ParameterIncrementStep(PipelineStep):
         pass
 
 
-class MockBreakpointer(Breakpointer):
-    """A mock object for Breakpointer that stops at a specified iteration."""
+class StopOnCheck(Breakpointer):
+    """Stop on the specified one-based check call, resetting after it stops."""
 
-    def __init__(self, stop_at_iteration: int, call_log: list[str] | None = None):
-        self.stop_at_iteration = stop_at_iteration
-        self.current_iteration = 1
+    def __init__(self, call_number: int, call_log: list[str] | None = None):
+        self.call_number = call_number
+        self.calls = 0
         self.call_log = call_log
 
     def check(self, state: PipelineState) -> bool:
         if self.call_log is not None:
             self.call_log.append("check_breakpointer")
-        self.current_iteration += 1
-        return self.current_iteration == self.stop_at_iteration
+        self.calls += 1
+        stopped = self.calls == self.call_number
+        if stopped:
+            self.calls = 0
+        return stopped
 
 
-class MockPruner(Pruner):
+class RemovingFirstComponentPruner(Pruner):
     """A mock object for Pruner that removes a component and logs its calls."""
 
     def __init__(self, name: str = "pruner", call_log: list[str] | None = None):
         self.name = name
         self.call_log = call_log if call_log is not None else []
 
-    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int] | None]:
+    def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         self.call_log.append(self.name)
         removed_components_indices = []
         if state.curr_mixture.n_components > 1:
@@ -204,12 +201,12 @@ def sample_data() -> np.ndarray:
 # --- Initialization (`__init__`) Tests ---
 
 
-class TestPipelineInitialization:
-    @pytest.mark.parametrize("container", [list, tuple])
-    def test_init_accepts_sequence_types(self, container: Callable):
+class TestConstruction:
+    @pytest.mark.parametrize("container", [list, tuple], ids=["list", "tuple"])
+    def test_accepts_sequence_containers(self, container: Callable):
         steps = container([MockSingleStep()])
-        breakpointers = container([MockBreakpointer(stop_at_iteration=2)])
-        pruners = container([MockPruner()])
+        breakpointers = container([StopOnCheck(call_number=1)])
+        pruners = container([RemovingFirstComponentPruner()])
 
         pipeline = Pipeline(steps, breakpointers, pruners)
 
@@ -218,15 +215,15 @@ class TestPipelineInitialization:
         assert isinstance(pipeline.pruners, list)
         assert isinstance(pipeline.history, IterationsHistory)
 
-    def test_init_with_none_pruners_creates_empty_list(self):
+    def test_uses_no_pruners_by_default(self):
         steps = [MockSingleStep()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        breakpointers = [StopOnCheck(call_number=1)]
 
         pipeline = Pipeline(steps, breakpointers, pruners=None)
 
         assert pipeline.pruners == []
 
-    def test_init_raises_error_for_empty_breakpointers(self):
+    def test_requires_a_stopping_criterion(self):
         steps = [MockSingleStep()]
 
         with pytest.raises(
@@ -238,9 +235,9 @@ class TestPipelineInitialization:
         ):
             Pipeline(steps, [])
 
-    def test_init_creates_history_with_correct_frequency(self):
+    def test_sets_history_frequency(self):
         steps = [MockSingleStep()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        breakpointers = [StopOnCheck(call_number=1)]
 
         pipeline_default = Pipeline(steps, breakpointers)
         assert pipeline_default.history.once_in_iterations == 1
@@ -253,27 +250,39 @@ class TestPipelineInitialization:
 # --- Step Validation Tests ---
 
 
-class TestPipelineValidation:
-    def test_validate_steps_raises_error_for_empty_steps(self):
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+class TestStepValidation:
+    def test_requires_at_least_one_step(self):
+        breakpointers = [StopOnCheck(call_number=1)]
         with pytest.raises(ValueError, match=r"^The 'steps' list cannot be empty for a Pipeline\.$"):
             Pipeline([], breakpointers)
 
-    def test_validate_steps_raises_error_for_invalid_order(self):
+    def test_rejects_invalid_step_order(self):
         invalid_steps = [MockStepA(), MockStepA()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        breakpointers = [StopOnCheck(call_number=1)]
 
         with pytest.raises(ValueError, match="Wrong pipeline configuration"):
             Pipeline(invalid_steps, breakpointers)
 
-    def test_validate_steps_succeeds_for_valid_cyclic_order(self):
+    def test_accepts_closed_step_cycle(self):
         valid_steps = [MockStepA(), MockStepB()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        breakpointers = [StopOnCheck(call_number=1)]
 
         try:
             Pipeline(valid_steps, breakpointers)
         except ValueError:
             pytest.fail("Valid cyclic step configuration raised ValueError unexpectedly.")
+
+    def test_the_last_pair_of_steps_is_checked(self):
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepB(), MockStepB()], [StopOnCheck(call_number=1)])
+
+    def test_the_first_pair_of_steps_is_checked(self):
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepA(), MockStepB()], [StopOnCheck(call_number=1)])
+
+    def test_the_pair_closing_the_cycle_is_checked(self):
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline([MockStepA(), MockStepB(), MockStepA()], [StopOnCheck(call_number=1)])
 
 
 # --- Fit Method Tests ---
@@ -281,12 +290,12 @@ class TestPipelineValidation:
 NUMBER_OF_BLOCKS = 2
 
 
-class TestPipelineFit:
-    def test_fit_modifies_mixture_to_expected_state_after_iterations(self, initial_mixture, sample_data):
+class TestFit:
+    def test_runs_each_iteration_and_returns_updated_mixture(self, initial_mixture, sample_data):
         expected_n_components = 2
 
         steps = [ParameterIncrementStep()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=3)]
+        breakpointers = [StopOnCheck(call_number=2)]
         pipeline = Pipeline(steps, breakpointers)
 
         # Expected state after 2 iterations with ParameterIncrementStep
@@ -312,11 +321,11 @@ class TestPipelineFit:
 
         np.testing.assert_allclose(final_lambdas, expected_final_lambdas, rtol=rtol)
 
-    def test_fit_does_not_modify_original_mixture(self, initial_mixture, sample_data):
+    def test_preserves_the_input_mixture(self, initial_mixture, sample_data):
         original_mixture_copy = copy(initial_mixture)
 
         steps = [ModifyingStep()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        breakpointers = [StopOnCheck(call_number=1)]
         pipeline = Pipeline(steps, breakpointers)
 
         pipeline.fit(sample_data, initial_mixture)
@@ -335,25 +344,25 @@ class TestPipelineFit:
                 err_msg=f"Parameters of component {i} in the original mixture were modified.",
             )
 
-    def test_fit_runs_steps_in_correct_order(self, initial_mixture, sample_data):
+    def test_runs_steps_in_configured_order(self, initial_mixture, sample_data):
         call_log = []
 
         # Configuration: A -> B -> A (cycle)
         steps = [MockStepA(call_log), MockStepB(call_log)]
-        breakpointers = [MockBreakpointer(stop_at_iteration=3)]
+        breakpointers = [StopOnCheck(call_number=2)]
 
         pipeline = Pipeline(steps, breakpointers)
         pipeline.fit(sample_data, initial_mixture)
 
         assert call_log == ["A", "B", "A", "B"]
 
-    def test_fit_stops_with_multiple_breakpointers(self, initial_mixture, sample_data):
+    def test_stops_when_any_breakpointer_reaches_its_limit(self, initial_mixture, sample_data):
         expected_checks = 4
 
         call_log = []
         breakpointers = [
-            MockBreakpointer(stop_at_iteration=100, call_log=call_log),
-            MockBreakpointer(stop_at_iteration=3, call_log=call_log),
+            StopOnCheck(call_number=99, call_log=call_log),
+            StopOnCheck(call_number=2, call_log=call_log),
         ]
 
         steps = [MockSingleStep()]
@@ -363,10 +372,10 @@ class TestPipelineFit:
 
         assert call_log.count("check_breakpointer") == expected_checks
 
-    def test_fit_warns_and_returns_on_step_error(self, initial_mixture, sample_data):
+    def test_warns_and_returns_after_step_error(self, initial_mixture, sample_data):
         call_log = []
         steps = [MockStepWithError(call_log)]
-        breakpointers = [MockBreakpointer(stop_at_iteration=10)]
+        breakpointers = [StopOnCheck(call_number=9)]
 
         pipeline = Pipeline(steps, breakpointers)
 
@@ -378,14 +387,14 @@ class TestPipelineFit:
         assert isinstance(result_mixture, MixtureModel)
         assert call_log == ["SingleStep"]
 
-    def test_fit_with_pruner_modifies_mixture(self, initial_mixture, sample_data):
+    def test_applies_component_pruning(self, initial_mixture, sample_data):
         expected_n_components = 2
         assert initial_mixture.n_components == expected_n_components
 
         call_log = []
         steps = [MockSingleStep()]
-        pruners = [MockPruner("pruner", call_log)]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        pruners = [RemovingFirstComponentPruner("pruner", call_log)]
+        breakpointers = [StopOnCheck(call_number=1)]
 
         pipeline = Pipeline(steps, breakpointers, pruners)
         fitted_mixture = pipeline.fit(sample_data, initial_mixture)
@@ -393,14 +402,14 @@ class TestPipelineFit:
         assert call_log.count("pruner") == 1
         assert fitted_mixture.n_components == 1
 
-    def test_fit_with_multiple_pruners_executes_in_order(self, initial_mixture, sample_data):
+    def test_runs_pruners_in_configured_order(self, initial_mixture, sample_data):
         call_log = []
         steps = [MockSingleStep()]
         pruners = [
-            MockPruner(name="pruner1", call_log=call_log),
-            MockPruner(name="pruner2", call_log=call_log),
+            RemovingFirstComponentPruner(name="pruner1", call_log=call_log),
+            RemovingFirstComponentPruner(name="pruner2", call_log=call_log),
         ]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
+        breakpointers = [StopOnCheck(call_number=1)]
 
         pipeline = Pipeline(steps, breakpointers, pruners)
 
@@ -409,11 +418,11 @@ class TestPipelineFit:
         assert call_log == ["pruner1", "pruner2"]
         assert fitted_mixture.n_components == 1
 
-    def test_fit_executes_pruners_after_all_steps(self, initial_mixture, sample_data):
+    def test_runs_pruners_after_steps(self, initial_mixture, sample_data):
         call_log = []
         steps = [MockStepA(call_log), MockStepB(call_log)]
-        pruners = [MockPruner("pruner", call_log)]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2, call_log=call_log)]
+        pruners = [RemovingFirstComponentPruner("pruner", call_log)]
+        breakpointers = [StopOnCheck(call_number=1, call_log=call_log)]
 
         pipeline = Pipeline(steps, breakpointers, pruners)
         pipeline.fit(sample_data, initial_mixture)
@@ -422,9 +431,9 @@ class TestPipelineFit:
 
         assert call_log == expected_order
 
-    def test_fit_record_iterations_to_public_history(self, initial_mixture, sample_data):
+    def test_records_iteration_history(self, initial_mixture, sample_data):
         steps = [MockSingleStep()]
-        breakpointers = [MockBreakpointer(stop_at_iteration=3)]
+        breakpointers = [StopOnCheck(call_number=2)]
 
         pipeline = Pipeline(steps, breakpointers)
 
@@ -437,10 +446,10 @@ class TestPipelineFit:
         assert pipeline.history[0].iteration == 0
         assert pipeline.history[0].mixture == fitted_mixture
 
-    def test_fit_records_with_custom_frequency(self, initial_mixture, sample_data):
+    def test_records_at_configured_frequency(self, initial_mixture, sample_data):
         steps = [MockSingleStep()]
 
-        breakpointers = [MockBreakpointer(stop_at_iteration=5)]
+        breakpointers = [StopOnCheck(call_number=4)]
 
         pipeline = Pipeline(steps, breakpointers, once_in_iterations=2)
 
@@ -454,96 +463,8 @@ class TestPipelineFit:
         assert pipeline.history[1].iteration == EXPECTED_ITERATIONS[1]
         assert pipeline.history[1].mixture == fitted_mixture
 
-    def test_clear_after_prune_called_during_fit(self, initial_mixture, sample_data):
-        call_log = []
-        LEN_CALL_LOG = 2
-
-        class TrackingStep(MockSingleStep):
-            def clear_after_prune(self, removed_components_indices: list[int]) -> None:
-                call_log.append(removed_components_indices)
-
-        steps = [TrackingStep(), TrackingStep()]
-        pruners = [MockPruner("pruner")]
-        breakpointers = [MockBreakpointer(stop_at_iteration=2)]
-
-        pipeline = Pipeline(steps, breakpointers, pruners)
-        pipeline.fit(sample_data, initial_mixture)
-
-        assert len(call_log) == LEN_CALL_LOG
-        for removed_indices in call_log:
-            assert removed_indices == [0]
-
 
 # --- Tests for MaximizationStep clear_after_prune method ---
-
-
-class TestMaximizationStepClearAfterPrune:
-    def test_clear_after_prune_removes_blocks_for_pruned_components(self):
-        blocks = [
-            OptimizationBlock(0, {"param1"}, "q_function"),
-            OptimizationBlock(1, {"param2"}, "q_function"),
-            OptimizationBlock(2, {"param1", "param2"}, "q_function"),
-        ]
-
-        step = MaximizationStep(blocks=blocks, optimizer=None)
-
-        removed_indices = [1]
-        step.clear_after_prune(removed_indices)
-
-        assert len(step.blocks) == NUMBER_OF_BLOCKS
-        assert step.blocks[0].component_id == 0
-        assert step.blocks[1].component_id == 1
-
-    def test_clear_after_prune_preserves_optimization_parameters(self):
-        blocks = [
-            OptimizationBlock(0, {"param1"}, "q_function"),
-            OptimizationBlock(1, {"param2", "param3"}, "q_function"),
-            OptimizationBlock(2, {"param1", "param2"}, "q_function"),
-        ]
-
-        step = MaximizationStep(blocks=blocks, optimizer=None)
-
-        removed_indices = [1]
-        step.clear_after_prune(removed_indices)
-
-        assert step.blocks[0].params_to_optimize == {"param1"}
-        assert step.blocks[1].params_to_optimize == {"param1", "param2"}
-
-    def test_clear_after_prune_with_empty_removal(self):
-        blocks = [OptimizationBlock(0, {"param1"}, "q_function"), OptimizationBlock(1, {"param2"}, "q_function")]
-
-        step = MaximizationStep(blocks=blocks, optimizer=None)
-        original_blocks = list(step.blocks)
-
-        step.clear_after_prune([])
-
-        assert step.blocks == original_blocks
-
-    def test_clear_after_prune_with_none_blocks(self):
-        step = MaximizationStep(blocks=[], optimizer=None)
-
-        step.clear_after_prune([0, 1])
-        assert step.blocks == []
-
-    def test_clear_after_prune_with_multiple_removals(self):
-        blocks = [
-            OptimizationBlock(0, {"param1"}, "q_function"),
-            OptimizationBlock(1, {"param2"}, "q_function"),
-            OptimizationBlock(2, {"param3"}, "q_function"),
-            OptimizationBlock(3, {"param1", "param2"}, "q_function"),
-        ]
-
-        step = MaximizationStep(blocks=blocks, optimizer=None)
-
-        removed_indices = [1, 3]
-        step.clear_after_prune(removed_indices)
-
-        assert len(step.blocks) == NUMBER_OF_BLOCKS
-        assert step.blocks[0].component_id == 0
-        assert step.blocks[1].component_id == 1
-
-        assert step.blocks[0].params_to_optimize == {"param1"}
-        assert step.blocks[1].params_to_optimize == {"param3"}
 
 
 # --- Bookkeeping of pruned components ---
@@ -578,7 +499,10 @@ class ResponsibilityStep(RecordingStep):
 
 
 class ScriptedPruner(Pruner):
-    """A pruner that removes the components given for each call, in order, and logs its calls."""
+    """Remove the requested components and log calls.
+
+    Requested indices must be sorted in ascending order.
+    """
 
     def __init__(self, name: str, log: list[tuple[str, ...]], removals: list[list[int]]):
         self.name = name
@@ -598,41 +522,13 @@ def exponential_mixture(n_components: int) -> MixtureModel:
     return MixtureModel(components)
 
 
-class TestPipelinePruningBookkeeping:
+class TestPruning:
     """Tests that the steps learn about pruned components right away and exactly once."""
-
-    def test_real_maximization_step_prunes_components_without_optimization_blocks(self) -> None:
-        """Continue fitting sparse blocks after real pruning without mutating caller blocks."""
-        mixture = MixtureModel(
-            [family(FamilyName.EXPONENTIAL)(lambda_=float(index + 1)) for index in range(4)],
-            weights=[0.3, 1e-8, 0.3, 0.4 - 1e-8],
-        )
-        blocks = [OptimizationBlock(index, {"lambda_"}, MaximizationStrategy.QFUNCTION) for index in [0, 3]]
-        maximization = MaximizationStep(blocks, ScipyNelderMead())
-        iterations = 3
-        remaining_components = 3
-        pipeline = Pipeline(
-            [ExpectationStep(), maximization],
-            [StepBreakpointer(iterations)],
-            [PriorThresholdPruner(1e-4)],
-        )
-
-        fitted = pipeline.fit(np.array([0.5, 1.0, 1.5, 2.0]), mixture)
-
-        assert fitted.n_components == remaining_components
-        assert len(pipeline.history) == iterations
-        assert all(record.error is None for record in pipeline.history)
-        assert all(record.mixture.n_components == remaining_components for record in pipeline.history)
-        assert all(record.H is not None and record.H.shape == (4, remaining_components) for record in pipeline.history)
-        assert [block.component_id for block in maximization.blocks] == [0, 2]
-        assert [block.component_id for block in blocks] == [0, 3]
-        assert maximization.blocks[1] is not blocks[1]
-        assert cc.all_parameters(fitted[1]) == cc.all_parameters(mixture[2])
 
     def test_steps_are_notified_right_after_pruning(self, sample_data):
         log: list[tuple[str, ...]] = []
         steps = [RecordingStep("A", log), RecordingStep("B", log)]
-        pipeline = Pipeline(steps, [StepBreakpointer(2)], [ScriptedPruner("p", log, [[0], []])])
+        pipeline = Pipeline(steps, [StopOnCheck(call_number=2)], [ScriptedPruner("p", log, [[0], []])])
 
         pipeline.fit(sample_data, exponential_mixture(3))
 
@@ -650,7 +546,7 @@ class TestPipelinePruningBookkeeping:
     def test_each_removal_is_reported_once(self, sample_data):
         log: list[tuple[str, ...]] = []
         pruner = ScriptedPruner("p", log, [[0], [], [1], []])
-        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(4)], [pruner])
+        pipeline = Pipeline([RecordingStep("A", log)], [StopOnCheck(call_number=4)], [pruner])
 
         pipeline.fit(sample_data, exponential_mixture(4))
 
@@ -658,7 +554,7 @@ class TestPipelinePruningBookkeeping:
 
     def test_steps_are_not_notified_when_nothing_is_removed(self, sample_data):
         log: list[tuple[str, ...]] = []
-        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(3)], [ScriptedPruner("p", log, [])])
+        pipeline = Pipeline([RecordingStep("A", log)], [StopOnCheck(call_number=3)], [ScriptedPruner("p", log, [])])
 
         pipeline.fit(sample_data, exponential_mixture(2))
 
@@ -668,7 +564,7 @@ class TestPipelinePruningBookkeeping:
         """The second pruner sees the mixture without the component the first one removed."""
         log: list[tuple[str, ...]] = []
         pruners = [ScriptedPruner("p1", log, [[0]]), ScriptedPruner("p2", log, [[1]])]
-        pipeline = Pipeline([RecordingStep("A", log)], [StepBreakpointer(1)], pruners)
+        pipeline = Pipeline([RecordingStep("A", log)], [StopOnCheck(call_number=1)], pruners)
 
         fitted = pipeline.fit(sample_data, exponential_mixture(3))
 
@@ -688,7 +584,7 @@ class TestPipelinePruningBookkeeping:
         log: list[tuple[str, ...]] = []
         pipeline = Pipeline(
             [ResponsibilityStep("A", log)],
-            [StepBreakpointer(2)],
+            [StopOnCheck(call_number=2)],
             [ScriptedPruner("p", log, [[0, 2], []])],
         )
 
@@ -699,22 +595,26 @@ class TestPipelinePruningBookkeeping:
         assert first.H.shape == (len(sample_data), 2)
         assert second.H.shape == (len(sample_data), 2)
 
+    # --- Details found by mutation testing ---
 
-# --- Details found by mutation testing ---
+    def test_notifies_steps_after_component_removal(self, initial_mixture, sample_data):
+        call_log = []
+        LEN_CALL_LOG = 2
 
+        class TrackingStep(MockSingleStep):
+            def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+                call_log.append(removed_components_indices)
 
-class TestPipelineStepValidation:
-    def test_the_last_pair_of_steps_is_checked(self):
-        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
-            Pipeline([MockStepA(), MockStepB(), MockStepB()], [StepBreakpointer(1)])
+        steps = [TrackingStep(), TrackingStep()]
+        pruners = [RemovingFirstComponentPruner("pruner")]
+        breakpointers = [StopOnCheck(call_number=1)]
 
-    def test_the_first_pair_of_steps_is_checked(self):
-        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
-            Pipeline([MockStepA(), MockStepA(), MockStepB()], [StepBreakpointer(1)])
+        pipeline = Pipeline(steps, breakpointers, pruners)
+        pipeline.fit(sample_data, initial_mixture)
 
-    def test_the_pair_closing_the_cycle_is_checked(self):
-        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
-            Pipeline([MockStepA(), MockStepB(), MockStepA()], [StepBreakpointer(1)])
+        assert len(call_log) == LEN_CALL_LOG
+        for removed_indices in call_log:
+            assert removed_indices == [0]
 
 
 class DataProbeStep(MockSingleStep):
@@ -771,18 +671,18 @@ class ErrorSettingPruner(Pruner):
         return state, []
 
 
-class TestPipelineFitDetails:
-    def test_fit_gives_float64_data_to_the_steps(self, initial_mixture):
+class TestHistoryAndState:
+    def test_converts_input_data_to_float64(self, initial_mixture):
         step = DataProbeStep()
 
-        Pipeline([step], [StepBreakpointer(2)]).fit([1, 2, 6, 7], initial_mixture)
+        Pipeline([step], [StopOnCheck(call_number=2)]).fit([1, 2, 6, 7], initial_mixture)
 
         assert step.dtypes == [np.float64, np.float64]
 
-    def test_fit_gives_each_iteration_the_mixture_it_started_with_as_the_previous_one(self, initial_mixture):
+    def test_sets_previous_mixture_at_iteration_start(self, initial_mixture):
         step = PreviousMixtureProbeStep()
 
-        Pipeline([step], [StepBreakpointer(3)]).fit(np.array([1.0, 2.0]), initial_mixture)
+        Pipeline([step], [StopOnCheck(call_number=3)]).fit(np.array([1.0, 2.0]), initial_mixture)
 
         for previous, current_at_start in step.seen:
             assert previous is not None
@@ -792,7 +692,7 @@ class TestPipelineFitDetails:
 
     def test_a_step_error_in_the_first_iteration_is_recorded_in_the_history(self, initial_mixture, sample_data):
         step = FailingStep(failing_run=1)
-        pipeline = Pipeline([step], [StepBreakpointer(5)])
+        pipeline = Pipeline([step], [StopOnCheck(call_number=5)])
 
         with pytest.warns(RuntimeWarning):
             result = pipeline.fit(sample_data, initial_mixture)
@@ -809,7 +709,7 @@ class TestPipelineFitDetails:
 
     def test_a_step_error_in_a_later_iteration_is_added_to_the_last_record(self, initial_mixture, sample_data):
         step = FailingStep(failing_run=2)
-        pipeline = Pipeline([step], [StepBreakpointer(5)])
+        pipeline = Pipeline([step], [StopOnCheck(call_number=5)])
 
         with pytest.warns(RuntimeWarning):
             pipeline.fit(sample_data, initial_mixture)
@@ -819,7 +719,7 @@ class TestPipelineFitDetails:
 
     def test_the_record_of_an_iteration_holds_the_data_the_pruners_and_the_error(self, initial_mixture, sample_data):
         pruner = ErrorSettingPruner()
-        pipeline = Pipeline([MockSingleStep([])], [StepBreakpointer(1)], [pruner])
+        pipeline = Pipeline([MockSingleStep([])], [StopOnCheck(call_number=1)], [pruner])
 
         pipeline.fit(sample_data, initial_mixture)
 
