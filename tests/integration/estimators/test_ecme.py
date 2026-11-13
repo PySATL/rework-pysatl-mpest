@@ -11,7 +11,12 @@ import pytest
 from numpy.testing import assert_allclose
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators import ECME
-from pysatl_mpest.estimators.iterative import PriorThresholdPruner, StepBreakpointer
+from pysatl_mpest.estimators.iterative import (
+    Breakpointer,
+    PipelineState,
+    PriorThresholdPruner,
+    StepBreakpointer,
+)
 from pysatl_mpest.optimizers import ScipyNelderMead
 
 from tests.helpers.estimator_data import (
@@ -20,9 +25,32 @@ from tests.helpers.estimator_data import (
     ecm_for,
     exponential,
     fitted_arrays,
+    normal,
     parameters,
     stray_start,
 )
+
+MONOTONICITY_TOLERANCE = 1e-6  # Slack for numerical noise in the non-decrease assertion.
+MIN_LOG_DENSITY_BOUND = -50.0  # Far above LOG_FLOOR = -1e4 of the ODL objective.
+
+
+class _LoglikelihoodRecorder(Breakpointer):
+    """Record the observed log-likelihood after every iteration and stop after ``max_iterations``.
+
+    Temporary workaround for bug 2.11 in OPEN-QUESTIONS.md: all ``IterationsHistory`` records share
+    one ``MixtureModel`` object, so the per-iteration likelihood cannot be read from ``history``.
+    Replace with history once the bug is fixed.
+    """
+
+    def __init__(self, max_iterations: int) -> None:
+        self._max_iterations = max_iterations
+        self.loglikelihoods: list[float] = []
+        self.min_log_density = np.inf
+
+    def check(self, state: PipelineState) -> bool:
+        self.loglikelihoods.append(state.curr_mixture.loglikelihood(state.X))
+        self.min_log_density = min(self.min_log_density, float(np.min(state.curr_mixture.lpdf(state.X))))
+        return len(self.loglikelihoods) >= self._max_iterations
 
 
 class TestStrategies:
@@ -89,6 +117,39 @@ class TestUnsupportedData:
             [component["lambda_"] for component in parameters(outlier_fit)],
             [component["lambda_"] for component in parameters(start)],
         )
+
+
+class TestLikelihoodMonotonicity:
+    def test_loglikelihood_does_not_decrease_with_the_facade_block_order(self) -> None:
+        """With soft E-step, no pruners and ScipyNelderMead the facade's order never decreases the likelihood.
+
+        The data has a spike cluster, a diffuse cluster and a small side cluster, and the start puts a
+        Q-function component between them with a weak far-away third component. With the old index-ordered
+        blocks ``[ODL0, Q1, ODL2]`` the stale-background ODL update makes iteration 2 decrease the observed
+        log-likelihood by about 2.35; the facade's order ``[Q1, ODL0, ODL2]`` must never decrease it.
+        """
+        rng = np.random.default_rng(42)
+        X = np.concatenate(
+            [
+                rng.normal(0.349, 0.220, 44),
+                rng.normal(3.218, 1.007, 42),
+                rng.normal(-4.223, 1.011, 8),
+            ]
+        )
+        start = MixtureModel(
+            [normal(1.342, 1.056), normal(2.332, 1.897), normal(15.797, 1.025)],
+            weights=[0.208, 0.778, 0.014],
+        )
+
+        recorder = _LoglikelihoodRecorder(10)
+        ecme = ECME(breakpointers=[recorder], pruners=[], optimizer=ScipyNelderMead(), default_strategy="odl")
+        ecme.fit(X, start, q_indices_raw=1, odl_indices_raw=[0, 2])
+
+        likelihoods = np.asarray([start.loglikelihood(X), *recorder.loglikelihoods])
+        assert len(recorder.loglikelihoods) == 10  # noqa: PLR2004
+        assert np.all(np.diff(likelihoods) >= -MONOTONICITY_TOLERANCE)
+        # The ODL objective floors the mixture log-density at LOG_FLOOR = -1e4; it is never approached here.
+        assert recorder.min_log_density > MIN_LOG_DENSITY_BOUND
 
 
 class TestPruning:
