@@ -285,6 +285,10 @@
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.PriorThresholdPruner.html">PriorThresholdPruner</a></li>
 </ul>
 </details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="generated/pysatl_mpest.estimators.EM.html">EM</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="generated/pysatl_mpest.estimators.EM.fit.html">fit</a></li>
+</ul>
+</details></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/pysatl_mpest.estimators.ECM.html">ECM</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/pysatl_mpest.estimators.ECME.html">ECME</a></li>
 <li class="toctree-l2"><a class="reference internal" href="generated/pysatl_mpest.estimators.BaseEstimator.html">BaseEstimator</a></li>
@@ -366,6 +370,14 @@
 <h2>Facades (High-Level API)<a class="headerlink" href="#facades-high-level-api" title="Link to this heading">#</a></h2>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.EM.html#pysatl_mpest.estimators.EM" title="pysatl_mpest.estimators.EM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EM</span></code></a></p></td>
+<td><p>Expectation-Maximization (EM) estimator.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="pst-scrollable-table-container"><table class="autosummary longtable table">
+<tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/pysatl_mpest.estimators.ECM.html#pysatl_mpest.estimators.ECM" title="pysatl_mpest.estimators.ECM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ECM</span></code></a></p></td>
 <td><p>Expectation-Conditional Maximization (ECM) estimator.</p></td>
 </tr>
@@ -374,6 +386,10 @@
 </tr>
 </tbody>
 </table>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">EM</span></code> is the standalone Expectation-Maximization estimator; the current <code class="docutils literal notranslate"><span class="pre">ECM</span></code> implementation performs the same component-wise Q-function updates.</p>
 </div>
 <section id="abstract-classes">
 <h3>Abstract Classes<a class="headerlink" href="#abstract-classes" title="Link to this heading">#</a></h3>
