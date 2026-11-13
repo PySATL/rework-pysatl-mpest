@@ -5,7 +5,6 @@ __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Sequence
-from copy import copy
 
 import numpy as np
 import pytest
@@ -62,22 +61,24 @@ class TestFitting:
     ) -> None:
         fitted = em_for(iterations).fit(X, start)
 
-        for actual, expected in zip(fitted_arrays(fitted), reference_em(X, start, iterations)):
+        for actual, expected in zip(fitted_arrays(fitted), reference_em(X, start, iterations), strict=True):
             assert_allclose(actual, expected, rtol=1e-9)
 
     def test_keeps_a_parameter_fixed_through_a_view(self, X: NDArray[np.float64]) -> None:
         fixed = family(FamilyName.NORMAL).view(mu=0.0)(sigma=2.0)
         start = MixtureModel([fixed, normal(4.0, 2.0)], weights=[0.5, 0.5])
-        before = copy(start)
+        parameters_before = parameters(start)
+        weights_before = np.array(start.weights)
 
         fitted = em_for(25).fit(X, start)
 
         assert cc.fixed_parameters(fitted[0]) == {"mu": 0.0}
         assert cc.all_parameters(fitted[0])["mu"] == 0.0
         expected = reference_em(X, start, 25, fixed_mu=(True, False))
-        for actual, reference in zip(fitted_arrays(fitted), expected):
+        for actual, reference in zip(fitted_arrays(fitted), expected, strict=True):
             assert_allclose(actual, reference, rtol=1e-9)
-        assert start == before
+        assert parameters(start) == parameters_before
+        assert_allclose(start.weights, weights_before)
 
 
 class TestHistory:
