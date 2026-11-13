@@ -66,6 +66,16 @@ def sample_mixture() -> MixtureModel:
 
 
 @pytest.fixture
+def two_normal_mixture() -> MixtureModel:
+    # Both components have two free parameters, so parameter groups can split them.
+    components = [
+        family(FamilyName.NORMAL)(mu=0.0, sigma=1.0),
+        family(FamilyName.NORMAL)(mu=5.0, sigma=2.0),
+    ]
+    return MixtureModel(components, weights=[0.4, 0.6])
+
+
+@pytest.fixture
 def sample_data() -> np.ndarray:
     return np.array([1, 2, 3, 11, 12, 13], dtype=np.float64)
 
@@ -150,6 +160,143 @@ class TestPipeline:
             assert block.component_id == i
             assert block.params_to_optimize is None
             assert block.maximization_strategy == MaximizationStrategy.QFUNCTION
+
+
+class TestParameterGroups:
+    """Blocks built from ``parameter_groups`` and validation of the argument."""
+
+    def _m_step_blocks(
+        self, mocker: MockerFixture, ecm: ECM, X: np.ndarray, mixture: MixtureModel, **fit_kwargs
+    ) -> list:
+        MockPipeline = mocker.patch("pysatl_mpest.estimators.ecm.Pipeline")
+        ecm.fit(X, mixture, **fit_kwargs)
+        m_step = MockPipeline.call_args[0][0][2]
+        return m_step.blocks
+
+    @pytest.mark.parametrize(
+        "fit_kwargs",
+        [{}, {"parameter_groups": None}, {"parameter_groups": {}}],
+        ids=["omitted", "none", "empty"],
+    )
+    def test_no_groups_give_one_joint_block_per_component(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        mock_pruners: list[Pruner],
+        two_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+        fit_kwargs: dict,
+    ):
+        ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
+
+        blocks = self._m_step_blocks(mocker, ecm, sample_data, two_normal_mixture, **fit_kwargs)
+
+        assert [(block.component_id, block.params_to_optimize) for block in blocks] == [(0, None), (1, None)]
+        assert all(block.maximization_strategy == MaximizationStrategy.QFUNCTION for block in blocks)
+
+    def test_groups_expand_into_an_ordered_chain_per_component(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        mock_pruners: list[Pruner],
+        two_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+    ):
+        ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
+
+        blocks = self._m_step_blocks(
+            mocker, ecm, sample_data, two_normal_mixture, parameter_groups={0: [{"mu"}, {"sigma"}]}
+        )
+
+        assert [(block.component_id, block.params_to_optimize) for block in blocks] == [
+            (0, {"mu"}),
+            (0, {"sigma"}),
+            (1, None),
+        ]
+        assert all(block.maximization_strategy == MaximizationStrategy.QFUNCTION for block in blocks)
+
+    def test_unlisted_components_keep_a_joint_block(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        mock_pruners: list[Pruner],
+        two_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+    ):
+        ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
+
+        blocks = self._m_step_blocks(
+            mocker, ecm, sample_data, two_normal_mixture, parameter_groups={1: [{"mu"}, {"sigma"}]}
+        )
+
+        assert [(block.component_id, block.params_to_optimize) for block in blocks] == [
+            (0, None),
+            (1, {"mu"}),
+            (1, {"sigma"}),
+        ]
+
+    @pytest.mark.parametrize(
+        "parameter_groups, match",
+        [
+            ({-1: [{"mu"}]}, "negative"),
+            ({2: [{"mu"}]}, "out of bounds"),
+            ({0: []}, "must not be empty"),
+            ({0: [{"mu"}, set()]}, "empty group"),
+            ({0: [{"mu", "sigma"}, {"sigma"}]}, "overlap"),
+            ({0: [{"mu"}]}, "not covered"),
+            ({0: [{"mu", "sigma", "x"}]}, "are not parameters"),
+        ],
+        ids=["negative-key", "out-of-bounds", "empty-list", "empty-group", "overlap", "uncovered", "unknown"],
+    )
+    def test_invalid_parameter_groups_raise_before_the_pipeline_is_created(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        mock_pruners: list[Pruner],
+        two_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+        parameter_groups: dict,
+        match: str,
+    ):
+        MockPipeline = mocker.patch("pysatl_mpest.estimators.ecm.Pipeline")
+        ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
+
+        with pytest.raises(ValueError, match=match):
+            ecm.fit(sample_data, two_normal_mixture, parameter_groups=parameter_groups)
+
+        MockPipeline.assert_not_called()
+
+    def test_fixed_parameters_in_groups_are_rejected(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        mock_pruners: list[Pruner],
+        sample_mixture: MixtureModel,
+        sample_data: np.ndarray,
+    ):
+        # In ``sample_mixture`` the first component has ``mu`` fixed by a view.
+        ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
+
+        with pytest.raises(ValueError, match="are fixed and cannot be optimized"):
+            ecm.fit(sample_data, sample_mixture, parameter_groups={0: [{"mu"}, {"sigma"}]})
+
+    def test_parameter_groups_is_keyword_only(
+        self,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        mock_pruners: list[Pruner],
+        two_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+    ):
+        ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
+
+        with pytest.raises(TypeError):
+            ecm.fit(sample_data, two_normal_mixture, 1, {0: [{"mu"}, {"sigma"}]})
 
 
 class TestHistory:
