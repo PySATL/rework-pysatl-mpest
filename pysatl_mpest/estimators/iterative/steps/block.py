@@ -52,6 +52,10 @@ class OptimizationBlock:
     params_to_optimize: set[str] | None
     maximization_strategy: MaximizationStrategy
 
+    def __post_init__(self) -> None:
+        if self.component_id < 0:
+            raise ValueError(f"component_id must be non-negative, got {self.component_id}")
+
     def params_to_update(self, component: ParametricFamilyDistribution) -> list[str]:
         """Return sorted names of free parameters to optimize for the component.
 

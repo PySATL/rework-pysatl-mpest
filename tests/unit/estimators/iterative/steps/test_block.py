@@ -69,6 +69,19 @@ def test_fixed_parameter_is_rejected(normal_fixed_mu: ParametricFamilyDistributi
     assert "Its free parameters are ['sigma']" in str(error.value)
 
 
+def test_negative_component_id_is_rejected() -> None:
+    with pytest.raises(ValueError, match=r"component_id must be non-negative, got -1"):
+        OptimizationBlock(-1, None, MaximizationStrategy.QFUNCTION)
+
+
+def test_non_negative_component_id_is_allowed() -> None:
+    assert OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION).component_id == 0
+
+    component_id = 3
+    block = OptimizationBlock(component_id, {"mu"}, MaximizationStrategy.MOMENTS)
+    assert block.component_id == component_id
+
+
 def test_unknown_and_fixed_parameters_are_reported_together(normal_fixed_mu: ParametricFamilyDistribution) -> None:
     with pytest.raises(
         ValueError,
