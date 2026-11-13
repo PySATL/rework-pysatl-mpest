@@ -7,11 +7,11 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import bisect
 from collections.abc import Mapping, Sequence
+from copy import copy
 from dataclasses import replace
 from types import MappingProxyType
 from typing import ClassVar
 
-import numpy as np
 from pysatl_core.families import ParametricFamilyDistribution
 
 from ....core import _components
@@ -23,10 +23,21 @@ from .block import MaximizationStrategy, OptimizationBlock
 
 
 class MaximizationStep(PipelineStep):
-    """Maximization step updating component parameters and mixture weights.
+    """Maximization step updating mixture component parameters.
 
-    Executes configured :class:`OptimizationBlock` tasks to update component parameters,
-    then updates mixture weights from responsibilities.
+    Executes configured :class:`OptimizationBlock` tasks with sequential
+    semantics: the result is the same as if the blocks ran one by one in list
+    order, so each block sees the parameter updates of all previous blocks, both
+    through the component it receives and through ``curr_mixture`` of the state
+    passed to it.
+
+    Mixture weights are not updated by this step; place :class:`WeightsStep`
+    between :class:`ExpectationStep` and this step in the pipeline to update
+    them from responsibilities.
+
+    Blocks are applied to a working copy of the mixture, and the updated
+    components are moved into ``state.curr_mixture`` only after every block
+    succeeds, so a strategy failure leaves the state's mixture unchanged.
 
     Parameters
     ----------
@@ -76,11 +87,16 @@ class MaximizationStep(PipelineStep):
         return _components.with_parameters(component, **params)
 
     def run(self, state: PipelineState) -> PipelineState:
-        """Execute the M-step, updating component parameters and weights.
+        """Execute the M-step, updating component parameters.
 
-        Strategy exceptions propagate directly. Parameters and weights update only
-        after all strategy blocks succeed, and the current mixture is modified in place.
-        Missing responsibilities set ``state.error`` instead of raising.
+        Each block is applied to a working copy of the mixture immediately, so a
+        block observes the results of all previous blocks; the strategy receives
+        a state whose ``curr_mixture`` is that working copy. After all blocks
+        succeed, the updated components are moved into ``state.curr_mixture``,
+        which stays the same object. Weights are not touched.
+
+        Strategy exceptions propagate directly and leave the state's mixture
+        unchanged. Missing responsibilities set ``state.error`` instead of raising.
 
         Parameters
         ----------
@@ -103,24 +119,19 @@ class MaximizationStep(PipelineStep):
         """
 
         if state.H is None:
-            error = ValueError("Responsibility matrix H is not computed.")
-            state.error = error
+            state.error = ValueError("Responsibility matrix H is not computed.")
             return state
 
-        results: list[tuple[int, dict[str, float]]] = []
-        curr_mixture = state.curr_mixture
+        working = copy(state.curr_mixture)
+        block_state = replace(state, curr_mixture=working)
 
         for block in self.blocks:
             strategy = self._strategies[block.maximization_strategy]
-            component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
-            results.append((component_id, new_params))
+            component_id, new_params = strategy(working[block.component_id], block_state, block, self.optimizer)
+            working[component_id] = self._update_components_params(working[component_id], new_params)
 
-        for component_id, params in results:
-            curr_mixture[component_id] = self._update_components_params(curr_mixture[component_id], params)
-
-        responsibilities_sum = np.sum(state.H, axis=0)
-        new_weights = responsibilities_sum / state.X.shape[0]
-        curr_mixture.log_weights = np.log(new_weights + 1e-30)
+        for index in range(working.n_components):
+            state.curr_mixture[index] = working[index]
 
         return state
 

@@ -17,6 +17,7 @@ from pysatl_mpest.estimators.iterative import (
     MaximizationStrategy,
     PipelineState,
     Pruner,
+    WeightsStep,
 )
 from pysatl_mpest.optimizers import Optimizer
 from pytest_mock import MockerFixture
@@ -120,7 +121,7 @@ class TestPipeline:
         MockPipeline = mocker.patch("pysatl_mpest.estimators.ecm.Pipeline")
         ecm = ECM(breakpointers=mock_breakpointers, pruners=mock_pruners, optimizer=mock_optimizer)
         record_frequency = 5
-        num_of_steps = 2
+        num_of_steps = 3
 
         ecm.fit(sample_data, sample_mixture, once_in_iterations=record_frequency)
 
@@ -138,9 +139,10 @@ class TestPipeline:
 
         assert len(pipeline_steps) == num_of_steps
         assert isinstance(pipeline_steps[0], ExpectationStep)
-        assert isinstance(pipeline_steps[1], MaximizationStep)
+        assert isinstance(pipeline_steps[1], WeightsStep)
+        assert isinstance(pipeline_steps[2], MaximizationStep)
 
-        m_step = pipeline_steps[1]
+        m_step = pipeline_steps[2]
         assert m_step.optimizer is mock_optimizer
         assert len(m_step.blocks) == 2  # noqa: PLR2004
 

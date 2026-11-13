@@ -4,13 +4,22 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from copy import copy
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
-from pysatl_mpest.estimators.iterative import MaximizationStep, MaximizationStrategy, OptimizationBlock, PipelineState
+from pysatl_mpest.estimators.iterative import (
+    ExpectationStep,
+    MaximizationStep,
+    MaximizationStrategy,
+    OptimizationBlock,
+    PipelineState,
+    WeightsStep,
+)
 from pysatl_mpest.optimizers import ScipyNelderMead
 
 from tests.helpers.families import family
@@ -70,3 +79,32 @@ def test_run_refreshes_previously_cached_mixture_density() -> None:
         weights=[0.5, 0.5],
     )
     assert_allclose(mixture.pdf(x), expected.pdf(x))
+
+
+def test_sequential_blocks_match_a_joint_block() -> None:
+    """Blocks {mu}, {sigma} of one component give the same result as the joint block {mu, sigma}."""
+    normal = family(FamilyName.NORMAL)
+    truth = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=6.0, sigma=1.5)], weights=[0.4, 0.6])
+    x = np.asarray(truth.generate(size=2000, random_state=np.random.default_rng(42)), dtype=np.float64)
+    start = MixtureModel([normal(mu=1.0, sigma=2.0), normal(mu=4.0, sigma=2.0)], weights=[0.5, 0.5])
+
+    def run_m_step(blocks: list[OptimizationBlock]) -> MixtureModel:
+        state = PipelineState(x, None, None, copy(start), None)
+        ExpectationStep().run(state)
+        WeightsStep().run(state)
+        MaximizationStep(blocks, ScipyNelderMead()).run(state)
+        return state.curr_mixture
+
+    split = run_m_step(
+        [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ]
+    )
+    joint = run_m_step([OptimizationBlock(0, {"mu", "sigma"}, MaximizationStrategy.QFUNCTION)])
+
+    split_params = cc.all_parameters(split[0])
+    joint_params = cc.all_parameters(joint[0])
+    assert split_params.keys() == joint_params.keys()
+    for name in joint_params:
+        assert_allclose(split_params[name], joint_params[name], atol=1e-12, rtol=0)

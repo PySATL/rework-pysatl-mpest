@@ -5,6 +5,7 @@ __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
+from numpy.testing import assert_allclose
 from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
@@ -16,6 +17,7 @@ from pysatl_mpest.estimators.iterative import (
     Pipeline,
     PriorThresholdPruner,
     StepBreakpointer,
+    WeightsStep,
 )
 from pysatl_mpest.optimizers import ScipyNelderMead
 
@@ -33,7 +35,7 @@ def test_real_maximization_step_prunes_components_without_optimization_blocks() 
     iterations = 3
     remaining_components = 3
     pipeline = Pipeline(
-        [ExpectationStep(), maximization],
+        [ExpectationStep(), WeightsStep(), maximization],
         [StepBreakpointer(iterations)],
         [PriorThresholdPruner(1e-4)],
     )
@@ -49,3 +51,21 @@ def test_real_maximization_step_prunes_components_without_optimization_blocks() 
     assert [block.component_id for block in blocks] == [0, 3]
     assert maximization.blocks[1] is not blocks[1]
     assert cc.all_parameters(fitted[1]) == cc.all_parameters(mixture[2])
+
+
+def test_pipeline_without_weights_step_keeps_weights_fixed() -> None:
+    """A pipeline without WeightsStep updates parameters but leaves the weights unchanged."""
+    mixture = MixtureModel(
+        [family(FamilyName.NORMAL)(mu=0.0, sigma=1.0), family(FamilyName.NORMAL)(mu=5.0, sigma=1.0)],
+        weights=[0.5, 0.5],
+    )
+    blocks = [OptimizationBlock(index, None, MaximizationStrategy.QFUNCTION) for index in range(2)]
+    pipeline = Pipeline(
+        [ExpectationStep(), MaximizationStep(blocks, ScipyNelderMead())],
+        [StepBreakpointer(3)],
+    )
+
+    fitted = pipeline.fit(np.array([-1.0, 0.0, 0.5, 4.0, 5.0, 6.0]), mixture)
+
+    assert cc.all_parameters(fitted[0]) != cc.all_parameters(mixture[0])
+    assert_allclose(fitted.weights, [0.5, 0.5], atol=1e-12)

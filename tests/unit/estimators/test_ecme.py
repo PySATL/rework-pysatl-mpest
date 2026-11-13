@@ -110,6 +110,7 @@ class TestPipeline:
         mock_pipeline_cls = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         mock_max_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.MaximizationStep")
         mock_exp_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.ExpectationStep")
+        mock_weights_step_cls = mocker.patch("pysatl_mpest.estimators.ecme.WeightsStep")
 
         expected_result = mocker.Mock(spec=MixtureModel)
         mock_pipeline_inst = mock_pipeline_cls.return_value
@@ -120,7 +121,7 @@ class TestPipeline:
 
         X_dummy = np.zeros((10, 2))
         expected_once_in_iterations = 5
-        expected_number_of_steps = 2
+        expected_number_of_steps = 3
         expected_number_of_blocks = 3
 
         result = ecme_instance.fit(
@@ -140,7 +141,8 @@ class TestPipeline:
         assert len(steps_arg) == expected_number_of_steps
 
         assert steps_arg[0] == mock_exp_step_cls.return_value
-        assert steps_arg[1] == mock_max_step_cls.return_value
+        assert steps_arg[1] == mock_weights_step_cls.return_value
+        assert steps_arg[2] == mock_max_step_cls.return_value
 
         mock_max_step_cls.assert_called_once()
         max_step_args = mock_max_step_cls.call_args

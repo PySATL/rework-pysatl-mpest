@@ -21,6 +21,7 @@ from .iterative import (
     OptimizationBlock,
     Pipeline,
     Pruner,
+    WeightsStep,
 )
 from .iterative._iteration_history import IterationsHistory
 
@@ -181,7 +182,7 @@ class ECME(BaseEstimator):
             blocks.append(OptimizationBlock(component_id=i, params_to_optimize=None, maximization_strategy=strategy))
 
         pipeline: Pipeline = Pipeline(
-            [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
+            [ExpectationStep(), WeightsStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,
             once_in_iterations,
