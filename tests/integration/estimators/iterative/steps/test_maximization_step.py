@@ -5,6 +5,7 @@ __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from copy import copy
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -20,9 +21,39 @@ from pysatl_mpest.estimators.iterative import (
     PipelineState,
     WeightsStep,
 )
-from pysatl_mpest.optimizers import ScipyNelderMead
+from pysatl_mpest.estimators.iterative._strategies import (
+    StrategyFunction,
+    moments_strategy,
+    observed_data_likelihood_strategy,
+    q_function_strategy,
+)
+from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead
 
 from tests.helpers.families import family
+
+_STRATEGY_FUNCTIONS: dict[MaximizationStrategy, StrategyFunction] = {
+    MaximizationStrategy.QFUNCTION: q_function_strategy,
+    MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD: observed_data_likelihood_strategy,
+    MaximizationStrategy.MOMENTS: moments_strategy,
+}
+
+
+def run_sequential_reference(
+    state: PipelineState, blocks: list[OptimizationBlock], optimizer: Optimizer
+) -> MixtureModel:
+    """Apply the blocks to a copy of ``state.curr_mixture`` one by one in list order.
+
+    Reproduces the sequential stage-1 semantics independently of
+    :class:`MaximizationStep`: each block's result is applied to the working
+    copy immediately, so a later block sees the updates of all earlier ones.
+    """
+    working = copy(state.curr_mixture)
+    block_state = replace(state, curr_mixture=working)
+    for block in blocks:
+        strategy = _STRATEGY_FUNCTIONS[block.maximization_strategy]
+        component_id, params = strategy(working[block.component_id], block_state, block, optimizer)
+        working[component_id] = cc.with_parameters(working[component_id], **params)
+    return working
 
 
 def test_moments_reject_unsupported_normal_parametrization() -> None:
@@ -108,3 +139,55 @@ def test_sequential_blocks_match_a_joint_block() -> None:
     assert split_params.keys() == joint_params.keys()
     for name in joint_params:
         assert_allclose(split_params[name], joint_params[name], atol=1e-12, rtol=0)
+
+
+@pytest.mark.parametrize(
+    "blocks",
+    [
+        [
+            OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, None, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, None, MaximizationStrategy.QFUNCTION),
+        ],
+        [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ],
+        [
+            OptimizationBlock(0, None, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+            OptimizationBlock(1, None, MaximizationStrategy.QFUNCTION),
+        ],
+        [
+            OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, None, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+            OptimizationBlock(2, None, MaximizationStrategy.QFUNCTION),
+        ],
+    ],
+    ids=["em-list", "same-component-chain", "odl-then-q", "q-odl-q"],
+)
+def test_wave_execution_matches_sequential_reference(blocks: list[OptimizationBlock]) -> None:
+    """Wave execution gives exactly the sequential list-order result."""
+    normal = family(FamilyName.NORMAL)
+    truth = MixtureModel(
+        [normal(mu=0.0, sigma=1.0), normal(mu=6.0, sigma=1.5), normal(mu=-5.0, sigma=0.8)],
+        weights=[0.4, 0.35, 0.25],
+    )
+    x = np.asarray(truth.generate(size=2000, random_state=np.random.default_rng(42)), dtype=np.float64)
+    start = MixtureModel(
+        [normal(mu=1.0, sigma=2.0), normal(mu=4.0, sigma=2.0), normal(mu=-3.0, sigma=1.5)],
+        weights=[1.0 / 3.0] * 3,
+    )
+    state = PipelineState(x, None, None, copy(start), None)
+    ExpectationStep().run(state)
+    WeightsStep().run(state)
+
+    optimizer = ScipyNelderMead()
+    expected = run_sequential_reference(state, blocks, optimizer)
+    MaximizationStep(blocks, optimizer).run(state)
+
+    for index in range(expected.n_components):
+        expected_params = cc.all_parameters(expected[index])
+        actual_params = cc.all_parameters(state.curr_mixture[index])
+        assert actual_params.keys() == expected_params.keys()
+        for name in expected_params:
+            assert_allclose(actual_params[name], expected_params[name], atol=1e-12, rtol=0)

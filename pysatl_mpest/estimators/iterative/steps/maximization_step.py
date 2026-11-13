@@ -17,6 +17,7 @@ from pysatl_core.families import ParametricFamilyDistribution
 from ....core import _components
 from ....optimizers import Optimizer
 from .._strategies import StrategyFunction, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
+from .._wave_planner import plan_waves
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
@@ -30,6 +31,12 @@ class MaximizationStep(PipelineStep):
     order, so each block sees the parameter updates of all previous blocks, both
     through the component it receives and through ``curr_mixture`` of the state
     passed to it.
+
+    Internally, blocks are grouped into waves of mutually independent blocks.
+    Blocks of one wave are computed from a single snapshot of the working
+    mixture, so they observe the same state; waves still run one at a time in
+    order. Independence is derived from the read access of the blocks'
+    strategies, so the result is exactly the sequential list-order result.
 
     Mixture weights are not updated by this step; place :class:`WeightsStep`
     between :class:`ExpectationStep` and this step in the pipeline to update
@@ -89,9 +96,13 @@ class MaximizationStep(PipelineStep):
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the M-step, updating component parameters.
 
-        Each block is applied to a working copy of the mixture immediately, so a
-        block observes the results of all previous blocks; the strategy receives
-        a state whose ``curr_mixture`` is that working copy. After all blocks
+        Blocks are grouped into waves of mutually independent blocks, recomputed
+        on every call from the current blocks. Each wave runs against a snapshot
+        of the working mixture: the strategy receives a state whose
+        ``curr_mixture`` is that snapshot, and the snapshot is not modified by
+        the wave's results, which are written to the working copy instead. A
+        block therefore observes the results of all blocks of earlier waves,
+        exactly as under sequential list-order execution. After all blocks
         succeed, the updated components are moved into ``state.curr_mixture``,
         which stays the same object. Weights are not touched.
 
@@ -123,12 +134,15 @@ class MaximizationStep(PipelineStep):
             return state
 
         working = copy(state.curr_mixture)
-        block_state = replace(state, curr_mixture=working)
 
-        for block in self.blocks:
-            strategy = self._strategies[block.maximization_strategy]
-            component_id, new_params = strategy(working[block.component_id], block_state, block, self.optimizer)
-            working[component_id] = self._update_components_params(working[component_id], new_params)
+        for wave in plan_waves(self.blocks):
+            snapshot = copy(working)
+            wave_state = replace(state, curr_mixture=snapshot)
+            for index in wave:
+                block = self.blocks[index]
+                strategy = self._strategies[block.maximization_strategy]
+                component_id, new_params = strategy(snapshot[block.component_id], wave_state, block, self.optimizer)
+                working[component_id] = self._update_components_params(working[component_id], new_params)
 
         for index in range(working.n_components):
             state.curr_mixture[index] = working[index]
