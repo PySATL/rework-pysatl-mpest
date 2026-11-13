@@ -15,8 +15,6 @@ from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators import ECM
 from pysatl_mpest.estimators.iterative import PriorThresholdPruner, StepBreakpointer
 from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead, ScipyPowell
-from scipy import stats
-from scipy.special import logsumexp
 
 from tests.helpers.estimator_data import (
     N_SAMPLES,
@@ -31,34 +29,9 @@ from tests.helpers.estimator_data import (
     stray_start,
 )
 from tests.helpers.families import family
+from tests.helpers.reference_em import reference_em
 
 LIKELIHOOD_SLACK = 1e-9  # A numerical tolerance for a likelihood that should not decrease.
-
-
-def reference_em(
-    X: np.ndarray, mixture: MixtureModel, iterations: int, fixed_mu: tuple[bool, ...] = ()
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """The EM algorithm for a mixture of normals written directly in numpy.
-
-    Returns the means, standard deviations and weights after ``iterations`` iterations. ``fixed_mu`` marks the
-    components whose mean is not updated; their standard deviation is measured around the fixed mean.
-    """
-
-    params = parameters(mixture)
-    mu = np.array([p["mu"] for p in params])
-    sigma = np.array([p["sigma"] for p in params])
-    weights = np.array(mixture.weights)
-    frozen = np.array(fixed_mu or (False,) * len(mu))
-
-    for _ in range(iterations):
-        joint = np.log(weights) + stats.norm(mu, sigma).logpdf(X[:, None])
-        resp = np.exp(joint - logsumexp(joint, axis=1, keepdims=True))
-        total = resp.sum(axis=0)
-        weights = total / len(X)
-        mu = np.where(frozen, mu, resp.T @ X / total)
-        sigma = np.sqrt((resp * (X[:, None] - mu) ** 2).sum(axis=0) / total)
-
-    return mu, sigma, weights
 
 
 @pytest.fixture

@@ -12,7 +12,7 @@ families of `pysatl-core`.
 
 Key modules include:
 - `core`: Provides the main `MixtureModel` class.
-- `estimators`: Provides the ECM and ECME estimators and the iterative pipeline they are built on.
+- `estimators`: Provides the EM, ECM and ECME estimators and the iterative pipeline they are built on.
 - `optimizers`: Provides the numerical optimizers used by the maximization step.
 """
 
