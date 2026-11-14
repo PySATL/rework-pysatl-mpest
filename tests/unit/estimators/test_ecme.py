@@ -4,6 +4,8 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
+from typing import Literal
+
 import numpy as np
 import pytest
 from pysatl_core.types import FamilyName
@@ -14,6 +16,7 @@ from pysatl_mpest.estimators.iterative import (
     ExpectationStep,
     MaximizationStep,
     MaximizationStrategy,
+    OptimizationBlock,
     PipelineState,
     WeightsStep,
 )
@@ -70,14 +73,6 @@ def sample_data() -> np.ndarray:
     return np.array([1, 2, 3, 11, 12, 13], dtype=np.float64)
 
 
-def fitted_m_step_blocks(mocker: MockerFixture, fit_call) -> list:
-    """Run ``fit_call`` with a mocked Pipeline and return the blocks of its MaximizationStep."""
-    MockPipeline = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
-    fit_call()
-    m_step = MockPipeline.call_args[0][0][2]
-    return m_step.blocks
-
-
 class TestInitialization:
     def test_copies_sequences_and_keeps_optimizer(
         self, mock_optimizer: Optimizer, mock_breakpointers: list[Breakpointer]
@@ -101,6 +96,27 @@ class TestInitialization:
 
 class TestStrategyIndices:
     """Index arguments of ``fit`` select strategies and reject invalid indices."""
+
+    @pytest.mark.parametrize(
+        ("q_indices", "odl_indices", "message"),
+        [(-1, None, "negative"), (None, 3, "out of bounds"), (1, 1, "specified for both")],
+    )
+    def test_invalid_indices_are_rejected_before_building_blocks(
+        self,
+        mocker: MockerFixture,
+        ecme: ECME,
+        three_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+        q_indices: int | None,
+        odl_indices: int | None,
+        message: str,
+    ):
+        builder = mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks")
+
+        with pytest.raises(ValueError, match=message):
+            ecme.fit(sample_data, three_normal_mixture, q_indices, odl_indices, parameter_groups={0: []})
+
+        builder.assert_not_called()
 
     @pytest.mark.parametrize("q_indices", [-1, [-1], [-2, 0]], ids=["int", "list", "list-with-negative"])
     def test_negative_q_indices_raise_value_error(
@@ -165,6 +181,34 @@ class TestStrategyIndices:
 
 
 class TestPipeline:
+    @pytest.mark.parametrize(
+        ("default", "q_indices", "odl_indices", "strategies"),
+        [
+            ("odl", [1], [0], [ODL, Q, ODL]),
+            ("q-func", [0], [1], [Q, ODL, Q]),
+        ],
+    )
+    def test_passes_component_strategies_and_groups_to_builder(
+        self,
+        mocker: MockerFixture,
+        mock_optimizer: Optimizer,
+        mock_breakpointers: list[Breakpointer],
+        three_normal_mixture: MixtureModel,
+        sample_data: np.ndarray,
+        default: Literal["odl", "q-func"],
+        q_indices: list[int],
+        odl_indices: list[int],
+        strategies: list[MaximizationStrategy],
+    ):
+        ecm_e = ECME(mock_breakpointers, [], mock_optimizer, default_strategy=default)
+        builder = mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks", return_value=[])
+        mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
+        groups = {1: [{"mu"}, {"sigma"}]}
+
+        ecm_e.fit(sample_data, three_normal_mixture, q_indices, odl_indices, parameter_groups=groups)
+
+        builder.assert_called_once_with(three_normal_mixture, groups, strategies)
+
     def test_returns_pipeline_result(
         self,
         mocker: MockerFixture,
@@ -172,6 +216,7 @@ class TestPipeline:
         three_normal_mixture: MixtureModel,
         sample_data: np.ndarray,
     ):
+        mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks", return_value=[])
         MockPipeline = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         mock_pipeline_instance = MockPipeline.return_value
         mock_pipeline_instance.fit.return_value = three_normal_mixture
@@ -191,6 +236,7 @@ class TestPipeline:
         three_normal_mixture: MixtureModel,
         sample_data: np.ndarray,
     ):
+        mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks", return_value=[])
         MockPipeline = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         record_frequency = 5
         num_of_steps = 3
@@ -215,49 +261,6 @@ class TestPipeline:
         assert isinstance(pipeline_steps[2], MaximizationStep)
         assert pipeline_steps[2].optimizer is mock_optimizer
 
-    def test_builds_q_chains_before_odl_chains(
-        self, mocker: MockerFixture, ecme: ECME, three_normal_mixture: MixtureModel, sample_data: np.ndarray
-    ):
-        # Component 1 is assigned the Q-function strategy; the order of blocks differs
-        # from the component order: all Q chains come first, then the ODL chains.
-        blocks = fitted_m_step_blocks(mocker, lambda: ecme.fit(sample_data, three_normal_mixture, q_indices_raw=1))
-
-        assert [(block.component_id, block.maximization_strategy) for block in blocks] == [
-            (1, Q),
-            (0, ODL),
-            (2, ODL),
-        ]
-        assert all(block.params_to_optimize is None for block in blocks)
-
-    def test_explicit_odl_indices_leave_the_rest_to_the_default_strategy(
-        self, mocker: MockerFixture, ecme: ECME, three_normal_mixture: MixtureModel, sample_data: np.ndarray
-    ):
-        blocks = fitted_m_step_blocks(
-            mocker, lambda: ecme.fit(sample_data, three_normal_mixture, odl_indices_raw=[0, 2])
-        )
-
-        assert [(block.component_id, block.maximization_strategy) for block in blocks] == [
-            (0, ODL),
-            (1, ODL),
-            (2, ODL),
-        ]
-
-    def test_uses_q_function_as_default_strategy(
-        self, mocker: MockerFixture, mock_optimizer: Optimizer, mock_breakpointers: list[Breakpointer]
-    ):
-        ecm_e = ECME(
-            breakpointers=mock_breakpointers,
-            pruners=[],
-            optimizer=mock_optimizer,
-            default_strategy="q-func",
-        )
-        mock_mixture = mocker.MagicMock(spec=MixtureModel)
-        mock_mixture.n_components = 2
-
-        blocks = fitted_m_step_blocks(mocker, lambda: ecm_e.fit(X=np.zeros(5), mixture=mock_mixture))
-
-        assert [(block.component_id, block.maximization_strategy) for block in blocks] == [(0, Q), (1, Q)]
-
 
 class TestParameterGroups:
     """Blocks built from ``parameter_groups`` and validation of the argument."""
@@ -265,16 +268,21 @@ class TestParameterGroups:
     def test_groups_split_chains_for_q_and_odl_components(
         self, mocker: MockerFixture, ecme: ECME, three_normal_mixture: MixtureModel, sample_data: np.ndarray
     ):
-        blocks = fitted_m_step_blocks(
-            mocker,
-            lambda: ecme.fit(
-                sample_data,
-                three_normal_mixture,
-                q_indices_raw=1,
-                parameter_groups={0: [{"mu"}, {"sigma"}], 1: [{"mu"}, {"sigma"}]},
-            ),
-        )
+        groups = {0: [{"mu"}, {"sigma"}], 1: [{"mu"}, {"sigma"}]}
+        builder_blocks = [
+            OptimizationBlock(0, {"mu"}, ODL),
+            OptimizationBlock(0, {"sigma"}, ODL),
+            OptimizationBlock(1, {"mu"}, Q),
+            OptimizationBlock(1, {"sigma"}, Q),
+            OptimizationBlock(2, None, ODL),
+        ]
+        builder = mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks", return_value=builder_blocks)
+        pipeline = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
 
+        ecme.fit(sample_data, three_normal_mixture, q_indices_raw=1, parameter_groups=groups)
+
+        builder.assert_called_once_with(three_normal_mixture, groups, [ODL, Q, ODL])
+        blocks = pipeline.call_args[0][0][2].blocks
         assert [(block.component_id, block.params_to_optimize, block.maximization_strategy) for block in blocks] == [
             (1, {"mu"}, Q),
             (1, {"sigma"}, Q),
@@ -283,63 +291,16 @@ class TestParameterGroups:
             (2, None, ODL),
         ]
 
-    def test_groups_apply_to_the_default_strategy_components(
-        self,
-        mocker: MockerFixture,
-        mock_optimizer: Optimizer,
-        mock_breakpointers: list[Breakpointer],
-        three_normal_mixture: MixtureModel,
-        sample_data: np.ndarray,
+    def test_builder_error_prevents_pipeline_creation(
+        self, mocker: MockerFixture, ecme: ECME, three_normal_mixture: MixtureModel, sample_data: np.ndarray
     ):
-        ecm_e = ECME(
-            breakpointers=mock_breakpointers,
-            pruners=[],
-            optimizer=mock_optimizer,
-            default_strategy="q-func",
-        )
+        mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks", side_effect=ValueError("invalid groups"))
+        pipeline = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
 
-        blocks = fitted_m_step_blocks(
-            mocker,
-            lambda: ecm_e.fit(
-                sample_data, three_normal_mixture, odl_indices_raw=2, parameter_groups={0: [{"mu"}, {"sigma"}]}
-            ),
-        )
+        with pytest.raises(ValueError, match="invalid groups"):
+            ecme.fit(sample_data, three_normal_mixture, parameter_groups={0: []})
 
-        assert [(block.component_id, block.params_to_optimize, block.maximization_strategy) for block in blocks] == [
-            (0, {"mu"}, Q),
-            (0, {"sigma"}, Q),
-            (1, None, Q),
-            (2, None, ODL),
-        ]
-
-    @pytest.mark.parametrize(
-        "parameter_groups, match",
-        [
-            ({-1: [{"mu"}]}, "negative"),
-            ({3: [{"mu"}]}, "out of bounds"),
-            ({0: []}, "must not be empty"),
-            ({0: [{"mu"}, set()]}, "empty group"),
-            ({0: [{"mu", "sigma"}, {"sigma"}]}, "overlap"),
-            ({0: [{"mu"}]}, "not covered"),
-            ({0: [{"mu", "sigma", "x"}]}, "are not parameters"),
-        ],
-        ids=["negative-key", "out-of-bounds", "empty-list", "empty-group", "overlap", "uncovered", "unknown"],
-    )
-    def test_invalid_parameter_groups_raise_before_the_pipeline_is_created(
-        self,
-        mocker: MockerFixture,
-        ecme: ECME,
-        three_normal_mixture: MixtureModel,
-        sample_data: np.ndarray,
-        parameter_groups: dict,
-        match: str,
-    ):
-        MockPipeline = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
-
-        with pytest.raises(ValueError, match=match):
-            ecme.fit(sample_data, three_normal_mixture, parameter_groups=parameter_groups)
-
-        MockPipeline.assert_not_called()
+        pipeline.assert_not_called()
 
     def test_parameter_groups_is_keyword_only(
         self, ecme: ECME, three_normal_mixture: MixtureModel, sample_data: np.ndarray
@@ -356,6 +317,7 @@ class TestHistory:
     def test_returns_pipeline_history_after_fit(
         self, mocker: MockerFixture, ecme: ECME, three_normal_mixture: MixtureModel, sample_data: np.ndarray
     ):
+        mocker.patch("pysatl_mpest.estimators.ecme.build_optimization_blocks", return_value=[])
         mock_pipeline_cls = mocker.patch("pysatl_mpest.estimators.ecme.Pipeline")
         mock_pipeline_instance = mock_pipeline_cls.return_value
 

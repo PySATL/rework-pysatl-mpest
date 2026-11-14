@@ -12,14 +12,13 @@ from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
-from ._parameter_groups import component_block_chain, validate_parameter_groups
+from ._parameter_groups import build_optimization_blocks
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
     ExpectationStep,
     MaximizationStep,
     MaximizationStrategy,
-    OptimizationBlock,
     Pipeline,
     Pruner,
     WeightsStep,
@@ -174,36 +173,23 @@ class ECME(BaseEstimator):
         if intersection:
             raise ValueError(f"Indices {intersection} specified for both Q-function and ODL strategies.")
 
-        validate_parameter_groups(mixture, parameter_groups)
-
         default_enum = (
             MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
             if self.default_strategy_name == "odl"
             else MaximizationStrategy.QFUNCTION
         )
 
-        def chain(component_id: int, strategy: MaximizationStrategy) -> list[OptimizationBlock]:
-            groups = None if parameter_groups is None else parameter_groups.get(component_id)
-            return component_block_chain(component_id, groups, strategy)
+        strategies = [default_enum] * n_components
+        for index in q_indices:
+            strategies[index] = MaximizationStrategy.QFUNCTION
+        for index in odl_indices:
+            strategies[index] = MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
 
-        # With ``params_to_optimize=None`` every free parameter of a component is optimized, and
-        # the parameters fixed with ``family.view(...)`` keep their values.
-        q_chains = [
-            block
-            for i in range(n_components)
-            if i in q_indices or (i not in odl_indices and default_enum is MaximizationStrategy.QFUNCTION)
-            for block in chain(i, MaximizationStrategy.QFUNCTION)
-        ]
-        odl_chains = [
-            block
-            for i in range(n_components)
-            if i in odl_indices
-            or (i not in q_indices and default_enum is MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD)
-            for block in chain(i, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD)
-        ]
+        blocks = build_optimization_blocks(mixture, parameter_groups, strategies)
+        blocks.sort(key=lambda block: block.maximization_strategy is not MaximizationStrategy.QFUNCTION)
 
         pipeline: Pipeline = Pipeline(
-            [ExpectationStep(), WeightsStep(), MaximizationStep([*q_chains, *odl_chains], self.optimizer)],
+            [ExpectationStep(), WeightsStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,
             once_in_iterations,
