@@ -391,6 +391,229 @@ class TestComponents:
             mixture.remove_component(0)
 
 
+class TestImmutableMethods:
+    def test_with_component_returns_new_model_and_preserves_original(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6])
+        original_log_weights = mixture.log_weights.copy()
+        original_hash = hash(mixture)
+
+        result = mixture.with_component(1, comp3)
+
+        expected_components = 2
+        assert result is not mixture
+        assert result.n_components == expected_components
+        assert result.components[0] is comp1
+        assert result.components[1] is comp3
+        assert_allclose(result.log_weights, original_log_weights)
+        assert_allclose(result.weights, [0.4, 0.6])
+        assert not result.log_weights.flags.writeable
+
+        assert mixture.n_components == expected_components
+        assert mixture.components[0] is comp1
+        assert mixture.components[1] is comp2
+        assert np.array_equal(mixture.log_weights, original_log_weights)
+        assert_allclose(mixture.weights, [0.4, 0.6])
+        assert hash(mixture) == original_hash
+
+    @pytest.mark.parametrize("index", [-1, 2, 99])
+    def test_with_component_rejects_out_of_range_index(
+        self, mock_comps: tuple[ParametricFamilyDistribution, ...], index: int
+    ) -> None:
+        mixture = MixtureModel(mock_comps)
+        comp = cast(ParametricFamilyDistribution, MockContinuousDistribution())
+
+        with pytest.raises(IndexError, match=r"^Index of component must be between 0 and 1$"):
+            mixture.with_component(index, comp)
+
+    def test_with_components_replaces_all_components_and_preserves_log_weights(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2], weights=[0.3, 0.7])
+        original_log_weights = mixture.log_weights.copy()
+
+        result = mixture.with_components([comp3, comp1])
+
+        expected_components = 2
+        assert result is not mixture
+        assert result.n_components == expected_components
+        assert result.components[0] is comp3
+        assert result.components[1] is comp1
+        assert_allclose(result.log_weights, original_log_weights)
+        assert_allclose(result.weights, [0.3, 0.7])
+        assert not result.log_weights.flags.writeable
+
+        assert mixture.components[0] is comp1
+        assert mixture.components[1] is comp2
+        assert np.array_equal(mixture.log_weights, original_log_weights)
+
+    def test_with_components_rejects_wrong_length(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+        mixture = MixtureModel(mock_comps)
+
+        with pytest.raises(ValueError, match=r"^Expected 2 components, got 1\.$"):
+            mixture.with_components([mock_comps[0]])
+
+    def test_with_log_weights_normalizes_input_and_preserves_original(
+        self, mock_comps: tuple[ParametricFamilyDistribution, ...]
+    ) -> None:
+        mixture = MixtureModel(mock_comps)
+        raw = np.log([2.0, 6.0])
+        raw_before = raw.copy()
+        original_log_weights = mixture.log_weights.copy()
+
+        result = mixture.with_log_weights(raw)
+
+        assert result is not mixture
+        assert_allclose(result.log_weights, np.log([0.25, 0.75]))
+        assert_allclose(result.weights, [0.25, 0.75])
+        assert not result.log_weights.flags.writeable
+
+        assert np.array_equal(raw, raw_before)
+        assert np.array_equal(mixture.log_weights, original_log_weights)
+        assert_allclose(mixture.weights, [0.5, 0.5])
+
+    def test_with_log_weights_rejects_wrong_length(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+        mixture = MixtureModel(mock_comps)
+
+        with pytest.raises(ValueError, match="length of the new log-weights vector"):
+            mixture.with_log_weights(np.array([0.0]))
+
+    @pytest.mark.parametrize(
+        "log_weights",
+        [[-np.inf, -np.inf], [np.nan, 0.0], [np.inf, 0.0]],
+        ids=["all-negative-inf", "nan", "positive-inf"],
+    )
+    def test_with_log_weights_rejects_values_that_cannot_be_normalized(
+        self, mock_comps: tuple[ParametricFamilyDistribution, ...], log_weights: list[float]
+    ) -> None:
+        mixture = MixtureModel(mock_comps)
+        before = mixture.log_weights.copy()
+
+        with pytest.raises(ValueError, match="normalizable"):
+            mixture.with_log_weights(log_weights)
+
+        assert np.array_equal(mixture.log_weights, before)
+
+    def test_with_added_component_preserves_proportions(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2], weights=[0.25, 0.75])
+        original_weights = mixture.weights.copy()
+        original_log_weights = mixture.log_weights.copy()
+
+        result = mixture.with_added_component(comp3, weight=0.2)
+
+        expected_components = 3
+        assert result is not mixture
+        assert result.n_components == expected_components
+        assert result.components[0] is comp1
+        assert result.components[1] is comp2
+        assert result.components[2] is comp3
+        assert_allclose(result.weights, [0.2, 0.6, 0.2])
+        assert_allclose(result.log_weights, np.log([0.2, 0.6, 0.2]))
+        assert not result.log_weights.flags.writeable
+
+        assert mixture.n_components == expected_components - 1
+        assert_allclose(mixture.weights, original_weights)
+        assert np.array_equal(mixture.log_weights, original_log_weights)
+
+    def test_with_added_component_rejects_invalid_weight(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+        original_n_components = mixture.n_components
+
+        message = r"^The weight of the new component must be in the range \(0, 1\)\.$"
+        for weight in (-0.1, 0.0, 1.0, 1.1):
+            with pytest.raises(ValueError, match=message):
+                mixture.with_added_component(comp3, weight=weight)
+
+        assert mixture.n_components == original_n_components
+
+    def test_without_component_renormalizes_weights(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2, comp3], weights=[0.2, 0.3, 0.5])
+
+        result = mixture.without_component(1)
+
+        expected_components = 2
+        assert result is not mixture
+        assert result.n_components == expected_components
+        assert result.components[0] is comp1
+        assert result.components[1] is comp3
+        assert_allclose(result.weights, [0.2 / 0.7, 0.5 / 0.7])
+        assert_allclose(result.log_weights, np.log([0.2 / 0.7, 0.5 / 0.7]))
+        assert not result.log_weights.flags.writeable
+
+        assert mixture.n_components == expected_components + 1
+        assert_allclose(mixture.weights, [0.2, 0.3, 0.5])
+
+    @pytest.mark.parametrize("index", [-1, 3, 99])
+    def test_without_component_rejects_out_of_range_index(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+        index: int,
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2, comp3], weights=[0.2, 0.3, 0.5])
+        original_n_components = mixture.n_components
+
+        with pytest.raises(IndexError, match=rf"^Index {index} out of range \[0, 2\]$"):
+            mixture.without_component(index)
+
+        assert mixture.n_components == original_n_components
+
+    def test_without_component_rejects_removal_of_last_component(self, mock_comp: ParametricFamilyDistribution) -> None:
+        mixture = MixtureModel([mock_comp])
+
+        with pytest.raises(ValueError, match=r"^The last component cannot be removed from the model\.$"):
+            mixture.without_component(0)
+
+    def test_without_component_rejects_removal_of_only_positive_weight(
+        self, mock_comps: tuple[ParametricFamilyDistribution, ...]
+    ) -> None:
+        mixture = MixtureModel(mock_comps).with_log_weights([-np.inf, 0.0])
+        before = mixture.log_weights.copy()
+
+        with pytest.raises(ValueError, match="positive weight"):
+            mixture.without_component(1)
+
+        expected_components = 2
+        assert mixture.n_components == expected_components
+        assert np.array_equal(mixture.log_weights, before)
+        assert_allclose(mixture.weights, [0.0, 1.0])
+
+    def test_derived_models_do_not_share_caches(
+        self,
+        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
+    ) -> None:
+        comp1, comp2, comp3 = param_comps
+        mixture = MixtureModel([comp1, comp2], weights=[0.4, 0.6])
+        _ = mixture.weights
+        _ = hash(mixture)
+
+        result = mixture.with_component(0, comp3).with_log_weights(np.log([0.5, 0.5]))
+
+        expected = MixtureModel([comp3, comp2], weights=[0.5, 0.5])
+        assert result == expected
+
+        assert mixture == MixtureModel([comp1, comp2], weights=[0.4, 0.6])
+        assert_allclose(mixture.weights, [0.4, 0.6])
+        assert hash(mixture) == hash(MixtureModel([comp1, comp2], weights=[0.4, 0.6]))
+
+
 class TestDensity:
     def test_pdf_is_exponential_of_lpdf(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
         mixture = MixtureModel(mock_comps, weights=[0.4, 0.6])
