@@ -18,6 +18,48 @@ from ..core import MixtureModel, _components
 from .iterative import MaximizationStrategy, OptimizationBlock
 
 
+def build_optimization_blocks(
+    mixture: MixtureModel,
+    parameter_groups: Mapping[int, Sequence[set[str]]] | None,
+    strategies: Sequence[MaximizationStrategy],
+) -> list[OptimizationBlock]:
+    """Validate parameter groups and build ordered component blocks.
+
+    Parameters
+    ----------
+    mixture : MixtureModel
+        Mixture whose components are optimized.
+    parameter_groups : Mapping[int, Sequence[set[str]]] | None
+        Ordered parameter groups by component, or None for joint steps.
+    strategies : Sequence[MaximizationStrategy]
+        Strategy for each component, in component order.
+
+    Returns
+    -------
+    list[OptimizationBlock]
+        Blocks in component and group order, with copied group sets.
+
+    Raises
+    ------
+    ValueError
+        If the number of strategies differs from the number of components,
+        or if parameter groups are invalid.
+    """
+
+    if len(strategies) != mixture.n_components:
+        raise ValueError("The number of strategies must match the number of components.")
+
+    validate_parameter_groups(mixture, parameter_groups)
+
+    return [
+        block
+        for component_id, strategy in enumerate(strategies)
+        for block in component_block_chain(
+            component_id, None if parameter_groups is None else parameter_groups.get(component_id), strategy
+        )
+    ]
+
+
 def validate_parameter_groups(
     mixture: MixtureModel,
     parameter_groups: Mapping[int, Sequence[set[str]]] | None,
