@@ -4,7 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
 from dataclasses import replace
 
 import numpy as np
@@ -41,19 +40,20 @@ _STRATEGY_FUNCTIONS: dict[MaximizationStrategy, StrategyFunction] = {
 def run_sequential_reference(
     state: PipelineState, blocks: list[OptimizationBlock], optimizer: Optimizer
 ) -> MixtureModel:
-    """Apply the blocks to a copy of ``state.curr_mixture`` one by one in list order.
+    """Apply the blocks to the components of ``state.curr_mixture`` one by one in list order.
 
     Reproduces the sequential stage-1 semantics independently of
     :class:`MaximizationStep`: each block's result is applied to the working
-    copy immediately, so a later block sees the updates of all earlier ones.
+    components immediately, so a later block sees the updates of all earlier ones.
     """
-    working = copy(state.curr_mixture)
-    block_state = replace(state, curr_mixture=working)
+    components = list(state.curr_mixture.components)
     for block in blocks:
+        working = state.curr_mixture.with_components(components)
+        block_state = replace(state, curr_mixture=working)
         strategy = _STRATEGY_FUNCTIONS[block.maximization_strategy]
         component_id, params = strategy(working[block.component_id], block_state, block, optimizer)
-        working[component_id] = cc.with_parameters(working[component_id], **params)
-    return working
+        components[component_id] = cc.with_parameters(components[component_id], **params)
+    return state.curr_mixture.with_components(components)
 
 
 def test_moments_reject_unsupported_normal_parametrization() -> None:
@@ -122,7 +122,7 @@ def test_sequential_blocks_match_a_joint_block() -> None:
     start = MixtureModel([normal(mu=1.0, sigma=2.0), normal(mu=4.0, sigma=2.0)], weights=[0.5, 0.5])
 
     def run_m_step(blocks: list[OptimizationBlock]) -> MixtureModel:
-        state = PipelineState(x, None, None, copy(start), None)
+        state = PipelineState(x, None, None, start, None)
         ExpectationStep().run(state)
         WeightsStep().run(state)
         MaximizationStep(blocks, ScipyNelderMead()).run(state)
@@ -179,7 +179,7 @@ def test_wave_execution_matches_sequential_reference(blocks: list[OptimizationBl
         [normal(mu=1.0, sigma=2.0), normal(mu=4.0, sigma=2.0), normal(mu=-3.0, sigma=1.5)],
         weights=[1.0 / 3.0] * 3,
     )
-    state = PipelineState(x, None, None, copy(start), None)
+    state = PipelineState(x, None, None, start, None)
     ExpectationStep().run(state)
     WeightsStep().run(state)
 

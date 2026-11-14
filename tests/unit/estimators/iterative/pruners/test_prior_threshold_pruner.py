@@ -4,8 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
-
 import numpy as np
 import pytest
 from hypothesis import given
@@ -144,15 +142,18 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
 def test_prune_does_not_modify_original_mixture_object(dummy_components):
     pruner = PriorThresholdPruner(threshold=0.5)
     initial_mixture = MixtureModel(dummy_components[:2], weights=[0.1, 0.9])
-    original_mixture_snapshot = copy(initial_mixture)
+    components_before = initial_mixture.components
+    weights_before = initial_mixture.weights.copy()
+    log_weights_before = initial_mixture.log_weights.copy()
 
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
     pruner.prune(state)
 
-    assert initial_mixture.n_components == original_mixture_snapshot.n_components
-    assert np.allclose(initial_mixture.weights, original_mixture_snapshot.weights)
-    assert initial_mixture.components == original_mixture_snapshot.components
+    assert initial_mixture.n_components == len(components_before)
+    assert np.allclose(initial_mixture.weights, weights_before)
+    assert np.array_equal(initial_mixture.log_weights, log_weights_before)
+    assert initial_mixture.components == components_before
 
 
 # --- Tests using Hypothesis ---

@@ -6,7 +6,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Callable
-from copy import copy
 
 import numpy as np
 import pytest
@@ -352,7 +351,10 @@ class TestFit:
         np.testing.assert_allclose(final_lambdas, expected_final_lambdas, rtol=rtol)
 
     def test_preserves_the_input_mixture(self, initial_mixture, sample_data):
-        original_mixture_copy = copy(initial_mixture)
+        weights_before = initial_mixture.weights.copy()
+        log_weights_before = initial_mixture.log_weights.copy()
+        components_before = initial_mixture.components
+        n_components_before = initial_mixture.n_components
 
         steps = [ModifyingStep()]
         breakpointers = [StopOnCheck(call_number=1)]
@@ -361,18 +363,13 @@ class TestFit:
         pipeline.fit(sample_data, initial_mixture)
 
         np.testing.assert_array_equal(
-            initial_mixture.weights, original_mixture_copy.weights, err_msg="Original mixture's weights were modified."
+            initial_mixture.weights, weights_before, err_msg="Original mixture's weights were modified."
         )
-        assert initial_mixture.n_components == original_mixture_copy.n_components
-
-        for i in range(initial_mixture.n_components):
-            original_params = cc.all_parameters(original_mixture_copy.components[i])["lambda_"]
-            current_params = cc.all_parameters(initial_mixture.components[i])["lambda_"]
-            np.testing.assert_array_equal(
-                current_params,
-                original_params,
-                err_msg=f"Parameters of component {i} in the original mixture were modified.",
-            )
+        np.testing.assert_array_equal(
+            initial_mixture.log_weights, log_weights_before, err_msg="Original mixture's log-weights were modified."
+        )
+        assert initial_mixture.n_components == n_components_before
+        assert initial_mixture.components == components_before
 
     def test_runs_steps_in_configured_order(self, initial_mixture, sample_data):
         call_log = []

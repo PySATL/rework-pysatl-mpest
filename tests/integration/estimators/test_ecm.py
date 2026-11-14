@@ -4,8 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
-
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -123,12 +121,13 @@ class TestFitting:
             assert_allclose(actual, reference, rtol=1e-9)
 
     def test_does_not_modify_the_initial_mixture(self, X: np.ndarray, start: MixtureModel) -> None:
-        before, components = copy(start), start.components
+        components_before = start.components
+        log_weights_before = start.log_weights.copy()
 
         ecm_for(5).fit(X, start)
 
-        assert start == before
-        assert start.components == components
+        assert start.components == components_before
+        assert np.array_equal(start.log_weights, log_weights_before)
 
     def test_is_deterministic(self, X: np.ndarray, start: MixtureModel) -> None:
         assert ecm_for(10).fit(X, start) == ecm_for(10).fit(X, start)
@@ -215,8 +214,7 @@ class TestPruning:
         start = stray_start((1,))
         after_first = ecm_for(1).fit(X, start)
         assert after_first.weights[1] < PRUNING_THRESHOLD
-        pruned = copy(after_first)
-        pruned.remove_component(1)
+        pruned = after_first.without_component(1)
 
         with_pruner = pruning_ecm(iterations=10).fit(X, start)
         by_hand = ecm_for(9).fit(X, pruned)
