@@ -45,7 +45,7 @@
     <link rel="index" title="Index" href="../../../../genindex.html" />
     <link rel="search" title="Search" href="../../../../search.html" />
     <link rel="next" title="StepBreakpointer" href="pysatl_mpest.estimators.iterative.StepBreakpointer.html" />
-    <link rel="prev" title="ExpectationStep" href="pysatl_mpest.estimators.iterative.ExpectationStep.html" />
+    <link rel="prev" title="WeightsStep" href="pysatl_mpest.estimators.iterative.WeightsStep.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="" />
@@ -279,6 +279,7 @@
 <li class="toctree-l3"><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.html">Breakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pysatl_mpest.estimators.iterative.Pruner.html">Pruner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pysatl_mpest.estimators.iterative.ExpectationStep.html">ExpectationStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pysatl_mpest.estimators.iterative.WeightsStep.html">WeightsStep</a></li>
 <li class="toctree-l3 current active"><a class="current reference internal" href="#">MaximizationStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pysatl_mpest.estimators.iterative.StepBreakpointer.html">StepBreakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.html">LikelihoodBreakpointer</a></li>
@@ -372,9 +373,10 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.MaximizationStep">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MaximizationStep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">blocks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/maximization_step.html#MaximizationStep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.MaximizationStep" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineStep.html#pysatl_mpest.estimators.iterative.PipelineStep" title="pysatl_mpest.estimators.iterative.pipeline_step.PipelineStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineStep</span></code></a></p>
-<p>Maximization step updating component parameters and mixture weights.</p>
-<p>Executes configured <code class="xref py py-class docutils literal notranslate"><span class="pre">OptimizationBlock</span></code> tasks to update component parameters,
-then updates mixture weights from responsibilities.</p>
+<p>Maximization step updating mixture component parameters.</p>
+<p>Applies <code class="xref py py-class docutils literal notranslate"><span class="pre">OptimizationBlock</span></code> tasks with sequential list-order semantics,
+grouping independent blocks into waves. Updates component parameters only;
+use <a class="reference internal" href="pysatl_mpest.estimators.iterative.WeightsStep.html#pysatl_mpest.estimators.iterative.WeightsStep" title="pysatl_mpest.estimators.iterative.WeightsStep"><code class="xref py py-class docutils literal notranslate"><span class="pre">WeightsStep</span></code></a> to update mixture weights.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -393,7 +395,7 @@ then updates mixture weights from responsibilities.</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.run.html#pysatl_mpest.estimators.iterative.MaximizationStep.run" title="pysatl_mpest.estimators.iterative.MaximizationStep.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>(state)</p></td>
-<td><p>Execute the M-step, updating component parameters and weights.</p></td>
+<td><p>Execute the M-step, updating component parameters.</p></td>
 </tr>
 </tbody>
 </table>
@@ -413,12 +415,12 @@ then updates mixture weights from responsibilities.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="pysatl_mpest.estimators.iterative.ExpectationStep.html"
+       href="pysatl_mpest.estimators.iterative.WeightsStep.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">ExpectationStep</p>
+        <p class="prev-next-title">WeightsStep</p>
       </div>
     </a>
     <a class="right-next"

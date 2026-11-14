@@ -763,8 +763,9 @@ window.addEventListener("load", load);
 <span class="w">        </span><span class="sd">"""list[type[PipelineStep]]: Steps permitted to follow ExpectationStep."""</span>
 
         <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_mpest.estimators.iterative.steps.maximization_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaximizationStep</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_mpest.estimators.iterative.steps.weights_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">WeightsStep</span>
 
-        <span class="k">return</span> <span class="p">[</span><span class="n">MaximizationStep</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">WeightsStep</span><span class="p">,</span> <span class="n">MaximizationStep</span><span class="p">]</span>
 
 <div class="viewcode-block" id="ExpectationStep.run">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.run.html#pysatl_mpest.estimators.iterative.ExpectationStep.run">[docs]</a>

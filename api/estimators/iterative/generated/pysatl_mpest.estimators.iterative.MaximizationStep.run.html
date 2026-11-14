@@ -316,10 +316,10 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.MaximizationStep.run">
 <span class="sig-prename descclassname"><span class="pre">MaximizationStep.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/maximization_step.html#MaximizationStep.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.MaximizationStep.run" title="Link to this definition">#</a></dt>
-<dd><p>Execute the M-step, updating component parameters and weights.</p>
-<p>Strategy exceptions propagate directly. Parameters and weights update only
-after all strategy blocks succeed, and the current mixture is modified in place.
-Missing responsibilities set <code class="docutils literal notranslate"><span class="pre">state.error</span></code> instead of raising.</p>
+<dd><p>Execute the M-step, updating component parameters.</p>
+<p>Applies all blocks atomically, preserving the mixture’s identity and weights.
+Strategy exceptions propagate without changing the mixture. Missing
+responsibilities set <code class="xref py py-attr docutils literal notranslate"><span class="pre">error</span></code> instead.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – Current state containing responsibility matrix H and current mixture.</p>

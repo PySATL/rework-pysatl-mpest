@@ -279,6 +279,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html">Breakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html">Pruner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.html">ExpectationStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.WeightsStep.html">WeightsStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html">MaximizationStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.html">StepBreakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.html">LikelihoodBreakpointer</a></li>
@@ -370,9 +371,8 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ECM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">breakpointers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pruners</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/ecm.html#ECM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.ECM" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator" title="pysatl_mpest.estimators.base_estimator.BaseEstimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code></a></p>
 <p>Expectation-Conditional Maximization (ECM) estimator.</p>
-<p>Executes an iterative pipeline of Expectation and Conditional Maximization steps.
-Maximization is partitioned component-wise, updating all free parameters of each
-component by maximizing the Q-function.</p>
+<p>Maximizes the Q-function over ordered parameter groups supplied to <a class="reference internal" href="pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit" title="pysatl_mpest.estimators.ECM.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a>.
+Without groups, jointly optimizes each component’s free parameters, as in EM.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -393,7 +393,7 @@ component by maximizing the Q-function.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit" title="pysatl_mpest.estimators.ECM.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(X, mixture[, once_in_iterations])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit" title="pysatl_mpest.estimators.ECM.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(X, mixture[, once_in_iterations, ...])</p></td>
 <td><p>Fit mixture model parameters using the ECM algorithm.</p></td>
 </tr>
 </tbody>

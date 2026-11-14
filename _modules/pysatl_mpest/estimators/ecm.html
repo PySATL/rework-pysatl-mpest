@@ -721,21 +721,22 @@ window.addEventListener("load", load);
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">"SPDX-License-Identifier: MIT"</span>
 
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..core</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..optimizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._parameter_groups</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_optimization_blocks</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.base_estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.iterative</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">Breakpointer</span><span class="p">,</span>
     <span class="n">ExpectationStep</span><span class="p">,</span>
     <span class="n">MaximizationStep</span><span class="p">,</span>
     <span class="n">MaximizationStrategy</span><span class="p">,</span>
-    <span class="n">OptimizationBlock</span><span class="p">,</span>
     <span class="n">Pipeline</span><span class="p">,</span>
     <span class="n">Pruner</span><span class="p">,</span>
+    <span class="n">WeightsStep</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.iterative._iteration_history</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationsHistory</span>
 
@@ -745,9 +746,8 @@ window.addEventListener("load", load);
 <span class="k">class</span><span class="w"> </span><span class="nc">ECM</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Expectation-Conditional Maximization (ECM) estimator.</span>
 
-<span class="sd">    Executes an iterative pipeline of Expectation and Conditional Maximization steps.</span>
-<span class="sd">    Maximization is partitioned component-wise, updating all free parameters of each</span>
-<span class="sd">    component by maximizing the Q-function.</span>
+<span class="sd">    Maximizes the Q-function over ordered parameter groups supplied to :meth:`fit`.</span>
+<span class="sd">    Without groups, jointly optimizes each component's free parameters, as in EM.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -804,7 +804,14 @@ window.addEventListener("load", load);
 
 <div class="viewcode-block" id="ECM.fit">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.ECM.fit.html#pysatl_mpest.estimators.ECM.fit">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span> <span class="n">mixture</span><span class="p">:</span> <span class="n">MixtureModel</span><span class="p">,</span> <span class="n">once_in_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">:</span> <span class="n">ArrayLike</span><span class="p">,</span>
+        <span class="n">mixture</span><span class="p">:</span> <span class="n">MixtureModel</span><span class="p">,</span>
+        <span class="n">once_in_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">parameter_groups</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Fit mixture model parameters using the ECM algorithm.</span>
 
 <span class="sd">        Parameters</span>
@@ -815,19 +822,29 @@ window.addEventListener("load", load);
 <span class="sd">            Initial mixture model to fit; not modified in-place.</span>
 <span class="sd">        once_in_iterations : int, optional</span>
 <span class="sd">            Iteration recording frequency in history. Defaults to 1.</span>
+<span class="sd">        parameter_groups : Mapping[int, Sequence[set[str]]] | None, optional</span>
+<span class="sd">            Component indices mapped to ordered, non-empty, disjoint groups covering</span>
+<span class="sd">            all free parameters. Groups are optimized sequentially; omitted components</span>
+<span class="sd">            use one joint step. Defaults to None.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        MixtureModel</span>
 <span class="sd">            Fitted mixture model with estimated parameters.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If a component index is invalid or its groups do not partition its</span>
+<span class="sd">            free parameters into non-empty, disjoint sets.</span>
 <span class="sd">        """</span>
 
-        <span class="c1"># No parameter names: every free parameter of a component is optimized, and the parameters</span>
-        <span class="c1"># fixed with ``family.view(...)`` keep their values.</span>
-        <span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">OptimizationBlock</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span><span class="p">)]</span>
+        <span class="n">blocks</span> <span class="o">=</span> <span class="n">build_optimization_blocks</span><span class="p">(</span>
+            <span class="n">mixture</span><span class="p">,</span> <span class="n">parameter_groups</span><span class="p">,</span> <span class="p">[</span><span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span><span class="p">]</span> <span class="o">*</span> <span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span>
+        <span class="p">)</span>
 
         <span class="n">pipeline</span><span class="p">:</span> <span class="n">Pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">ExpectationStep</span><span class="p">(),</span> <span class="n">MaximizationStep</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)],</span>
+            <span class="p">[</span><span class="n">ExpectationStep</span><span class="p">(),</span> <span class="n">WeightsStep</span><span class="p">(),</span> <span class="n">MaximizationStep</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">,</span>
             <span class="n">once_in_iterations</span><span class="p">,</span>

@@ -279,6 +279,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html">Breakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html">Pruner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.html">ExpectationStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.WeightsStep.html">WeightsStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html">MaximizationStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.html">StepBreakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="../iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.html">LikelihoodBreakpointer</a></li>
@@ -370,9 +371,13 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ECME</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">breakpointers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pruners</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_strategy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'odl'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/pysatl_mpest/estimators/ecme.html#ECME"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.ECME" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pysatl_mpest.estimators.BaseEstimator.html#pysatl_mpest.estimators.BaseEstimator" title="pysatl_mpest.estimators.base_estimator.BaseEstimator"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code></a></p>
 <p>Expectation-Conditional Maximization Either (ECME) estimator.</p>
-<p>Extends ECM by allowing components to be optimized by either maximizing the
-Q-function or directly maximizing the Observed Data Likelihood (ODL).
-All free parameters are estimated, preserving fixed view parameters.</p>
+<p>Optimizes free parameters using the Q-function or observed-data likelihood
+(ODL), preserving fixed parameters. Executes Q-function blocks before ODL
+blocks, each in ascending component order.</p>
+<p>With soft expectations, no pruning, and an optimizer that never worsens its
+objective, observed-data log-likelihood is non-decreasing across iterations.
+<a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.ScipyNelderMead.html#pysatl_mpest.optimizers.ScipyNelderMead" title="pysatl_mpest.optimizers.ScipyNelderMead"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScipyNelderMead</span></code></a> meets this optimizer condition;
+the base <a class="reference internal" href="../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Optimizer</span></code></a> contract does not require it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

@@ -379,9 +379,18 @@
 </li>
 </ul>
 </section>
-</section>
 <section id="id2">
-<h2>Различные диаграммы<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<h3>Фасады<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
+<p>Фасады собирают пайплайн <code class="docutils literal notranslate"><span class="pre">[ExpectationStep,</span> <span class="pre">WeightsStep,</span> <span class="pre">MaximizationStep]</span></code>:</p>
+<ul class="simple">
+<li><p><strong>EM</strong> — классический EM: один M-блок на компоненту, все свободные параметры максимизируют Q-функцию.</p></li>
+<li><p><strong>ECM</strong> — EM с условными шагами. <code class="docutils literal notranslate"><span class="pre">fit</span></code> принимает необязательный <code class="docutils literal notranslate"><span class="pre">parameter_groups</span></code>: для компоненты задаётся упорядоченный список групп её свободных параметров, и каждая группа становится отдельным условным блоком. Без <code class="docutils literal notranslate"><span class="pre">parameter_groups</span></code> поведение совпадает с EM.</p></li>
+<li><p><strong>ECME</strong> — расширение ECM: компонента может максимизировать Q-функцию или наблюдаемое правдоподобие (<code class="docutils literal notranslate"><span class="pre">q_indices_raw</span></code>, <code class="docutils literal notranslate"><span class="pre">odl_indices_raw</span></code> в <code class="docutils literal notranslate"><span class="pre">fit</span></code>, <code class="docutils literal notranslate"><span class="pre">default_strategy</span></code> в конструкторе). <code class="docutils literal notranslate"><span class="pre">parameter_groups</span></code> работает для обоих видов блоков. M-блоки строятся в порядке Q-цепочек всех компонент, затем ODL-цепочек по возрастанию индекса. При мягком E-шаге, без пруннеров и оптимизаторе, который не возвращает точку хуже стартовой (<code class="docutils literal notranslate"><span class="pre">ScipyNelderMead</span></code> это выполняет, базовый <code class="docutils literal notranslate"><span class="pre">Optimizer</span></code> этого не обещает), логарифм правдоподобия по итерациям не убывает. Гарантия относится только к порядку блоков, который строит фасад: <code class="docutils literal notranslate"><span class="pre">MaximizationStep</span></code> с произвольным списком блоков исполняет его как есть.</p></li>
+</ul>
+</section>
+</section>
+<section id="id3">
+<h2>Различные диаграммы<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
 <div class="toctree-wrapper compound">
 </div>
 </section>
@@ -436,9 +445,10 @@
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">Классы</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#baseestimator">BaseEstimator</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Фасады</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Различные диаграммы</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Различные диаграммы</a></li>
 </ul>
   </nav></div>
 

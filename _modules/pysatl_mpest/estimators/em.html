@@ -736,6 +736,7 @@ window.addEventListener("load", load);
     <span class="n">OptimizationBlock</span><span class="p">,</span>
     <span class="n">Pipeline</span><span class="p">,</span>
     <span class="n">Pruner</span><span class="p">,</span>
+    <span class="n">WeightsStep</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.iterative._iteration_history</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationsHistory</span>
 
@@ -821,7 +822,7 @@ window.addEventListener("load", load);
         <span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span><span class="n">OptimizationBlock</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span><span class="p">)]</span>
 
         <span class="n">pipeline</span><span class="p">:</span> <span class="n">Pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">ExpectationStep</span><span class="p">(),</span> <span class="n">MaximizationStep</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)],</span>
+            <span class="p">[</span><span class="n">ExpectationStep</span><span class="p">(),</span> <span class="n">WeightsStep</span><span class="p">(),</span> <span class="n">MaximizationStep</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">,</span>
             <span class="n">once_in_iterations</span><span class="p">,</span>

@@ -723,16 +723,17 @@ window.addEventListener("load", load);
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">bisect</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">replace</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MappingProxyType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ClassVar</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pysatl_core.families</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParametricFamilyDistribution</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">....core</span><span class="w"> </span><span class="kn">import</span> <span class="n">_components</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">....optimizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.._strategies</span><span class="w"> </span><span class="kn">import</span> <span class="n">StrategyFunction</span><span class="p">,</span> <span class="n">moments_strategy</span><span class="p">,</span> <span class="n">observed_data_likelihood_strategy</span><span class="p">,</span> <span class="n">q_function_strategy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.._wave_planner</span><span class="w"> </span><span class="kn">import</span> <span class="n">plan_waves</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_step</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineStep</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.block</span><span class="w"> </span><span class="kn">import</span> <span class="n">MaximizationStrategy</span><span class="p">,</span> <span class="n">OptimizationBlock</span>
@@ -741,10 +742,11 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MaximizationStep">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html#pysatl_mpest.estimators.iterative.MaximizationStep">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">MaximizationStep</span><span class="p">(</span><span class="n">PipelineStep</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">"""Maximization step updating component parameters and mixture weights.</span>
+<span class="w">    </span><span class="sd">"""Maximization step updating mixture component parameters.</span>
 
-<span class="sd">    Executes configured :class:`OptimizationBlock` tasks to update component parameters,</span>
-<span class="sd">    then updates mixture weights from responsibilities.</span>
+<span class="sd">    Applies :class:`OptimizationBlock` tasks with sequential list-order semantics,</span>
+<span class="sd">    grouping independent blocks into waves. Updates component parameters only;</span>
+<span class="sd">    use :class:`WeightsStep` to update mixture weights.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -796,11 +798,11 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MaximizationStep.run">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.run.html#pysatl_mpest.estimators.iterative.MaximizationStep.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineState</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Execute the M-step, updating component parameters and weights.</span>
+<span class="w">        </span><span class="sd">"""Execute the M-step, updating component parameters.</span>
 
-<span class="sd">        Strategy exceptions propagate directly. Parameters and weights update only</span>
-<span class="sd">        after all strategy blocks succeed, and the current mixture is modified in place.</span>
-<span class="sd">        Missing responsibilities set ``state.error`` instead of raising.</span>
+<span class="sd">        Applies all blocks atomically, preserving the mixture's identity and weights.</span>
+<span class="sd">        Strategy exceptions propagate without changing the mixture. Missing</span>
+<span class="sd">        responsibilities set :attr:`~pysatl_mpest.estimators.iterative.pipeline_state.PipelineState.error` instead.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -823,24 +825,22 @@ window.addEventListener("load", load);
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">error</span> <span class="o">=</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Responsibility matrix H is not computed."</span><span class="p">)</span>
-            <span class="n">state</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="n">error</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">error</span> <span class="o">=</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Responsibility matrix H is not computed."</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">state</span>
 
-        <span class="n">results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">curr_mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>
+        <span class="n">working</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span>
-            <span class="n">strategy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_strategies</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">maximization_strategy</span><span class="p">]</span>
-            <span class="n">component_id</span><span class="p">,</span> <span class="n">new_params</span> <span class="o">=</span> <span class="n">strategy</span><span class="p">(</span><span class="n">curr_mixture</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">],</span> <span class="n">state</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)</span>
-            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">component_id</span><span class="p">,</span> <span class="n">new_params</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">wave</span> <span class="ow">in</span> <span class="n">plan_waves</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">):</span>
+            <span class="n">snapshot</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">working</span><span class="p">)</span>
+            <span class="n">wave_state</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">curr_mixture</span><span class="o">=</span><span class="n">snapshot</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">wave</span><span class="p">:</span>
+                <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                <span class="n">strategy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_strategies</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">maximization_strategy</span><span class="p">]</span>
+                <span class="n">component_id</span><span class="p">,</span> <span class="n">new_params</span> <span class="o">=</span> <span class="n">strategy</span><span class="p">(</span><span class="n">snapshot</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">],</span> <span class="n">wave_state</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)</span>
+                <span class="n">working</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_components_params</span><span class="p">(</span><span class="n">working</span><span class="p">[</span><span class="n">component_id</span><span class="p">],</span> <span class="n">new_params</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">component_id</span><span class="p">,</span> <span class="n">params</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-            <span class="n">curr_mixture</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_components_params</span><span class="p">(</span><span class="n">curr_mixture</span><span class="p">[</span><span class="n">component_id</span><span class="p">],</span> <span class="n">params</span><span class="p">)</span>
-
-        <span class="n">responsibilities_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">new_weights</span> <span class="o">=</span> <span class="n">responsibilities_sum</span> <span class="o">/</span> <span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">curr_mixture</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">new_weights</span> <span class="o">+</span> <span class="mf">1e-30</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">working</span><span class="o">.</span><span class="n">n_components</span><span class="p">):</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">working</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
 
         <span class="k">return</span> <span class="n">state</span></div>
 

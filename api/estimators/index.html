@@ -279,6 +279,7 @@
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.html">Breakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.Pruner.html">Pruner</a></li>
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.ExpectationStep.html">ExpectationStep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.WeightsStep.html">WeightsStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.html">MaximizationStep</a></li>
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.html">StepBreakpointer</a></li>
 <li class="toctree-l3"><a class="reference internal" href="iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.html">LikelihoodBreakpointer</a></li>
@@ -389,7 +390,7 @@
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p><code class="docutils literal notranslate"><span class="pre">EM</span></code> is the standalone Expectation-Maximization estimator; the current <code class="docutils literal notranslate"><span class="pre">ECM</span></code> implementation performs the same component-wise Q-function updates.</p>
+<p><code class="docutils literal notranslate"><span class="pre">EM</span></code> is the standalone Expectation-Maximization estimator. <code class="docutils literal notranslate"><span class="pre">ECM</span></code> performs conditional maximization over ordered parameter groups passed to <code class="docutils literal notranslate"><span class="pre">fit</span></code> as <code class="docutils literal notranslate"><span class="pre">parameter_groups</span></code> and matches <code class="docutils literal notranslate"><span class="pre">EM</span></code> when they are omitted; <code class="docutils literal notranslate"><span class="pre">ECME</span></code> additionally allows per-component Q-function or observed-data-likelihood maximization.</p>
 </div>
 <section id="abstract-classes">
 <h3>Abstract Classes<a class="headerlink" href="#abstract-classes" title="Link to this heading">#</a></h3>

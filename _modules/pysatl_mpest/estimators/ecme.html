@@ -721,22 +721,23 @@ window.addEventListener("load", load);
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">"SPDX-License-Identifier: MIT"</span>
 
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">..core</span><span class="w"> </span><span class="kn">import</span> <span class="n">MixtureModel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..optimizers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._parameter_groups</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_optimization_blocks</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.base_estimator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.iterative</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">Breakpointer</span><span class="p">,</span>
     <span class="n">ExpectationStep</span><span class="p">,</span>
     <span class="n">MaximizationStep</span><span class="p">,</span>
     <span class="n">MaximizationStrategy</span><span class="p">,</span>
-    <span class="n">OptimizationBlock</span><span class="p">,</span>
     <span class="n">Pipeline</span><span class="p">,</span>
     <span class="n">Pruner</span><span class="p">,</span>
+    <span class="n">WeightsStep</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.iterative._iteration_history</span><span class="w"> </span><span class="kn">import</span> <span class="n">IterationsHistory</span>
 
@@ -746,9 +747,14 @@ window.addEventListener("load", load);
 <span class="k">class</span><span class="w"> </span><span class="nc">ECME</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Expectation-Conditional Maximization Either (ECME) estimator.</span>
 
-<span class="sd">    Extends ECM by allowing components to be optimized by either maximizing the</span>
-<span class="sd">    Q-function or directly maximizing the Observed Data Likelihood (ODL).</span>
-<span class="sd">    All free parameters are estimated, preserving fixed view parameters.</span>
+<span class="sd">    Optimizes free parameters using the Q-function or observed-data likelihood</span>
+<span class="sd">    (ODL), preserving fixed parameters. Executes Q-function blocks before ODL</span>
+<span class="sd">    blocks, each in ascending component order.</span>
+
+<span class="sd">    With soft expectations, no pruning, and an optimizer that never worsens its</span>
+<span class="sd">    objective, observed-data log-likelihood is non-decreasing across iterations.</span>
+<span class="sd">    :class:`~pysatl_mpest.optimizers.ScipyNelderMead` meets this optimizer condition;</span>
+<span class="sd">    the base :class:`~pysatl_mpest.optimizers.Optimizer` contract does not require it.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -826,14 +832,12 @@ window.addEventListener("load", load);
             <span class="k">return</span> <span class="p">{</span><span class="n">indices</span><span class="p">}</span>
         <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="n">original_idx</span> <span class="o">=</span> <span class="n">idx</span>
-        <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">idx</span> <span class="o">+=</span> <span class="n">n_components</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="n">n_components</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Component index </span><span class="si">{</span><span class="n">original_idx</span><span class="si">}</span><span class="s2"> is out of bounds for mixture size </span><span class="si">{</span><span class="n">n_components</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">idx</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_indices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indices</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Component index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> is negative; component indices must be non-negative."</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="n">n_components</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Component index </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2"> is out of bounds for mixture size </span><span class="si">{</span><span class="n">n_components</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ECME.fit">
 <a class="viewcode-back" href="../../../api/estimators/generated/pysatl_mpest.estimators.ECME.fit.html#pysatl_mpest.estimators.ECME.fit">[docs]</a>
@@ -844,6 +848,8 @@ window.addEventListener("load", load);
         <span class="n">q_indices_raw</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">odl_indices_raw</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">once_in_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">parameter_groups</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MixtureModel</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Fit mixture model parameters using the ECME algorithm.</span>
 
@@ -854,11 +860,15 @@ window.addEventListener("load", load);
 <span class="sd">        mixture : MixtureModel</span>
 <span class="sd">            Initial mixture model to fit; not modified in-place.</span>
 <span class="sd">        q_indices_raw : Sequence[int] | int | None, optional</span>
-<span class="sd">            Component indices to optimize via Q-function maximization. Supports negative indexing.</span>
+<span class="sd">            Component indices to optimize via Q-function maximization. Must be non-negative.</span>
 <span class="sd">        odl_indices_raw : Sequence[int] | int | None, optional</span>
-<span class="sd">            Component indices to optimize via ODL maximization. Supports negative indexing.</span>
+<span class="sd">            Component indices to optimize via ODL maximization. Must be non-negative.</span>
 <span class="sd">        once_in_iterations : int, optional</span>
 <span class="sd">            Iteration recording frequency in history. Defaults to 1.</span>
+<span class="sd">        parameter_groups : Mapping[int, Sequence[set[str]]] | None, optional</span>
+<span class="sd">            Component indices mapped to ordered, non-empty, disjoint groups covering</span>
+<span class="sd">            all free parameters. Groups are optimized sequentially with the component's</span>
+<span class="sd">            strategy; omitted components use one joint step. Defaults to None.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -868,19 +878,20 @@ window.addEventListener("load", load);
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If a component index is out of bounds or present in both strategy index sets.</span>
+<span class="sd">            If a component index is invalid or assigned both strategies, or its</span>
+<span class="sd">            groups do not partition its free parameters into non-empty, disjoint sets.</span>
 <span class="sd">        """</span>
 
         <span class="n">n_components</span> <span class="o">=</span> <span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span>
 
-        <span class="n">q_indices</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_index</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_indices</span><span class="p">(</span><span class="n">q_indices_raw</span><span class="p">)}</span>
-        <span class="n">odl_indices</span> <span class="o">=</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_resolve_index</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_indices</span><span class="p">(</span><span class="n">odl_indices_raw</span><span class="p">)}</span>
+        <span class="n">q_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_indices</span><span class="p">(</span><span class="n">q_indices_raw</span><span class="p">)</span>
+        <span class="n">odl_indices</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_indices</span><span class="p">(</span><span class="n">odl_indices_raw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_indices</span><span class="p">(</span><span class="n">q_indices</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate_indices</span><span class="p">(</span><span class="n">odl_indices</span><span class="p">,</span> <span class="n">n_components</span><span class="p">)</span>
 
         <span class="n">intersection</span> <span class="o">=</span> <span class="n">q_indices</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">odl_indices</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">intersection</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Indices </span><span class="si">{</span><span class="n">intersection</span><span class="si">}</span><span class="s2"> specified for both Q-function and ODL strategies."</span><span class="p">)</span>
-
-        <span class="n">blocks</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="n">default_enum</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">OBSERVED_DATA_LIKELIHOOD</span>
@@ -888,20 +899,17 @@ window.addEventListener("load", load);
             <span class="k">else</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span>
         <span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_components</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">q_indices</span><span class="p">:</span>
-                <span class="n">strategy</span> <span class="o">=</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span>
-            <span class="k">elif</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">odl_indices</span><span class="p">:</span>
-                <span class="n">strategy</span> <span class="o">=</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">OBSERVED_DATA_LIKELIHOOD</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">strategy</span> <span class="o">=</span> <span class="n">default_enum</span>
+        <span class="n">strategies</span> <span class="o">=</span> <span class="p">[</span><span class="n">default_enum</span><span class="p">]</span> <span class="o">*</span> <span class="n">n_components</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">q_indices</span><span class="p">:</span>
+            <span class="n">strategies</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">odl_indices</span><span class="p">:</span>
+            <span class="n">strategies</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">OBSERVED_DATA_LIKELIHOOD</span>
 
-            <span class="c1"># No parameter names: every free parameter of a component is optimized, and the parameters</span>
-            <span class="c1"># fixed with ``family.view(...)`` keep their values.</span>
-            <span class="n">blocks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">OptimizationBlock</span><span class="p">(</span><span class="n">component_id</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">params_to_optimize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maximization_strategy</span><span class="o">=</span><span class="n">strategy</span><span class="p">))</span>
+        <span class="n">blocks</span> <span class="o">=</span> <span class="n">build_optimization_blocks</span><span class="p">(</span><span class="n">mixture</span><span class="p">,</span> <span class="n">parameter_groups</span><span class="p">,</span> <span class="n">strategies</span><span class="p">)</span>
+        <span class="n">blocks</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">block</span><span class="p">:</span> <span class="n">block</span><span class="o">.</span><span class="n">maximization_strategy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">MaximizationStrategy</span><span class="o">.</span><span class="n">QFUNCTION</span><span class="p">)</span>
 
         <span class="n">pipeline</span><span class="p">:</span> <span class="n">Pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">ExpectationStep</span><span class="p">(),</span> <span class="n">MaximizationStep</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)],</span>
+            <span class="p">[</span><span class="n">ExpectationStep</span><span class="p">(),</span> <span class="n">WeightsStep</span><span class="p">(),</span> <span class="n">MaximizationStep</span><span class="p">(</span><span class="n">blocks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)],</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pruners</span><span class="p">,</span>
             <span class="n">once_in_iterations</span><span class="p">,</span>
