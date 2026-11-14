@@ -11,7 +11,7 @@ from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
-from ._parameter_groups import component_block_chain, validate_parameter_groups
+from ._parameter_groups import build_optimization_blocks
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
@@ -119,19 +119,9 @@ class ECM(BaseEstimator):
             free parameters into non-empty, disjoint sets.
         """
 
-        validate_parameter_groups(mixture, parameter_groups)
-
-        # With ``params_to_optimize=None`` every free parameter of a component is optimized, and
-        # the parameters fixed with ``family.view(...)`` keep their values.
-        blocks = [
-            block
-            for i in range(mixture.n_components)
-            for block in component_block_chain(
-                i,
-                None if parameter_groups is None else parameter_groups.get(i),
-                MaximizationStrategy.QFUNCTION,
-            )
-        ]
+        blocks = build_optimization_blocks(
+            mixture, parameter_groups, [MaximizationStrategy.QFUNCTION] * mixture.n_components
+        )
 
         pipeline: Pipeline = Pipeline(
             [ExpectationStep(), WeightsStep(), MaximizationStep(blocks, self.optimizer)],
