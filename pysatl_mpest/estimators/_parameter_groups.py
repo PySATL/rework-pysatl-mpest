@@ -1,5 +1,4 @@
-"""
-Validation of per-component parameter groups and construction of their optimization block chains.
+"""Shared validation of parameter groups and construction of optimization blocks.
 
 ``parameter_groups`` is the facade-level way to request conditional maximization: for a component it
 is an ordered list of parameter groups, and each group becomes a separate maximization block. This
@@ -49,44 +48,23 @@ def build_optimization_blocks(
     if len(strategies) != mixture.n_components:
         raise ValueError("The number of strategies must match the number of components.")
 
-    validate_parameter_groups(mixture, parameter_groups)
+    _validate_parameter_groups(mixture, parameter_groups)
 
-    return [
-        block
-        for component_id, strategy in enumerate(strategies)
-        for block in component_block_chain(
-            component_id, None if parameter_groups is None else parameter_groups.get(component_id), strategy
-        )
-    ]
+    blocks: list[OptimizationBlock] = []
+    for component_id, strategy in enumerate(strategies):
+        groups = None if parameter_groups is None else parameter_groups.get(component_id)
+        if groups is None:
+            blocks.append(OptimizationBlock(component_id, None, strategy))
+        else:
+            blocks.extend(OptimizationBlock(component_id, set(group), strategy) for group in groups)
+    return blocks
 
 
-def validate_parameter_groups(
+def _validate_parameter_groups(
     mixture: MixtureModel,
     parameter_groups: Mapping[int, Sequence[set[str]]] | None,
 ) -> None:
-    """Validate ``parameter_groups`` keys and per-component group lists.
-
-    Keys must be non-negative component indices inside the mixture. For every
-    listed component the group list must be non-empty, its groups must be
-    non-empty and pairwise disjoint, and their union must equal the component's
-    free parameters exactly — the condition for the conditional steps to form a
-    partition of the component's maximization problem.
-
-    Parameters
-    ----------
-    mixture : MixtureModel
-        The mixture the indices refer to.
-    parameter_groups : Mapping[int, Sequence[set[str]]] | None
-        Ordered parameter groups per component index, or None.
-
-    Raises
-    ------
-    ValueError
-        If a key is negative or out of bounds, a component's group list is
-        empty, a group is empty, groups overlap, or the union of a component's
-        groups differs from its free parameters (unknown, fixed, or uncovered
-        parameter names).
-    """
+    """Validate component indices and groups against each component's free parameters."""
 
     if parameter_groups is None:
         return
@@ -147,31 +125,3 @@ def _validate_component_groups(
         f"Invalid parameter_groups for component {component_id}: {'; '.join(problems)}. "
         f"Its free parameters are {sorted(free)}."
     )
-
-
-def component_block_chain(
-    component_id: int,
-    groups: Sequence[set[str]] | None,
-    strategy: MaximizationStrategy,
-) -> list[OptimizationBlock]:
-    """Build the ordered chain of optimization blocks for one component.
-
-    Parameters
-    ----------
-    component_id : int
-        Zero-based index of the component.
-    groups : Sequence[set[str]] | None
-        Ordered parameter groups of the component, or None for a single joint
-        step over all its free parameters.
-    strategy : MaximizationStrategy
-        Strategy assigned to every block of the chain.
-
-    Returns
-    -------
-    list[OptimizationBlock]
-        Blocks in conditional-step order; the group sets are copied.
-    """
-
-    if groups is None:
-        return [OptimizationBlock(component_id, None, strategy)]
-    return [OptimizationBlock(component_id, set(group), strategy) for group in groups]

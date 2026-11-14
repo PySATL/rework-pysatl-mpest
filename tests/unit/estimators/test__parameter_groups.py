@@ -1,5 +1,5 @@
 """
-Unit tests for the parameter-groups validation and block-chain helpers of the ECM and ECME facades.
+Unit tests for shared parameter-group validation and optimization block construction.
 """
 
 __author__ = "Danil Totmyanin"
@@ -11,10 +11,7 @@ from collections.abc import Mapping, Sequence
 import pytest
 from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel, _components
-from pysatl_mpest.estimators._parameter_groups import (
-    build_optimization_blocks,
-    component_block_chain,
-)
+from pysatl_mpest.estimators._parameter_groups import build_optimization_blocks
 from pysatl_mpest.estimators.iterative import MaximizationStrategy, OptimizationBlock
 from pytest_mock import MockerFixture
 
@@ -150,30 +147,3 @@ class TestParameterGroupValidation:
         build_optimization_blocks(
             partially_fixed_mixture, {0: [{"sigma"}], 1: [{"lambda_"}]}, [MaximizationStrategy.QFUNCTION] * 2
         )
-
-
-class TestComponentBlockChain:
-    def test_no_groups_gives_a_single_joint_block(self):
-        blocks = component_block_chain(1, None, MaximizationStrategy.QFUNCTION)
-
-        assert blocks == [OptimizationBlock(1, None, MaximizationStrategy.QFUNCTION)]
-
-    def test_groups_give_ordered_blocks_of_one_component(self):
-        blocks = component_block_chain(0, [{"mu"}, {"sigma"}], MaximizationStrategy.QFUNCTION)
-
-        assert blocks == [
-            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
-            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
-        ]
-
-    def test_the_strategy_is_applied_to_every_block(self):
-        blocks = component_block_chain(2, [{"a"}, {"b"}], MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD)
-
-        assert all(block.maximization_strategy == MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD for block in blocks)
-
-    def test_blocks_get_copies_of_the_groups(self):
-        group = {"mu"}
-        blocks = component_block_chain(0, [group], MaximizationStrategy.QFUNCTION)
-
-        assert blocks[0].params_to_optimize == group
-        assert blocks[0].params_to_optimize is not group
