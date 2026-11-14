@@ -52,12 +52,17 @@ class TestNextSteps:
 class TestRun:
     def test_updates_weights_from_responsibilities(self, state_with_H: PipelineState, normal_mixture: MixtureModel):
         components_before = list(normal_mixture)
+        log_weights_before = normal_mixture.log_weights.copy()
 
         result = WeightsStep().run(state_with_H)
 
         assert result is state_with_H
-        assert_allclose(normal_mixture.weights, [0.45, 0.55], atol=1e-12)
-        assert list(normal_mixture) == components_before
+        assert state_with_H.curr_mixture is not normal_mixture
+        assert_allclose(state_with_H.curr_mixture.weights, [0.45, 0.55], atol=1e-12)
+        assert all(new is old for new, old in zip(state_with_H.curr_mixture, components_before, strict=True))
+        # The mixture passed in the state is left unchanged.
+        assert_allclose(normal_mixture.weights, [0.3, 0.7], atol=1e-12)
+        np.testing.assert_array_equal(normal_mixture.log_weights, log_weights_before)
 
     def test_zero_responsibility_keeps_log_weight_finite(self, normal_mixture: MixtureModel):
         state = make_state(
@@ -68,8 +73,10 @@ class TestRun:
 
         WeightsStep().run(state)
 
-        assert np.all(np.isfinite(normal_mixture.log_weights))
-        assert_allclose(normal_mixture.weights, [1.0, 0.0], atol=1e-12)
+        assert state.curr_mixture is not normal_mixture
+        assert np.all(np.isfinite(state.curr_mixture.log_weights))
+        assert_allclose(state.curr_mixture.weights, [1.0, 0.0], atol=1e-12)
+        assert_allclose(normal_mixture.weights, [0.3, 0.7], atol=1e-12)
 
     def test_missing_responsibilities_set_error_and_keep_weights(
         self, normal_mixture: MixtureModel, state_with_H: PipelineState
@@ -83,6 +90,7 @@ class TestRun:
         assert result is state
         assert isinstance(state.error, ValueError)
         assert str(state.error) == "Responsibility matrix H is not computed."
+        assert state.curr_mixture is normal_mixture
         np.testing.assert_array_equal(normal_mixture.log_weights, original_log_weights)
 
     def test_returns_same_state_and_preserves_other_fields(self, state_with_H: PipelineState):
@@ -91,6 +99,7 @@ class TestRun:
         original_H = state.H
         original_prev_mixture = state.prev_mixture
         original_error = state.error
+        mixture_before = state.curr_mixture
 
         result = WeightsStep().run(state)
 
@@ -99,7 +108,7 @@ class TestRun:
         assert result.H is original_H
         assert result.prev_mixture is original_prev_mixture
         assert result.error is original_error
-        assert result.curr_mixture is state.curr_mixture
+        assert result.curr_mixture is not mixture_before
 
 
 class TestClearAfterPrune:

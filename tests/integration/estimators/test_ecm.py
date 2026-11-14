@@ -67,6 +67,23 @@ class TestFitting:
         for actual, expected in zip(fitted_arrays(fitted), reference_em(X, start, iterations)):
             assert_allclose(actual, expected, rtol=1e-9)
 
+    def test_history_records_hold_distinct_mixtures_matching_reference_em(
+        self, X: np.ndarray, start: MixtureModel
+    ) -> None:
+        iterations = 5
+        ecm = ecm_for(iterations)
+
+        fitted = ecm.fit(X, start)
+
+        records = [ecm.history[i] for i in range(len(ecm.history))]
+        assert len(records) == iterations
+        assert len({id(record.mixture) for record in records}) == iterations
+        assert all(record.mixture is not start for record in records)
+        assert fitted is records[-1].mixture
+        for i, record in enumerate(records):
+            for actual, expected in zip(fitted_arrays(record.mixture), reference_em(X, start, i + 1)):
+                assert_allclose(actual, expected, rtol=1e-9)
+
     def test_recovers_the_parameters_of_a_mixture(self, X: np.ndarray, start: MixtureModel) -> None:
         fitted = ecm_for(300, tolerance=1e-9).fit(X, start)
         mu, sigma, weights = fitted_arrays(fitted)

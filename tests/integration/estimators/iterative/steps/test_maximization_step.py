@@ -90,16 +90,16 @@ def test_view_component_density_matches_plain_component() -> None:
     step.run(state)
 
     expected = family(FamilyName.NORMAL)(mu=1.0, sigma=1.25)
-    assert cc.fixed_parameters(mixture[0]) == {"mu": 1.0}
-    assert cc.free_parameters(mixture[0]) == {"sigma": 1.25}
-    assert_allclose(cc.lpdf(mixture[0], x), cc.lpdf(expected, x))
+    assert cc.fixed_parameters(state.curr_mixture[0]) == {"mu": 1.0}
+    assert cc.free_parameters(state.curr_mixture[0]) == {"sigma": 1.25}
+    assert_allclose(cc.lpdf(state.curr_mixture[0], x), cc.lpdf(expected, x))
 
 
 def test_run_refreshes_previously_cached_mixture_density() -> None:
     x = np.array([-1.0, 0.0, 0.5, 2.0])
     normal = family(FamilyName.NORMAL)
     mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0)], weights=[0.5, 0.5])
-    mixture.pdf(x)
+    pdf_before = mixture.pdf(x)
     state = PipelineState(x, np.full((len(x), 2), 0.5), None, mixture, None)
     step = MaximizationStep([OptimizationBlock(0, {"mu", "sigma"}, MaximizationStrategy.QFUNCTION)], ScipyNelderMead())
 
@@ -109,7 +109,9 @@ def test_run_refreshes_previously_cached_mixture_density() -> None:
         [normal(mu=0.375, sigma=np.sqrt(4.6875 / 4)), normal(mu=5.0, sigma=1.0)],
         weights=[0.5, 0.5],
     )
-    assert_allclose(mixture.pdf(x), expected.pdf(x))
+    assert_allclose(state.curr_mixture.pdf(x), expected.pdf(x))
+    # The mixture passed in the state is left unchanged.
+    assert_allclose(mixture.pdf(x), pdf_before)
 
 
 def test_sequential_blocks_match_a_joint_block() -> None:
