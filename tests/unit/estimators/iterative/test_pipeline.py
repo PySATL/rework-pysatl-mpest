@@ -107,19 +107,22 @@ class ModifyingStep(PipelineStep):
         return [ModifyingStep]
 
     def run(self, state: PipelineState) -> PipelineState:
-        if state.curr_mixture.n_components > 0:
-            new_weights = np.zeros(state.curr_mixture.n_components)
+        mixture = state.curr_mixture
+
+        if mixture.n_components > 0:
+            new_weights = np.zeros(mixture.n_components)
             new_weights[0] = 1.0
-            state.curr_mixture.log_weights = np.log(new_weights + 1e-30)
+            mixture = mixture.with_log_weights(np.log(new_weights + 1e-30))
 
-        if state.curr_mixture.n_components > 0:
-            comp = state.curr_mixture.components[0]
+        if mixture.n_components > 0:
+            comp = mixture.components[0]
             new_comp = cc.with_parameters(comp, lambda_=999.0)
-            state.curr_mixture[0] = new_comp
+            mixture = mixture.with_component(0, new_comp)
 
-        if state.curr_mixture.n_components > 1:
-            state.curr_mixture.remove_component(1)
+        if mixture.n_components > 1:
+            mixture = mixture.without_component(1)
 
+        state.curr_mixture = mixture
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
@@ -134,11 +137,14 @@ class ParameterIncrementStep(PipelineStep):
         return [ParameterIncrementStep]
 
     def run(self, state: PipelineState) -> PipelineState:
-        for i, component in enumerate(state.curr_mixture.components):
-            new_lambda = cc.all_parameters(component)["lambda_"] + 1.0
-            state.curr_mixture[i] = cc.with_parameters(component, lambda_=new_lambda)
+        mixture = state.curr_mixture
+        components = [
+            cc.with_parameters(component, lambda_=cc.all_parameters(component)["lambda_"] + 1.0)
+            for component in mixture.components
+        ]
+        mixture = mixture.with_components(components)
 
-        new_weights = state.curr_mixture.weights.copy()
+        new_weights = mixture.weights.copy()
         if len(new_weights) > 1:
             new_weights[0] += 0.1
             new_weights[1] -= 0.1
@@ -146,7 +152,7 @@ class ParameterIncrementStep(PipelineStep):
             new_weights = np.clip(new_weights, 0, 1)
             new_weights /= np.sum(new_weights)
 
-        state.curr_mixture.log_weights = np.log(new_weights + 1e-30)
+        state.curr_mixture = mixture.with_log_weights(np.log(new_weights + 1e-30))
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
@@ -182,7 +188,7 @@ class RemovingFirstComponentPruner(Pruner):
         self.call_log.append(self.name)
         removed_components_indices = []
         if state.curr_mixture.n_components > 1:
-            state.curr_mixture.remove_component(0)
+            state.curr_mixture = state.curr_mixture.without_component(0)
             removed_components_indices.append(0)
         return (state, removed_components_indices)
 
@@ -537,7 +543,7 @@ class ScriptedPruner(Pruner):
         removed = next(self.removals, [])
         self.log.append(("prune", self.name, str(removed)))
         for index in sorted(removed, reverse=True):
-            state.curr_mixture.remove_component(index)
+            state.curr_mixture = state.curr_mixture.without_component(index)
         return state, removed
 
 
@@ -661,9 +667,11 @@ class PreviousMixtureProbeStep(MockSingleStep):
         self.seen: list[tuple[MixtureModel | None, MixtureModel]] = []
 
     def run(self, state: PipelineState) -> PipelineState:
-        self.seen.append((state.prev_mixture, copy(state.curr_mixture)))
+        self.seen.append((state.prev_mixture, state.curr_mixture))
         component = state.curr_mixture[0]
-        state.curr_mixture[0] = cc.with_parameters(component, lambda_=cc.all_parameters(component)["lambda_"] + 1.0)
+        state.curr_mixture = state.curr_mixture.with_component(
+            0, cc.with_parameters(component, lambda_=cc.all_parameters(component)["lambda_"] + 1.0)
+        )
         return state
 
 

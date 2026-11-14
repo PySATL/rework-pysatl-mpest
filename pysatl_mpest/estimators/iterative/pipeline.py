@@ -6,7 +6,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import warnings
 from collections.abc import Sequence
-from copy import copy
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -28,6 +27,9 @@ class Pipeline(BaseEstimator):
 
     Steps, breakpointers and pruners may be stateful and are reused as is by every call of :meth:`fit`.
     ``history`` is not cleared between calls, so records of repeated fits accumulate.
+
+    Steps and pruners must replace ``state.curr_mixture`` with a new mixture object instead of
+    modifying it in place, because ``prev_mixture`` and the history records hold references to it.
 
     Parameters
     ----------
@@ -135,11 +137,10 @@ class Pipeline(BaseEstimator):
         """
 
         X = np.asarray(X, dtype=np.float64)
-        copied_mixture = copy(mixture)
-        state = PipelineState(X, None, None, copied_mixture, None)
+        state = PipelineState(X, None, None, mixture, None)
 
         while True:
-            state.prev_mixture = copy(state.curr_mixture)
+            state.prev_mixture = state.curr_mixture
 
             for step in self.steps:
                 result_state = step.run(state)
