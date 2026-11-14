@@ -26,25 +26,9 @@ from .block import MaximizationStrategy, OptimizationBlock
 class MaximizationStep(PipelineStep):
     """Maximization step updating mixture component parameters.
 
-    Executes configured :class:`OptimizationBlock` tasks with sequential
-    semantics: the result is the same as if the blocks ran one by one in list
-    order, so each block sees the parameter updates of all previous blocks, both
-    through the component it receives and through ``curr_mixture`` of the state
-    passed to it.
-
-    Internally, blocks are grouped into waves of mutually independent blocks.
-    Blocks of one wave are computed from a single snapshot of the working
-    mixture, so they observe the same state; waves still run one at a time in
-    order. Independence is derived from the read access of the blocks'
-    strategies, so the result is exactly the sequential list-order result.
-
-    Mixture weights are not updated by this step; place :class:`WeightsStep`
-    between :class:`ExpectationStep` and this step in the pipeline to update
-    them from responsibilities.
-
-    Blocks are applied to a working copy of the mixture, and the updated
-    components are moved into ``state.curr_mixture`` only after every block
-    succeeds, so a strategy failure leaves the state's mixture unchanged.
+    Applies :class:`OptimizationBlock` tasks with sequential list-order semantics,
+    grouping independent blocks into waves. Updates component parameters only;
+    use :class:`WeightsStep` to update mixture weights.
 
     Parameters
     ----------
@@ -96,18 +80,9 @@ class MaximizationStep(PipelineStep):
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the M-step, updating component parameters.
 
-        Blocks are grouped into waves of mutually independent blocks, recomputed
-        on every call from the current blocks. Each wave runs against a snapshot
-        of the working mixture: the strategy receives a state whose
-        ``curr_mixture`` is that snapshot, and the snapshot is not modified by
-        the wave's results, which are written to the working copy instead. A
-        block therefore observes the results of all blocks of earlier waves,
-        exactly as under sequential list-order execution. After all blocks
-        succeed, the updated components are moved into ``state.curr_mixture``,
-        which stays the same object. Weights are not touched.
-
-        Strategy exceptions propagate directly and leave the state's mixture
-        unchanged. Missing responsibilities set ``state.error`` instead of raising.
+        Applies all blocks atomically, preserving the mixture's identity and weights.
+        Strategy exceptions propagate without changing the mixture. Missing
+        responsibilities set :attr:`~pysatl_mpest.estimators.iterative.pipeline_state.PipelineState.error` instead.
 
         Parameters
         ----------

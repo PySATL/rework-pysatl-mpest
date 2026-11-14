@@ -30,22 +30,14 @@ from .iterative._iteration_history import IterationsHistory
 class ECME(BaseEstimator):
     """Expectation-Conditional Maximization Either (ECME) estimator.
 
-    Extends ECM by allowing components to be optimized by either maximizing the
-    Q-function or directly maximizing the Observed Data Likelihood (ODL).
-    All free parameters are estimated, preserving fixed view parameters.
+    Optimizes free parameters using the Q-function or observed-data likelihood
+    (ODL), preserving fixed parameters. Executes Q-function blocks before ODL
+    blocks, each in ascending component order.
 
-    The maximization blocks are ordered so that the components updated through
-    the Q-function go first (in ascending component order), followed by the
-    components updated through ODL (also ascending). Together with
-    :class:`WeightsStep` and the sequential semantics of :class:`MaximizationStep`,
-    this makes the observed-data log-likelihood non-decreasing across iterations
-    when the expectation step is soft, no pruners remove components, and the
-    optimizer never returns a point with a worse objective value than its
-    starting point. :class:`~pysatl_mpest.optimizers.ScipyNelderMead` satisfies
-    the optimizer condition; the base :class:`~pysatl_mpest.optimizers.Optimizer`
-    contract does not promise it. The guarantee applies only to the block order
-    built by this facade: a :class:`MaximizationStep` given an arbitrary block
-    list executes it as given.
+    With soft expectations, no pruning, and an optimizer that never worsens its
+    objective, observed-data log-likelihood is non-decreasing across iterations.
+    :class:`~pysatl_mpest.optimizers.ScipyNelderMead` meets this optimizer condition;
+    the base :class:`~pysatl_mpest.optimizers.Optimizer` contract does not require it.
 
     Parameters
     ----------
@@ -155,15 +147,9 @@ class ECME(BaseEstimator):
         once_in_iterations : int, optional
             Iteration recording frequency in history. Defaults to 1.
         parameter_groups : Mapping[int, Sequence[set[str]]] | None, optional
-            Ordered partition of components' free parameters into conditional
-            maximization steps. Keys are component indices; each value orders
-            disjoint non-empty parameter groups whose union is exactly the
-            component's free parameters. Every group becomes a separate
-            maximization step computed at the parameter values produced by the
-            previous steps of the same component, under the strategy assigned
-            to that component. Components without an entry get a single step
-            over all free parameters, which is also the behavior when the
-            argument is omitted. Defaults to None.
+            Component indices mapped to ordered, non-empty, disjoint groups covering
+            all free parameters. Groups are optimized sequentially with the component's
+            strategy; omitted components use one joint step. Defaults to None.
 
         Returns
         -------
@@ -173,11 +159,8 @@ class ECME(BaseEstimator):
         Raises
         ------
         ValueError
-            If a component index is negative, out of bounds, or present in both
-            strategy index sets; or if a ``parameter_groups`` key is negative or
-            out of bounds, a component's group list is empty, a group is empty,
-            groups overlap, or the union of a component's groups differs from
-            its free parameters (unknown, fixed, or uncovered parameter names).
+            If a component index is invalid or assigned both strategies, or its
+            groups do not partition its free parameters into non-empty, disjoint sets.
         """
 
         n_components = mixture.n_components

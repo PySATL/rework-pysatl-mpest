@@ -28,12 +28,8 @@ from .iterative._iteration_history import IterationsHistory
 class ECM(BaseEstimator):
     """Expectation-Conditional Maximization (ECM) estimator.
 
-    Executes an iterative pipeline of Expectation and Conditional Maximization steps.
-    Maximization is partitioned component-wise; the ``parameter_groups`` argument of
-    :meth:`fit` may further split a component's free parameters into ordered groups,
-    each optimized by maximizing the Q-function at the values produced by the previous
-    groups of the same component. Without groups each component gets a single joint
-    maximization step and the estimator coincides with EM.
+    Maximizes the Q-function over ordered parameter groups supplied to :meth:`fit`.
+    Without groups, jointly optimizes each component's free parameters, as in EM.
 
     Parameters
     ----------
@@ -107,14 +103,9 @@ class ECM(BaseEstimator):
         once_in_iterations : int, optional
             Iteration recording frequency in history. Defaults to 1.
         parameter_groups : Mapping[int, Sequence[set[str]]] | None, optional
-            Ordered partition of components' free parameters into conditional
-            maximization steps. Keys are component indices; each value orders
-            disjoint non-empty parameter groups whose union is exactly the
-            component's free parameters. Every group becomes a separate
-            maximization step computed at the parameter values produced by the
-            previous groups of the same component. Components without an entry
-            get a single joint step over all free parameters, which is also the
-            behavior when the argument is omitted. Defaults to None.
+            Component indices mapped to ordered, non-empty, disjoint groups covering
+            all free parameters. Groups are optimized sequentially; omitted components
+            use one joint step. Defaults to None.
 
         Returns
         -------
@@ -124,10 +115,8 @@ class ECM(BaseEstimator):
         Raises
         ------
         ValueError
-            If a ``parameter_groups`` key is negative or out of bounds, a
-            component's group list is empty, a group is empty, groups overlap,
-            or the union of a component's groups differs from its free
-            parameters (unknown, fixed, or uncovered parameter names).
+            If a component index is invalid or its groups do not partition its
+            free parameters into non-empty, disjoint sets.
         """
 
         validate_parameter_groups(mixture, parameter_groups)
