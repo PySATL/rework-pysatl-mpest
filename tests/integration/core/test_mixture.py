@@ -131,7 +131,7 @@ class TestDensity:
     def test_pdf_matches_exp_lpdf_exactly(self) -> None:
         exponential = family(FamilyName.EXPONENTIAL)
         mixture = MixtureModel([exponential(lambda_=1.0), exponential(lambda_=3.0)])
-        mixture.log_weights = np.log([2.0, 6.0])
+        mixture = mixture.with_log_weights(np.log([2.0, 6.0]))
         data = np.array([-1.0, 0.0, 0.5, 1.0, 800.0])
 
         density = mixture.pdf(data)
@@ -262,7 +262,7 @@ class TestCoreExport:
     def test_to_core_mixture_exports_valid_distribution(self) -> None:
         exponential = family(FamilyName.EXPONENTIAL)
         mixture = MixtureModel([exponential(lambda_=1.0), exponential(lambda_=3.0)])
-        mixture.log_weights = np.log([2.0, 6.0])
+        mixture = mixture.with_log_weights(np.log([2.0, 6.0]))
 
         exported = mixture.to_core_mixture()
 
