@@ -7,5 +7,12 @@ __license__ = "SPDX-License-Identifier: MIT"
 from .block import MaximizationStrategy, OptimizationBlock
 from .expectation_step import ExpectationStep
 from .maximization_step import MaximizationStep
+from .weights_step import WeightsStep
 
-__all__ = ["ExpectationStep", "MaximizationStep", "MaximizationStrategy", "OptimizationBlock"]
+__all__ = [
+    "ExpectationStep",
+    "MaximizationStep",
+    "MaximizationStrategy",
+    "OptimizationBlock",
+    "WeightsStep",
+]

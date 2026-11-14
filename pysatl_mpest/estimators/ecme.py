@@ -5,22 +5,23 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Literal
 
 from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
+from ._parameter_groups import build_optimization_blocks
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
     ExpectationStep,
     MaximizationStep,
     MaximizationStrategy,
-    OptimizationBlock,
     Pipeline,
     Pruner,
+    WeightsStep,
 )
 from .iterative._iteration_history import IterationsHistory
 
@@ -28,9 +29,14 @@ from .iterative._iteration_history import IterationsHistory
 class ECME(BaseEstimator):
     """Expectation-Conditional Maximization Either (ECME) estimator.
 
-    Extends ECM by allowing components to be optimized by either maximizing the
-    Q-function or directly maximizing the Observed Data Likelihood (ODL).
-    All free parameters are estimated, preserving fixed view parameters.
+    Optimizes free parameters using the Q-function or observed-data likelihood
+    (ODL), preserving fixed parameters. Executes Q-function blocks before ODL
+    blocks, each in ascending component order.
+
+    With soft expectations, no pruning, and an optimizer that never worsens its
+    objective, observed-data log-likelihood is non-decreasing across iterations.
+    :class:`~pysatl_mpest.optimizers.ScipyNelderMead` meets this optimizer condition;
+    the base :class:`~pysatl_mpest.optimizers.Optimizer` contract does not require it.
 
     Parameters
     ----------
@@ -108,14 +114,12 @@ class ECME(BaseEstimator):
             return {indices}
         return set(indices)
 
-    def _resolve_index(self, idx: int, n_components: int) -> int:
-        original_idx = idx
-        if idx < 0:
-            idx += n_components
-
-        if not (0 <= idx < n_components):
-            raise ValueError(f"Component index {original_idx} is out of bounds for mixture size {n_components}.")
-        return idx
+    def _validate_indices(self, indices: set[int], n_components: int) -> None:
+        for idx in indices:
+            if idx < 0:
+                raise ValueError(f"Component index {idx} is negative; component indices must be non-negative.")
+            if idx >= n_components:
+                raise ValueError(f"Component index {idx} is out of bounds for mixture size {n_components}.")
 
     def fit(
         self,
@@ -124,6 +128,8 @@ class ECME(BaseEstimator):
         q_indices_raw: Sequence[int] | int | None = None,
         odl_indices_raw: Sequence[int] | int | None = None,
         once_in_iterations: int = 1,
+        *,
+        parameter_groups: Mapping[int, Sequence[set[str]]] | None = None,
     ) -> MixtureModel:
         """Fit mixture model parameters using the ECME algorithm.
 
@@ -134,11 +140,15 @@ class ECME(BaseEstimator):
         mixture : MixtureModel
             Initial mixture model to fit; not modified in-place.
         q_indices_raw : Sequence[int] | int | None, optional
-            Component indices to optimize via Q-function maximization. Supports negative indexing.
+            Component indices to optimize via Q-function maximization. Must be non-negative.
         odl_indices_raw : Sequence[int] | int | None, optional
-            Component indices to optimize via ODL maximization. Supports negative indexing.
+            Component indices to optimize via ODL maximization. Must be non-negative.
         once_in_iterations : int, optional
             Iteration recording frequency in history. Defaults to 1.
+        parameter_groups : Mapping[int, Sequence[set[str]]] | None, optional
+            Component indices mapped to ordered, non-empty, disjoint groups covering
+            all free parameters. Groups are optimized sequentially with the component's
+            strategy; omitted components use one joint step. Defaults to None.
 
         Returns
         -------
@@ -148,19 +158,20 @@ class ECME(BaseEstimator):
         Raises
         ------
         ValueError
-            If a component index is out of bounds or present in both strategy index sets.
+            If a component index is invalid or assigned both strategies, or its
+            groups do not partition its free parameters into non-empty, disjoint sets.
         """
 
         n_components = mixture.n_components
 
-        q_indices = {self._resolve_index(i, n_components) for i in self._normalize_indices(q_indices_raw)}
-        odl_indices = {self._resolve_index(i, n_components) for i in self._normalize_indices(odl_indices_raw)}
+        q_indices = self._normalize_indices(q_indices_raw)
+        odl_indices = self._normalize_indices(odl_indices_raw)
+        self._validate_indices(q_indices, n_components)
+        self._validate_indices(odl_indices, n_components)
 
         intersection = q_indices.intersection(odl_indices)
         if intersection:
             raise ValueError(f"Indices {intersection} specified for both Q-function and ODL strategies.")
-
-        blocks = []
 
         default_enum = (
             MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
@@ -168,20 +179,17 @@ class ECME(BaseEstimator):
             else MaximizationStrategy.QFUNCTION
         )
 
-        for i in range(n_components):
-            if i in q_indices:
-                strategy = MaximizationStrategy.QFUNCTION
-            elif i in odl_indices:
-                strategy = MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
-            else:
-                strategy = default_enum
+        strategies = [default_enum] * n_components
+        for index in q_indices:
+            strategies[index] = MaximizationStrategy.QFUNCTION
+        for index in odl_indices:
+            strategies[index] = MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD
 
-            # No parameter names: every free parameter of a component is optimized, and the parameters
-            # fixed with ``family.view(...)`` keep their values.
-            blocks.append(OptimizationBlock(component_id=i, params_to_optimize=None, maximization_strategy=strategy))
+        blocks = build_optimization_blocks(mixture, parameter_groups, strategies)
+        blocks.sort(key=lambda block: block.maximization_strategy is not MaximizationStrategy.QFUNCTION)
 
         pipeline: Pipeline = Pipeline(
-            [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
+            [ExpectationStep(), WeightsStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,
             once_in_iterations,

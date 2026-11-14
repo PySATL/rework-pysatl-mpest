@@ -5,21 +5,22 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from numpy.typing import ArrayLike
 
 from ..core import MixtureModel
 from ..optimizers import Optimizer
+from ._parameter_groups import build_optimization_blocks
 from .base_estimator import BaseEstimator
 from .iterative import (
     Breakpointer,
     ExpectationStep,
     MaximizationStep,
     MaximizationStrategy,
-    OptimizationBlock,
     Pipeline,
     Pruner,
+    WeightsStep,
 )
 from .iterative._iteration_history import IterationsHistory
 
@@ -27,9 +28,8 @@ from .iterative._iteration_history import IterationsHistory
 class ECM(BaseEstimator):
     """Expectation-Conditional Maximization (ECM) estimator.
 
-    Executes an iterative pipeline of Expectation and Conditional Maximization steps.
-    Maximization is partitioned component-wise, updating all free parameters of each
-    component by maximizing the Q-function.
+    Maximizes the Q-function over ordered parameter groups supplied to :meth:`fit`.
+    Without groups, jointly optimizes each component's free parameters, as in EM.
 
     Parameters
     ----------
@@ -84,7 +84,14 @@ class ECM(BaseEstimator):
             raise AttributeError("History is not available. Call the 'fit' method first.")
         return self._history
 
-    def fit(self, X: ArrayLike, mixture: MixtureModel, once_in_iterations: int = 1) -> MixtureModel:
+    def fit(
+        self,
+        X: ArrayLike,
+        mixture: MixtureModel,
+        once_in_iterations: int = 1,
+        *,
+        parameter_groups: Mapping[int, Sequence[set[str]]] | None = None,
+    ) -> MixtureModel:
         """Fit mixture model parameters using the ECM algorithm.
 
         Parameters
@@ -95,19 +102,29 @@ class ECM(BaseEstimator):
             Initial mixture model to fit; not modified in-place.
         once_in_iterations : int, optional
             Iteration recording frequency in history. Defaults to 1.
+        parameter_groups : Mapping[int, Sequence[set[str]]] | None, optional
+            Component indices mapped to ordered, non-empty, disjoint groups covering
+            all free parameters. Groups are optimized sequentially; omitted components
+            use one joint step. Defaults to None.
 
         Returns
         -------
         MixtureModel
             Fitted mixture model with estimated parameters.
+
+        Raises
+        ------
+        ValueError
+            If a component index is invalid or its groups do not partition its
+            free parameters into non-empty, disjoint sets.
         """
 
-        # No parameter names: every free parameter of a component is optimized, and the parameters
-        # fixed with ``family.view(...)`` keep their values.
-        blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(mixture.n_components)]
+        blocks = build_optimization_blocks(
+            mixture, parameter_groups, [MaximizationStrategy.QFUNCTION] * mixture.n_components
+        )
 
         pipeline: Pipeline = Pipeline(
-            [ExpectationStep(), MaximizationStep(blocks, self.optimizer)],
+            [ExpectationStep(), WeightsStep(), MaximizationStep(blocks, self.optimizer)],
             self.breakpointers,
             self.pruners,
             once_in_iterations,

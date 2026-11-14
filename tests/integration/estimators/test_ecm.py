@@ -9,12 +9,14 @@ from copy import copy
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators import ECM
 from pysatl_mpest.estimators.iterative import PriorThresholdPruner, StepBreakpointer
 from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead, ScipyPowell
+from scipy.special import logsumexp
 
 from tests.helpers.estimator_data import (
     N_SAMPLES,
@@ -32,6 +34,13 @@ from tests.helpers.families import family
 from tests.helpers.reference_em import reference_em
 
 LIKELIHOOD_SLACK = 1e-9  # A numerical tolerance for a likelihood that should not decrease.
+
+
+def normal_exponential(mu: float, sigma: float) -> ParametricFamilyDistribution:
+    """A Normal component in the ``exponential`` parametrization: ``a = -1/(2*sigma**2)``, ``b = mu/sigma**2``."""
+    a = -1.0 / (2 * sigma**2)
+    b = mu / sigma**2
+    return family(FamilyName.NORMAL)(parametrization_name="exponential", a=a, b=b)
 
 
 @pytest.fixture
@@ -248,3 +257,80 @@ class TestUnsupportedData:
             assert actual == pytest.approx(expected, rel=1e-9)
         assert_allclose(outlier_fit.weights, clean_fit.weights, rtol=1e-9)
         assert np.isneginf(outlier_fit.loglikelihood(np.append(clean, -0.5)))
+
+
+class TestParameterGroups:
+    """Conditional maximization via ``parameter_groups``."""
+
+    @pytest.mark.parametrize("iterations", [1, 5])
+    def test_single_group_covering_all_free_parameters_reproduces_em(
+        self, X: np.ndarray, start: MixtureModel, iterations: int
+    ) -> None:
+        # One group per component is the same maximization problem as EM's joint step.
+        groups = {0: [{"mu", "sigma"}], 1: [{"mu", "sigma"}]}
+        fitted = ecm_for(iterations).fit(X, start, parameter_groups=groups)
+
+        for actual, expected in zip(fitted_arrays(fitted), reference_em(X, start, iterations)):
+            assert_allclose(actual, expected, rtol=1e-9)
+
+    def test_groups_cover_only_free_parameters_and_keep_fixed_ones(self, X: np.ndarray) -> None:
+        fixed_a = -0.5
+        fixed = family(FamilyName.NORMAL).view(parametrization_name="exponential", a=fixed_a)(b=1.0)
+        start = MixtureModel([fixed, normal_exponential(3.0, 1.0)], weights=[0.5, 0.5])
+        ecm = ECM(breakpointers=[StepBreakpointer(1)], pruners=[], optimizer=ScipyNelderMead())
+
+        fitted = ecm.fit(X, start, parameter_groups={0: [{"b"}], 1: [{"a"}, {"b"}]})
+
+        assert cc.fixed_parameters(fitted[0]) == {"a": fixed_a}
+        assert cc.all_parameters(fitted[0])["a"] == fixed_a
+
+    def test_conditional_steps_match_the_closed_form_reference(self) -> None:
+        """One iteration of true ECM on Normal ``exponential`` components.
+
+        With groups ``[{"a"}, {"b"}]`` the block for ``a`` maximizes Q at the old
+        ``b``, then the block for ``b`` maximizes Q at the new ``a``. The numpy
+        reference below performs the same closed-form conditional steps; the
+        result must differ from EM's joint maximizer and from updating both
+        groups off a single snapshot by more than the Nelder-Mead tolerance.
+        """
+        rng = np.random.default_rng(42)
+        truth = MixtureModel([normal(0.0, 1.0), normal(6.0, 1.5)], weights=TRUE_WEIGHTS)
+        X = np.asarray(truth.generate(size=N_SAMPLES, random_state=rng), dtype=np.float64)
+
+        start_ab = [(-0.5, 2.0), (-0.5, 3.0)]  # (mu, sigma) = (2, 1) and (3, 1)
+        start = MixtureModel([normal_exponential(2.0, 1.0), normal_exponential(3.0, 1.0)], weights=[0.5, 0.5])
+
+        ecm = ECM(breakpointers=[StepBreakpointer(1)], pruners=[], optimizer=ScipyNelderMead())
+        fitted = ecm.fit(X, start, parameter_groups={0: [{"a"}, {"b"}], 1: [{"a"}, {"b"}]})
+
+        # Reference iteration on numpy: soft responsibilities, weights, and the
+        # conditional maximizers of Q ~ a*m2 + b*m1 + b**2/(4*a) + 0.5*log(-a).
+        def lpdf(a: float, b: float) -> np.ndarray:
+            return a * X**2 + b * X + b**2 / (4 * a) - 0.5 * np.log(np.pi / (-a))
+
+        log_joint = np.stack([lpdf(a, b) for a, b in start_ab], axis=1) + np.log(start.weights)
+        H = np.exp(log_joint - logsumexp(log_joint, axis=1, keepdims=True))
+        total = H.sum(axis=0)
+        m1 = (H * X[:, None]).sum(axis=0) / total
+        m2 = (H * X[:, None] ** 2).sum(axis=0) / total
+
+        tolerance = 1e-3  # Nelder-Mead accuracy on the conditional maximizers.
+        min_gap = 0.05
+        assert_allclose(fitted.weights, total / len(X), atol=tolerance)
+
+        for component, (a_old, b_old), m1_j, m2_j in zip(fitted, start_ab, m1, m2, strict=True):
+            a_ecm = (-1.0 - np.sqrt(1.0 + 4.0 * m2_j * b_old**2)) / (4.0 * m2_j)
+            b_ecm = -2.0 * a_ecm * m1_j
+            actual = cc.free_parameters(component)
+
+            assert actual["a"] == pytest.approx(a_ecm, abs=tolerance)
+            assert actual["b"] == pytest.approx(b_ecm, abs=tolerance)
+
+            # EM's joint maximizer from the same snapshot: mu = m1, sigma**2 = m2 - m1**2.
+            variance = m2_j - m1_j**2
+            a_em, b_em = -1.0 / (2 * variance), m1_j / variance
+            assert max(abs(actual["a"] - a_em), abs(actual["b"] - b_em)) > min_gap
+
+            # Both groups updated from a single snapshot differ in ``b``.
+            b_simultaneous = -2.0 * a_old * m1_j
+            assert abs(actual["b"] - b_simultaneous) > min_gap

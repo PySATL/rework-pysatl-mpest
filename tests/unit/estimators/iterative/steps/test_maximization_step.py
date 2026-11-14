@@ -5,8 +5,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from unittest.mock import call
-
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -28,34 +26,14 @@ from pytest_mock import MockerFixture
 from tests.helpers.families import family
 from tests.helpers.pipeline import make_state
 
+type RecordedCall = tuple[ParametricFamilyDistribution, PipelineState, OptimizationBlock, Optimizer]
+
 
 @pytest.fixture
 def mock_optimizer(mocker: MockerFixture) -> Optimizer:
     """Fixture to create a mock Optimizer."""
 
     return mocker.MagicMock(spec=Optimizer)
-
-
-@pytest.fixture
-def parametrized_state(mocker: MockerFixture) -> PipelineState:
-    """
-    Creates a PipelineState fixture for testing.
-
-    This fixture constructs a mock MixtureModel and PipelineState where
-    all relevant arrays (X, H) and model attributes use np.float64.
-    """
-
-    comp1 = mocker.MagicMock(spec=ParametricFamilyDistribution)
-    comp2 = mocker.MagicMock(spec=ParametricFamilyDistribution)
-    mock_components = [comp1, comp2]
-
-    mixture = mocker.MagicMock(spec=MixtureModel)
-    mixture.__getitem__.side_effect = lambda i: mock_components[i]
-    mixture.__iter__.return_value = iter(mock_components)
-
-    X = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
-    H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]], dtype=np.float64)
-    return PipelineState(X=X, H=H, prev_mixture=None, curr_mixture=mixture, error=None)
 
 
 @pytest.fixture
@@ -70,6 +48,12 @@ def real_state() -> PipelineState:
         curr_mixture=mixture,
         error=None,
     )
+
+
+@pytest.fixture
+def normal_mixture() -> MixtureModel:
+    normal = family(FamilyName.NORMAL)
+    return MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0)], weights=[0.5, 0.5])
 
 
 def uniform_responsibilities(mixture: MixtureModel) -> np.ndarray:
@@ -92,10 +76,21 @@ def make_scripted_step(
     return MaximizationStep(blocks, mocker.MagicMock(spec=Optimizer))
 
 
-@pytest.fixture
-def normal_mixture() -> MixtureModel:
-    normal = family(FamilyName.NORMAL)
-    return MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0)], weights=[0.5, 0.5])
+def make_recording_step(
+    mocker: MockerFixture, blocks: list[OptimizationBlock], *updates: dict[str, float]
+) -> tuple[MaximizationStep, list[RecordedCall]]:
+    """Build a step whose strategy records its arguments and returns scripted parameters for each block."""
+    returned = iter(updates)
+    calls: list[RecordedCall] = []
+
+    def scripted(
+        component: ParametricFamilyDistribution, state: PipelineState, block: OptimizationBlock, optimizer: Optimizer
+    ) -> tuple[int, dict[str, float]]:
+        calls.append((component, state, block, optimizer))
+        return block.component_id, next(returned)
+
+    mocker.patch.object(MaximizationStep, "_strategies", {MaximizationStrategy.QFUNCTION: scripted})
+    return MaximizationStep(blocks, mocker.MagicMock(spec=Optimizer)), calls
 
 
 class TestConstruction:
@@ -124,8 +119,8 @@ class TestConstruction:
 
 
 class TestRun:
-    def test_missing_responsibilities_set_error(self, mock_optimizer: Optimizer, parametrized_state: PipelineState):
-        state = parametrized_state
+    def test_missing_responsibilities_set_error(self, mock_optimizer: Optimizer, real_state: PipelineState):
+        state = real_state
 
         state.H = None
         step = MaximizationStep(blocks=[], optimizer=mock_optimizer)
@@ -139,105 +134,177 @@ class TestRun:
     def test_strategy_result_updates_component(
         self,
         mocker: MockerFixture,
-        mock_optimizer: Optimizer,
-        parametrized_state: PipelineState,
+        normal_mixture: MixtureModel,
     ):
-        state = parametrized_state
-
-        block = OptimizationBlock(
-            component_id=0,
-            params_to_optimize={"loc", "rate"},
-            maximization_strategy=MaximizationStrategy.QFUNCTION,
-        )
-        step = MaximizationStep(blocks=[block], optimizer=mock_optimizer)
-
-        mock_strategy = mocker.patch("pysatl_mpest.estimators.iterative.steps.maximization_step.q_function_strategy")
-        optimized_params = {"loc": np.float64(1.5), "rate": np.float64(2.5)}
-        mock_strategy.return_value = (0, optimized_params)
-
-        new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
-        mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
-
-        updated_component = mocker.MagicMock(spec=ParametricFamilyDistribution)
-        update = mocker.patch.object(MaximizationStep, "_update_components_params", return_value=updated_component)
-
-        target_component = state.curr_mixture[0]
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+        block = OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION)
+        step, calls = make_recording_step(mocker, [block], {"mu": 1.5})
+        original = normal_mixture[0]
 
         step.run(state)
 
-        mock_strategy.assert_called_once_with(target_component, state, block, mock_optimizer)
-        update.assert_called_once_with(target_component, optimized_params)
-        state.curr_mixture.__setitem__.assert_called_once_with(0, updated_component)
+        component, seen_state, seen_block, seen_optimizer = calls[0]
+        assert component is original
+        assert seen_block is block
+        assert seen_optimizer is step.optimizer
+        assert seen_state is not state
+        assert seen_state.curr_mixture is not state.curr_mixture
+        # The strategy sees the wave's snapshot, which is not modified by the block's result.
+        assert cc.all_parameters(seen_state.curr_mixture[0]) == {"mu": 0.0, "sigma": 1.0}
+        assert cc.all_parameters(normal_mixture[0]) == {"mu": 1.5, "sigma": 1.0}
 
-    def test_responsibilities_set_mixture_weights(
-        self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
-    ):
-        state = parametrized_state
-
-        # Sum of responsibilities: [1.8/4, 2.2/4] = [0.45, 0.55]
-        expected_new_weights = np.array([0.45, 0.55], dtype=np.float64)
-        expected_log_weights = np.log(expected_new_weights + 1e-30).astype(np.float64)
-
-        p = mocker.PropertyMock()
-        type(state.curr_mixture).log_weights = p
-
-        step = MaximizationStep(blocks=[], optimizer=mock_optimizer)
-        step.run(state)
-
-        p.assert_called_once()
-        actual_log_weights = p.call_args.args[0]
-        np.testing.assert_allclose(actual_log_weights, expected_log_weights, atol=1e-7)
-
-    def test_blocks_run_sequentially(
-        self,
-        mocker: MockerFixture,
-        mock_optimizer: Optimizer,
-        parametrized_state: PipelineState,
-    ):
-        state = parametrized_state
-
-        expected_call_count = 2
-
-        block1 = OptimizationBlock(
-            component_id=1,
-            params_to_optimize={"rate"},
-            maximization_strategy=MaximizationStrategy.QFUNCTION,
-        )
-        block0 = OptimizationBlock(
-            component_id=0,
-            params_to_optimize={"loc"},
-            maximization_strategy=MaximizationStrategy.QFUNCTION,
-        )
-        # Order matters: block1 first, then block0
-        step = MaximizationStep(blocks=[block1, block0], optimizer=mock_optimizer)
-
-        mock_strategy = mocker.patch("pysatl_mpest.estimators.iterative.steps.maximization_step.q_function_strategy")
-        mock_strategy.side_effect = [
-            (1, {"rate": 1.1}),
-            (0, {"loc": 2.2}),
+    def test_blocks_of_one_wave_share_one_snapshot(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
+        """Blocks of one wave receive the same ``state.curr_mixture`` object: the wave's snapshot."""
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"mu"}, MaximizationStrategy.QFUNCTION),
         ]
+        originals = (normal_mixture[0], normal_mixture[1])
+        step, calls = make_recording_step(mocker, blocks, {"mu": 9.0}, {"mu": 8.0})
 
-        component0, component1 = state.curr_mixture
+        step.run(state)
 
-        new_strategies = {MaximizationStrategy.QFUNCTION: mock_strategy}
-        mocker.patch.object(MaximizationStep, "_strategies", new_strategies)
+        first_state, second_state = calls[0][1], calls[1][1]
+        assert first_state.curr_mixture is second_state.curr_mixture
+        assert first_state.curr_mixture is not state.curr_mixture
+        assert calls[0][0] is originals[0]
+        assert calls[1][0] is originals[1]
+        # The snapshot is not modified: the first block's result went to the working copy.
+        assert cc.all_parameters(second_state.curr_mixture[0])["mu"] == 0.0
+
+    def test_next_wave_sees_the_previous_waves_update(self, mocker: MockerFixture, normal_mixture: MixtureModel):
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ]
+        new_mu = 2.0
+        step, calls = make_recording_step(mocker, blocks, {"mu": new_mu}, {"sigma": 3.0})
+
+        step.run(state)
+
+        second_component, second_state, second_block, _ = calls[1]
+        assert second_block is blocks[1]
+        assert cc.all_parameters(second_component)["mu"] == new_mu
+        assert cc.all_parameters(second_state.curr_mixture[0])["mu"] == new_mu
+        assert second_state.H is state.H
+        assert second_state.X is state.X
+        # Each wave computes from its own snapshot of the working mixture.
+        assert calls[0][1].curr_mixture is not second_state.curr_mixture
+        assert cc.all_parameters(calls[0][1].curr_mixture[0])["mu"] == 0.0
+        assert cc.all_parameters(normal_mixture[0]) == {"mu": new_mu, "sigma": 3.0}
+
+    def test_same_wave_odl_block_reads_the_snapshot(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
+        """In [ODL0, Q1] both blocks form one wave, so ODL reads component 1 before the wave's updates."""
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+        new_mu = 9.0
+        seen_mu: list[float] = []
+        seen_mixtures: list[MixtureModel] = []
+
+        def odl_probe(
+            component: ParametricFamilyDistribution,
+            state: PipelineState,
+            block: OptimizationBlock,
+            optimizer: Optimizer,
+        ) -> tuple[int, dict[str, float]]:
+            seen_mixtures.append(state.curr_mixture)
+            seen_mu.append(cc.all_parameters(state.curr_mixture[1])["mu"])
+            return block.component_id, {}
+
+        def q_scripted(
+            component: ParametricFamilyDistribution,
+            state: PipelineState,
+            block: OptimizationBlock,
+            optimizer: Optimizer,
+        ) -> tuple[int, dict[str, float]]:
+            seen_mixtures.append(state.curr_mixture)
+            return block.component_id, {"mu": new_mu}
+
         mocker.patch.object(
-            MaximizationStep, "_update_components_params", side_effect=lambda component, params: component
+            MaximizationStep,
+            "_strategies",
+            {
+                MaximizationStrategy.QFUNCTION: q_scripted,
+                MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD: odl_probe,
+            },
+        )
+        step = MaximizationStep(
+            [
+                OptimizationBlock(0, None, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+                OptimizationBlock(1, {"mu"}, MaximizationStrategy.QFUNCTION),
+            ],
+            mocker.MagicMock(spec=Optimizer),
         )
 
         step.run(state)
 
-        assert mock_strategy.call_count == expected_call_count
+        assert seen_mixtures[0] is seen_mixtures[1]
+        assert seen_mu == [5.0]
+        assert cc.all_parameters(normal_mixture[1])["mu"] == new_mu
 
-        first_call_args = mock_strategy.call_args_list[0].args
-        assert first_call_args[0] is component1
-        assert first_call_args[2] is block1
+    def test_odl_like_strategy_sees_earlier_block_updates(
+        self, mocker: MockerFixture, normal_mixture: MixtureModel
+    ) -> None:
+        """A strategy reading ``state.curr_mixture`` observes components updated by earlier blocks."""
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+        seen_mu: list[float] = []
 
-        second_call_args = mock_strategy.call_args_list[1].args
-        assert second_call_args[0] is component0
-        assert second_call_args[2] is block0
+        def q_scripted(
+            component: ParametricFamilyDistribution,
+            state: PipelineState,
+            block: OptimizationBlock,
+            optimizer: Optimizer,
+        ) -> tuple[int, dict[str, float]]:
+            return block.component_id, {"mu": 9.0}
 
-        state.curr_mixture.__setitem__.assert_has_calls([call(1, component1), call(0, component0)])
+        def odl_probe(
+            component: ParametricFamilyDistribution,
+            state: PipelineState,
+            block: OptimizationBlock,
+            optimizer: Optimizer,
+        ) -> tuple[int, dict[str, float]]:
+            seen_mu.append(cc.all_parameters(state.curr_mixture[0])["mu"])
+            return block.component_id, {}
+
+        mocker.patch.object(
+            MaximizationStep,
+            "_strategies",
+            {
+                MaximizationStrategy.QFUNCTION: q_scripted,
+                MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD: odl_probe,
+            },
+        )
+        step = MaximizationStep(
+            [
+                OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+                OptimizationBlock(1, None, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+            ],
+            mocker.MagicMock(spec=Optimizer),
+        )
+
+        step.run(state)
+
+        assert seen_mu == [9.0]
+
+    def test_does_not_update_weights(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
+        H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]])
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), H, normal_mixture)
+        log_weights_before = normal_mixture.log_weights
+
+        make_scripted_step(
+            mocker, [OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION)], {"mu": 1.0, "sigma": 2.0}
+        ).run(state)
+
+        assert normal_mixture.log_weights is log_weights_before
+        assert_allclose(normal_mixture.weights, [0.5, 0.5], atol=1e-12)
+
+    def test_preserves_curr_mixture_object(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+
+        make_scripted_step(mocker, [OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION)], {"mu": 1.0}).run(state)
+
+        assert state.curr_mixture is normal_mixture
 
     def test_out_of_range_component_is_rejected(self, mock_optimizer: Optimizer, real_state: PipelineState) -> None:
         block = OptimizationBlock(real_state.curr_mixture.n_components, None, MaximizationStrategy.QFUNCTION)
@@ -248,13 +315,13 @@ class TestRun:
 
         assert real_state.error is None
 
-    def test_strategy_failure_prevents_updates(
+    def test_strategy_failure_leaves_state_mixture_untouched(
         self, mock_optimizer: Optimizer, real_state: PipelineState, mocker: MockerFixture
     ) -> None:
         state = real_state
         mixture = state.curr_mixture
         original_components = list(mixture)
-        original_log_weights = mixture.log_weights.copy()
+        original_log_weights = mixture.log_weights
         blocks = [OptimizationBlock(index, {"mu"}, MaximizationStrategy.QFUNCTION) for index in range(2)]
         step = MaximizationStep(blocks, mock_optimizer)
         error = RuntimeError("Optimization diverged")
@@ -267,25 +334,63 @@ class TestRun:
 
         assert caught.value is error
         assert strategy.call_count == len(blocks)
-        update.assert_not_called()
+        # The first block's result went into the working copy, which is discarded on failure.
+        assert update.call_count == 1
         assert state.curr_mixture is mixture
         assert all(current is original for current, original in zip(mixture, original_components, strict=True))
-        np.testing.assert_array_equal(mixture.log_weights, original_log_weights)
+        assert mixture.log_weights is original_log_weights
         assert state.error is None
 
-    def test_zero_responsibility_keeps_log_weight_finite(
-        self, mocker: MockerFixture, mock_optimizer: Optimizer, parametrized_state: PipelineState
-    ):
-        state = parametrized_state
-        state.H = np.array([[1.0, 0.0]] * 4)
-        log_weights = mocker.PropertyMock()
-        type(state.curr_mixture).log_weights = log_weights
+    def test_failure_in_a_later_wave_leaves_state_mixture_untouched(
+        self, mock_optimizer: Optimizer, real_state: PipelineState, mocker: MockerFixture
+    ) -> None:
+        """A failure in a later wave discards the results of all earlier waves."""
+        state = real_state
+        mixture = state.curr_mixture
+        original_components = list(mixture)
+        original_log_weights = mixture.log_weights
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+        error = RuntimeError("Optimization diverged")
+        strategy = mocker.Mock(side_effect=[(0, {"mu": 10.0}), error])
+        mocker.patch.object(MaximizationStep, "_strategies", {MaximizationStrategy.QFUNCTION: strategy})
 
-        MaximizationStep(blocks=[], optimizer=mock_optimizer).run(state)
+        with pytest.raises(RuntimeError, match="Optimization diverged") as caught:
+            step.run(state)
 
-        actual = log_weights.call_args.args[0]
-        assert np.all(np.isfinite(actual))
-        np.testing.assert_allclose(actual, [0.0, np.log(1e-30)], atol=1e-9)
+        assert caught.value is error
+        assert state.curr_mixture is mixture
+        assert all(current is original for current, original in zip(mixture, original_components, strict=True))
+        assert mixture.log_weights is original_log_weights
+        assert state.error is None
+
+    def test_run_after_prune_plans_waves_for_current_blocks(
+        self, mocker: MockerFixture, mock_optimizer: Optimizer
+    ) -> None:
+        """After pruning, the next run replans waves for the surviving blocks."""
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(mixture), mixture)
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"sigma"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"sigma": 3.0})
+
+        mixture.remove_component(0)
+        step.clear_after_prune([0])
+        step.run(state)
+
+        # Surviving blocks [Q0{mu}, Q0{sigma}] form a chain of two waves.
+        assert [call[2].params_to_optimize for call in calls] == [{"mu"}, {"sigma"}]
+        assert calls[0][1].curr_mixture is not calls[1][1].curr_mixture
+        assert cc.all_parameters(calls[1][1].curr_mixture[0])["mu"] == 1.0
+        assert cc.all_parameters(mixture[0]) == {"mu": 1.0, "sigma": 3.0}
+        assert cc.all_parameters(mixture[1]) == {"mu": -5.0, "sigma": 1.0}
 
     def test_strategy_parameters_replace_component(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
@@ -337,14 +442,6 @@ class TestRun:
             )
 
         assert mixture[0] is component
-
-    def test_uses_responsibilities_for_weights(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
-        H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]])
-        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), H, normal_mixture)
-
-        make_scripted_step(mocker, []).run(state)
-
-        assert_allclose(normal_mixture.weights, [0.45, 0.55], atol=1e-12)
 
     @pytest.mark.parametrize(
         "error",
@@ -483,7 +580,7 @@ class TestClearAfterPrune:
 
     def test_shifts_blocks_after_removed_component(self, mock_optimizer: Optimizer):
         blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(4)]
-        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
+        step = MaximizationStep(blocks, mock_optimizer)
 
         step.clear_after_prune([0])
 

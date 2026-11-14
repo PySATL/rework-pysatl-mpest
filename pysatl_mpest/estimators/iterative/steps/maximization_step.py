@@ -7,26 +7,28 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import bisect
 from collections.abc import Mapping, Sequence
+from copy import copy
 from dataclasses import replace
 from types import MappingProxyType
 from typing import ClassVar
 
-import numpy as np
 from pysatl_core.families import ParametricFamilyDistribution
 
 from ....core import _components
 from ....optimizers import Optimizer
 from .._strategies import StrategyFunction, moments_strategy, observed_data_likelihood_strategy, q_function_strategy
+from .._wave_planner import plan_waves
 from ..pipeline_state import PipelineState
 from ..pipeline_step import PipelineStep
 from .block import MaximizationStrategy, OptimizationBlock
 
 
 class MaximizationStep(PipelineStep):
-    """Maximization step updating component parameters and mixture weights.
+    """Maximization step updating mixture component parameters.
 
-    Executes configured :class:`OptimizationBlock` tasks to update component parameters,
-    then updates mixture weights from responsibilities.
+    Applies :class:`OptimizationBlock` tasks with sequential list-order semantics,
+    grouping independent blocks into waves. Updates component parameters only;
+    use :class:`WeightsStep` to update mixture weights.
 
     Parameters
     ----------
@@ -76,11 +78,11 @@ class MaximizationStep(PipelineStep):
         return _components.with_parameters(component, **params)
 
     def run(self, state: PipelineState) -> PipelineState:
-        """Execute the M-step, updating component parameters and weights.
+        """Execute the M-step, updating component parameters.
 
-        Strategy exceptions propagate directly. Parameters and weights update only
-        after all strategy blocks succeed, and the current mixture is modified in place.
-        Missing responsibilities set ``state.error`` instead of raising.
+        Applies all blocks atomically, preserving the mixture's identity and weights.
+        Strategy exceptions propagate without changing the mixture. Missing
+        responsibilities set :attr:`~pysatl_mpest.estimators.iterative.pipeline_state.PipelineState.error` instead.
 
         Parameters
         ----------
@@ -103,24 +105,22 @@ class MaximizationStep(PipelineStep):
         """
 
         if state.H is None:
-            error = ValueError("Responsibility matrix H is not computed.")
-            state.error = error
+            state.error = ValueError("Responsibility matrix H is not computed.")
             return state
 
-        results: list[tuple[int, dict[str, float]]] = []
-        curr_mixture = state.curr_mixture
+        working = copy(state.curr_mixture)
 
-        for block in self.blocks:
-            strategy = self._strategies[block.maximization_strategy]
-            component_id, new_params = strategy(curr_mixture[block.component_id], state, block, self.optimizer)
-            results.append((component_id, new_params))
+        for wave in plan_waves(self.blocks):
+            snapshot = copy(working)
+            wave_state = replace(state, curr_mixture=snapshot)
+            for index in wave:
+                block = self.blocks[index]
+                strategy = self._strategies[block.maximization_strategy]
+                component_id, new_params = strategy(snapshot[block.component_id], wave_state, block, self.optimizer)
+                working[component_id] = self._update_components_params(working[component_id], new_params)
 
-        for component_id, params in results:
-            curr_mixture[component_id] = self._update_components_params(curr_mixture[component_id], params)
-
-        responsibilities_sum = np.sum(state.H, axis=0)
-        new_weights = responsibilities_sum / state.X.shape[0]
-        curr_mixture.log_weights = np.log(new_weights + 1e-30)
+        for index in range(working.n_components):
+            state.curr_mixture[index] = working[index]
 
         return state
 

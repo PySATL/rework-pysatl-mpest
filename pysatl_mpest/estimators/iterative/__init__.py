@@ -12,7 +12,7 @@ from .pipeline_state import PipelineState
 from .pipeline_step import PipelineStep
 from .pruner import Pruner
 from .pruners import PriorThresholdPruner
-from .steps import ExpectationStep, MaximizationStep, MaximizationStrategy, OptimizationBlock
+from .steps import ExpectationStep, MaximizationStep, MaximizationStrategy, OptimizationBlock, WeightsStep
 
 __all__ = [
     "Breakpointer",
@@ -27,4 +27,5 @@ __all__ = [
     "PriorThresholdPruner",
     "Pruner",
     "StepBreakpointer",
+    "WeightsStep",
 ]

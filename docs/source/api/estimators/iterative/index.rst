@@ -36,6 +36,7 @@ Steps (`PipelineStep`):
    :template: class.rst
 
    ~ExpectationStep
+   ~WeightsStep
    ~MaximizationStep
 
 Breakpointers (`Breakpointer`):

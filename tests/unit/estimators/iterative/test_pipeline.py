@@ -15,12 +15,17 @@ from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators.iterative import (
     Breakpointer,
+    ExpectationStep,
+    MaximizationStep,
     Pipeline,
     PipelineState,
     PipelineStep,
     Pruner,
+    WeightsStep,
 )
 from pysatl_mpest.estimators.iterative._iteration_history import IterationRecord, IterationsHistory
+from pysatl_mpest.optimizers import Optimizer
+from pytest_mock import MockerFixture
 
 from tests.helpers.families import family
 
@@ -283,6 +288,25 @@ class TestStepValidation:
     def test_the_pair_closing_the_cycle_is_checked(self):
         with pytest.raises(ValueError, match="Wrong pipeline configuration"):
             Pipeline([MockStepA(), MockStepB(), MockStepA()], [StopOnCheck(call_number=1)])
+
+    def test_accepts_expectation_weights_maximization_sequence(self, mocker: MockerFixture):
+        optimizer = mocker.MagicMock(spec=Optimizer)
+        steps = [ExpectationStep(), WeightsStep(), MaximizationStep([], optimizer)]
+
+        Pipeline(steps, [StopOnCheck(call_number=1)])
+
+    def test_accepts_expectation_maximization_sequence(self, mocker: MockerFixture):
+        optimizer = mocker.MagicMock(spec=Optimizer)
+        steps = [ExpectationStep(), MaximizationStep([], optimizer)]
+
+        Pipeline(steps, [StopOnCheck(call_number=1)])
+
+    def test_rejects_maximization_weights_transition(self, mocker: MockerFixture):
+        optimizer = mocker.MagicMock(spec=Optimizer)
+        steps = [ExpectationStep(), MaximizationStep([], optimizer), WeightsStep()]
+
+        with pytest.raises(ValueError, match="Wrong pipeline configuration"):
+            Pipeline(steps, [StopOnCheck(call_number=1)])
 
 
 # --- Fit Method Tests ---

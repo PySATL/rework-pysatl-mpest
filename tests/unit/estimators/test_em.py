@@ -111,6 +111,7 @@ class TestPipeline:
         expected_frequency: int,
     ) -> None:
         MockExpectationStep = mocker.patch("pysatl_mpest.estimators.em.ExpectationStep", autospec=True)
+        MockWeightsStep = mocker.patch("pysatl_mpest.estimators.em.WeightsStep", autospec=True)
         MockMaximizationStep = mocker.patch("pysatl_mpest.estimators.em.MaximizationStep", autospec=True)
         MockPipeline = mocker.patch("pysatl_mpest.estimators.em.Pipeline", autospec=True)
         MockPipeline.return_value.history = IterationsHistory(once_in_iterations=1)
@@ -119,12 +120,17 @@ class TestPipeline:
         em.fit(sample_data, sample_mixture, **fit_kwargs)
 
         MockExpectationStep.assert_called_once_with()
+        MockWeightsStep.assert_called_once_with()
         MockMaximizationStep.assert_called_once()
 
         args, _ = MockPipeline.call_args
         pipeline_steps, pipeline_breakpointers, pipeline_pruners, pipeline_record_freq = args
 
-        assert pipeline_steps == [MockExpectationStep.return_value, MockMaximizationStep.return_value]
+        assert pipeline_steps == [
+            MockExpectationStep.return_value,
+            MockWeightsStep.return_value,
+            MockMaximizationStep.return_value,
+        ]
         assert pipeline_breakpointers == mock_breakpointers
         assert pipeline_pruners == mock_pruners
         assert pipeline_record_freq == expected_frequency

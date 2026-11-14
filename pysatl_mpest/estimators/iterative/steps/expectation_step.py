@@ -45,8 +45,9 @@ class ExpectationStep(PipelineStep):
         """list[type[PipelineStep]]: Steps permitted to follow ExpectationStep."""
 
         from pysatl_mpest.estimators.iterative.steps.maximization_step import MaximizationStep
+        from pysatl_mpest.estimators.iterative.steps.weights_step import WeightsStep
 
-        return [MaximizationStep]
+        return [WeightsStep, MaximizationStep]
 
     def run(self, state: PipelineState) -> PipelineState:
         """Compute responsibility matrix H and store it in pipeline state.

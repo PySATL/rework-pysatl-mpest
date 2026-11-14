@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 from pysatl_mpest.core import MixtureModel
-from pysatl_mpest.estimators.iterative import ExpectationStep, MaximizationStep, PipelineState
+from pysatl_mpest.estimators.iterative import ExpectationStep, MaximizationStep, PipelineState, WeightsStep
 
 
 @pytest.fixture
@@ -39,9 +39,9 @@ class TestConstruction:
 
 
 class TestNextSteps:
-    def test_allows_maximization_as_the_next_step(self):
+    def test_allows_weights_and_maximization_as_next_steps(self):
         step = ExpectationStep()
-        assert step.available_next_steps == [MaximizationStep]
+        assert step.available_next_steps == [WeightsStep, MaximizationStep]
 
 
 class TestRun:

@@ -37,7 +37,7 @@ Facades (High-Level API)
 
 .. note::
 
-   ``EM`` is the standalone Expectation-Maximization estimator; the current ``ECM`` implementation performs the same component-wise Q-function updates.
+   ``EM`` is the standalone Expectation-Maximization estimator. ``ECM`` performs conditional maximization over ordered parameter groups passed to ``fit`` as ``parameter_groups`` and matches ``EM`` when they are omitted; ``ECME`` additionally allows per-component Q-function or observed-data-likelihood maximization.
 
 Abstract Classes
 ================
