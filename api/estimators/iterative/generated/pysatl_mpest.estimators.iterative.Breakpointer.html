@@ -378,11 +378,17 @@
 differing component counts between <code class="docutils literal notranslate"><span class="pre">state.prev_mixture</span></code> and <code class="docutils literal notranslate"><span class="pre">state.curr_mixture</span></code>.</p>
 <p><code class="docutils literal notranslate"><span class="pre">check</span></code> may keep state between calls and is expected to be called once per iteration. The pipeline stops
 at the first breakpointer that returns True, so the ones after it are not called in that iteration.</p>
+<p>Any state accumulated by <code class="docutils literal notranslate"><span class="pre">check</span></code> lives only within a single <code class="docutils literal notranslate"><span class="pre">Pipeline.fit</span></code> call: <code class="docutils literal notranslate"><span class="pre">Pipeline.fit</span></code>
+invokes <a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.reset.html#pysatl_mpest.estimators.iterative.Breakpointer.reset" title="pysatl_mpest.estimators.iterative.Breakpointer.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> on every breakpointer before the first iteration, so reusing the estimator
+across fits starts from a clean state.</p>
 <p class="rubric">Methods</p>
 <div class="pst-scrollable-table-container"><table class="autosummary longtable table">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.check.html#pysatl_mpest.estimators.iterative.Breakpointer.check" title="pysatl_mpest.estimators.iterative.Breakpointer.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(state)</p></td>
 <td><p>Evaluate whether pipeline execution should terminate.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.Breakpointer.reset.html#pysatl_mpest.estimators.iterative.Breakpointer.reset" title="pysatl_mpest.estimators.iterative.Breakpointer.reset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset</span></code></a>()</p></td>
+<td><p>Reset all state accumulated by <code class="docutils literal notranslate"><span class="pre">check</span></code> between calls.</p></td>
 </tr>
 </tbody>
 </table>

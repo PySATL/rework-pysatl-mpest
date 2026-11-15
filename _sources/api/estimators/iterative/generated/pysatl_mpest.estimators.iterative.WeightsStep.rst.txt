@@ -19,6 +19,10 @@ WeightsStep
         
     
 
+    
+        
+    
+
 
 
 
@@ -29,6 +33,8 @@ WeightsStep
 
 
    ~WeightsStep.clear_after_prune
+
+   ~WeightsStep.reset
 
    ~WeightsStep.run
 

@@ -750,8 +750,8 @@ window.addEventListener("load", load);
 <span class="sd">    ``-inf`` because that method includes observations outside the support.</span>
 
 <span class="sd">    An empty support or a non-finite sum emits a ``RuntimeWarning`` and stops</span>
-<span class="sd">    the pipeline. Both the stored sum and support mask are reset whenever this</span>
-<span class="sd">    breakpointer stops the pipeline, including ordinary convergence.</span>
+<span class="sd">    the pipeline. The stored sum and support mask are cleared only by</span>
+<span class="sd">    :meth:`reset`, which :meth:`Pipeline.fit` calls before every fitting run.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -775,6 +775,7 @@ window.addEventListener("load", load);
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        check</span>
+<span class="sd">        reset</span>
 <span class="sd">    """</span>
 
     <span class="n">threshold</span><span class="p">:</span> <span class="n">Scalar</span>
@@ -828,8 +829,6 @@ window.addEventListener("load", load);
                 <span class="ne">RuntimeWarning</span><span class="p">,</span>
                 <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span> <span class="kc">True</span>
 
         <span class="k">if</span> <span class="p">(</span>
@@ -842,12 +841,18 @@ window.addEventListener("load", load);
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">likelihood_new</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span> <span class="kc">True</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="n">likelihood_new</span>
         <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="LikelihoodBreakpointer.reset">
+<a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Clear the stored likelihood baseline and support mask."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_likelihood_old</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_support_mask_old</span> <span class="o">=</span> <span class="kc">None</span></div>
 </div>
 
 </pre></div>

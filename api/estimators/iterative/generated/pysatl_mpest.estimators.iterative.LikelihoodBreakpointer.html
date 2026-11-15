@@ -387,8 +387,8 @@ contribute; a changed support mask establishes a new comparison baseline.
 Thus, this sum can be finite even when <code class="docutils literal notranslate"><span class="pre">mixture.loglikelihood(X)</span></code> is
 <code class="docutils literal notranslate"><span class="pre">-inf</span></code> because that method includes observations outside the support.</p>
 <p>An empty support or a non-finite sum emits a <code class="docutils literal notranslate"><span class="pre">RuntimeWarning</span></code> and stops
-the pipeline. Both the stored sum and support mask are reset whenever this
-breakpointer stops the pipeline, including ordinary convergence.</p>
+the pipeline. The stored sum and support mask are cleared only by
+<a class="reference internal" href="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset" title="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>, which <a class="reference internal" href="pysatl_mpest.estimators.iterative.Pipeline.fit.html#pysatl_mpest.estimators.iterative.Pipeline.fit" title="pysatl_mpest.estimators.iterative.Pipeline.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">Pipeline.fit()</span></code></a> calls before every fitting run.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>threshold</strong> (<em>Scalar</em>) – The convergence threshold for the log-likelihood difference.
@@ -406,6 +406,9 @@ Must be a positive number.</p>
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check" title="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.check"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check</span></code></a>(state)</p></td>
 <td><p>Check convergence of the log-likelihood over supported observations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset.html#pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset" title="pysatl_mpest.estimators.iterative.LikelihoodBreakpointer.reset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset</span></code></a>()</p></td>
+<td><p>Clear the stored likelihood baseline and support mask.</p></td>
 </tr>
 </tbody>
 </table>

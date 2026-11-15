@@ -19,6 +19,10 @@ PipelineStep
         
     
 
+    
+        
+    
+
 
 
 
@@ -29,6 +33,8 @@ PipelineStep
 
 
    ~PipelineStep.clear_after_prune
+
+   ~PipelineStep.reset
 
    ~PipelineStep.run
 

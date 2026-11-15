@@ -756,8 +756,9 @@ window.addEventListener("load", load);
 
 <span class="sd">    Attributes</span>
 <span class="sd">    ----------</span>
-<span class="sd">    blocks : list[OptimizationBlock]</span>
-<span class="sd">        Configured optimization tasks.</span>
+<span class="sd">    blocks : tuple[OptimizationBlock, ...]</span>
+<span class="sd">        Optimization tasks as given to the constructor; never reassigned.</span>
+<span class="sd">        Pruning renumbers a private working copy that :meth:`reset` restores.</span>
 <span class="sd">    optimizer : Optimizer</span>
 <span class="sd">        Numerical optimizer instance.</span>
 
@@ -767,6 +768,8 @@ window.addEventListener("load", load);
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        run</span>
+<span class="sd">        clear_after_prune</span>
+<span class="sd">        reset</span>
 <span class="sd">    """</span>
 
     <span class="n">_strategies</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="n">MaximizationStrategy</span><span class="p">,</span> <span class="n">StrategyFunction</span><span class="p">]]</span> <span class="o">=</span> <span class="n">MappingProxyType</span><span class="p">(</span>
@@ -778,7 +781,8 @@ window.addEventListener("load", load);
     <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blocks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">OptimizationBlock</span><span class="p">],</span> <span class="n">optimizer</span><span class="p">:</span> <span class="n">Optimizer</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">OptimizationBlock</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">blocks</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">OptimizationBlock</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span> <span class="o">=</span> <span class="n">optimizer</span>
 
     <span class="nd">@property</span>
@@ -799,9 +803,11 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineState</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Execute the M-step, updating component parameters.</span>
 
-<span class="sd">        Applies all blocks atomically: the results are collected in a working</span>
-<span class="sd">        list of components, and ``state.curr_mixture`` is replaced by a new</span>
-<span class="sd">        mixture with the updated components and the same weights. The mixture</span>
+<span class="sd">        Applies the blocks of the working list, which reflects pruning done by</span>
+<span class="sd">        :meth:`clear_after_prune` until the next :meth:`reset`. All blocks are</span>
+<span class="sd">        applied atomically: the results are collected in a working list of</span>
+<span class="sd">        components, and ``state.curr_mixture`` is replaced by a new mixture</span>
+<span class="sd">        with the updated components and the same weights. The mixture</span>
 <span class="sd">        passed in the state is not modified. Strategy exceptions propagate</span>
 <span class="sd">        without changing ``state.curr_mixture``. Missing responsibilities set</span>
 <span class="sd">        :attr:`~pysatl_mpest.estimators.iterative.pipeline_state.PipelineState.error` instead.</span>
@@ -832,11 +838,11 @@ window.addEventListener("load", load);
 
         <span class="n">components</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="o">.</span><span class="n">components</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">wave</span> <span class="ow">in</span> <span class="n">plan_waves</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">wave</span> <span class="ow">in</span> <span class="n">plan_waves</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span><span class="p">):</span>
             <span class="n">snapshot</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="o">.</span><span class="n">with_components</span><span class="p">(</span><span class="n">components</span><span class="p">)</span>
             <span class="n">wave_state</span> <span class="o">=</span> <span class="n">replace</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">curr_mixture</span><span class="o">=</span><span class="n">snapshot</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">wave</span><span class="p">:</span>
-                <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
                 <span class="n">strategy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_strategies</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">maximization_strategy</span><span class="p">]</span>
                 <span class="n">component_id</span><span class="p">,</span> <span class="n">new_params</span> <span class="o">=</span> <span class="n">strategy</span><span class="p">(</span><span class="n">snapshot</span><span class="p">[</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">],</span> <span class="n">wave_state</span><span class="p">,</span> <span class="n">block</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimizer</span><span class="p">)</span>
                 <span class="n">components</span><span class="p">[</span><span class="n">component_id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_components_params</span><span class="p">(</span><span class="n">components</span><span class="p">[</span><span class="n">component_id</span><span class="p">],</span> <span class="n">new_params</span><span class="p">)</span>
@@ -849,12 +855,14 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="MaximizationStep.clear_after_prune">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">clear_after_prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">removed_components_indices</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Update optimization blocks after component pruning.</span>
+<span class="w">        </span><span class="sd">"""Update the working optimization blocks after component pruning.</span>
 
 <span class="sd">        Removes blocks associated with pruned components and shifts component_id</span>
 <span class="sd">        for remaining blocks by the number of removed components before them.</span>
 <span class="sd">        Surviving blocks are replaced with updated copies, so the block objects</span>
-<span class="sd">        given to the constructor are not modified.</span>
+<span class="sd">        given to the constructor are not modified. The ``blocks`` attribute is</span>
+<span class="sd">        left unchanged; the renumbering applies to the working list until the</span>
+<span class="sd">        next :meth:`reset`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -862,15 +870,26 @@ window.addEventListener("load", load);
 <span class="sd">            Indices of components that were removed.</span>
 <span class="sd">        """</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">removed_components_indices</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">removed_components_indices</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span><span class="p">:</span>
             <span class="k">return</span>
 
         <span class="n">removed</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">removed_components_indices</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">replace</span><span class="p">(</span><span class="n">block</span><span class="p">,</span> <span class="n">component_id</span><span class="o">=</span><span class="n">block</span><span class="o">.</span><span class="n">component_id</span> <span class="o">-</span> <span class="n">bisect</span><span class="o">.</span><span class="n">bisect_left</span><span class="p">(</span><span class="n">removed</span><span class="p">,</span> <span class="n">block</span><span class="o">.</span><span class="n">component_id</span><span class="p">))</span>
-            <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span>
+            <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span>
             <span class="k">if</span> <span class="n">block</span><span class="o">.</span><span class="n">component_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed</span>
         <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="MaximizationStep.reset">
+<a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.MaximizationStep.reset.html#pysatl_mpest.estimators.iterative.MaximizationStep.reset">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Restore the working block list to the configured ``blocks``.</span>
+
+<span class="sd">        :meth:`Pipeline.fit` calls this method before the first iteration, so</span>
+<span class="sd">        pruning changes of a previous fit do not carry over.</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_working_blocks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

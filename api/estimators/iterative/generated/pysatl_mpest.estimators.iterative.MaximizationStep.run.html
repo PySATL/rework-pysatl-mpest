@@ -317,9 +317,11 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.MaximizationStep.run">
 <span class="sig-prename descclassname"><span class="pre">MaximizationStep.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/maximization_step.html#MaximizationStep.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.MaximizationStep.run" title="Link to this definition">#</a></dt>
 <dd><p>Execute the M-step, updating component parameters.</p>
-<p>Applies all blocks atomically: the results are collected in a working
-list of components, and <code class="docutils literal notranslate"><span class="pre">state.curr_mixture</span></code> is replaced by a new
-mixture with the updated components and the same weights. The mixture
+<p>Applies the blocks of the working list, which reflects pruning done by
+<a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune" title="pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune"><code class="xref py py-meth docutils literal notranslate"><span class="pre">clear_after_prune()</span></code></a> until the next <a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.reset.html#pysatl_mpest.estimators.iterative.MaximizationStep.reset" title="pysatl_mpest.estimators.iterative.MaximizationStep.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>. All blocks are
+applied atomically: the results are collected in a working list of
+components, and <code class="docutils literal notranslate"><span class="pre">state.curr_mixture</span></code> is replaced by a new mixture
+with the updated components and the same weights. The mixture
 passed in the state is not modified. Strategy exceptions propagate
 without changing <code class="docutils literal notranslate"><span class="pre">state.curr_mixture</span></code>. Missing responsibilities set
 <code class="xref py py-attr docutils literal notranslate"><span class="pre">error</span></code> instead.</p>

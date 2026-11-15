@@ -721,6 +721,8 @@ window.addEventListener("load", load);
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">"SPDX-License-Identifier: MIT"</span>
 
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">....typings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Scalar</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pruner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pruner</span>
@@ -768,10 +770,11 @@ window.addEventListener("load", load);
     <span class="k">def</span><span class="w"> </span><span class="nf">prune</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">PipelineState</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">"""Remove components with weights below threshold, retaining at least one component.</span>
 
-<span class="sd">        Candidates are removed in index order, at most ``n_components - 1`` of them. If every weight</span>
-<span class="sd">        falls below the threshold, the component with the highest index is retained, not the one with</span>
-<span class="sd">        the largest weight. The mixture in ``state`` is not modified; the returned state holds a new</span>
-<span class="sd">        mixture built with ``MixtureModel.without_component``.</span>
+<span class="sd">        All components whose weight is strictly below ``threshold`` are removal candidates. If at least</span>
+<span class="sd">        one weight is greater than or equal to the threshold, every candidate is removed. If every weight</span>
+<span class="sd">        falls below the threshold, all candidates except the component with the largest weight are</span>
+<span class="sd">        removed; ties are resolved in favor of the smallest index. The mixture in ``state`` is not</span>
+<span class="sd">        modified; the returned state holds a new mixture built with ``MixtureModel.without_component``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -787,14 +790,10 @@ window.addEventListener("load", load);
         <span class="n">mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>
         <span class="n">n</span> <span class="o">=</span> <span class="n">mixture</span><span class="o">.</span><span class="n">n_components</span>
 
-        <span class="n">candidates_to_remove</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mixture</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">]</span>
+        <span class="n">to_remove</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">mixture</span><span class="o">.</span><span class="n">weights</span><span class="p">)</span> <span class="k">if</span> <span class="n">w</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">threshold</span><span class="p">]</span>
 
-        <span class="n">max_removals</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">1</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">candidates_to_remove</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_removals</span><span class="p">:</span>
-            <span class="n">to_remove</span> <span class="o">=</span> <span class="n">candidates_to_remove</span><span class="p">[:</span><span class="n">max_removals</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">to_remove</span> <span class="o">=</span> <span class="n">candidates_to_remove</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">to_remove</span><span class="p">)</span> <span class="o">==</span> <span class="n">n</span><span class="p">:</span>
+            <span class="n">to_remove</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">mixture</span><span class="o">.</span><span class="n">weights</span><span class="p">)))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">to_remove</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="p">[])</span>

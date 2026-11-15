@@ -19,6 +19,10 @@ ExpectationStep
         
     
 
+    
+        
+    
+
 
 
 
@@ -29,6 +33,8 @@ ExpectationStep
 
 
    ~ExpectationStep.clear_after_prune
+
+   ~ExpectationStep.reset
 
    ~ExpectationStep.run
 

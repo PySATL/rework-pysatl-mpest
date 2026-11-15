@@ -316,11 +316,13 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune">
 <span class="sig-prename descclassname"><span class="pre">MaximizationStep.</span></span><span class="sig-name descname"><span class="pre">clear_after_prune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">removed_components_indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/maximization_step.html#MaximizationStep.clear_after_prune"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune" title="Link to this definition">#</a></dt>
-<dd><p>Update optimization blocks after component pruning.</p>
+<dd><p>Update the working optimization blocks after component pruning.</p>
 <p>Removes blocks associated with pruned components and shifts component_id
 for remaining blocks by the number of removed components before them.
 Surviving blocks are replaced with updated copies, so the block objects
-given to the constructor are not modified.</p>
+given to the constructor are not modified. The <code class="docutils literal notranslate"><span class="pre">blocks</span></code> attribute is
+left unchanged; the renumbering applies to the working list until the
+next <a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.reset.html#pysatl_mpest.estimators.iterative.MaximizationStep.reset" title="pysatl_mpest.estimators.iterative.MaximizationStep.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>removed_components_indices</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Indices of components that were removed.</p>

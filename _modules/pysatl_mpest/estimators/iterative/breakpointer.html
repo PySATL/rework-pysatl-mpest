@@ -736,12 +736,17 @@ window.addEventListener("load", load);
 <span class="sd">    ``check`` may keep state between calls and is expected to be called once per iteration. The pipeline stops</span>
 <span class="sd">    at the first breakpointer that returns True, so the ones after it are not called in that iteration.</span>
 
+<span class="sd">    Any state accumulated by ``check`` lives only within a single ``Pipeline.fit`` call: ``Pipeline.fit``</span>
+<span class="sd">    invokes :meth:`reset` on every breakpointer before the first iteration, so reusing the estimator</span>
+<span class="sd">    across fits starts from a clean state.</span>
+
 <span class="sd">    Methods</span>
 <span class="sd">    -------</span>
 <span class="sd">    .. autosummary::</span>
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        check</span>
+<span class="sd">        reset</span>
 <span class="sd">    """</span>
 
 <div class="viewcode-block" id="Breakpointer.check">
@@ -759,6 +764,18 @@ window.addEventListener("load", load);
 <span class="sd">        -------</span>
 <span class="sd">        bool</span>
 <span class="sd">            True if stopping condition is satisfied, False otherwise.</span>
+<span class="sd">        """</span></div>
+
+
+<div class="viewcode-block" id="Breakpointer.reset">
+<a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.Breakpointer.reset.html#pysatl_mpest.estimators.iterative.Breakpointer.reset">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Reset all state accumulated by ``check`` between calls.</span>
+
+<span class="sd">        Called by :meth:`Pipeline.fit` before the first iteration, so that</span>
+<span class="sd">        every ``fit`` call on the same estimator starts from a clean state.</span>
+<span class="sd">        Implementations without state may leave the body empty.</span>
 <span class="sd">        """</span></div>
 </div>
 

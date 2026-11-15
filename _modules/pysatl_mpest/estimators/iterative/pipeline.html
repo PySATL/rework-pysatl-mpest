@@ -743,7 +743,9 @@ window.addEventListener("load", load);
 <span class="sd">    Sequentially executes configured processing steps, applies pruners,</span>
 <span class="sd">    and checks stopping criteria on each iteration until convergence.</span>
 
-<span class="sd">    Steps, breakpointers and pruners may be stateful and are reused as is by every call of :meth:`fit`.</span>
+<span class="sd">    Steps and breakpointers may keep state between iterations. They are reused by every call of</span>
+<span class="sd">    :meth:`fit`, which calls :meth:`PipelineStep.reset` and :meth:`Breakpointer.reset` on each of them</span>
+<span class="sd">    before the first iteration, so no per-fit state carries over between fits. Pruners are reused as is.</span>
 <span class="sd">    ``history`` is not cleared between calls, so records of repeated fits accumulate.</span>
 
 <span class="sd">    Steps and pruners must replace ``state.curr_mixture`` with a new mixture object instead of</span>
@@ -858,6 +860,12 @@ window.addEventListener("load", load);
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">mixture</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">breakpointer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">breakpointers</span><span class="p">:</span>
+            <span class="n">breakpointer</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+            <span class="n">step</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>

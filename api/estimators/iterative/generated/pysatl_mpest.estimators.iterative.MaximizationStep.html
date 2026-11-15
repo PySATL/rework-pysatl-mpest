@@ -386,7 +386,8 @@ use <a class="reference internal" href="pysatl_mpest.estimators.iterative.Weight
 </dd>
 <dt class="field-even">Variables<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>blocks</strong> (<em>list</em><em>[</em><em>OptimizationBlock</em><em>]</em>) – Configured optimization tasks.</p></li>
+<li><p><strong>blocks</strong> (<em>tuple</em><em>[</em><em>OptimizationBlock</em><em>, </em><em>...</em><em>]</em>) – Optimization tasks as given to the constructor; never reassigned.
+Pruning renumbers a private working copy that <a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.reset.html#pysatl_mpest.estimators.iterative.MaximizationStep.reset" title="pysatl_mpest.estimators.iterative.MaximizationStep.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> restores.</p></li>
 <li><p><strong>optimizer</strong> (<a class="reference internal" href="../../../optimizers/generated/pysatl_mpest.optimizers.Optimizer.html#pysatl_mpest.optimizers.Optimizer" title="pysatl_mpest.optimizers.Optimizer"><em>Optimizer</em></a>) – Numerical optimizer instance.</p></li>
 </ul>
 </dd>
@@ -396,6 +397,12 @@ use <a class="reference internal" href="pysatl_mpest.estimators.iterative.Weight
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.run.html#pysatl_mpest.estimators.iterative.MaximizationStep.run" title="pysatl_mpest.estimators.iterative.MaximizationStep.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>(state)</p></td>
 <td><p>Execute the M-step, updating component parameters.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune.html#pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune" title="pysatl_mpest.estimators.iterative.MaximizationStep.clear_after_prune"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear_after_prune</span></code></a>(removed_components_indices)</p></td>
+<td><p>Update the working optimization blocks after component pruning.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.MaximizationStep.reset.html#pysatl_mpest.estimators.iterative.MaximizationStep.reset" title="pysatl_mpest.estimators.iterative.MaximizationStep.reset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset</span></code></a>()</p></td>
+<td><p>Restore the working block list to the configured <code class="docutils literal notranslate"><span class="pre">blocks</span></code>.</p></td>
 </tr>
 </tbody>
 </table>

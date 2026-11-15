@@ -317,10 +317,11 @@
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune">
 <span class="sig-prename descclassname"><span class="pre">PriorThresholdPruner.</span></span><span class="sig-name descname"><span class="pre">prune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/pruners/prior_threshold_pruner.html#PriorThresholdPruner.prune"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.PriorThresholdPruner.prune" title="Link to this definition">#</a></dt>
 <dd><p>Remove components with weights below threshold, retaining at least one component.</p>
-<p>Candidates are removed in index order, at most <code class="docutils literal notranslate"><span class="pre">n_components</span> <span class="pre">-</span> <span class="pre">1</span></code> of them. If every weight
-falls below the threshold, the component with the highest index is retained, not the one with
-the largest weight. The mixture in <code class="docutils literal notranslate"><span class="pre">state</span></code> is not modified; the returned state holds a new
-mixture built with <code class="docutils literal notranslate"><span class="pre">MixtureModel.without_component</span></code>.</p>
+<p>All components whose weight is strictly below <code class="docutils literal notranslate"><span class="pre">threshold</span></code> are removal candidates. If at least
+one weight is greater than or equal to the threshold, every candidate is removed. If every weight
+falls below the threshold, all candidates except the component with the largest weight are
+removed; ties are resolved in favor of the smallest index. The mixture in <code class="docutils literal notranslate"><span class="pre">state</span></code> is not
+modified; the returned state holds a new mixture built with <code class="docutils literal notranslate"><span class="pre">MixtureModel.without_component</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – Current pipeline state.</p>

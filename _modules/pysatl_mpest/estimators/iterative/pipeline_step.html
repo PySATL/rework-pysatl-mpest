@@ -741,6 +741,8 @@ window.addEventListener("load", load);
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        run</span>
+<span class="sd">        clear_after_prune</span>
+<span class="sd">        reset</span>
 <span class="sd">    """</span>
 
     <span class="nd">@property</span>
@@ -776,12 +778,25 @@ window.addEventListener("load", load);
 <span class="w">        </span><span class="sd">"""Clean up step internal state for components removed during pruning.</span>
 
 <span class="sd">        Surviving components are renumbered contiguously starting from 0; step</span>
-<span class="sd">        state indexed by component must be re-indexed accordingly.</span>
+<span class="sd">        state indexed by component must be re-indexed accordingly. The</span>
+<span class="sd">        re-indexed state stays in effect until :meth:`reset` is called.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        removed_components_indices : list[int]</span>
 <span class="sd">            Ascending indices of removed components relative to the mixture before this removal.</span>
+<span class="sd">        """</span></div>
+
+
+<div class="viewcode-block" id="PipelineStep.reset">
+<a class="viewcode-back" href="../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.PipelineStep.reset.html#pysatl_mpest.estimators.iterative.PipelineStep.reset">[docs]</a>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Return the step to its post-constructor state.</span>
+
+<span class="sd">        :meth:`Pipeline.fit` calls this method on every step before the first</span>
+<span class="sd">        iteration, so no per-fit state carries over between fits. Steps without</span>
+<span class="sd">        such state may leave the body empty.</span>
 <span class="sd">        """</span></div>
 </div>
 

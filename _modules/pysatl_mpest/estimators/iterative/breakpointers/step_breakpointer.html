@@ -730,8 +730,8 @@ window.addEventListener("load", load);
 <span class="k">class</span><span class="w"> </span><span class="nc">StepBreakpointer</span><span class="p">(</span><span class="n">Breakpointer</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""Stops the pipeline after a fixed number of iterations.</span>
 
-<span class="sd">    The counter resets to 0 only when this breakpointer reaches the limit. If the pipeline is stopped by</span>
-<span class="sd">    another breakpointer or by a step error first, the count carries over to the next use of the instance.</span>
+<span class="sd">    The counter is reset by :meth:`reset`, which :meth:`Pipeline.fit` calls before every fitting run,</span>
+<span class="sd">    so each ``fit`` starts counting from zero.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -754,6 +754,7 @@ window.addEventListener("load", load);
 <span class="sd">        :toctree: generated/</span>
 
 <span class="sd">        check</span>
+<span class="sd">        reset</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
@@ -769,15 +770,17 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="StepBreakpointer.check">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.check.html#pysatl_mpest.estimators.iterative.StepBreakpointer.check">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Evaluate if the iteration limit has been reached, resetting counter on True."""</span>
+<span class="w">        </span><span class="sd">"""Evaluate if the iteration limit has been reached."""</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span></div>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="k">return</span> <span class="kc">True</span>
 
-        <span class="k">return</span> <span class="kc">False</span></div>
+<div class="viewcode-block" id="StepBreakpointer.reset">
+<a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.StepBreakpointer.reset.html#pysatl_mpest.estimators.iterative.StepBreakpointer.reset">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Reset the iteration counter to zero."""</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_step</span> <span class="o">=</span> <span class="mi">0</span></div>
 </div>
 
 </pre></div>

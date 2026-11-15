@@ -318,7 +318,8 @@
 <span class="sig-prename descclassname"><span class="pre">ExpectationStep.</span></span><span class="sig-name descname"><span class="pre">clear_after_prune</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">removed_components_indices</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/expectation_step.html#ExpectationStep.clear_after_prune"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.ExpectationStep.clear_after_prune" title="Link to this definition">#</a></dt>
 <dd><p>Clean up step internal state for components removed during pruning.</p>
 <p>Surviving components are renumbered contiguously starting from 0; step
-state indexed by component must be re-indexed accordingly.</p>
+state indexed by component must be re-indexed accordingly. The
+re-indexed state stays in effect until <a class="reference internal" href="pysatl_mpest.estimators.iterative.ExpectationStep.reset.html#pysatl_mpest.estimators.iterative.ExpectationStep.reset" title="pysatl_mpest.estimators.iterative.ExpectationStep.reset"><code class="xref py py-meth docutils literal notranslate"><span class="pre">reset()</span></code></a> is called.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>removed_components_indices</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – Ascending indices of removed components relative to the mixture before this removal.</p>
