@@ -1,7 +1,0 @@
-
-remove\_component
-=================
-
-.. currentmodule:: pysatl_mpest.core
-
-.. automethod:: pysatl_mpest.core.MixtureModel.remove_component

@@ -814,12 +814,16 @@ window.addEventListener("load", load);
 <section id="mixturemodel">
 <h3>MixtureModel<a class="headerlink" href="#mixturemodel" title="Link to this heading">#</a></h3>
 <p>Класс смеси распределений.</p>
-<p>Логарифмические веса нормализуются при создании смеси и каждом присваивании через
+<p>Смесь неизменяема: после создания её компоненты и веса не меняются. Любое изменение
+возвращает новую смесь через методы <code class="docutils literal notranslate"><span class="pre">with_*</span></code> или <code class="docutils literal notranslate"><span class="pre">without_component</span></code>, исходная остаётся
+прежней. Поэтому хеш по содержимому стабилен и смесь можно использовать ключом словаря,
+а <code class="docutils literal notranslate"><span class="pre">copy(mixture)</span></code> возвращает тот же объект.</p>
+<p>Логарифмические веса нормализуются при создании смеси и в <code class="docutils literal notranslate"><span class="pre">with_log_weights</span></code> через
 <code class="docutils literal notranslate"><span class="pre">scipy.special.log_softmax</span></code>: сумма <code class="docutils literal notranslate"><span class="pre">exp(log_weights)</span></code> равна единице, в том числе при больших
-общих сдвигах входного вектора. Сеттер копирует входной массив и отклоняет NaN, положительную
-бесконечность и вектор только из отрицательных бесконечностей. Отдельные нулевые веса
-(<code class="docutils literal notranslate"><span class="pre">log_weights</span> <span class="pre">=</span> <span class="pre">-inf</span></code>) допустимы. Копирование смеси сохраняет малые веса непосредственно
-в логарифмическом пространстве.</p>
+общих сдвигах входного вектора. Входной массив копируется; NaN, положительная бесконечность
+и вектор только из отрицательных бесконечностей отклоняются. Отдельные нулевые веса
+(<code class="docutils literal notranslate"><span class="pre">log_weights</span> <span class="pre">=</span> <span class="pre">-inf</span></code>) допустимы. Методы, не меняющие веса (<code class="docutils literal notranslate"><span class="pre">with_component</span></code>,
+<code class="docutils literal notranslate"><span class="pre">with_components</span></code>), переиспользуют уже нормализованный массив без повторной нормировки.</p>
 <p>Плотность вычисляется как <code class="docutils literal notranslate"><span class="pre">pdf(X)</span> <span class="pre">=</span> <span class="pre">exp(lpdf(X))</span></code>, чтобы оба метода использовали одни
 нормализованные веса. Для вычисления <code class="docutils literal notranslate"><span class="pre">pdf</span></code> объект смеси ядра не создаётся и не кэшируется.
 <code class="docutils literal notranslate"><span class="pre">to_core_mixture()</span></code> остаётся явным экспортом в <code class="docutils literal notranslate"><span class="pre">pysatl-core</span></code> для работы с его характеристиками.</p>
@@ -829,27 +833,41 @@ window.addEventListener("load", load);
 <li><p><strong>+ n_components: int</strong></p>
 <p>Количество компонент в смеси.</p>
 </li>
-<li><p><strong>+ components: list[Distribution]</strong></p>
+<li><p><strong>+ components: tuple[Distribution, …]</strong></p>
 <p>Компоненты смеси.</p>
 </li>
 <li><p><strong>+ weights: ndarray</strong></p>
 <p>Нормализованные веса компонент, вычисленные через <code class="docutils literal notranslate"><span class="pre">softmax(log_weights)</span></code>.</p>
 </li>
 <li><p><strong>+ log_weights: ndarray</strong></p>
-<p>Нормализованные логарифмические веса. Массив доступен только для чтения; для изменения
-весов нужно присвоить новый вектор свойству целиком.</p>
+<p>Нормализованные логарифмические веса. Массив доступен только для чтения; новые веса
+задаются через <code class="docutils literal notranslate"><span class="pre">with_log_weights</span></code>.</p>
 </li>
 </ul>
 </li>
 <li><p><strong>Методы</strong></p>
+<p>Каждый метод <code class="docutils literal notranslate"><span class="pre">with_*</span></code> и <code class="docutils literal notranslate"><span class="pre">without_component</span></code> возвращает новую смесь и не меняет исходную.</p>
 <ul>
-<li><p><strong>+ add_component(component: int, weight: float)</strong></p>
-<p>Добавляет новую компоненту и назначает ей выбранный вес. Остальные веса пересчитываются согласно их пропорциям.</p>
+<li><p><strong>+ with_component(index: int, component: Distribution): MixtureModel</strong></p>
+<p>Заменяет компоненту с индексом <code class="docutils literal notranslate"><span class="pre">index</span></code>, веса не меняются. Отрицательные индексы не
+поддерживаются; индекс вне <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">n_components</span> <span class="pre">-</span> <span class="pre">1]</span></code> вызывает <code class="docutils literal notranslate"><span class="pre">IndexError</span></code>.</p>
 </li>
-<li><p><strong>+ remove_component(component_idx: int)</strong></p>
-<p>Удаляет компоненту из смеси по ее индексу. Остальные веса пересчитываются согласно их пропорциям так, чтобы соблюдался инвариант.
-Удаление последней компоненты или единственной компоненты с положительным весом вызывает
-<code class="docutils literal notranslate"><span class="pre">ValueError</span></code>, сохраняя состояние смеси.</p>
+<li><p><strong>+ with_components(components: Sequence[Distribution]): MixtureModel</strong></p>
+<p>Заменяет все компоненты, сохраняя веса без повторной нормировки. Другое число компонент
+вызывает <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+</li>
+<li><p><strong>+ with_log_weights(log_weights: ArrayLike): MixtureModel</strong></p>
+<p>Задаёт новые логарифмические веса и нормализует их. Неверная длина или вектор, который
+нельзя нормализовать, вызывают <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+</li>
+<li><p><strong>+ with_added_component(component: Distribution, weight: float): MixtureModel</strong></p>
+<p>Добавляет компоненту с весом <code class="docutils literal notranslate"><span class="pre">weight</span></code> из интервала (0, 1); остальные веса умножаются на
+<code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">weight</span></code> и сохраняют пропорции. Вес вне интервала вызывает <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+</li>
+<li><p><strong>+ without_component(index: int): MixtureModel</strong></p>
+<p>Удаляет компоненту по индексу, остальные веса нормируются заново. Индекс вне диапазона
+вызывает <code class="docutils literal notranslate"><span class="pre">IndexError</span></code>, удаление последней компоненты или единственной компоненты
+с положительным весом — <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
 </li>
 <li><p><strong>+ pdf(X: ArrayLike): ndarray</strong></p>
 <p>Функция плотности, вычисляемая как <code class="docutils literal notranslate"><span class="pre">exp(lpdf(X))</span></code>.</p>

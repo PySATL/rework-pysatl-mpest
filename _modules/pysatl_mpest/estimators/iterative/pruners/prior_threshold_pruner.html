@@ -721,8 +721,6 @@ window.addEventListener("load", load);
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">"SPDX-License-Identifier: MIT"</span>
 
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
-
 <span class="kn">from</span><span class="w"> </span><span class="nn">....typings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Scalar</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pipeline_state</span><span class="w"> </span><span class="kn">import</span> <span class="n">PipelineState</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">..pruner</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pruner</span>
@@ -772,7 +770,8 @@ window.addEventListener("load", load);
 
 <span class="sd">        Candidates are removed in index order, at most ``n_components - 1`` of them. If every weight</span>
 <span class="sd">        falls below the threshold, the component with the highest index is retained, not the one with</span>
-<span class="sd">        the largest weight.</span>
+<span class="sd">        the largest weight. The mixture in ``state`` is not modified; the returned state holds a new</span>
+<span class="sd">        mixture built with ``MixtureModel.without_component``.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -800,9 +799,9 @@ window.addEventListener("load", load);
         <span class="k">if</span> <span class="ow">not</span> <span class="n">to_remove</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="p">[])</span>
 
-        <span class="n">new_mixture</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">mixture</span><span class="p">)</span>
+        <span class="n">new_mixture</span> <span class="o">=</span> <span class="n">mixture</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">to_remove</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-            <span class="n">new_mixture</span><span class="o">.</span><span class="n">remove_component</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">new_mixture</span> <span class="o">=</span> <span class="n">new_mixture</span><span class="o">.</span><span class="n">without_component</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
         <span class="n">new_state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span>
             <span class="n">X</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="p">,</span> <span class="n">H</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">prev_mixture</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span><span class="p">,</span> <span class="n">curr_mixture</span><span class="o">=</span><span class="n">new_mixture</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">state</span><span class="o">.</span><span class="n">error</span>

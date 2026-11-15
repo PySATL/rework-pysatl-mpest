@@ -316,15 +316,16 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="pysatl_mpest.estimators.iterative.WeightsStep.run">
 <span class="sig-prename descclassname"><span class="pre">WeightsStep.</span></span><span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/pysatl_mpest/estimators/iterative/steps/weights_step.html#WeightsStep.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pysatl_mpest.estimators.iterative.WeightsStep.run" title="Link to this definition">#</a></dt>
-<dd><p>Update mixture weights from responsibilities and store them in the mixture.</p>
-<p>The state and the current mixture are modified in place. Missing
+<dd><p>Update mixture weights from responsibilities.</p>
+<p>Replaces <code class="docutils literal notranslate"><span class="pre">state.curr_mixture</span></code> with a new mixture carrying the updated
+weights; the mixture passed in the state is not modified. Missing
 responsibilities set <code class="docutils literal notranslate"><span class="pre">state.error</span></code> instead of raising.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>state</strong> (<a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState"><em>PipelineState</em></a>) – Current state containing responsibility matrix H and current mixture.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Updated state with modified mixture weights.</p>
+<dd class="field-even"><p>Updated state with a new mixture carrying the updated weights.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference internal" href="pysatl_mpest.estimators.iterative.PipelineState.html#pysatl_mpest.estimators.iterative.PipelineState" title="pysatl_mpest.estimators.iterative.PipelineState">PipelineState</a></p>

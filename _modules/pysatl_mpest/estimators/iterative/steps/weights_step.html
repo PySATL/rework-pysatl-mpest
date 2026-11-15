@@ -755,9 +755,10 @@ window.addEventListener("load", load);
 <div class="viewcode-block" id="WeightsStep.run">
 <a class="viewcode-back" href="../../../../../api/estimators/iterative/generated/pysatl_mpest.estimators.iterative.WeightsStep.run.html#pysatl_mpest.estimators.iterative.WeightsStep.run">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">PipelineState</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineState</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">"""Update mixture weights from responsibilities and store them in the mixture.</span>
+<span class="w">        </span><span class="sd">"""Update mixture weights from responsibilities.</span>
 
-<span class="sd">        The state and the current mixture are modified in place. Missing</span>
+<span class="sd">        Replaces ``state.curr_mixture`` with a new mixture carrying the updated</span>
+<span class="sd">        weights; the mixture passed in the state is not modified. Missing</span>
 <span class="sd">        responsibilities set ``state.error`` instead of raising.</span>
 
 <span class="sd">        Parameters</span>
@@ -768,7 +769,7 @@ window.addEventListener("load", load);
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        PipelineState</span>
-<span class="sd">            Updated state with modified mixture weights.</span>
+<span class="sd">            Updated state with a new mixture carrying the updated weights.</span>
 <span class="sd">        """</span>
 
         <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">H</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -777,7 +778,7 @@ window.addEventListener("load", load);
 
         <span class="n">responsibilities_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">new_weights</span> <span class="o">=</span> <span class="n">responsibilities_sum</span> <span class="o">/</span> <span class="n">state</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="o">.</span><span class="n">log_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">new_weights</span> <span class="o">+</span> <span class="mf">1e-30</span><span class="p">)</span>
+        <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="o">.</span><span class="n">with_log_weights</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">new_weights</span> <span class="o">+</span> <span class="mf">1e-30</span><span class="p">))</span>
 
         <span class="k">return</span> <span class="n">state</span></div>
 

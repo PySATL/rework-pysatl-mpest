@@ -722,7 +722,6 @@ window.addEventListener("load", load);
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ArrayLike</span>
@@ -746,6 +745,9 @@ window.addEventListener("load", load);
 
 <span class="sd">    Steps, breakpointers and pruners may be stateful and are reused as is by every call of :meth:`fit`.</span>
 <span class="sd">    ``history`` is not cleared between calls, so records of repeated fits accumulate.</span>
+
+<span class="sd">    Steps and pruners must replace ``state.curr_mixture`` with a new mixture object instead of</span>
+<span class="sd">    modifying it in place, because ``prev_mixture`` and the history records hold references to it.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -855,11 +857,10 @@ window.addEventListener("load", load);
 <span class="sd">        """</span>
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-        <span class="n">copied_mixture</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">mixture</span><span class="p">)</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">copied_mixture</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">PipelineState</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">mixture</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span><span class="p">)</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">prev_mixture</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">curr_mixture</span>
 
             <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
                 <span class="n">result_state</span> <span class="o">=</span> <span class="n">step</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>

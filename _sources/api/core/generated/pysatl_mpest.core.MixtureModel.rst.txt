@@ -43,6 +43,18 @@ MixtureModel
         
     
 
+    
+        
+    
+
+    
+        
+    
+
+    
+        
+    
+
 
 
 
@@ -51,8 +63,6 @@ MixtureModel
    :template: method.rst
    :hidden:
 
-
-   ~MixtureModel.add_component
 
    ~MixtureModel.component_lpdf_matrix
 
@@ -64,9 +74,17 @@ MixtureModel
 
    ~MixtureModel.pdf
 
-   ~MixtureModel.remove_component
-
    ~MixtureModel.to_core_mixture
+
+   ~MixtureModel.with_added_component
+
+   ~MixtureModel.with_component
+
+   ~MixtureModel.with_components
+
+   ~MixtureModel.with_log_weights
+
+   ~MixtureModel.without_component
 
 
 
