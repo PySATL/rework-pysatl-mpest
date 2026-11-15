@@ -18,12 +18,17 @@ class Breakpointer(ABC):
     ``check`` may keep state between calls and is expected to be called once per iteration. The pipeline stops
     at the first breakpointer that returns True, so the ones after it are not called in that iteration.
 
+    Any state accumulated by ``check`` lives only within a single ``Pipeline.fit`` call: ``Pipeline.fit``
+    invokes :meth:`reset` on every breakpointer before the first iteration, so reusing the estimator
+    across fits starts from a clean state.
+
     Methods
     -------
     .. autosummary::
         :toctree: generated/
 
         check
+        reset
     """
 
     @abstractmethod
@@ -39,4 +44,13 @@ class Breakpointer(ABC):
         -------
         bool
             True if stopping condition is satisfied, False otherwise.
+        """
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Reset all state accumulated by ``check`` between calls.
+
+        Called by :meth:`Pipeline.fit` before the first iteration, so that
+        every ``fit`` call on the same estimator starts from a clean state.
+        Implementations without state may leave the body empty.
         """

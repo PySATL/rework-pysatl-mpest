@@ -32,8 +32,8 @@ class LikelihoodBreakpointer(Breakpointer):
     ``-inf`` because that method includes observations outside the support.
 
     An empty support or a non-finite sum emits a ``RuntimeWarning`` and stops
-    the pipeline. Both the stored sum and support mask are reset whenever this
-    breakpointer stops the pipeline, including ordinary convergence.
+    the pipeline. The stored sum and support mask are cleared only by
+    :meth:`reset`, which :meth:`Pipeline.fit` calls before every fitting run.
 
     Parameters
     ----------
@@ -57,6 +57,7 @@ class LikelihoodBreakpointer(Breakpointer):
         :toctree: generated/
 
         check
+        reset
     """
 
     threshold: Scalar
@@ -108,8 +109,6 @@ class LikelihoodBreakpointer(Breakpointer):
                 RuntimeWarning,
                 stacklevel=2,
             )
-            self._likelihood_old = None
-            self._support_mask_old = None
             return True
 
         if (
@@ -122,9 +121,12 @@ class LikelihoodBreakpointer(Breakpointer):
             return False
 
         if abs(likelihood_new - self._likelihood_old) < self.threshold:
-            self._likelihood_old = None
-            self._support_mask_old = None
             return True
 
         self._likelihood_old = likelihood_new
         return False
+
+    def reset(self) -> None:
+        """Clear the stored likelihood baseline and support mask."""
+        self._likelihood_old = None
+        self._support_mask_old = None

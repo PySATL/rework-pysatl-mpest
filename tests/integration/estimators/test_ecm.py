@@ -12,7 +12,7 @@ from pysatl_core.types import FamilyName
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.core import _components as cc
 from pysatl_mpest.estimators import ECM
-from pysatl_mpest.estimators.iterative import PriorThresholdPruner, StepBreakpointer
+from pysatl_mpest.estimators.iterative import LikelihoodBreakpointer, PriorThresholdPruner, StepBreakpointer
 from pysatl_mpest.optimizers import Optimizer, ScipyNelderMead, ScipyPowell
 from scipy.special import logsumexp
 
@@ -161,6 +161,29 @@ class TestStopping:
 
         assert 1 < len(ecm.history) < 500  # noqa: PLR2004
         assert_allclose(fitted_arrays(fitted)[2], TRUE_WEIGHTS, atol=0.03)
+
+    def test_repeated_fits_start_from_a_clean_breakpoint_state(self) -> None:
+        """Fitting the same ECM object repeatedly must give identical results."""
+        rng = np.random.default_rng(42)
+        truth = MixtureModel([exponential(0.5), exponential(2.0)], weights=[0.5, 0.5])
+        X = np.asarray(truth.generate(size=600, random_state=rng), dtype=np.float64)
+        start = MixtureModel([exponential(0.5), exponential(3.0)])
+        ecm = ECM(
+            breakpointers=[LikelihoodBreakpointer(1e-3), StepBreakpointer(50)],
+            pruners=[],
+            optimizer=ScipyNelderMead(),
+        )
+
+        iteration_counts = []
+        fitted_mixtures = []
+        for _ in range(3):
+            # Each fit creates a fresh pipeline, so the history holds this fit's iterations only.
+            fitted_mixtures.append(ecm.fit(X, start))
+            iteration_counts.append(len(ecm.history))
+
+        assert iteration_counts[0] == iteration_counts[1] == iteration_counts[2]
+        assert fitted_mixtures[1] == fitted_mixtures[0]
+        assert fitted_mixtures[2] == fitted_mixtures[0]
 
 
 class TestNumericalOptimization:

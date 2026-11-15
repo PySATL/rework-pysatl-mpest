@@ -159,21 +159,35 @@ class ParameterIncrementStep(PipelineStep):
 
 
 class StopOnCheck(Breakpointer):
-    """Stop on the specified one-based check call, resetting after it stops."""
+    """Stop on the specified one-based check call; reset by Pipeline.fit before every fit."""
 
     def __init__(self, call_number: int, call_log: list[str] | None = None):
         self.call_number = call_number
         self.calls = 0
         self.call_log = call_log
 
+    def reset(self) -> None:
+        self.calls = 0
+
     def check(self, state: PipelineState) -> bool:
         if self.call_log is not None:
             self.call_log.append("check_breakpointer")
         self.calls += 1
-        stopped = self.calls == self.call_number
-        if stopped:
-            self.calls = 0
-        return stopped
+        return self.calls >= self.call_number
+
+
+class RecordingBreakpointer(Breakpointer):
+    """Log 'reset' and 'check' calls; never stops the pipeline on its own."""
+
+    def __init__(self, log: list[str]):
+        self.log = log
+
+    def reset(self) -> None:
+        self.log.append("reset")
+
+    def check(self, state: PipelineState) -> bool:
+        self.log.append("check")
+        return False
 
 
 class RemovingFirstComponentPruner(Pruner):
@@ -489,6 +503,60 @@ class TestFit:
         assert pipeline.history[0].iteration == EXPECTED_ITERATIONS[0]
         assert pipeline.history[1].iteration == EXPECTED_ITERATIONS[1]
         assert pipeline.history[1].mixture == fitted_mixture
+
+
+# --- Breakpointer reset tests ---
+
+
+class TestBreakpointerReset:
+    """Pipeline.fit must reset every breakpointer before the first iteration of every fit."""
+
+    def test_reset_is_called_once_before_the_first_check_of_every_fit(self, initial_mixture, sample_data):
+        log: list[str] = []
+        stopper = StopOnCheck(call_number=2)
+        recording = RecordingBreakpointer(log)
+        pipeline = Pipeline([MockSingleStep()], [recording, stopper])
+
+        pipeline.fit(sample_data, initial_mixture)
+        pipeline.fit(sample_data, initial_mixture)
+
+        # Per fit: one reset, then one 'check' per iteration (2 iterations until the stopper fires).
+        assert log == ["reset", "check", "check", "reset", "check", "check"]
+
+    def test_reset_is_called_on_breakpointers_after_the_one_that_stopped(self, initial_mixture, sample_data):
+        """any() short-circuits check(), but reset() must still reach every breakpointer."""
+        log: list[str] = []
+        pipeline = Pipeline(
+            [MockSingleStep()],
+            [StopOnCheck(call_number=1), RecordingBreakpointer(log)],
+        )
+
+        pipeline.fit(sample_data, initial_mixture)
+        pipeline.fit(sample_data, initial_mixture)
+
+        # The first breakpointer stops on the first check, so the recording one is never polled —
+        # but it must still be reset once per fit.
+        assert log == ["reset", "reset"]
+
+    def test_breakpointer_state_does_not_leak_between_fits(self, initial_mixture, sample_data):
+        """A stateful breakpointer must behave identically on repeated fits."""
+        pipeline = Pipeline([MockSingleStep()], [StopOnCheck(call_number=3)])
+
+        pipeline.fit(sample_data, initial_mixture)
+        first_fit_iterations = len(pipeline.history)
+
+        pipeline.fit(sample_data, initial_mixture)
+        second_fit_iterations = len(pipeline.history) - first_fit_iterations
+
+        assert second_fit_iterations == first_fit_iterations == 3  # noqa: PLR2004
+
+    def test_breakpointer_without_reset_cannot_be_instantiated(self):
+        class IncompleteBreakpointer(Breakpointer):
+            def check(self, state: PipelineState) -> bool:
+                return False
+
+        with pytest.raises(TypeError):
+            IncompleteBreakpointer()
 
 
 # --- Tests for MaximizationStep clear_after_prune method ---

@@ -120,10 +120,33 @@ class TestCheckLogic:
 
         assert not bp.check(state)
         assert bp.check(state)
+        # The baseline is kept after the stop; only reset() clears it.
+        assert bp._likelihood_old is not None
+        assert bp._support_mask_old is not None
+
+        bp.reset()
+        assert bp._likelihood_old is None
+        assert bp._support_mask_old is None
 
         assert not bp.check(state)
         assert bp.check(state)
-        assert bp._likelihood_old is None
+
+    def test_reset_clears_the_baseline_so_the_same_likelihood_does_not_stop(
+        self, mock_mixture_with_likelihood, dummy_state_factory
+    ):
+        """Without reset() a repeated likelihood would stop again immediately."""
+        LIKELIHOOD = 5.0
+        mixture = mock_mixture_with_likelihood([LIKELIHOOD] * 3)
+        state = dummy_state_factory(mixture)
+        bp = LikelihoodBreakpointer(0.1)
+
+        assert not bp.check(state)
+        assert bp.check(state)
+
+        bp.reset()
+        # A fresh baseline is established, so the unchanged likelihood does not stop the pipeline.
+        assert not bp.check(state)
+        assert bp._likelihood_old == LIKELIHOOD
 
 
 @pytest.mark.filterwarnings("error")
@@ -184,22 +207,29 @@ class TestSupportFiltering:
         assert not bp.check(state)
         assert bp.check(state)
 
-    def test_support_mask_is_reset_after_convergence(self, mock_mixture_with_log_densities, dummy_state_factory):
+    def test_support_mask_is_kept_after_convergence_until_reset(
+        self, mock_mixture_with_log_densities, dummy_state_factory
+    ):
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0]] * 3)
         state = dummy_state_factory(mixture, X=np.array([1.0, 2.0]))
         bp = LikelihoodBreakpointer(0.1)
 
         assert not bp.check(state)
         assert bp.check(state)
+        assert bp._likelihood_old == -1.0
+        np.testing.assert_array_equal(bp._support_mask_old, [False, True])
+
+        bp.reset()
         assert bp._likelihood_old is None
         assert bp._support_mask_old is None
+
         assert not bp.check(state)
         assert bp._likelihood_old == -1.0
         np.testing.assert_array_equal(bp._support_mask_old, [False, True])
 
 
 class TestNonFiniteStops:
-    """Invalid sums and empty support stop with a warning and clear the baseline."""
+    """Invalid sums and empty support stop with a warning and keep the baseline until reset()."""
 
     @pytest.mark.parametrize("invalid", [np.nan, np.inf], ids=["nan", "positive-infinity"])
     def test_non_finite_log_density_stops_with_a_warning(
@@ -232,7 +262,7 @@ class TestNonFiniteStops:
     @pytest.mark.parametrize(
         "invalid", [[np.nan, -1.0], [np.inf, -1.0], [-np.inf, -np.inf]], ids=["nan", "positive-infinity", "no-support"]
     )
-    def test_state_is_reset_after_a_non_finite_stop(
+    def test_state_is_kept_after_a_non_finite_stop_until_reset(
         self, mock_mixture_with_log_densities, dummy_state_factory, invalid
     ):
         mixture = mock_mixture_with_log_densities([[-np.inf, -1.0], invalid, [-np.inf, -1.0]])
@@ -243,8 +273,14 @@ class TestNonFiniteStops:
         with pytest.warns(RuntimeWarning, match="log-likelihood cannot be evaluated"):
             assert bp.check(state)
 
+        # The warning stop does not clear the stored baseline; only reset() does.
+        assert bp._likelihood_old == -1.0
+        np.testing.assert_array_equal(bp._support_mask_old, [False, True])
+
+        bp.reset()
         assert bp._likelihood_old is None
         assert bp._support_mask_old is None
+
         assert not bp.check(state)
         assert bp._likelihood_old == -1.0
         np.testing.assert_array_equal(bp._support_mask_old, [False, True])
