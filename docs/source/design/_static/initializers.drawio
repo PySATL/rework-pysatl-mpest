@@ -1,0 +1,139 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="app.diagrams.net" version="26.0.0">
+  <diagram id="initialization" name="Initialization UML">
+    <mxGraphModel dx="1550" dy="1100" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1860" pageHeight="950" adaptiveColors="auto" background="#FFFFFF">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="spec" value="&lt;b&gt;ComponentSpec&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="40" y="40" width="430" height="110" />
+        </mxCell>
+        <mxCell id="spec-fields-line" value="" parent="spec" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="48" width="430" height="1" />
+        </mxCell>
+        <mxCell id="spec-fields" value="+ family: ParametricFamily&lt;br&gt;+ parametrization_name: str" parent="spec" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="49" width="430" height="61" />
+        </mxCell>
+        <mxCell id="task" value="&lt;b&gt;ComponentInitialization&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="40" y="285" width="430" height="110" />
+        </mxCell>
+        <mxCell id="task-fields-line" value="" parent="task" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="48" width="430" height="1" />
+        </mxCell>
+        <mxCell id="task-fields" value="+ spec: ComponentSpec&lt;br&gt;+ estimator: ComponentEstimator" parent="task" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="49" width="430" height="61" />
+        </mxCell>
+        <mxCell id="initializer" value="&lt;b&gt;Initializer&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="620" y="40" width="620" height="216" />
+        </mxCell>
+        <mxCell id="initializer-fields-line" value="" parent="initializer" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="48" width="620" height="1" />
+        </mxCell>
+        <mxCell id="initializer-fields" value="+ partitioner: Partitioner&lt;br&gt;+ weight_estimator: WeightEstimator" parent="initializer" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="49" width="620" height="61" />
+        </mxCell>
+        <mxCell id="initializer-methods-line" value="" parent="initializer" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="110" width="620" height="1" />
+        </mxCell>
+        <mxCell id="initializer-methods" value="+ initialize(X: UnivariateFloatArray,&lt;br&gt;&amp;nbsp;&amp;nbsp;components: Sequence[ComponentInitialization],&lt;br&gt;&amp;nbsp;&amp;nbsp;*, random_state:&lt;br&gt;&amp;nbsp;&amp;nbsp;int | np.random.Generator | None = None): MixtureModel" parent="initializer" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="111" width="620" height="105" />
+        </mxCell>
+        <mxCell id="mixture" value="&lt;b&gt;MixtureModel&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="1390" y="40" width="430" height="132" />
+        </mxCell>
+        <mxCell id="mixture-fields-line" value="" parent="mixture" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="48" width="430" height="1" />
+        </mxCell>
+        <mxCell id="mixture-fields" value="+ components:&lt;br&gt;&amp;nbsp;&amp;nbsp;tuple[ParametricFamilyDistribution, ...]&lt;br&gt;+ weights: UnivariateFloatArray" parent="mixture" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="49" width="430" height="83" />
+        </mxCell>
+        <mxCell id="partitioner" value="&amp;lt;&amp;lt;Abstract&amp;gt;&amp;gt;&lt;br&gt;&lt;b&gt;Partitioner&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="40" y="550" width="430" height="180" />
+        </mxCell>
+        <mxCell id="partitioner-fields-line" value="" parent="partitioner" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="62" width="430" height="1" />
+        </mxCell>
+        <mxCell id="partitioner-fields" value="" parent="partitioner" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="63" width="430" height="11" />
+        </mxCell>
+        <mxCell id="partitioner-methods-line" value="" parent="partitioner" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="74" width="430" height="1" />
+        </mxCell>
+        <mxCell id="partitioner-methods" value="&lt;i&gt;+ partition(X: UnivariateFloatArray,&lt;br&gt;&amp;nbsp;&amp;nbsp;specs: Sequence[ComponentSpec],&lt;br&gt;&amp;nbsp;&amp;nbsp;*, rng: np.random.Generator):&lt;br&gt;&amp;nbsp;&amp;nbsp;MultivariateFloatArray&lt;/i&gt;" parent="partitioner" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="75" width="430" height="105" />
+        </mxCell>
+        <mxCell id="estimator" value="&amp;lt;&amp;lt;Abstract&amp;gt;&amp;gt;&lt;br&gt;&lt;b&gt;ComponentEstimator&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="620" y="550" width="620" height="202" />
+        </mxCell>
+        <mxCell id="estimator-fields-line" value="" parent="estimator" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="62" width="620" height="1" />
+        </mxCell>
+        <mxCell id="estimator-fields" value="" parent="estimator" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="63" width="620" height="11" />
+        </mxCell>
+        <mxCell id="estimator-methods-line" value="" parent="estimator" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="74" width="620" height="1" />
+        </mxCell>
+        <mxCell id="estimator-methods" value="&lt;i&gt;+ estimate(X: UnivariateFloatArray,&lt;br&gt;&amp;nbsp;&amp;nbsp;membership: UnivariateFloatArray,&lt;br&gt;&amp;nbsp;&amp;nbsp;spec: ComponentSpec,&lt;br&gt;&amp;nbsp;&amp;nbsp;*, rng: np.random.Generator):&lt;br&gt;&amp;nbsp;&amp;nbsp;ParametricFamilyDistribution&lt;/i&gt;" parent="estimator" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="75" width="620" height="127" />
+        </mxCell>
+        <mxCell id="weights" value="&amp;lt;&amp;lt;Abstract&amp;gt;&amp;gt;&lt;br&gt;&lt;b&gt;WeightEstimator&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;whiteSpace=wrap;align=center;verticalAlign=top;spacingTop=8;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="1390" y="550" width="430" height="158" />
+        </mxCell>
+        <mxCell id="weights-fields-line" value="" parent="weights" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="62" width="430" height="1" />
+        </mxCell>
+        <mxCell id="weights-fields" value="" parent="weights" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="63" width="430" height="11" />
+        </mxCell>
+        <mxCell id="weights-methods-line" value="" parent="weights" vertex="1" style="shape=line;html=1;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="0" y="74" width="430" height="1" />
+        </mxCell>
+        <mxCell id="weights-methods" value="&lt;i&gt;+ estimate(H: MultivariateFloatArray,&lt;br&gt;&amp;nbsp;&amp;nbsp;*, rng: np.random.Generator):&lt;br&gt;&amp;nbsp;&amp;nbsp;UnivariateFloatArray&lt;/i&gt;" parent="weights" vertex="1" style="text;html=1;whiteSpace=wrap;align=left;verticalAlign=top;spacingLeft=12;spacingRight=8;spacingTop=8;fontFamily=Helvetica;fontSize=16;overflow=hidden;">
+          <mxGeometry as="geometry" x="0" y="75" width="430" height="83" />
+        </mxCell>
+        <mxCell id="input" source="initializer" target="task" value="" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;dashed=1;exitX=0;exitY=0.65;entryX=1;entryY=0.25;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="task-spec" source="task" target="spec" value="1" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;exitX=0.5;exitY=0;entryX=0.5;entryY=1;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="task-estimator" source="task" target="estimator" value="1" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;exitX=1;exitY=0.75;entryX=0;entryY=0.5;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="output" source="initializer" target="mixture" value="«create»" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;dashed=1;exitX=1;exitY=0.3;entryX=0;entryY=0.5;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="uses-partition" source="initializer" target="partitioner" value="1" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;exitX=0.2;exitY=1;entryX=0.5;entryY=0;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1">
+            <Array as="points">
+              <mxPoint x="744" y="470" />
+              <mxPoint x="255" y="470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uses-weights" source="initializer" target="weights" value="1" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;exitX=0.8;exitY=1;entryX=0.5;entryY=0;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="partition-example" value="&lt;b&gt;QuantilePartitioner&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="40" y="850" width="430" height="60" />
+        </mxCell>
+        <mxCell id="inherits-partition-example" source="partition-example" target="partitioner" value="" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;endArrow=block;endFill=0;endSize=18;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="estimator-example" value="&lt;b&gt;MomentsComponentEstimator&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="620" y="850" width="620" height="60" />
+        </mxCell>
+        <mxCell id="inherits-estimator-example" source="estimator-example" target="estimator" value="" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;endArrow=block;endFill=0;endSize=18;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+        <mxCell id="weight-example" value="&lt;b&gt;MembershipWeightEstimator&lt;/b&gt;" parent="1" vertex="1" style="rounded=0;html=1;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=19;fillColor=#FFFFFF;strokeColor=#000000;strokeWidth=2;">
+          <mxGeometry as="geometry" x="1390" y="850" width="430" height="60" />
+        </mxCell>
+        <mxCell id="inherits-weight-example" source="weight-example" target="weights" value="" parent="1" edge="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontFamily=Helvetica;fontSize=15;fontColor=#000000;labelBackgroundColor=#FFFFFF;endArrow=open;endSize=12;endArrow=block;endFill=0;endSize=18;jumpStyle=arc;jumpSize=8;">
+          <mxGeometry as="geometry" relative="1" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
