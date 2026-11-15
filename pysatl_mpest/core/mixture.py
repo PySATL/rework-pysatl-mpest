@@ -229,8 +229,8 @@ class MixtureModel:
     def with_log_weights(self, log_weights: ArrayLike) -> "MixtureModel":
         """Return a new mixture with the given log-weights.
 
-        The input is copied and normalized via log-softmax, exactly as when
-        assigning to the ``log_weights`` property.
+        The input is copied and normalized via log-softmax, exactly as the
+        weights passed to the constructor.
 
         Parameters
         ----------
