@@ -45,14 +45,17 @@ def test_check_stops_at_configured_step(max_steps: int, dummy_state):
     assert should_stop_final, f"Should stop at the final step {max_steps}"
 
 
-def test_counter_resets_after_stopping(dummy_state):
+def test_counter_is_not_reset_by_check_after_stopping(dummy_state):
+    """check keeps counting past the limit; only reset() zeroes the counter."""
     max_steps = 5
     breakpointer = StepBreakpointer(max_steps)
 
     for _ in range(max_steps):
         breakpointer.check(dummy_state)
 
-    assert breakpointer._current_step == 0
+    assert breakpointer._current_step == max_steps
+    assert breakpointer.check(dummy_state)
+    assert breakpointer._current_step == max_steps + 1
 
 
 def test_breakpointer_is_reusable_after_reset(dummy_state):
@@ -62,11 +65,27 @@ def test_breakpointer_is_reusable_after_reset(dummy_state):
     assert not breakpointer.check(dummy_state)
     assert not breakpointer.check(dummy_state)
     assert breakpointer.check(dummy_state)
+    assert breakpointer._current_step == max_steps
 
+    breakpointer.reset()
     assert breakpointer._current_step == 0
 
     assert not breakpointer.check(dummy_state)
     assert not breakpointer.check(dummy_state)
     assert breakpointer.check(dummy_state)
+    assert breakpointer._current_step == max_steps
 
-    assert breakpointer._current_step == 0
+
+def test_reset_restores_full_iteration_budget(dummy_state):
+    """After reset() the breakpointer needs max_steps fresh checks to stop again."""
+    max_steps = 3
+    breakpointer = StepBreakpointer(max_steps)
+
+    breakpointer.check(dummy_state)
+    breakpointer.check(dummy_state)
+    breakpointer.reset()
+
+    for i in range(1, max_steps):
+        assert not breakpointer.check(dummy_state), f"Should not stop at step {i} after reset"
+
+    assert breakpointer.check(dummy_state)

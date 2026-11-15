@@ -5,6 +5,8 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
+import numpy as np
+
 from ....typings import Scalar
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
@@ -48,10 +50,11 @@ class PriorThresholdPruner(Pruner):
     def prune(self, state: PipelineState) -> tuple[PipelineState, list[int]]:
         """Remove components with weights below threshold, retaining at least one component.
 
-        Candidates are removed in index order, at most ``n_components - 1`` of them. If every weight
-        falls below the threshold, the component with the highest index is retained, not the one with
-        the largest weight. The mixture in ``state`` is not modified; the returned state holds a new
-        mixture built with ``MixtureModel.without_component``.
+        All components whose weight is strictly below ``threshold`` are removal candidates. If at least
+        one weight is greater than or equal to the threshold, every candidate is removed. If every weight
+        falls below the threshold, all candidates except the component with the largest weight are
+        removed; ties are resolved in favor of the smallest index. The mixture in ``state`` is not
+        modified; the returned state holds a new mixture built with ``MixtureModel.without_component``.
 
         Parameters
         ----------
@@ -67,14 +70,10 @@ class PriorThresholdPruner(Pruner):
         mixture = state.curr_mixture
         n = mixture.n_components
 
-        candidates_to_remove = [i for i, w in enumerate(mixture.weights) if w < self.threshold]
+        to_remove = [i for i, w in enumerate(mixture.weights) if w < self.threshold]
 
-        max_removals = n - 1
-
-        if len(candidates_to_remove) > max_removals:
-            to_remove = candidates_to_remove[:max_removals]
-        else:
-            to_remove = candidates_to_remove
+        if len(to_remove) == n:
+            to_remove.remove(int(np.argmax(mixture.weights)))
 
         if not to_remove:
             return (state, [])

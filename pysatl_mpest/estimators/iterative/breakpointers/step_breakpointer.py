@@ -12,8 +12,8 @@ from ..pipeline_state import PipelineState
 class StepBreakpointer(Breakpointer):
     """Stops the pipeline after a fixed number of iterations.
 
-    The counter resets to 0 only when this breakpointer reaches the limit. If the pipeline is stopped by
-    another breakpointer or by a step error first, the count carries over to the next use of the instance.
+    The counter is reset by :meth:`reset`, which :meth:`Pipeline.fit` calls before every fitting run,
+    so each ``fit`` starts counting from zero.
 
     Parameters
     ----------
@@ -36,6 +36,7 @@ class StepBreakpointer(Breakpointer):
         :toctree: generated/
 
         check
+        reset
     """
 
     def __init__(self, max_steps: int):
@@ -49,12 +50,11 @@ class StepBreakpointer(Breakpointer):
             raise ValueError("The maximum number of steps must be greater than or equal to 1")
 
     def check(self, state: PipelineState) -> bool:
-        """Evaluate if the iteration limit has been reached, resetting counter on True."""
+        """Evaluate if the iteration limit has been reached."""
 
         self._current_step += 1
+        return self._current_step >= self.max_steps
 
-        if self._current_step >= self.max_steps:
-            self._current_step = 0
-            return True
-
-        return False
+    def reset(self) -> None:
+        """Reset the iteration counter to zero."""
+        self._current_step = 0

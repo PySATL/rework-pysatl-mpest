@@ -118,3 +118,13 @@ class TestClearAfterPrune:
         step.clear_after_prune([0])
 
         assert_allclose(state_with_H.curr_mixture.weights, [0.3, 0.7], atol=1e-12)
+
+
+class TestReset:
+    def test_reset_does_not_change_the_next_run(self, state_with_H: PipelineState):
+        step = WeightsStep()
+
+        step.reset()
+        result = step.run(state_with_H)
+
+        assert_allclose(result.curr_mixture.weights, [0.45, 0.55], atol=1e-12)

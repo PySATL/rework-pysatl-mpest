@@ -6,7 +6,7 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
@@ -97,17 +97,19 @@ def test_pruning_removes_subthreshold_components_and_keeps_threshold_equal_weigh
     assert np.isclose(np.sum(new_mixture.weights), 1.0)
 
 
-def test_prune_does_not_remove_last_component():
+def test_prune_keeps_first_component_on_equal_weights_all_below_threshold():
     pruner = PriorThresholdPruner(threshold=0.9)
-    # Mixture with two components, both below threshold
+    # Mixture with two components, both below threshold; equal weights resolve to the smallest index
     components = [make_component(0), make_component(1)]
     initial_mixture = MixtureModel(components[:2], weights=[0.5, 0.5])
     state = PipelineState(
         X=np.array([], dtype=np.float64), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None
     )
 
-    new_state, _ = pruner.prune(state)
+    new_state, removed = pruner.prune(state)
+    assert removed == [1]
     assert new_state.curr_mixture.n_components == 1
+    assert new_state.curr_mixture.components == (components[0],)
 
 
 def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
@@ -194,6 +196,36 @@ def test_pruning_preserves_valid_mixture_invariants_for_generated_weights(weight
     assert np.isclose(np.sum(new_mixture.weights), 1.0)
 
 
+@given(data=st.data())
+def test_prune_keeps_largest_weight_component_when_all_weights_below_threshold(data):
+    weights_list = data.draw(
+        st.lists(st.floats(min_value=1e-6, max_value=1.0, allow_nan=False), min_size=2, max_size=10)
+    )
+    weights_sum = sum(weights_list)
+    initial_weights = np.array(weights_list) / weights_sum
+
+    num_components = len(initial_weights)
+    components = [make_component(i) for i in range(num_components)]
+    initial_mixture = MixtureModel(components, weights=initial_weights)
+
+    mixture_weights = initial_mixture.weights
+    w_max = float(mixture_weights.max())
+    assume(w_max < 1.0 - 1e-6)
+    threshold = data.draw(st.floats(min_value=w_max, max_value=1.0 - 1e-6, exclude_min=True, allow_nan=False))
+
+    pruner = PriorThresholdPruner(threshold)
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    new_state, removed = pruner.prune(state)
+    new_mixture = new_state.curr_mixture
+
+    expected_survivor = components[int(np.argmax(mixture_weights))]
+    assert new_mixture.n_components == 1
+    assert new_mixture.components == (expected_survivor,)
+    assert len(removed) == num_components - 1
+    assert np.isclose(np.sum(new_mixture.weights), 1.0)
+
+
 def test_prune_returns_original_state_when_no_pruning(dummy_components):
     pruner = PriorThresholdPruner(threshold=0.05)
     initial_mixture = MixtureModel(dummy_components, weights=[0.4, 0.3, 0.3])
@@ -237,7 +269,7 @@ def test_prune_result_has_expected_renormalized_weights(dummy_components):
     assert new_mixture.components[1] is dummy_components[1]
 
 
-def test_prune_multiple_removals_keeps_highest_indexed_survivor(dummy_components):
+def test_prune_all_below_threshold_keeps_largest_weight_component():
     pruner = PriorThresholdPruner(threshold=0.5)
     components = [make_component(i) for i in range(4)]
     initial_mixture = MixtureModel(components, weights=[0.4, 0.3, 0.2, 0.1])
@@ -245,10 +277,40 @@ def test_prune_multiple_removals_keeps_highest_indexed_survivor(dummy_components
 
     new_state, removed = pruner.prune(state)
 
-    expected_removed = [0, 1, 2]
+    expected_removed = [1, 2, 3]
     expected_weights = np.array([1.0])
     assert removed == expected_removed
     new_mixture = new_state.curr_mixture
     assert new_mixture.n_components == 1
-    assert new_mixture.components == (components[3],)
+    assert new_mixture.components == (components[0],)
     assert np.allclose(new_mixture.weights, expected_weights)
+
+
+def test_prune_all_below_threshold_with_heaviest_first_component():
+    pruner = PriorThresholdPruner(threshold=0.9)
+    components = [make_component(i) for i in range(3)]
+    initial_mixture = MixtureModel(components, weights=[0.5, 0.3, 0.2])
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    new_state, removed = pruner.prune(state)
+
+    assert removed == [1, 2]
+    new_mixture = new_state.curr_mixture
+    assert new_mixture.n_components == 1
+    assert new_mixture.components == (components[0],)
+    assert np.allclose(new_mixture.weights, [1.0])
+
+
+def test_prune_all_below_threshold_with_heaviest_middle_component():
+    pruner = PriorThresholdPruner(threshold=0.9)
+    components = [make_component(i) for i in range(3)]
+    initial_mixture = MixtureModel(components, weights=[0.3, 0.4, 0.3])
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    new_state, removed = pruner.prune(state)
+
+    assert removed == [0, 2]
+    new_mixture = new_state.curr_mixture
+    assert new_mixture.n_components == 1
+    assert new_mixture.components == (components[1],)
+    assert np.allclose(new_mixture.weights, [1.0])

@@ -4,6 +4,10 @@ Components are `pysatl-core` distributions of one class, so `functools.singledis
 an implementation by the class of the first argument, cannot tell a normal distribution from an
 exponential one. `FamilyDispatch` selects it by the pair ``(family name, parametrization name)``
 instead, and falls back to a default implementation when nothing is registered for the pair.
+
+A `FamilyDispatch` is not a decorator: it is constructed with the default implementation, an explicit
+``name`` and a ``doc`` describing the whole dispatch, and implementations are added through its
+``register`` method.
 """
 
 __author__ = "Danil Totmyanin"
@@ -12,7 +16,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 
 from collections.abc import Callable, Mapping
-from functools import update_wrapper
 from types import MappingProxyType
 from typing import Concatenate
 
@@ -33,6 +36,10 @@ class FamilyDispatch[**P, R]:
     default : Callable[Concatenate[ParametricFamilyDistribution, P], R]
         The implementation used when nothing is registered for the family and parametrization
         of the component.
+    name : str
+        The dispatcher's own ``__name__`` and ``__qualname__``.
+    doc : str
+        The dispatcher's own docstring, describing the whole dispatch and shown by ``help()``.
 
     Methods
     -------
@@ -43,10 +50,22 @@ class FamilyDispatch[**P, R]:
         dispatch
     """
 
-    def __init__(self, default: Callable[Concatenate[ParametricFamilyDistribution, P], R]) -> None:
+    __name__: str
+    __qualname__: str
+    __doc__: str
+
+    def __init__(
+        self,
+        default: Callable[Concatenate[ParametricFamilyDistribution, P], R],
+        *,
+        name: str,
+        doc: str,
+    ) -> None:
         self._default = default
         self._registry: dict[StrategyKey, Callable[Concatenate[ParametricFamilyDistribution, P], R]] = {}
-        update_wrapper(self, default)
+        self.__name__ = name
+        self.__qualname__ = name
+        self.__doc__ = doc
 
     @property
     def registry(self) -> Mapping[StrategyKey, Callable[Concatenate[ParametricFamilyDistribution, P], R]]:
@@ -115,21 +134,3 @@ class FamilyDispatch[**P, R]:
 
     def __call__(self, component: ParametricFamilyDistribution, /, *args: P.args, **kwargs: P.kwargs) -> R:
         return self.dispatch(component)(component, *args, **kwargs)
-
-
-def family_dispatch[**P, R](default: Callable[Concatenate[ParametricFamilyDistribution, P], R]) -> FamilyDispatch[P, R]:
-    """Turn a function into a `FamilyDispatch`. Meant to be used as a decorator, like `functools.singledispatch`.
-
-    Parameters
-    ----------
-    default : Callable[Concatenate[ParametricFamilyDistribution, P], R]
-        The implementation used when nothing is registered for the family and parametrization
-        of the component.
-
-    Returns
-    -------
-    FamilyDispatch[P, R]
-        The function with the ``register`` and ``dispatch`` methods.
-    """
-
-    return FamilyDispatch(default)

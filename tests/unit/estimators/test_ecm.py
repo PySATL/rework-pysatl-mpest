@@ -34,6 +34,9 @@ class StopOnSecondCheck(Breakpointer):
     def __init__(self):
         self.called = False
 
+    def reset(self) -> None:
+        self.called = False
+
     def check(self, state: PipelineState) -> bool:
         if self.called:
             return True
@@ -146,7 +149,7 @@ class TestPipeline:
             two_normal_mixture, groups, [MaximizationStrategy.QFUNCTION] * two_normal_mixture.n_components
         )
         maximization_step = pipeline.call_args.args[0][2]
-        assert maximization_step.blocks == blocks
+        assert maximization_step.blocks == tuple(blocks)
 
     def test_builder_error_prevents_pipeline_creation(
         self,

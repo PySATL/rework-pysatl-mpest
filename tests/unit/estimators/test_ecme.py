@@ -35,6 +35,9 @@ class StopOnSecondCheck(Breakpointer):
     def __init__(self):
         self.called = False
 
+    def reset(self) -> None:
+        self.called = False
+
     def check(self, state: PipelineState) -> bool:
         if self.called:
             return True

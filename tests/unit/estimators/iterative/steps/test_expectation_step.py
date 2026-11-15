@@ -112,3 +112,16 @@ class TestRun:
         assert result_state.curr_mixture is original_mixture_ref
         assert result_state.prev_mixture is original_prev_mixture_ref
         assert result_state.error is original_error_ref
+
+
+class TestReset:
+    def test_reset_does_not_change_the_next_run(self, initial_pipeline_state):
+        state = initial_pipeline_state
+        step = ExpectationStep(is_soft=True)
+
+        step.reset()
+        result_state = step.run(state)
+
+        expected_h = np.array([[0.42 / 0.45, 0.03 / 0.45], [0.56 / 0.65, 0.09 / 0.65]], dtype=np.float64)
+        assert result_state.H is not None
+        assert_allclose(result_state.H, expected_h, rtol=1e-6, atol=1e-6)

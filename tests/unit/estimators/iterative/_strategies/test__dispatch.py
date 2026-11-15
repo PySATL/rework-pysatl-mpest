@@ -9,7 +9,7 @@ from typing import cast
 import pytest
 from pysatl_core.families import ParametricFamilyDistribution
 from pysatl_core.types import FamilyName
-from pysatl_mpest.estimators.iterative._strategies._dispatch import FamilyDispatch, family_dispatch
+from pysatl_mpest.estimators.iterative._strategies._dispatch import FamilyDispatch
 
 from tests.mocks.distributions import MockContinuousDistribution
 
@@ -23,16 +23,16 @@ def make_component(
     return cast(ParametricFamilyDistribution, mock)
 
 
+def default_implementation(component: ParametricFamilyDistribution, value: int) -> str:
+    """Default implementation."""
+    return f"default {value}"
+
+
 @pytest.fixture
 def strategy() -> FamilyDispatch[[int], str]:
     """A fresh dispatch with a default implementation, so that registrations do not leak between tests."""
 
-    @family_dispatch
-    def default(component: ParametricFamilyDistribution, value: int) -> str:
-        """Default implementation."""
-        return f"default {value}"
-
-    return default
+    return FamilyDispatch(default_implementation, name="strategy", doc="Strategy docstring.")
 
 
 def test_uses_default_when_nothing_is_registered(strategy: FamilyDispatch[[int], str]) -> None:
@@ -95,7 +95,7 @@ def test_dispatch_returns_the_selected_implementation(strategy: FamilyDispatch[[
     strategy.register("MockFamily", "MockParam")(registered)
 
     assert strategy.dispatch(make_component()) is registered
-    assert strategy.dispatch(make_component(family_name="Other")) is strategy.__wrapped__  # type: ignore[attr-defined]
+    assert strategy.dispatch(make_component(family_name="Other")) is default_implementation
 
 
 def test_registry_is_read_only(strategy: FamilyDispatch[[int], str]) -> None:
@@ -103,6 +103,8 @@ def test_registry_is_read_only(strategy: FamilyDispatch[[int], str]) -> None:
         strategy.registry[("MockFamily", "MockParam")] = lambda component, value: "registered"  # type: ignore[index]
 
 
-def test_keeps_name_and_docstring_of_default(strategy: FamilyDispatch[[int], str]) -> None:
-    assert strategy.__name__ == "default"
-    assert strategy.__doc__ == "Default implementation."
+def test_has_explicit_name_qualname_and_doc(strategy: FamilyDispatch[[int], str]) -> None:
+    assert strategy.__name__ == "strategy"
+    assert strategy.__qualname__ == "strategy"
+    assert strategy.__doc__ == "Strategy docstring."
+    assert not hasattr(strategy, "__wrapped__")

@@ -19,7 +19,7 @@ from ....core import _components
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
-from ._dispatch import family_dispatch
+from ._dispatch import FamilyDispatch
 
 NUMERICAL_TOLERANCE = 1e-9
 
@@ -135,6 +135,39 @@ def _normal_mean_std(
 
 # The implementations are plain functions and are registered by a call, not by a decorator:
 # the mutation testing tool does not mutate decorated functions.
-moments_strategy = family_dispatch(_not_implemented)
+moments_strategy = FamilyDispatch(
+    _not_implemented,
+    name="moments_strategy",
+    doc="""M-step strategy based on the Method of Moments.
+
+Selects the implementation by the family and parametrization of the component.
+Analytical moment matching is registered for the ``Normal`` family with the
+``meanStd`` parametrization and the ``Exponential`` family with the ``rate``
+parametrization. No fallback exists for other pairs.
+
+Parameters
+----------
+component : ParametricFamilyDistribution
+    The mixture component to update.
+state : PipelineState
+    The pipeline state holding the data ``X`` and the responsibilities ``H``.
+block : OptimizationBlock
+    The block describing which parameters of ``component`` to update.
+optimizer : Optimizer
+    The optimizer passed to the strategy; unused by the analytical
+    implementations.
+
+Returns
+-------
+tuple[int, dict[str, float]]
+    The component id and a mapping of updated parameter names to new values.
+
+Raises
+------
+NotImplementedError
+    If nothing is registered for the family and parametrization of the
+    component.
+""",
+)
 moments_strategy.register(FamilyName.EXPONENTIAL, "rate")(_exponential_rate)
 moments_strategy.register(FamilyName.NORMAL, "meanStd")(_normal_mean_std)

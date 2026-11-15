@@ -24,6 +24,8 @@ class WeightsStep(PipelineStep):
         :toctree: generated/
 
         run
+        clear_after_prune
+        reset
     """
 
     @property
@@ -63,4 +65,8 @@ class WeightsStep(PipelineStep):
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
+
+    def reset(self) -> None:
+        """Return the step to its post-constructor state (no per-fit state)."""
         pass
