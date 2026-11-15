@@ -151,7 +151,10 @@ class TestRun:
         assert seen_state.curr_mixture is not state.curr_mixture
         # The strategy sees the wave's snapshot, which is not modified by the block's result.
         assert cc.all_parameters(seen_state.curr_mixture[0]) == {"mu": 0.0, "sigma": 1.0}
-        assert cc.all_parameters(normal_mixture[0]) == {"mu": 1.5, "sigma": 1.0}
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.5, "sigma": 1.0}
+        # The mixture passed in the state is left unchanged.
+        assert normal_mixture[0] is original
+        assert cc.all_parameters(normal_mixture[0]) == {"mu": 0.0, "sigma": 1.0}
 
     def test_blocks_of_one_wave_share_one_snapshot(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         """Blocks of one wave receive the same ``state.curr_mixture`` object: the wave's snapshot."""
@@ -193,7 +196,9 @@ class TestRun:
         # Each wave computes from its own snapshot of the working mixture.
         assert calls[0][1].curr_mixture is not second_state.curr_mixture
         assert cc.all_parameters(calls[0][1].curr_mixture[0])["mu"] == 0.0
-        assert cc.all_parameters(normal_mixture[0]) == {"mu": new_mu, "sigma": 3.0}
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": new_mu, "sigma": 3.0}
+        # The mixture passed in the state is left unchanged.
+        assert cc.all_parameters(normal_mixture[0]) == {"mu": 0.0, "sigma": 1.0}
 
     def test_same_wave_odl_block_reads_the_snapshot(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         """In [ODL0, Q1] both blocks form one wave, so ODL reads component 1 before the wave's updates."""
@@ -241,7 +246,8 @@ class TestRun:
 
         assert seen_mixtures[0] is seen_mixtures[1]
         assert seen_mu == [5.0]
-        assert cc.all_parameters(normal_mixture[1])["mu"] == new_mu
+        assert cc.all_parameters(state.curr_mixture[1])["mu"] == new_mu
+        assert cc.all_parameters(normal_mixture[1]) == {"mu": 5.0, "sigma": 1.0}
 
     def test_odl_like_strategy_sees_earlier_block_updates(
         self, mocker: MockerFixture, normal_mixture: MixtureModel
@@ -290,21 +296,30 @@ class TestRun:
     def test_does_not_update_weights(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         H = np.array([[0.8, 0.2], [0.7, 0.3], [0.1, 0.9], [0.2, 0.8]])
         state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), H, normal_mixture)
-        log_weights_before = normal_mixture.log_weights
+        log_weights_before = normal_mixture.log_weights.copy()
 
         make_scripted_step(
             mocker, [OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION)], {"mu": 1.0, "sigma": 2.0}
         ).run(state)
 
-        assert normal_mixture.log_weights is log_weights_before
-        assert_allclose(normal_mixture.weights, [0.5, 0.5], atol=1e-12)
+        assert state.curr_mixture is not normal_mixture
+        assert_allclose(state.curr_mixture.weights, normal_mixture.weights, atol=1e-12)
+        np.testing.assert_array_equal(state.curr_mixture.log_weights, log_weights_before)
+        np.testing.assert_array_equal(normal_mixture.log_weights, log_weights_before)
 
-    def test_preserves_curr_mixture_object(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
+    def test_replaces_curr_mixture_with_a_new_object(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
+        mixture_before = state.curr_mixture
 
-        make_scripted_step(mocker, [OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION)], {"mu": 1.0}).run(state)
+        make_scripted_step(
+            mocker, [OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION)], {"mu": 1.0, "sigma": 2.0}
+        ).run(state)
 
-        assert state.curr_mixture is normal_mixture
+        assert state.curr_mixture is not mixture_before
+        assert state.curr_mixture is not normal_mixture
+        assert state.curr_mixture[1] is normal_mixture[1]
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.0, "sigma": 2.0}
+        assert cc.all_parameters(normal_mixture[0]) == {"mu": 0.0, "sigma": 1.0}
 
     def test_out_of_range_component_is_rejected(self, mock_optimizer: Optimizer, real_state: PipelineState) -> None:
         block = OptimizationBlock(real_state.curr_mixture.n_components, None, MaximizationStrategy.QFUNCTION)
@@ -373,7 +388,8 @@ class TestRun:
         """After pruning, the next run replans waves for the surviving blocks."""
         normal = family(FamilyName.NORMAL)
         mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
-        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(mixture), mixture)
+        pruned = mixture.without_component(0)
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
         blocks = [
             OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
             OptimizationBlock(1, {"mu"}, MaximizationStrategy.QFUNCTION),
@@ -381,7 +397,6 @@ class TestRun:
         ]
         step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"sigma": 3.0})
 
-        mixture.remove_component(0)
         step.clear_after_prune([0])
         step.run(state)
 
@@ -389,8 +404,11 @@ class TestRun:
         assert [call[2].params_to_optimize for call in calls] == [{"mu"}, {"sigma"}]
         assert calls[0][1].curr_mixture is not calls[1][1].curr_mixture
         assert cc.all_parameters(calls[1][1].curr_mixture[0])["mu"] == 1.0
-        assert cc.all_parameters(mixture[0]) == {"mu": 1.0, "sigma": 3.0}
-        assert cc.all_parameters(mixture[1]) == {"mu": -5.0, "sigma": 1.0}
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.0, "sigma": 3.0}
+        assert cc.all_parameters(state.curr_mixture[1]) == {"mu": -5.0, "sigma": 1.0}
+        # The mixture passed in the state is left unchanged.
+        assert cc.all_parameters(pruned[0]) == {"mu": 5.0, "sigma": 1.0}
+        assert mixture.n_components == 3  # noqa: PLR2004
 
     def test_strategy_parameters_replace_component(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
@@ -400,9 +418,12 @@ class TestRun:
             mocker, [OptimizationBlock(0, None, MaximizationStrategy.QFUNCTION)], {"mu": 1.0, "sigma": 2.0}
         ).run(state)
 
-        assert cc.all_parameters(normal_mixture[0]) == {"mu": 1.0, "sigma": 2.0}
-        assert normal_mixture[1] is untouched
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.0, "sigma": 2.0}
+        assert state.curr_mixture[1] is untouched
         assert cc.all_parameters(original) == {"mu": 0.0, "sigma": 1.0}
+        # The mixture passed in the state is left unchanged.
+        assert normal_mixture[0] is original
+        assert cc.all_parameters(normal_mixture[0]) == {"mu": 0.0, "sigma": 1.0}
 
     def test_combines_updates_to_one_component(self, mocker: MockerFixture, normal_mixture: MixtureModel) -> None:
         state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(normal_mixture), normal_mixture)
@@ -418,7 +439,7 @@ class TestRun:
 
         step.run(state)
 
-        assert cc.all_parameters(normal_mixture[0]) == {"mu": 2.0, "sigma": 3.0}
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 2.0, "sigma": 3.0}
 
     def test_preserves_view_parameters(self, mocker: MockerFixture) -> None:
         mixture = MixtureModel([family(FamilyName.NORMAL).view(mu=1.0)(sigma=2.0)])
@@ -428,8 +449,8 @@ class TestRun:
             mocker, [OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION)], {"sigma": 3.0}
         ).run(state)
 
-        assert cc.fixed_parameters(mixture[0]) == {"mu": 1.0}
-        assert cc.free_parameters(mixture[0]) == {"sigma": 3.0}
+        assert cc.fixed_parameters(state.curr_mixture[0]) == {"mu": 1.0}
+        assert cc.free_parameters(state.curr_mixture[0]) == {"sigma": 3.0}
 
     def test_rejects_fixed_parameter_updates(self, mocker: MockerFixture) -> None:
         component = family(FamilyName.NORMAL).view(mu=1.0)(sigma=2.0)
@@ -441,6 +462,7 @@ class TestRun:
                 state
             )
 
+        assert state.curr_mixture is mixture
         assert mixture[0] is component
 
     @pytest.mark.parametrize(

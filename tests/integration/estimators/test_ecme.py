@@ -11,12 +11,7 @@ import pytest
 from numpy.testing import assert_allclose
 from pysatl_mpest.core import MixtureModel
 from pysatl_mpest.estimators import ECME
-from pysatl_mpest.estimators.iterative import (
-    Breakpointer,
-    PipelineState,
-    PriorThresholdPruner,
-    StepBreakpointer,
-)
+from pysatl_mpest.estimators.iterative import PriorThresholdPruner, StepBreakpointer
 from pysatl_mpest.optimizers import ScipyNelderMead
 
 from tests.helpers.estimator_data import (
@@ -32,25 +27,6 @@ from tests.helpers.estimator_data import (
 
 MONOTONICITY_TOLERANCE = 1e-6  # Slack for numerical noise in the non-decrease assertion.
 MIN_LOG_DENSITY_BOUND = -50.0  # Far above LOG_FLOOR = -1e4 of the ODL objective.
-
-
-class _LoglikelihoodRecorder(Breakpointer):
-    """Record the observed log-likelihood after every iteration and stop after ``max_iterations``.
-
-    Temporary workaround for bug 2.11 in OPEN-QUESTIONS.md: all ``IterationsHistory`` records share
-    one ``MixtureModel`` object, so the per-iteration likelihood cannot be read from ``history``.
-    Replace with history once the bug is fixed.
-    """
-
-    def __init__(self, max_iterations: int) -> None:
-        self._max_iterations = max_iterations
-        self.loglikelihoods: list[float] = []
-        self.min_log_density = np.inf
-
-    def check(self, state: PipelineState) -> bool:
-        self.loglikelihoods.append(state.curr_mixture.loglikelihood(state.X))
-        self.min_log_density = min(self.min_log_density, float(np.min(state.curr_mixture.lpdf(state.X))))
-        return len(self.loglikelihoods) >= self._max_iterations
 
 
 class TestStrategies:
@@ -141,15 +117,18 @@ class TestLikelihoodMonotonicity:
             weights=[0.208, 0.778, 0.014],
         )
 
-        recorder = _LoglikelihoodRecorder(10)
-        ecme = ECME(breakpointers=[recorder], pruners=[], optimizer=ScipyNelderMead(), default_strategy="odl")
+        ecme = ECME(
+            breakpointers=[StepBreakpointer(10)], pruners=[], optimizer=ScipyNelderMead(), default_strategy="odl"
+        )
         ecme.fit(X, start, q_indices_raw=1, odl_indices_raw=[0, 2])
 
-        likelihoods = np.asarray([start.loglikelihood(X), *recorder.loglikelihoods])
-        assert len(recorder.loglikelihoods) == 10  # noqa: PLR2004
+        records = [ecme.history[i] for i in range(len(ecme.history))]
+        assert len(records) == 10  # noqa: PLR2004
+        likelihoods = [start.loglikelihood(X), *[record.mixture.loglikelihood(record.X) for record in records]]
         assert np.all(np.diff(likelihoods) >= -MONOTONICITY_TOLERANCE)
         # The ODL objective floors the mixture log-density at LOG_FLOOR = -1e4; it is never approached here.
-        assert recorder.min_log_density > MIN_LOG_DENSITY_BOUND
+        min_log_density = min(float(np.min(record.mixture.lpdf(record.X))) for record in records)
+        assert min_log_density > MIN_LOG_DENSITY_BOUND
 
 
 class TestPruning:

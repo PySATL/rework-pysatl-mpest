@@ -4,8 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
-
 import numpy as np
 import pytest
 from pysatl_core.families import ParametricFamilyDistribution
@@ -90,7 +88,7 @@ class TestObjective:
         assert captured_target(optimizer)([1.0, 2.0]) == pytest.approx(-float(np.sum(stats.norm(1.0, 2.0).logpdf(X))))
 
     def test_uses_the_normalized_weights_of_the_mixture(self, mixture: MixtureModel, optimizer: Optimizer) -> None:
-        mixture.log_weights = np.log([2.0, 6.0])
+        mixture = mixture.with_log_weights(np.log([2.0, 6.0]))
 
         observed_data_likelihood_strategy(mixture[1], make_state(X, None, mixture), odl_block(), optimizer)
 
@@ -261,13 +259,15 @@ class TestStrategyContract:
     """Check strategycontract behavior."""
 
     def test_does_not_modify_the_component_or_the_mixture(self, mixture: MixtureModel, optimizer: Optimizer) -> None:
-        before = copy(mixture)
+        components_before = mixture.components
+        log_weights_before = mixture.log_weights.copy()
         component = mixture[1]
 
         observed_data_likelihood_strategy(component, make_state(X, None, mixture), odl_block(), optimizer)
 
         assert cc.all_parameters(component) == {"mu": 3.0, "sigma": 2.0}
-        assert mixture == before
+        assert mixture.components == components_before
+        assert np.array_equal(mixture.log_weights, log_weights_before)
 
     def test_is_called_once_from_the_current_values(self, mixture: MixtureModel, optimizer: Optimizer) -> None:
         observed_data_likelihood_strategy(mixture[1], make_state(X, None, mixture), odl_block(), optimizer)

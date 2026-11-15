@@ -35,9 +35,10 @@ class WeightsStep(PipelineStep):
         return [MaximizationStep]
 
     def run(self, state: PipelineState) -> PipelineState:
-        """Update mixture weights from responsibilities and store them in the mixture.
+        """Update mixture weights from responsibilities.
 
-        The state and the current mixture are modified in place. Missing
+        Replaces ``state.curr_mixture`` with a new mixture carrying the updated
+        weights; the mixture passed in the state is not modified. Missing
         responsibilities set ``state.error`` instead of raising.
 
         Parameters
@@ -48,7 +49,7 @@ class WeightsStep(PipelineStep):
         Returns
         -------
         PipelineState
-            Updated state with modified mixture weights.
+            Updated state with a new mixture carrying the updated weights.
         """
 
         if state.H is None:
@@ -57,7 +58,7 @@ class WeightsStep(PipelineStep):
 
         responsibilities_sum = np.sum(state.H, axis=0)
         new_weights = responsibilities_sum / state.X.shape[0]
-        state.curr_mixture.log_weights = np.log(new_weights + 1e-30)
+        state.curr_mixture = state.curr_mixture.with_log_weights(np.log(new_weights + 1e-30))
 
         return state
 

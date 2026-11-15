@@ -5,8 +5,6 @@ __copyright__ = "Copyright (c) 2025 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 
-from copy import copy
-
 from ....typings import Scalar
 from ..pipeline_state import PipelineState
 from ..pruner import Pruner
@@ -52,7 +50,8 @@ class PriorThresholdPruner(Pruner):
 
         Candidates are removed in index order, at most ``n_components - 1`` of them. If every weight
         falls below the threshold, the component with the highest index is retained, not the one with
-        the largest weight.
+        the largest weight. The mixture in ``state`` is not modified; the returned state holds a new
+        mixture built with ``MixtureModel.without_component``.
 
         Parameters
         ----------
@@ -80,9 +79,9 @@ class PriorThresholdPruner(Pruner):
         if not to_remove:
             return (state, [])
 
-        new_mixture = copy(mixture)
+        new_mixture = mixture
         for i in sorted(to_remove, reverse=True):
-            new_mixture.remove_component(i)
+            new_mixture = new_mixture.without_component(i)
 
         new_state = PipelineState(
             X=state.X, H=state.H, prev_mixture=state.prev_mixture, curr_mixture=new_mixture, error=state.error

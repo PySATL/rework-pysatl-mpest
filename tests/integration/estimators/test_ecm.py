@@ -4,8 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
-
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -67,6 +65,23 @@ class TestFitting:
         for actual, expected in zip(fitted_arrays(fitted), reference_em(X, start, iterations)):
             assert_allclose(actual, expected, rtol=1e-9)
 
+    def test_history_records_hold_distinct_mixtures_matching_reference_em(
+        self, X: np.ndarray, start: MixtureModel
+    ) -> None:
+        iterations = 5
+        ecm = ecm_for(iterations)
+
+        fitted = ecm.fit(X, start)
+
+        records = [ecm.history[i] for i in range(len(ecm.history))]
+        assert len(records) == iterations
+        assert len({id(record.mixture) for record in records}) == iterations
+        assert all(record.mixture is not start for record in records)
+        assert fitted is records[-1].mixture
+        for i, record in enumerate(records):
+            for actual, expected in zip(fitted_arrays(record.mixture), reference_em(X, start, i + 1)):
+                assert_allclose(actual, expected, rtol=1e-9)
+
     def test_recovers_the_parameters_of_a_mixture(self, X: np.ndarray, start: MixtureModel) -> None:
         fitted = ecm_for(300, tolerance=1e-9).fit(X, start)
         mu, sigma, weights = fitted_arrays(fitted)
@@ -106,12 +121,13 @@ class TestFitting:
             assert_allclose(actual, reference, rtol=1e-9)
 
     def test_does_not_modify_the_initial_mixture(self, X: np.ndarray, start: MixtureModel) -> None:
-        before, components = copy(start), start.components
+        components_before = start.components
+        log_weights_before = start.log_weights.copy()
 
         ecm_for(5).fit(X, start)
 
-        assert start == before
-        assert start.components == components
+        assert start.components == components_before
+        assert np.array_equal(start.log_weights, log_weights_before)
 
     def test_is_deterministic(self, X: np.ndarray, start: MixtureModel) -> None:
         assert ecm_for(10).fit(X, start) == ecm_for(10).fit(X, start)
@@ -198,8 +214,7 @@ class TestPruning:
         start = stray_start((1,))
         after_first = ecm_for(1).fit(X, start)
         assert after_first.weights[1] < PRUNING_THRESHOLD
-        pruned = copy(after_first)
-        pruned.remove_component(1)
+        pruned = after_first.without_component(1)
 
         with_pruner = pruning_ecm(iterations=10).fit(X, start)
         by_hand = ecm_for(9).fit(X, pruned)

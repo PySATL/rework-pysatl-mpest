@@ -7,7 +7,6 @@ __license__ = "SPDX-License-Identifier: MIT"
 
 import bisect
 from collections.abc import Mapping, Sequence
-from copy import copy
 from dataclasses import replace
 from types import MappingProxyType
 from typing import ClassVar
@@ -80,9 +79,12 @@ class MaximizationStep(PipelineStep):
     def run(self, state: PipelineState) -> PipelineState:
         """Execute the M-step, updating component parameters.
 
-        Applies all blocks atomically, preserving the mixture's identity and weights.
-        Strategy exceptions propagate without changing the mixture. Missing
-        responsibilities set :attr:`~pysatl_mpest.estimators.iterative.pipeline_state.PipelineState.error` instead.
+        Applies all blocks atomically: the results are collected in a working
+        list of components, and ``state.curr_mixture`` is replaced by a new
+        mixture with the updated components and the same weights. The mixture
+        passed in the state is not modified. Strategy exceptions propagate
+        without changing ``state.curr_mixture``. Missing responsibilities set
+        :attr:`~pysatl_mpest.estimators.iterative.pipeline_state.PipelineState.error` instead.
 
         Parameters
         ----------
@@ -92,7 +94,7 @@ class MaximizationStep(PipelineStep):
         Returns
         -------
         PipelineState
-            Updated state with modified mixture model.
+            Updated state with a new mixture model.
 
         Raises
         ------
@@ -108,19 +110,18 @@ class MaximizationStep(PipelineStep):
             state.error = ValueError("Responsibility matrix H is not computed.")
             return state
 
-        working = copy(state.curr_mixture)
+        components = list(state.curr_mixture.components)
 
         for wave in plan_waves(self.blocks):
-            snapshot = copy(working)
+            snapshot = state.curr_mixture.with_components(components)
             wave_state = replace(state, curr_mixture=snapshot)
             for index in wave:
                 block = self.blocks[index]
                 strategy = self._strategies[block.maximization_strategy]
                 component_id, new_params = strategy(snapshot[block.component_id], wave_state, block, self.optimizer)
-                working[component_id] = self._update_components_params(working[component_id], new_params)
+                components[component_id] = self._update_components_params(components[component_id], new_params)
 
-        for index in range(working.n_components):
-            state.curr_mixture[index] = working[index]
+        state.curr_mixture = state.curr_mixture.with_components(components)
 
         return state
 

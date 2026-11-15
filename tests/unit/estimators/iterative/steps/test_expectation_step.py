@@ -15,7 +15,7 @@ from pysatl_mpest.estimators.iterative import ExpectationStep, MaximizationStep,
 def initial_pipeline_state(mocker) -> PipelineState:
     mixture = mocker.create_autospec(MixtureModel, instance=True)
     mixture.component_lpdf_matrix.return_value = np.log([[0.6, 0.1], [0.8, 0.3]]).astype(np.float64)
-    mixture.log_weights = np.log([0.7, 0.3]).astype(np.float64)
+    mixture.configure_mock(log_weights=np.log([0.7, 0.3]).astype(np.float64))
 
     return PipelineState(
         X=np.array([1.0, 2.0], dtype=np.float64),

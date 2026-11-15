@@ -21,6 +21,43 @@ from ._sampling import DeterministicSampling
 _SAMPLING = DeterministicSampling()
 
 
+def _normalize_log_weights(log_weights: ArrayLike, n_components: int) -> UnivariateFloatArray:
+    """Copy log-weights and normalize them via log-softmax.
+
+    Parameters
+    ----------
+    log_weights : ArrayLike
+        Logarithmic component weights; they are normalized, so they need not sum to one in log space.
+    n_components : int
+        Expected number of weights.
+
+    Returns
+    -------
+    UnivariateFloatArray
+        A read-only normalized log-weights array of length ``n_components``.
+
+    Raises
+    ------
+    ValueError
+        If the length differs from ``n_components`` or the values cannot be normalized
+        (all ``-inf``, ``NaN`` or ``+inf``).
+    """
+
+    new_log_weights = np.array(log_weights, dtype=np.float64)
+
+    if len(new_log_weights) != n_components:
+        raise ValueError(
+            f"The length of the new log-weights vector ({len(new_log_weights)}) "
+            f"does not match the number of components ({n_components})."
+        )
+    if not np.isfinite(logsumexp(new_log_weights)):
+        raise ValueError("The log-weights must be normalizable: at least one finite value and no NaN or +inf.")
+
+    normalized = log_softmax(new_log_weights)
+    normalized.flags.writeable = False
+    return normalized
+
+
 class MixtureModel:
     """Represents a finite mixture of continuous probability distributions.
 
@@ -31,6 +68,12 @@ class MixtureModel:
     inequality (``!=``). Two models are considered equal if they have the
     same set of components and weights, regardless of the order in which
     components were added.
+
+    The model is immutable: its components and weights cannot be changed after
+    creation. Every modification returns a new ``MixtureModel`` via one of the
+    ``with_*`` methods or :meth:`without_component`. Because the contents never
+    change in place, instances are hashable and can safely be used as
+    dictionary keys.
 
     Parameters
     ----------
@@ -51,9 +94,8 @@ class MixtureModel:
         A NumPy array of the normalized weights for each component. The sum
         of weights is always 1.
     log_weights : UnivariateFloatArray
-        A read-only NumPy array of normalized logarithmic component weights. Assigning a new
-        value copies and normalizes it; a ``ValueError`` is raised if its length differs from
-        ``n_components`` or it cannot be normalized (all ``-inf``, ``NaN`` or ``+inf``).
+        A read-only NumPy array of normalized logarithmic component weights. New weights are set
+        via :meth:`with_log_weights`.
 
     Raises
     ------
@@ -67,8 +109,11 @@ class MixtureModel:
     .. autosummary::
         :toctree: generated/
 
-        add_component
-        remove_component
+        with_component
+        with_components
+        with_log_weights
+        with_added_component
+        without_component
         to_core_mixture
         pdf
         lpdf
@@ -92,10 +137,10 @@ class MixtureModel:
             weights = np.asarray(weights, dtype=np.float64)
             self._validate_weights(n_components, weights)
 
-        self._components = list(components)
+        self._components = tuple(components)
         self._cached_weights: UnivariateFloatArray | None = None
         self._sorted_pairs_cache: list[tuple[_components.ComponentKey, float]] | None = None
-        self.log_weights = np.log(weights + np.finfo(np.float64).tiny)
+        self._log_weights = _normalize_log_weights(np.log(weights + np.finfo(np.float64).tiny), n_components)
 
     @property
     def n_components(self):
@@ -104,10 +149,10 @@ class MixtureModel:
         return len(self.components)
 
     @property
-    def components(self):
+    def components(self) -> tuple[ParametricFamilyDistribution, ...]:
         """tuple[ParametricFamilyDistribution, ...]: Components of the mixture."""
 
-        return tuple(self._components)
+        return self._components
 
     @property
     def weights(self) -> UnivariateFloatArray:
@@ -124,36 +169,95 @@ class MixtureModel:
 
         return self._log_weights
 
-    @log_weights.setter
-    def log_weights(self, new_log_weights: ArrayLike) -> None:
-        """Copy and normalize log-weights via log-softmax.
+    def with_component(self, index: int, component: ParametricFamilyDistribution) -> "MixtureModel":
+        """Return a new mixture with the component at ``index`` replaced.
+
+        The log-weights are unchanged and shared with this mixture.
+
+        Parameters
+        ----------
+        index : int
+            Index of the component to replace; negative indices are not supported.
+        component : ParametricFamilyDistribution
+            The replacement component.
+
+        Returns
+        -------
+        MixtureModel
+            A new mixture; this mixture is left unchanged.
+
+        Raises
+        ------
+        IndexError
+            If ``index`` is outside ``[0, n_components - 1]``.
+        """
+
+        if not (0 <= index <= self.n_components - 1):
+            raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
+
+        components = list(self._components)
+        components[index] = component
+        return self._from_normalized(components, self._log_weights)
+
+    def with_components(self, components: Sequence[ParametricFamilyDistribution]) -> "MixtureModel":
+        """Return a new mixture with all components replaced.
+
+        The already normalized log-weights are kept as is and shared with this
+        mixture; only the length is checked.
+
+        Parameters
+        ----------
+        components : Sequence[ParametricFamilyDistribution]
+            The new components; must be as many as in this mixture.
+
+        Returns
+        -------
+        MixtureModel
+            A new mixture; this mixture is left unchanged.
 
         Raises
         ------
         ValueError
-            If length differs from ``n_components`` or values cannot be normalized
-            (e.g. all ``-inf``, ``NaN``, or ``+inf``).
+            If the number of components differs from ``n_components``.
         """
 
-        new_log_weights = np.array(new_log_weights, dtype=np.float64)
+        if len(components) != self.n_components:
+            raise ValueError(f"Expected {self.n_components} components, got {len(components)}.")
 
-        if len(new_log_weights) != self.n_components:
-            raise ValueError(
-                f"The length of the new log-weights vector ({len(new_log_weights)}) "
-                f"does not match the number of components ({self.n_components})."
-            )
-        if not np.isfinite(logsumexp(new_log_weights)):
-            raise ValueError("The log-weights must be normalizable: at least one finite value and no NaN or +inf.")
+        return self._from_normalized(components, self._log_weights)
 
-        normalized = log_softmax(new_log_weights)
-        normalized.flags.writeable = False
-        self._log_weights = normalized
-        self._invalidate_cache()
+    def with_log_weights(self, log_weights: ArrayLike) -> "MixtureModel":
+        """Return a new mixture with the given log-weights.
 
-    def add_component(self, component: ParametricFamilyDistribution, weight: Scalar) -> None:
-        """Adds a new component to the mix, preserving the proportions of the existing component weights.
+        The input is copied and normalized via log-softmax, exactly as the
+        weights passed to the constructor.
 
-        The old component weights are multiplied by ``1 - weight``.
+        Parameters
+        ----------
+        log_weights : ArrayLike
+            New logarithmic component weights; they are normalized, so they need
+            not sum to one in log space.
+
+        Returns
+        -------
+        MixtureModel
+            A new mixture; this mixture is left unchanged.
+
+        Raises
+        ------
+        ValueError
+            If the length differs from ``n_components`` or the values cannot be
+            normalized (all ``-inf``, ``NaN`` or ``+inf``).
+        """
+
+        normalized = _normalize_log_weights(log_weights, self.n_components)
+        return self._from_normalized(self._components, normalized)
+
+    def with_added_component(self, component: ParametricFamilyDistribution, weight: Scalar) -> "MixtureModel":
+        """Return a new mixture with an appended component.
+
+        The existing component weights are multiplied by ``1 - weight`` so that
+        their proportions are preserved.
 
         Parameters
         ----------
@@ -161,6 +265,11 @@ class MixtureModel:
             The distribution component to add.
         weight : Scalar
             The weight for the new component, a number in the range (0, 1).
+
+        Returns
+        -------
+        MixtureModel
+            A new mixture; this mixture is left unchanged.
 
         Raises
         ------
@@ -173,18 +282,23 @@ class MixtureModel:
 
         d_weight = float(weight)
         new_log_weights = np.append(self._log_weights + np.log(1.0 - d_weight), np.log(d_weight))
-        self._components.append(component)
-        self.log_weights = new_log_weights
+        normalized = _normalize_log_weights(new_log_weights, self.n_components + 1)
+        return self._from_normalized([*self._components, component], normalized)
 
-    def remove_component(self, component_idx: int) -> None:
-        """Removes a component from the mixture by its index.
+    def without_component(self, index: int) -> "MixtureModel":
+        """Return a new mixture without the component at ``index``.
 
         The weights of the remaining components are renormalized to sum to 1.
 
         Parameters
         ----------
-        component_idx : int
-            The index of the component to remove.
+        index : int
+            The index of the component to remove; negative indices are not supported.
+
+        Returns
+        -------
+        MixtureModel
+            A new mixture; this mixture is left unchanged.
 
         Raises
         ------
@@ -196,23 +310,24 @@ class MixtureModel:
         """
 
         n_components = self.n_components
-        if not 0 <= component_idx < n_components:
-            raise IndexError(f"Index {component_idx} out of range [0, {n_components - 1}]")
+        if not 0 <= index < n_components:
+            raise IndexError(f"Index {index} out of range [0, {n_components - 1}]")
 
         if n_components <= 1:
             raise ValueError("The last component cannot be removed from the model.")
 
-        new_log_weights = np.delete(self._log_weights, component_idx)
+        new_log_weights = np.delete(self._log_weights, index)
         if not np.any(np.isfinite(new_log_weights)):
             raise ValueError("Cannot remove the only component with positive weight.")
 
-        del self._components[component_idx]
-        self.log_weights = new_log_weights
+        normalized = _normalize_log_weights(new_log_weights, n_components - 1)
+        components = [comp for i, comp in enumerate(self._components) if i != index]
+        return self._from_normalized(components, normalized)
 
     def to_core_mixture(self) -> FiniteMixtureDistribution:
         """Convert to a pysatl-core FiniteMixtureDistribution.
 
-        The result is a snapshot: later changes to this model are not reflected in it.
+        The result is an independent pysatl-core mixture built from the current components and weights.
         """
 
         weighted_components = [(float(w), comp) for w, comp in zip(self.weights, self.components)]
@@ -331,33 +446,15 @@ class MixtureModel:
 
         return self.components[key]
 
-    def __setitem__(self, key: int, value: ParametricFamilyDistribution) -> None:
-        """Replace component at index.
-
-        Raises
-        ------
-        IndexError
-            If ``key`` is outside ``[0, n_components - 1]``; unlike ``__getitem__``, negative
-            indices are not supported.
-        """
-
-        if not (0 <= key <= self.n_components - 1):
-            raise IndexError(f"Index of component must be between 0 and {self.n_components - 1}")
-
-        self._components[key] = value
-        self._invalidate_cache()
-
     def __iter__(self) -> Iterator[ParametricFamilyDistribution]:
         """Iterate over mixture components."""
 
         return iter(self.components)
 
     def __copy__(self) -> "MixtureModel":
-        """Create a shallow copy: the component objects are shared, the weights are copied."""
+        """Return ``self``: the mixture is immutable, so a copy would be identical."""
 
-        new_model = MixtureModel(self._components)
-        new_model.log_weights = self._log_weights
-        return new_model
+        return self
 
     def __eq__(self, other: object) -> bool:
         """Check equality against another mixture, invariant to component ordering."""
@@ -382,9 +479,24 @@ class MixtureModel:
 
         return hash(tuple(key for key, _ in self._get_sorted_pairs()))
 
-    def _invalidate_cache(self) -> None:
-        self._cached_weights = None
-        self._sorted_pairs_cache = None
+    @classmethod
+    def _from_normalized(
+        cls,
+        components: Sequence[ParametricFamilyDistribution],
+        log_weights: UnivariateFloatArray,
+    ) -> "MixtureModel":
+        """Build a mixture from components and already normalized, read-only log-weights.
+
+        Skips the checks and normalization of ``__init__``: both inputs must come
+        from validated sources. The caches start empty.
+        """
+
+        mixture = cls.__new__(cls)
+        mixture._components = tuple(components)
+        mixture._cached_weights = None
+        mixture._sorted_pairs_cache = None
+        mixture._log_weights = log_weights
+        return mixture
 
     def _validate_weights(self, n_components: int, weights: UnivariateFloatArray) -> None:
         if len(weights) != n_components:

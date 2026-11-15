@@ -4,8 +4,6 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from copy import copy
-
 import numpy as np
 import pytest
 from hypothesis import given
@@ -144,15 +142,18 @@ def test_prune_preserves_other_pipeline_state_attributes(dummy_components):
 def test_prune_does_not_modify_original_mixture_object(dummy_components):
     pruner = PriorThresholdPruner(threshold=0.5)
     initial_mixture = MixtureModel(dummy_components[:2], weights=[0.1, 0.9])
-    original_mixture_snapshot = copy(initial_mixture)
+    components_before = initial_mixture.components
+    weights_before = initial_mixture.weights.copy()
+    log_weights_before = initial_mixture.log_weights.copy()
 
     state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
 
     pruner.prune(state)
 
-    assert initial_mixture.n_components == original_mixture_snapshot.n_components
-    assert np.allclose(initial_mixture.weights, original_mixture_snapshot.weights)
-    assert initial_mixture.components == original_mixture_snapshot.components
+    assert initial_mixture.n_components == len(components_before)
+    assert np.allclose(initial_mixture.weights, weights_before)
+    assert np.array_equal(initial_mixture.log_weights, log_weights_before)
+    assert initial_mixture.components == components_before
 
 
 # --- Tests using Hypothesis ---
@@ -205,3 +206,49 @@ def test_prune_returns_original_state_when_no_pruning(dummy_components):
     assert removed == []
     assert new_state is original_state
     assert new_state.curr_mixture is initial_mixture
+
+
+def test_prune_returns_new_state_and_new_mixture_objects(dummy_components):
+    pruner = PriorThresholdPruner(threshold=0.15)
+    initial_mixture = MixtureModel(dummy_components, weights=[0.7, 0.2, 0.1])
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    new_state, _ = pruner.prune(state)
+
+    assert new_state is not state
+    assert new_state.curr_mixture is not initial_mixture
+
+
+def test_prune_result_has_expected_renormalized_weights(dummy_components):
+    pruner = PriorThresholdPruner(threshold=0.15)
+    initial_mixture = MixtureModel(dummy_components, weights=[0.7, 0.2, 0.1])
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    new_state, removed = pruner.prune(state)
+
+    expected_removed = [2]
+    expected_n_components = 2
+    expected_weights = np.array([0.7 / 0.9, 0.2 / 0.9])
+    assert removed == expected_removed
+    new_mixture = new_state.curr_mixture
+    assert new_mixture.n_components == expected_n_components
+    assert np.allclose(new_mixture.weights, expected_weights)
+    assert new_mixture.components[0] is dummy_components[0]
+    assert new_mixture.components[1] is dummy_components[1]
+
+
+def test_prune_multiple_removals_keeps_highest_indexed_survivor(dummy_components):
+    pruner = PriorThresholdPruner(threshold=0.5)
+    components = [make_component(i) for i in range(4)]
+    initial_mixture = MixtureModel(components, weights=[0.4, 0.3, 0.2, 0.1])
+    state = PipelineState(X=np.array([]), H=None, prev_mixture=None, curr_mixture=initial_mixture, error=None)
+
+    new_state, removed = pruner.prune(state)
+
+    expected_removed = [0, 1, 2]
+    expected_weights = np.array([1.0])
+    assert removed == expected_removed
+    new_mixture = new_state.curr_mixture
+    assert new_mixture.n_components == 1
+    assert new_mixture.components == (components[3],)
+    assert np.allclose(new_mixture.weights, expected_weights)

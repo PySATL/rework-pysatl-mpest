@@ -5,7 +5,6 @@ __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Callable, Sequence
-from copy import copy
 
 import numpy as np
 import pytest
@@ -131,7 +130,7 @@ class TestDensity:
     def test_pdf_matches_exp_lpdf_exactly(self) -> None:
         exponential = family(FamilyName.EXPONENTIAL)
         mixture = MixtureModel([exponential(lambda_=1.0), exponential(lambda_=3.0)])
-        mixture.log_weights = np.log([2.0, 6.0])
+        mixture = mixture.with_log_weights(np.log([2.0, 6.0]))
         data = np.array([-1.0, 0.0, 0.5, 1.0, 800.0])
 
         density = mixture.pdf(data)
@@ -192,14 +191,14 @@ class TestEquality:
 
         assert MixtureModel([component, extra], weights=[1.0, 0.0]) != MixtureModel([component])
 
-    def test_copy_with_arbitrary_weights_is_equal_and_hashes_equal(self) -> None:
+    def test_reconstructed_mixture_with_arbitrary_weights_is_equal_and_hashes_equal(self) -> None:
         # Log and softmax re-projection introduces numerical variation around 1e-16.
         components = [_normal(0.0, 1.0), _normal_fixed_mu(3.0, 2.0), _exponential(2.0)]
         rng = np.random.default_rng(0)
 
         for weights in rng.dirichlet(np.ones(3), size=500):
             mixture = MixtureModel(components, weights=weights)
-            duplicate = copy(mixture)
+            duplicate = MixtureModel(mixture.components, mixture.weights)
 
             assert duplicate == mixture
             assert hash(duplicate) == hash(mixture)
@@ -262,7 +261,7 @@ class TestCoreExport:
     def test_to_core_mixture_exports_valid_distribution(self) -> None:
         exponential = family(FamilyName.EXPONENTIAL)
         mixture = MixtureModel([exponential(lambda_=1.0), exponential(lambda_=3.0)])
-        mixture.log_weights = np.log([2.0, 6.0])
+        mixture = mixture.with_log_weights(np.log([2.0, 6.0]))
 
         exported = mixture.to_core_mixture()
 
