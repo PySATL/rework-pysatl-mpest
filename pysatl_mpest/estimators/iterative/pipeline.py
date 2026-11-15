@@ -25,9 +25,9 @@ class Pipeline(BaseEstimator):
     Sequentially executes configured processing steps, applies pruners,
     and checks stopping criteria on each iteration until convergence.
 
-    Steps and pruners may be stateful and are reused as is by every call of :meth:`fit`. Breakpointers are
-    also reused, but :meth:`fit` calls :meth:`Breakpointer.reset` on each of them before the first iteration,
-    so no stopping state carries over between fits.
+    Steps and breakpointers may keep state between iterations. They are reused by every call of
+    :meth:`fit`, which calls :meth:`PipelineStep.reset` and :meth:`Breakpointer.reset` on each of them
+    before the first iteration, so no per-fit state carries over between fits. Pruners are reused as is.
     ``history`` is not cleared between calls, so records of repeated fits accumulate.
 
     Steps and pruners must replace ``state.curr_mixture`` with a new mixture object instead of
@@ -143,6 +143,9 @@ class Pipeline(BaseEstimator):
 
         for breakpointer in self.breakpointers:
             breakpointer.reset()
+
+        for step in self.steps:
+            step.reset()
 
         while True:
             state.prev_mixture = state.curr_mixture

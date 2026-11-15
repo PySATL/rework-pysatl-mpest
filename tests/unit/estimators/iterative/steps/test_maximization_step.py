@@ -105,7 +105,8 @@ class TestConstruction:
 
         step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
 
-        assert step.blocks == blocks
+        assert step.blocks == tuple(blocks)
+        assert isinstance(step.blocks, tuple)
         assert step.optimizer == mock_optimizer
         assert isinstance(step, PipelineStep)
 
@@ -484,126 +485,225 @@ class TestRun:
 
 
 class TestClearAfterPrune:
-    def test_removes_pruned_blocks(self, mock_optimizer: Optimizer):
-        CONST = 2
+    """After pruning, ``run`` applies the surviving blocks to the renumbered components."""
 
+    def test_removes_pruned_blocks(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
+        pruned = mixture.without_component(1)
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"loc"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"rate"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"loc", "rate"}, MaximizationStrategy.QFUNCTION),
         ]
-
-        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"mu": 2.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([1])
+        step.run(state)
 
-        assert len(step.blocks) == CONST
-        assert step.blocks[0].component_id == 0
-        assert step.blocks[1].component_id == 1
+        # The blocks of components 0 and 2 survive, renumbered to 0 and 1.
+        assert [call[2].component_id for call in calls] == [0, 1]
+        assert calls[0][0] is pruned[0]
+        assert calls[1][0] is pruned[1]
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.0, "sigma": 1.0}
+        assert cc.all_parameters(state.curr_mixture[1]) == {"mu": 2.0, "sigma": 1.0}
 
-    def test_preserves_parameters_of_surviving_blocks(self, mock_optimizer: Optimizer):
+    def test_preserves_parameters_of_surviving_blocks(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
+        pruned = mixture.without_component(1)
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate", "scale"}, "q_function"),
-            OptimizationBlock(2, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"loc"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"rate", "scale"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"loc", "rate"}, MaximizationStrategy.QFUNCTION),
         ]
-
-        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"mu": 2.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([1])
+        step.run(state)
 
-        assert step.blocks[0].params_to_optimize == {"loc"}
-        assert step.blocks[1].params_to_optimize == {"loc", "rate"}
+        assert [call[2].params_to_optimize for call in calls] == [{"loc"}, {"loc", "rate"}]
 
-    def test_shifts_unoptimized_components(self, mock_optimizer: Optimizer) -> None:
+    def test_shifts_unoptimized_components(self, mocker: MockerFixture) -> None:
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=float(index), sigma=1.0) for index in range(5)])
+        pruned = mixture.without_component(1)
         blocks = [
             OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
             OptimizationBlock(4, {"sigma"}, MaximizationStrategy.QFUNCTION),
         ]
-        step = MaximizationStep(blocks, mock_optimizer)
+        step, calls = make_recording_step(mocker, blocks, {"mu": 10.0}, {"sigma": 3.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([1])
+        step.run(state)
 
-        assert [block.component_id for block in step.blocks] == [0, 3]
+        # The block of component 4 shifts to component 3 of the pruned mixture.
+        assert [call[2].component_id for call in calls] == [0, 3]
+        assert calls[1][0] is pruned[3]
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 10.0, "sigma": 1.0}
+        assert cc.all_parameters(state.curr_mixture[3]) == {"mu": 4.0, "sigma": 3.0}
 
-    def test_shifts_each_block_for_one_component(self, mock_optimizer: Optimizer) -> None:
+    def test_shifts_each_block_for_one_component(self, mocker: MockerFixture) -> None:
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
+        pruned = mixture.without_component(1)
         blocks = [
             OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
             OptimizationBlock(0, {"sigma"}, MaximizationStrategy.QFUNCTION),
             OptimizationBlock(2, {"rate"}, MaximizationStrategy.QFUNCTION),
         ]
-        step = MaximizationStep(blocks, mock_optimizer)
+        # The independent blocks share the first wave, so the call order is
+        # [block mu of 0, block rate of 2 (renumbered to 1), block sigma of 0].
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"mu": 3.0}, {"sigma": 2.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([1])
+        step.run(state)
 
-        assert [block.component_id for block in step.blocks] == [0, 0, 1]
-        assert [block.params_to_optimize for block in step.blocks] == [{"mu"}, {"sigma"}, {"rate"}]
+        assert [call[2].component_id for call in calls] == [0, 1, 0]
+        assert [call[2].params_to_optimize for call in calls] == [{"mu"}, {"rate"}, {"sigma"}]
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.0, "sigma": 2.0}
+        assert cc.all_parameters(state.curr_mixture[1]) == {"mu": 3.0, "sigma": 1.0}
 
-    def test_handles_duplicate_indices_and_multiple_removals(self, mock_optimizer: Optimizer) -> None:
-        blocks = [OptimizationBlock(index, None, MaximizationStrategy.QFUNCTION) for index in [0, 2, 5]]
-        step = MaximizationStep(blocks, mock_optimizer)
+    def test_handles_duplicate_indices_and_multiple_removals(self, mocker: MockerFixture) -> None:
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=float(index), sigma=1.0) for index in range(6)])
+        pruned = mixture.without_component(3).without_component(1)
+        blocks = [OptimizationBlock(index, {"mu"}, MaximizationStrategy.QFUNCTION) for index in [0, 2, 5]]
+        step, calls = make_recording_step(mocker, blocks, {"mu": 10.0}, {"mu": 20.0}, {"mu": 50.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([3, 1, 3])
+        step.run(state)
 
-        assert [block.component_id for block in step.blocks] == [0, 1, 3]
+        assert [call[2].component_id for call in calls] == [0, 1, 3]
+        assert calls[2][0] is pruned[3]  # originally component 5
 
-    def test_leaves_caller_blocks_unchanged(self, mock_optimizer: Optimizer) -> None:
+    def test_leaves_caller_blocks_unchanged(self, mocker: MockerFixture) -> None:
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
+        pruned = mixture.without_component(1)
         blocks = [
             OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
-            OptimizationBlock(1, None, MaximizationStrategy.MOMENTS),
-            OptimizationBlock(2, {"sigma"}, MaximizationStrategy.OBSERVED_DATA_LIKELIHOOD),
+            OptimizationBlock(1, None, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"sigma"}, MaximizationStrategy.QFUNCTION),
         ]
-        step = MaximizationStep(blocks, mock_optimizer)
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"sigma": 3.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([1])
+        step.run(state)
 
+        # The caller's blocks are not mutated; the applied surviving blocks are updated copies.
         assert [block.component_id for block in blocks] == [0, 1, 2]
-        assert [block.component_id for block in step.blocks] == [0, 1]
-        for surviving, original in zip(step.blocks, [blocks[0], blocks[2]], strict=True):
+        assert step.blocks == tuple(blocks)
+        for call, original in zip(calls, [blocks[0], blocks[2]], strict=True):
+            surviving = call[2]
             assert surviving is not original
             assert surviving.params_to_optimize is original.params_to_optimize
             assert surviving.maximization_strategy is original.maximization_strategy
 
-    def test_handles_empty_removal(self, mock_optimizer: Optimizer):
-        blocks = [OptimizationBlock(0, {"loc"}, "q_function"), OptimizationBlock(1, {"rate"}, "q_function")]
-
-        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
-        original_blocks = list(step.blocks)
+    def test_handles_empty_removal(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0)])
+        blocks = [
+            OptimizationBlock(0, {"loc"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"rate"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"mu": 2.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(mixture), mixture)
 
         step.clear_after_prune([])
+        step.run(state)
 
-        assert step.blocks == original_blocks
+        # An empty removal leaves the working list untouched: the original blocks are applied.
+        assert [call[2].component_id for call in calls] == [0, 1]
+        assert calls[0][2] is blocks[0]
+        assert calls[1][2] is blocks[1]
 
-    def test_handles_no_blocks(self, mock_optimizer: Optimizer):
-        step = MaximizationStep(blocks=[], optimizer=mock_optimizer)
+    def test_handles_no_blocks(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0)])
+        step, calls = make_recording_step(mocker, [])
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(mixture), mixture)
 
         step.clear_after_prune([0, 1])
-        assert step.blocks == []
+        step.run(state)
 
-    def test_handles_multiple_removals(self, mock_optimizer: Optimizer):
-        NUMBER_OF_BLOCKS = 2
+        assert calls == []
+        assert all(new is old for new, old in zip(state.curr_mixture, mixture, strict=True))
+
+    def test_handles_multiple_removals(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=float(index), sigma=1.0) for index in range(4)])
+        pruned = mixture.without_component(3).without_component(1)
         blocks = [
-            OptimizationBlock(0, {"loc"}, "q_function"),
-            OptimizationBlock(1, {"rate"}, "q_function"),
-            OptimizationBlock(2, {"scale"}, "q_function"),
-            OptimizationBlock(3, {"loc", "rate"}, "q_function"),
+            OptimizationBlock(0, {"loc"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"rate"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"scale"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(3, {"loc", "rate"}, MaximizationStrategy.QFUNCTION),
         ]
-
-        step = MaximizationStep(blocks=blocks, optimizer=mock_optimizer)
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"mu": 2.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([1, 3])
+        step.run(state)
 
-        assert len(step.blocks) == NUMBER_OF_BLOCKS
-        assert step.blocks[0].component_id == 0
-        assert step.blocks[1].component_id == 1
+        # The blocks of components 0 and 2 survive, renumbered to 0 and 1.
+        assert [call[2].component_id for call in calls] == [0, 1]
+        assert [call[2].params_to_optimize for call in calls] == [{"loc"}, {"scale"}]
 
-        assert step.blocks[0].params_to_optimize == {"loc"}
-        assert step.blocks[1].params_to_optimize == {"scale"}
-
-    def test_shifts_blocks_after_removed_component(self, mock_optimizer: Optimizer):
-        blocks = [OptimizationBlock(i, None, MaximizationStrategy.QFUNCTION) for i in range(4)]
-        step = MaximizationStep(blocks, mock_optimizer)
+    def test_shifts_blocks_after_removed_component(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=float(index), sigma=1.0) for index in range(4)])
+        pruned = mixture.without_component(0)
+        blocks = [OptimizationBlock(i, {"mu"}, MaximizationStrategy.QFUNCTION) for i in range(4)]
+        step, calls = make_recording_step(mocker, blocks, {"mu": 10.0}, {"mu": 20.0}, {"mu": 30.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(pruned), pruned)
 
         step.clear_after_prune([0])
+        step.run(state)
 
-        assert [block.component_id for block in step.blocks] == [0, 1, 2]
+        assert [call[2].component_id for call in calls] == [0, 1, 2]
+        assert calls[0][0] is pruned[0]  # originally component 1
+
+
+class TestReset:
+    """``reset`` restores the working block list from the constructor ``blocks``."""
+
+    def test_blocks_keeps_the_constructor_blocks_after_pruning(self, mock_optimizer: Optimizer):
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(1, {"sigma"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"mu"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step = MaximizationStep(blocks, mock_optimizer)
+
+        step.clear_after_prune([1])
+
+        assert step.blocks == tuple(blocks)
+        assert all(current is original for current, original in zip(step.blocks, blocks, strict=True))
+
+    def test_reset_restores_the_constructor_blocks_for_the_next_run(self, mocker: MockerFixture):
+        normal = family(FamilyName.NORMAL)
+        mixture = MixtureModel([normal(mu=0.0, sigma=1.0), normal(mu=5.0, sigma=1.0), normal(mu=-5.0, sigma=1.0)])
+        blocks = [
+            OptimizationBlock(0, {"mu"}, MaximizationStrategy.QFUNCTION),
+            OptimizationBlock(2, {"mu"}, MaximizationStrategy.QFUNCTION),
+        ]
+        step, calls = make_recording_step(mocker, blocks, {"mu": 1.0}, {"mu": 2.0})
+        state = make_state(np.array([-1.0, 0.0, 0.5, 2.0]), uniform_responsibilities(mixture), mixture)
+
+        step.clear_after_prune([1])
+        step.reset()
+        step.run(state)
+
+        # The run applies the original blocks on the original mixture again.
+        assert [call[2].component_id for call in calls] == [0, 2]
+        assert calls[0][2] is blocks[0]
+        assert calls[1][2] is blocks[1]
+        assert cc.all_parameters(state.curr_mixture[0]) == {"mu": 1.0, "sigma": 1.0}
+        assert cc.all_parameters(state.curr_mixture[2]) == {"mu": 2.0, "sigma": 1.0}

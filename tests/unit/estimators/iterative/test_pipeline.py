@@ -48,6 +48,9 @@ class MockStepA(PipelineStep):
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
         pass
 
+    def reset(self) -> None:
+        pass
+
 
 class MockStepB(PipelineStep):
     """A concrete mock step 'B' that can follow 'A' and loop back."""
@@ -64,6 +67,9 @@ class MockStepB(PipelineStep):
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
+
+    def reset(self) -> None:
         pass
 
 
@@ -83,6 +89,9 @@ class MockSingleStep(PipelineStep):
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
+
+    def reset(self) -> None:
         pass
 
 
@@ -127,6 +136,9 @@ class ModifyingStep(PipelineStep):
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
         pass
 
+    def reset(self) -> None:
+        pass
+
 
 class ParameterIncrementStep(PipelineStep):
     """A mock step that predictably modifies mixture parameters on each run."""
@@ -155,6 +167,9 @@ class ParameterIncrementStep(PipelineStep):
         return state
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+        pass
+
+    def reset(self) -> None:
         pass
 
 
@@ -559,7 +574,55 @@ class TestBreakpointerReset:
             IncompleteBreakpointer()
 
 
-# --- Tests for MaximizationStep clear_after_prune method ---
+# --- Step reset tests ---
+
+
+class TestStepReset:
+    """Pipeline.fit must reset every step before the first iteration of every fit."""
+
+    def test_reset_is_called_once_before_the_first_run_of_every_fit(self, initial_mixture, sample_data):
+        log: list[tuple[str, ...]] = []
+        step = RecordingStep("A", log)
+        pipeline = Pipeline([step], [StopOnCheck(call_number=2)])
+
+        pipeline.fit(sample_data, initial_mixture)
+        pipeline.fit(sample_data, initial_mixture)
+
+        # Per fit: one reset before the first run, then one run per iteration (2 iterations each).
+        assert log == [
+            ("reset", "A"),
+            ("run", "A"),
+            ("run", "A"),
+            ("reset", "A"),
+            ("run", "A"),
+            ("run", "A"),
+        ]
+
+    def test_reset_is_called_on_every_step(self, initial_mixture, sample_data):
+        log: list[tuple[str, ...]] = []
+        pipeline = Pipeline(
+            [RecordingStep("A", log), RecordingStep("B", log)],
+            [StopOnCheck(call_number=1)],
+        )
+
+        pipeline.fit(sample_data, initial_mixture)
+
+        assert log == [("reset", "A"), ("reset", "B"), ("run", "A"), ("run", "B")]
+
+    def test_step_without_reset_cannot_be_instantiated(self):
+        class IncompleteStep(PipelineStep):
+            @property
+            def available_next_steps(self) -> list[type[PipelineStep]]:
+                return [IncompleteStep]
+
+            def run(self, state: PipelineState) -> PipelineState:
+                return state
+
+            def clear_after_prune(self, removed_components_indices: list[int]) -> None:
+                pass
+
+        with pytest.raises(TypeError):
+            IncompleteStep()
 
 
 # --- Bookkeeping of pruned components ---
@@ -582,6 +645,9 @@ class RecordingStep(PipelineStep):
 
     def clear_after_prune(self, removed_components_indices: list[int]) -> None:
         self.log.append(("clear", self.name, str(removed_components_indices)))
+
+    def reset(self) -> None:
+        self.log.append(("reset", self.name))
 
 
 class ResponsibilityStep(RecordingStep):
@@ -628,6 +694,8 @@ class TestPruning:
         pipeline.fit(sample_data, exponential_mixture(3))
 
         assert log == [
+            ("reset", "A"),
+            ("reset", "B"),
             ("run", "A"),
             ("run", "B"),
             ("prune", "p", "[0]"),
@@ -664,6 +732,7 @@ class TestPruning:
         fitted = pipeline.fit(sample_data, exponential_mixture(3))
 
         assert log == [
+            ("reset", "A"),
             ("run", "A"),
             ("prune", "p1", "[0]"),
             ("clear", "A", "[0]"),

@@ -23,6 +23,8 @@ class PipelineStep(ABC):
         :toctree: generated/
 
         run
+        clear_after_prune
+        reset
     """
 
     @property
@@ -53,10 +55,20 @@ class PipelineStep(ABC):
         """Clean up step internal state for components removed during pruning.
 
         Surviving components are renumbered contiguously starting from 0; step
-        state indexed by component must be re-indexed accordingly.
+        state indexed by component must be re-indexed accordingly. The
+        re-indexed state stays in effect until :meth:`reset` is called.
 
         Parameters
         ----------
         removed_components_indices : list[int]
             Ascending indices of removed components relative to the mixture before this removal.
+        """
+
+    @abstractmethod
+    def reset(self) -> None:
+        """Return the step to its post-constructor state.
+
+        :meth:`Pipeline.fit` calls this method on every step before the first
+        iteration, so no per-fit state carries over between fits. Steps without
+        such state may leave the body empty.
         """
