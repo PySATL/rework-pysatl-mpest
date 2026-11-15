@@ -21,7 +21,7 @@ from ....core import _components
 from ....optimizers import Optimizer
 from ..pipeline_state import PipelineState
 from ..steps import OptimizationBlock
-from ._dispatch import family_dispatch
+from ._dispatch import FamilyDispatch
 
 NUMERICAL_TOLERANCE = 1e-9
 
@@ -169,6 +169,35 @@ def _normal_mean_std(
 
 # The implementations are plain functions and are registered by a call, not by a decorator:
 # the mutation testing tool does not mutate decorated functions.
-q_function_strategy = family_dispatch(_numerical_q_function)
+q_function_strategy = FamilyDispatch(
+    _numerical_q_function,
+    name="q_function_strategy",
+    doc="""M-step strategy based on maximizing the Q-function.
+
+Selects the implementation by the family and parametrization of the component.
+Analytical solutions are registered for the ``Normal`` family with the
+``meanStd`` parametrization and the ``Exponential`` family with the ``rate``
+parametrization. For any other pair the parameters requested in ``block`` are
+maximized numerically by ``optimizer`` over the expected complete-data
+log-likelihood; points violating parametrization constraints are rejected
+with an infinite target value.
+
+Parameters
+----------
+component : ParametricFamilyDistribution
+    The mixture component to update.
+state : PipelineState
+    The pipeline state holding the data ``X`` and the responsibilities ``H``.
+block : OptimizationBlock
+    The block describing which parameters of ``component`` to update.
+optimizer : Optimizer
+    The optimizer used by the numerical fallback.
+
+Returns
+-------
+tuple[int, dict[str, float]]
+    The component id and a mapping of updated parameter names to new values.
+""",
+)
 q_function_strategy.register(FamilyName.EXPONENTIAL, "rate")(_exponential_rate)
 q_function_strategy.register(FamilyName.NORMAL, "meanStd")(_normal_mean_std)

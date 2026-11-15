@@ -228,14 +228,22 @@ class TestDispatch:
         selected = q_function_strategy.dispatch(make_component())
 
         assert selected is q_function_strategy.registry[key]
-        assert selected is not q_function_strategy.__wrapped__
+        assert selected is not q_function_module._numerical_q_function
 
     @pytest.mark.parametrize("make_component", GENERIC)
     def test_selects_the_default_for_unregistered_pairs(
         self, make_component: Callable[[], ParametricFamilyDistribution]
     ) -> None:
         """Selects the default for unregistered pairs."""
-        assert q_function_strategy.dispatch(make_component()) is q_function_strategy.__wrapped__
+        assert q_function_strategy.dispatch(make_component()) is q_function_module._numerical_q_function
+
+    def test_strategy_has_its_own_name_and_docstring(self) -> None:
+        """Strategy has its own name and docstring."""
+        doc = q_function_strategy.__doc__ or ""
+
+        assert q_function_strategy.__name__ == "q_function_strategy"
+        for token in ("Normal", "meanStd", "Exponential", "rate"):
+            assert token in doc
 
 
 class TestNormalFormula:

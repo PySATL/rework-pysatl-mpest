@@ -355,7 +355,7 @@ class TestDispatch:
         selected = moments_strategy.dispatch(make_component())
 
         assert selected is moments_strategy.registry[key]
-        assert selected is not moments_strategy.__wrapped__
+        assert selected is not moments_module._not_implemented
 
     @pytest.mark.parametrize(
         "make_component",
@@ -372,7 +372,15 @@ class TestDispatch:
     def test_selects_the_default_implementation_for_unregistered_pairs(
         self, make_component: Callable[[], ParametricFamilyDistribution]
     ) -> None:
-        assert moments_strategy.dispatch(make_component()) is moments_strategy.__wrapped__
+        assert moments_strategy.dispatch(make_component()) is moments_module._not_implemented
+
+    def test_strategy_has_its_own_name_and_docstring(self) -> None:
+        """Strategy has its own name and docstring."""
+        doc = moments_strategy.__doc__ or ""
+
+        assert moments_strategy.__name__ == "moments_strategy"
+        for token in ("Normal", "meanStd", "Exponential", "rate", "NotImplementedError"):
+            assert token in doc
 
 
 @pytest.fixture
