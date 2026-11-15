@@ -5,7 +5,6 @@ __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
 from collections.abc import Callable, Sequence
-from copy import copy
 
 import numpy as np
 import pytest
@@ -192,14 +191,14 @@ class TestEquality:
 
         assert MixtureModel([component, extra], weights=[1.0, 0.0]) != MixtureModel([component])
 
-    def test_copy_with_arbitrary_weights_is_equal_and_hashes_equal(self) -> None:
+    def test_reconstructed_mixture_with_arbitrary_weights_is_equal_and_hashes_equal(self) -> None:
         # Log and softmax re-projection introduces numerical variation around 1e-16.
         components = [_normal(0.0, 1.0), _normal_fixed_mu(3.0, 2.0), _exponential(2.0)]
         rng = np.random.default_rng(0)
 
         for weights in rng.dirichlet(np.ones(3), size=500):
             mixture = MixtureModel(components, weights=weights)
-            duplicate = copy(mixture)
+            duplicate = MixtureModel(mixture.components, mixture.weights)
 
             assert duplicate == mixture
             assert hash(duplicate) == hash(mixture)

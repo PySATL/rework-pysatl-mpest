@@ -4,7 +4,7 @@ __author__ = "Danil Totmyanin"
 __copyright__ = "Copyright (c) 2026 PySATL project"
 __license__ = "SPDX-License-Identifier: MIT"
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from copy import copy
 from typing import cast
 from unittest.mock import MagicMock, patch
@@ -473,6 +473,62 @@ class TestImmutableMethods:
         assert hash(mixture) == hash(MixtureModel([comp1, comp2], weights=[0.4, 0.6]))
 
 
+class TestImmutability:
+    def test_setitem_is_not_supported(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+        mixture = MixtureModel(mock_comps)
+        replacement = cast(ParametricFamilyDistribution, MockContinuousDistribution(param1=99.0))
+
+        with pytest.raises(TypeError):
+            mixture[0] = replacement
+
+        assert mixture.components == mock_comps
+
+    def test_log_weights_cannot_be_assigned(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+        mixture = MixtureModel(mock_comps)
+        before = mixture.log_weights.copy()
+
+        with pytest.raises(AttributeError, match="log_weights"):
+            mixture.log_weights = np.array([0.0, 0.0])
+
+        assert np.array_equal(mixture.log_weights, before)
+
+    def test_mutators_are_removed(self) -> None:
+        assert not hasattr(MixtureModel, "add_component")
+        assert not hasattr(MixtureModel, "remove_component")
+        assert not hasattr(MixtureModel, "__setitem__")
+
+    def test_components_is_a_tuple(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+        mixture = MixtureModel(mock_comps)
+
+        assert isinstance(mixture.components, tuple)
+
+    @pytest.mark.parametrize(
+        "derive",
+        [
+            pytest.param(lambda mixture, extra: mixture.with_component(0, extra), id="with_component"),
+            pytest.param(lambda mixture, extra: mixture.with_components([extra, extra]), id="with_components"),
+            pytest.param(lambda mixture, extra: mixture.with_log_weights(np.log([0.9, 0.1])), id="with_log_weights"),
+            pytest.param(
+                lambda mixture, extra: mixture.with_added_component(extra, weight=0.5), id="with_added_component"
+            ),
+            pytest.param(lambda mixture, extra: mixture.without_component(0), id="without_component"),
+        ],
+    )
+    def test_derivation_keeps_the_original_usable_as_dict_key(
+        self,
+        mock_comps: tuple[ParametricFamilyDistribution, ...],
+        derive: Callable[[MixtureModel, ParametricFamilyDistribution], MixtureModel],
+    ) -> None:
+        mixture = MixtureModel(mock_comps, weights=[0.5, 0.5])
+        registry = {mixture: "start"}
+        extra = cast(ParametricFamilyDistribution, MockContinuousDistribution(param1=99.0))
+
+        derived = derive(mixture, extra)
+
+        assert registry[mixture] == "start"
+        assert derived not in registry
+
+
 class TestDensity:
     def test_pdf_is_exponential_of_lpdf(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
         mixture = MixtureModel(mock_comps, weights=[0.4, 0.6])
@@ -650,17 +706,6 @@ class TestGenerate:
 
 
 class TestEquality:
-    def test_copy_is_equal_and_has_equal_hash(
-        self,
-        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
-    ) -> None:
-        comp1, comp2, _ = param_comps
-        mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
-
-        mixture2 = copy(mixture1)
-        assert mixture1 == mixture2
-        assert hash(mixture1) == hash(mixture2)
-
     def test_unrelated_type_is_not_equal(self, mock_comp: ParametricFamilyDistribution) -> None:
         mixture = MixtureModel([mock_comp])
         assert mixture != "a string"
@@ -760,29 +805,7 @@ class TestEquality:
 
 
 class TestCopy:
-    def test_preserves_components_and_copies_weights(
-        self,
-        param_comps: tuple[ParametricFamilyDistribution, ParametricFamilyDistribution, ParametricFamilyDistribution],
-    ) -> None:
-        comp1, comp2, _ = param_comps
-        mixture1 = MixtureModel([comp1, comp2], weights=[0.5, 0.5])
+    def test_copy_returns_the_same_object(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
+        mixture = MixtureModel(mock_comps)
 
-        mixture2 = copy(mixture1)
-        assert mixture2 is not mixture1
-        assert mixture2.components[0] is comp1
-        assert mixture2.weights is not mixture1.weights
-
-    def test_preserves_log_weights_exactly(self, mock_comps: tuple[ParametricFamilyDistribution, ...]) -> None:
-        mixture = MixtureModel(mock_comps).with_log_weights([-800.0, 0.0])
-        copied = copy(mixture)
-
-        assert np.array_equal(copied.log_weights, mixture.log_weights)
-        assert copied.log_weights is not mixture.log_weights
-        assert copied.components == mixture.components
-        assert all(left is right for left, right in zip(copied.components, mixture.components))
-
-        copied = copied.with_added_component(mock_comps[0], weight=0.5)
-
-        assert mixture.components == mock_comps
-        assert np.array_equal(mixture.log_weights, [-800.0, 0.0])
-        assert copied.n_components == mixture.n_components + 1
+        assert copy(mixture) is mixture
